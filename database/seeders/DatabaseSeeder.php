@@ -15,6 +15,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Master data first: products depend on units of measure existing.
+        $this->call([
+            UnitOfMeasureSeeder::class,
+            ProductSeeder::class,
+        ]);
+
         // User::factory(10)->create();
 
         User::factory()->create([

@@ -1,3 +1,180 @@
+# Coconut Factory ERP
+
+This repository is an **ERP system for a coconut processing factory**. It manages the
+purchase, processing, inventory and sale of coconut products — whole coconuts, dehusked
+coconuts, husk, husk chips (7C / 9C / 10C), copra and coconut shell.
+
+The rules in this file are **mandatory**. They exist because this is an accounting and
+inventory system: mistakes here corrupt real financial and stock records, and corrupted
+records are often impossible to reconstruct.
+
+---
+
+## Technology stack
+
+| Layer | Technology |
+| --- | --- |
+| Framework | Laravel 13 |
+| Language | PHP 8.5 |
+| Frontend | Vue 3 + Inertia.js + TypeScript |
+| Styling | Tailwind CSS |
+| Database | MariaDB |
+| Web server | Nginx |
+| Mobile (future) | Flutter app consuming a REST API |
+
+Because a Flutter mobile application will later consume this system, business logic must
+live where **both** Inertia controllers and REST API controllers can reuse it — i.e. in
+action/service classes, never inside a controller or a Vue component.
+
+---
+
+## General development rules
+
+1. **Follow Laravel conventions.** Use `php artisan make:*` generators. Match the structure
+   and naming of existing sibling files.
+2. **Keep business logic out of controllers** where practical. Controllers validate input,
+   call an action, and return a response.
+3. **Use service/action classes for important business operations.** Anything that moves
+   stock, posts a journal, or changes a business document belongs in an action class under
+   `app/Actions/`.
+4. **Use database transactions** for inventory, production and accounting postings. A
+   partially-written stock movement or journal is a corrupt record.
+5. **Use foreign keys and database constraints.** The database is the last line of defence;
+   do not rely on application validation alone.
+6. **Use `decimal` columns for money and measurable quantities. Never use float or double
+   for accounting values.** Floating-point arithmetic loses precision and will silently
+   produce unbalanced journals.
+7. **Never hard-code business values that should be configurable** — rates, thresholds,
+   allocation methods, product codes and UOM codes belong in the database or config.
+8. **Every significant business feature must include automated tests.**
+9. **Never silently modify posted business transactions.**
+10. **Posted transactions must be reversed or cancelled according to business rules**,
+    never edited in place.
+11. **Never delete audit history.**
+12. **Do not invent business rules.** If a requirement is unclear, implement what is
+    confirmed, mark the gap `TBD` in `docs/`, and raise it with the user.
+
+---
+
+## Critical inventory rules
+
+**Stock must be derived from inventory transactions.**
+
+**Never directly maintain inventory by simply changing a product stock field.** There must
+be no `current_stock` (or equivalent) column on `products`. On-hand quantity is always
+calculated from the inventory ledger.
+
+Every stock movement must record at minimum:
+
+- product
+- warehouse — **required; multiple warehouses must be supported**
+- quantity
+- UOM
+- movement direction / type
+- transaction / source type
+- source record ID
+- date / time
+- user
+- cost where relevant
+- lot / batch — **nullable, but the architecture must support traceability**
+
+**Negative inventory is NOT allowed by default.** A transaction that would take available
+stock below zero must **fail atomically** — the whole business event rolls back, leaving no
+partial movements. A future configuration setting may relax this; the default does not.
+
+**Units of measure: exactly two.** `NOS` for countable physical items, `KG` for weight.
+There is no separate "Qty" unit — "Qty" is UI wording for a `NOS` count.
+
+---
+
+## Critical accounting rules
+
+- Use **double-entry accounting**.
+- **Never directly modify account balances.** Balances are derived from posted journals.
+- Every posted journal must satisfy **Total Debit = Total Credit**.
+- Financial records must remain **auditable** — every posting traceable to its source
+  document and user.
+
+---
+
+## Confirmed business rules
+
+Full detail lives in `docs/BUSINESS_RULES.md`. Summary:
+
+### Whole Coconut — primary UOM `NOS`
+
+Can be purchased from suppliers, sold directly to customers, or sent to dehusking.
+
+### Dehusking
+
+`N Whole Coconut` → `N Dehusked Coconut` + `N Raw Coconut Husk`
+
+Example — input 1,000 Whole Coconut produces 1,000 Dehusked Coconut and 1,000 Raw Coconut
+Husk. Whole Coconut decreases by 1,000; Dehusked Coconut increases by 1,000; Raw Husk
+increases by 1,000. This is a **fixed 1:1:1 relationship**.
+
+### Dehusked Coconut — primary UOM `NOS`
+
+Can be sold directly, or used for copra production.
+
+### Raw Coconut Husk — primary UOM `NOS`
+
+Enters inventory from two sources: internal dehusking, or direct supplier purchase.
+Processed through husk chipping.
+
+### Husk Chipping
+
+Input: Raw Husk in `NOS`. Outputs: `7C`, `9C`, `10C` — all in `KG`.
+
+- **Waste / loss is recorded as production waste and creates NO inventory.** It may be
+  promoted to a proper inventory product later if the factory begins selling dust or
+  another by-product. **Do not create a `DUST` product.**
+- **Actual output weights are entered by the operator.**
+- **Do not use a fixed conversion from husks to KG.**
+
+### Copra Production
+
+Input: Dehusked Coconut in `NOS`. Outputs: Copra in `KG`, plus Raw Coconut Shell.
+
+- Raw Shell must support **both quantity (`NOS`) and weight (`KG`)**.
+- One coconut yields one shell quantity, unless this rule changes later.
+- **Do not use a fixed NOS-to-KG conversion** — shell weights vary.
+
+### Raw Coconut Shell
+
+Sellable **by count (`NOS`) or by weight (`KG`)**. Inventory must preserve both actual
+quantity and actual weight where available.
+
+### Costing
+
+- Intended inventory costing method: **Weighted Average Cost**.
+- Joint-product cost allocation will later support a configurable method such as market
+  value / NRV.
+- **Do not implement detailed finance or cost allocation yet.**
+
+---
+
+## Current scope
+
+Implemented: **Product Master** (products + units of measure) and project documentation.
+
+**Not yet started — do not begin without instruction:** Supplier Master, Customer Master,
+Inventory ledger, Purchasing, Production, Finance, Sales, role-based permissions.
+
+Authenticated users may currently access the Product Master. Role-based permissions come
+later.
+
+---
+
+## Working agreement
+
+- Read `docs/` before implementing a business feature.
+- Run `vendor/bin/pint --dirty` after changing PHP files.
+- Run `php artisan test` and `npm run build` before reporting work complete.
+- Use forward migrations. **Do not use `migrate:fresh`** without explaining why first.
+- The development database is `coconut_erp_dev`. Never drop unrelated tables.
+
+---
 <laravel-boost-guidelines>
 === foundation rules ===
 
