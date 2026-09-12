@@ -9,7 +9,7 @@ Ubuntu 26.04, PHP 8.5.4, Laravel 13.31, Vue 3 + Inertia + Tailwind, MariaDB 11.8
 (`coconut_erp_dev`, dedicated non-root user), Nginx dev HTTPS on port 8443.
 Baseline committed. Ports 80/443 reserved for GitLab.
 
-## Phase 1 — Documentation & Product Master ◀ CURRENT
+## Phase 1 — Documentation & Product Master ✅ COMPLETE
 
 - [x] `CLAUDE.md` with mandatory development rules
 - [x] `docs/` — requirements, business rules, inventory, accounting, data model, plan
@@ -22,15 +22,23 @@ Baseline committed. Ports 80/443 reserved for GitLab.
 **Explicitly out of scope for this phase:** inventory, suppliers, customers, purchasing,
 production, sales, finance, role-based permissions.
 
-## Phase 2 — Master data (not started)
+## Phase 2 — Master data ✅ COMPLETE
 
-Warehouse Master, Supplier Master, Customer Master.
+- [x] **Supplier Master** — single table for all materials bought; `payment_terms_days`
+      cannot be negative
+- [x] **Customer Master** — single table for all products sold; `credit_limit`
+      `decimal(15,2)` and `credit_days`, neither may be negative
+- [x] **Warehouse Master** — multi-warehouse; exactly one active default, enforced
+      transactionally by `SetDefaultWarehouse` (see `DATA_MODEL.md` D-2)
+- [x] Only `MAIN` / "Main Warehouse" seeded. The example yards (Coconut Yard, Husk Yard,
+      Copra Store, Shell Yard, Finished Goods Store) are **not** seeded
+- [x] Responsive CRUD UIs matching the Product Master style; no destroy routes
+- [x] Feature tests for all three masters
 
-**Unblocked.** Multiple warehouses are confirmed; V1 seeds one default warehouse
-`MAIN` / "Main Warehouse". Example future yards (Coconut Yard, Husk Yard, Copra Store,
-Shell Yard, Finished Goods Store) are **not** to be seeded.
+**Deliberately not implemented:** customer balances, receivables, supplier payables, price
+lists, or any per-party product restriction.
 
-## Phase 3 — Inventory ledger (not started)
+## Phase 3 — Inventory ledger (not started) ◀ NEXT
 
 The foundation for everything downstream. Must implement `INVENTORY_RULES.md` in full:
 movement table with all required fields, derived stock, negative-stock guard, dual UOM for

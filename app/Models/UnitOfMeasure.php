@@ -21,20 +21,12 @@ class UnitOfMeasure extends Model
         'is_active',
     ];
 
-    /**
-     * Unit codes are always stored uppercase so lookups and uniqueness are predictable.
-     */
     protected function casts(): array
     {
         return [
             'decimal_places' => 'integer',
             'is_active' => 'boolean',
         ];
-    }
-
-    public function setCodeAttribute(?string $value): void
-    {
-        $this->attributes['code'] = $value === null ? null : mb_strtoupper(trim($value));
     }
 
     /**

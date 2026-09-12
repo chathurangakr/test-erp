@@ -36,15 +36,6 @@ class Product extends Model
     }
 
     /**
-     * Product codes are normalised to uppercase on the model rather than in a controller,
-     * so the rule also applies to seeders and the future REST API.
-     */
-    public function setCodeAttribute(?string $value): void
-    {
-        $this->attributes['code'] = $value === null ? null : mb_strtoupper(trim($value));
-    }
-
-    /**
      * @return BelongsTo<UnitOfMeasure, $this>
      */
     public function primaryUom(): BelongsTo

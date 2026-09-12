@@ -1,6 +1,7 @@
 # Data Model — Coconut Factory ERP
 
-> **Status:** Product Master implemented. All other entities are `TBD` / not started.
+> **Status:** Product Master and Phase 2 master data (suppliers, customers, warehouses)
+> implemented. All transactional entities are `TBD` / not started.
 
 ## 1. Implemented tables
 
@@ -63,6 +64,79 @@ See `INVENTORY_RULES.md` §1–2.
 
 Products are **seeded, never hard-coded in application logic**.
 
+
+### 1.3 `suppliers`
+
+One supplier table covers every material the factory buys — whole coconut, raw husk, and
+anything added later. There are deliberately **no separate coconut/husk supplier tables**.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `code` | string(50), **unique** | **Normalised to uppercase** |
+| `name` | string(150) | required |
+| `contact_person` | string(150), nullable | |
+| `phone` / `secondary_phone` | string(30), nullable | |
+| `email` | string(150), nullable | validated as an email |
+| `address_line_1` / `address_line_2` | string(200), nullable | |
+| `city` / `district` | string(100), nullable | |
+| `registration_number` / `tax_number` | string(100), nullable | |
+| `payment_terms_days` | unsigned smallint, default `0` | **cannot be negative** |
+| `notes` | text, nullable | |
+| `is_active` | boolean, default `true` | |
+| `created_at` / `updated_at` | timestamps | |
+
+**No balance, outstanding or purchase-total column.** Amounts owed are derived from posted
+transactions in the finance module. An automated test guards this.
+
+### 1.4 `customers`
+
+One customer table covers every product the factory sells. There are deliberately **no
+separate customer tables per product**.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `code` | string(50), **unique** | **Normalised to uppercase** |
+| `name` | string(150) | required |
+| `contact_person` | string(150), nullable | |
+| `phone` / `secondary_phone` | string(30), nullable | |
+| `email` | string(150), nullable | |
+| `address_line_1` / `address_line_2` | string(200), nullable | |
+| `city` / `district` | string(100), nullable | |
+| `registration_number` / `tax_number` | string(100), nullable | |
+| `credit_limit` | **`decimal(15,2)`**, default `0` | **cannot be negative**; an agreed term, *not* a balance |
+| `credit_days` | unsigned smallint, default `0` | **cannot be negative** |
+| `notes` | text, nullable | |
+| `is_active` | boolean, default `true` | |
+| `created_at` / `updated_at` | timestamps | |
+
+**No balance or receivable column.** Outstanding amounts are derived from posted
+transactions. An automated test guards this.
+
+### 1.5 `warehouses`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `code` | string(50), **unique** | **Normalised to uppercase** |
+| `name` | string(150) | required |
+| `description` | text, nullable | |
+| `address` | text, nullable | |
+| `is_active` | boolean, default `true` | |
+| `is_default` | boolean, default `false` | **exactly one active warehouse is the default** |
+| `created_at` / `updated_at` | timestamps | |
+
+**Seeded warehouse — only one**
+
+| Code | Name | is_default | is_active |
+| --- | --- | --- | --- |
+| `MAIN` | Main Warehouse | `true` | `true` |
+
+The example yards discussed for the future (Coconut Yard, Husk Yard, Copra Store, Shell
+Yard, Finished Goods Store) are **deliberately not seeded** — they are illustrations, not
+confirmed requirements. A test asserts they are absent.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -81,6 +155,31 @@ The business may describe shell sales as "Qty" or "KG" in the user interface, bu
 repoints any product using `QTY` to `NOS` and then removes `QTY` if nothing references it.
 It is idempotent and a no-op on a fresh database. An automated test asserts the unit master
 contains exactly `NOS` and `KG`.
+
+### D-2 — the "one default warehouse" rule is enforced in code, not by a constraint
+
+`CLAUDE.md` rule 5 asks for database constraints where appropriate. For "only one **active**
+warehouse may be the default", a database constraint is **not** appropriate here:
+
+- MariaDB has no partial/filtered unique index.
+- SQLite (used by the test suite) supports one, but with different syntax.
+
+A MariaDB-only constraint would leave the **test schema weaker than production**, which is
+exactly the setup that produces failures only in production. The invariant is therefore
+enforced in `App\Actions\Warehouses\SetDefaultWarehouse`, inside a database transaction
+that clears the old default before setting the new one, so no moment exists with two
+defaults. `is_default` is never written directly by a controller. Tests cover it.
+
+### D-3 — the default warehouse cannot be deactivated — ⚠️ **needs confirmation**
+
+The rule "only one **active** warehouse may be the default" does not say what should happen
+when someone deactivates the current default. An inactive default is a contradictory state.
+
+Rather than silently moving the default to some other warehouse — which would be inventing
+a business rule — deactivating the default is **refused** with a message telling the user to
+make another warehouse the default first.
+
+`TBD` — please confirm this is the behaviour you want.
 
 ## 3. Not yet designed — required future shape
 

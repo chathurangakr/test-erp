@@ -154,14 +154,33 @@ quantity and actual weight where available.
 
 ---
 
+## Master data rules
+
+These apply to every master table (products, units of measure, suppliers, customers,
+warehouses) and to every master added later:
+
+- **Codes are unique and normalised to uppercase.** Use the `App\Concerns\HasUppercaseCode`
+  trait on the model, never a controller, so seeders and the REST API get the same rule.
+- **No destroy route and no hard delete in the UI.** Master records are deactivated with
+  `is_active`, because historic transactions must keep referring to something meaningful.
+- **No balances, totals or stock columns on master tables.** A supplier has no payable, a
+  customer has no receivable, a product has no stock. Those are always derived from posted
+  transactions. `credit_limit` is an agreed *term*, not a balance.
+- **Exactly one active warehouse is the default.** Never write `is_default` directly; use
+  `App\Actions\Warehouses\SetDefaultWarehouse`, which maintains the invariant inside a
+  transaction. See `docs/DATA_MODEL.md` D-2.
+
+---
+
 ## Current scope
 
-Implemented: **Product Master** (products + units of measure) and project documentation.
+Implemented: project documentation, **Product Master** (products + units of measure),
+**Supplier Master**, **Customer Master**, **Warehouse Master**.
 
-**Not yet started — do not begin without instruction:** Supplier Master, Customer Master,
-Inventory ledger, Purchasing, Production, Finance, Sales, role-based permissions.
+**Not yet started — do not begin without instruction:** Inventory ledger, Purchasing,
+Production, Sales, Finance, Costing, role-based permissions, REST API.
 
-Authenticated users may currently access the Product Master. Role-based permissions come
+Authenticated users may currently access all master data. Role-based permissions come
 later.
 
 ---

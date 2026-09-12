@@ -27,12 +27,12 @@ through several stages, and sells both intermediate and finished products.
               │          ▼               ▼
               │     Customer      ┌──────────────────┐
               │   (direct sale)   │  7C / 9C / 10C   │ (KG)
-              │                   │  + waste (TBD)   │
+              │                   │  + waste (loss)  │
               │ Copra production  └──────────────────┘
               ▼
     ┌───────────────────┐
     │ Copra (KG)        │
-    │ Raw Shell (Qty+KG)│ ───────▶ Customer (sold by Qty or KG)
+    │ Raw Shell (NOS+KG)│ ───────▶ Customer (by count or KG)
     └───────────────────┘
 ```
 
@@ -62,12 +62,17 @@ See `DATA_MODEL.md` decision D-1.
 
 - **Product Master** — list, search, create, edit, view, activate/deactivate.
 - **Unit of Measure master** — seeded; no UI yet.
+- **Supplier Master** — one supplier table for every material bought. Full CRUD UI.
+- **Customer Master** — one customer table for every product sold. Full CRUD UI.
+- **Warehouse Master** — multi-warehouse, one seeded default (`MAIN`). Full CRUD UI.
+
+No master record can be deleted through the UI; all use active/inactive status.
 
 ### 4.2 Planned, not started
 
-Supplier Master, Customer Master, Inventory ledger, Purchasing, Production
-(dehusking / husk chipping / copra), Sales, Finance (double-entry), role-based
-permissions, REST API for the Flutter mobile application.
+Inventory ledger, Purchasing, Production (dehusking / husk chipping / copra), Sales,
+Finance (double-entry), Costing, role-based permissions, REST API for the Flutter mobile
+application.
 
 ## 5. Non-functional requirements
 
@@ -99,6 +104,8 @@ permissions, REST API for the Flutter mobile application.
 | 4 | Is **tax** (VAT/SVAT) in scope? | Finance |
 | 5 | What **roles and permissions** are required? | Permissions |
 | 6 | Is **partial/failed production output** possible (input consumed, no output)? | Production |
+| 11 | Should **deactivating the default warehouse** be refused, or should the default move automatically? Currently refused — see `DATA_MODEL.md` D-3. | Warehouse Master |
+| 12 | Do suppliers or customers need a **price list or product restriction**? Currently any party may trade any product. | Purchasing / Sales |
 | 7 | Are **inter-warehouse transfers** required? | Inventory ledger |
 | 8 | Is stock valued **per warehouse or globally**? | Inventory / Costing |
 | 9 | **Lot numbering scheme**; are lots mandatory for particular products? | Inventory ledger |
