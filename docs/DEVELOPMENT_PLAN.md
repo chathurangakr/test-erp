@@ -38,22 +38,31 @@ production, sales, finance, role-based permissions.
 **Deliberately not implemented:** customer balances, receivables, supplier payables, price
 lists, or any per-party product restriction.
 
-## Phase 3 — Inventory ledger (not started) ◀ NEXT
+## Phase 3 — Inventory engine ✅ COMPLETE
 
-The foundation for everything downstream. Must implement `INVENTORY_RULES.md` in full:
-movement table with all required fields, derived stock, negative-stock guard, dual UOM for
-Raw Shell, transactional writes.
+The foundation for everything downstream.
 
-**Unblocked.** Confirmed constraints: warehouse reference **required** on every movement;
-lot/batch reference **supported** (nullable); negative inventory **not allowed by default**,
-failing atomically.
+- [x] `inventory_lots`, `inventory_transactions`, `inventory_transaction_lines`
+- [x] Stock derived from the ledger — no stock column, no cache
+- [x] Weighted average cost at company/product level, BCMath throughout
+- [x] Negative stock rejected atomically, under a `FOR UPDATE` product lock
+- [x] Warehouse transfers — value-neutral, atomic, same-warehouse and inactive rejected
+- [x] Reversals — new opposite transaction, single-use, never edits the original
+- [x] Dual UOM (shell NOS + KG) with no fixed conversion
+- [x] Posted transactions immutable at the model level
+- [x] Read-only Stock on Hand / Stock Ledger / Lots screens
+- [x] 46 inventory tests
 
-**Still open:** inter-warehouse transfers, per-warehouse vs global valuation, lot numbering
-scheme.
+**Deliberately not implemented:** posting UI, transfer UI, manual lot creation UI,
+financial journals, joint-product cost allocation.
 
-## Phase 4 — Purchasing (not started)
+## Phase 4 — Purchasing (not started) ◀ NEXT
 
-Purchase of Whole Coconut and direct purchase of Raw Husk. Posts inventory movements.
+Purchase of Whole Coconut and direct purchase of Raw Husk.
+
+**Must post through `App\Actions\Inventory\PostInventoryTransaction`** — never write to
+the ledger directly. The engine already provides the `PURCHASE_RECEIPT` type, lot creation
+and weighted-average costing.
 
 ## Phase 5 — Production (not started)
 
@@ -93,6 +102,9 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 | Rule | Source |
 | --- | --- |
 | Stock derived from ledger, never a stock column | `INVENTORY_RULES.md` §1 |
+| All inventory written via `PostInventoryTransaction` | `INVENTORY_RULES.md` §13 |
+| Posted inventory is immutable; correct by reversal | `INVENTORY_RULES.md` §10, §12 |
+| Decimal-safe arithmetic via `DecimalMath` (BCMath) | `INVENTORY_RULES.md` §8 |
 | Debits = Credits on every journal | `ACCOUNTING_RULES.md` §2 |
 | `decimal` for money/quantities, never float | `CLAUDE.md` |
 | Transactions for inventory/production/accounting | `CLAUDE.md` |

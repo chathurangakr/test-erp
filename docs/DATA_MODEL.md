@@ -1,7 +1,7 @@
 # Data Model — Coconut Factory ERP
 
-> **Status:** Product Master and Phase 2 master data (suppliers, customers, warehouses)
-> implemented. All transactional entities are `TBD` / not started.
+> **Status:** Master data (Phases 1-2) and the inventory engine (Phase 3) implemented.
+> Business documents — purchasing, sales, production, finance — are not started.
 
 ## 1. Implemented tables
 
@@ -137,6 +137,62 @@ The example yards discussed for the future (Coconut Yard, Husk Yard, Copra Store
 Yard, Finished Goods Store) are **deliberately not seeded** — they are illustrations, not
 confirmed requirements. A test asserts they are absent.
 
+
+### 1.6 `inventory_lots`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `lot_number` | string(50), **unique** | `LOT-YYYYMMDD-000001`; no business meaning |
+| `product_id` | FK → `products.id` | `restrictOnDelete`; a lot belongs to ONE product |
+| `supplier_lot_number` | string(100), nullable | the supplier's own batch reference |
+| `source_type` / `source_id` | string(100) / bigint, nullable | originating document |
+| `manufactured_at` / `received_at` | date, nullable | |
+| `notes` | text, nullable | |
+| `is_active` | boolean, default `true` | stock cannot be received into an inactive lot |
+| `created_at` / `updated_at` | timestamps | |
+
+### 1.7 `inventory_transactions` (header)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `reference` | string(50), **unique** | `INV-YYYYMMDD-000001` |
+| `transaction_type` | string(50) | `App\Enums\InventoryTransactionType` |
+| `transaction_date` | datetime | |
+| `source_type` / `source_id` | string(100) / bigint, nullable | originating document |
+| `reversal_of_id` | FK → self, nullable, **unique** | the unique index is what makes double reversal impossible |
+| `reversed_by_id` | FK → self, nullable | append-only audit pointer |
+| `notes` | text, nullable | |
+| `posted_by` | FK → `users.id`, nullable | |
+| `posted_at` | datetime | |
+| `created_at` / `updated_at` | timestamps | |
+
+**Immutable.** The model throws on `updating` and `deleting`; only `reversed_by_id` may be
+written after posting.
+
+### 1.8 `inventory_transaction_lines` (the ledger)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `inventory_transaction_id` | FK → `inventory_transactions.id` | `restrictOnDelete` |
+| `product_id` | FK → `products.id` | `restrictOnDelete` |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete`, **required** |
+| `lot_id` | FK → `inventory_lots.id`, **nullable** | `restrictOnDelete` |
+| `direction` | string(3) | `IN` / `OUT` — decides the sign |
+| `quantity` | **`decimal(20,3)`** | always positive |
+| `secondary_quantity` | **`decimal(20,3)`**, nullable | dual-UOM products only |
+| `unit_cost` | **`decimal(20,6)`** | weighted average at posting time for OUT |
+| `total_cost` | **`decimal(20,6)`** | |
+| `created_at` / `updated_at` | timestamps | |
+
+**Immutable**, like the header. Indexed on `(product_id, warehouse_id)` and
+`(product_id, warehouse_id, lot_id)` to serve the stock queries.
+
+**This table is the single source of truth for stock.** No stock column exists on any
+master table, and there is no cache.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -181,6 +237,30 @@ make another warehouse the default first.
 
 `TBD` — please confirm this is the behaviour you want.
 
+### I-1 — a reversal reuses the original line's unit cost — ⚠️ **needs confirmation**
+
+The general rule is that outgoing stock is valued at the current weighted average. A
+reversal is the exception: it reuses the **original line's** unit cost, so that it cancels
+the original exactly in both quantity and value.
+
+Reversing a receipt of 100 @ 10 after the average had drifted to 12 would otherwise remove
+1,200 of value when only 1,000 went in — corrupting the valuation silently.
+See `INVENTORY_RULES.md` §12.
+
+### I-2 — secondary quantity is informational — ⚠️ **needs confirmation**
+
+Secondary quantities (shell KG) are recorded "where known", so some movements carry `null`.
+The secondary balance is therefore not a reliable running total, and is **not** guarded
+against going negative. Only the primary quantity is strictly enforced.
+See `INVENTORY_RULES.md` §7.
+
+### I-3 — the weighted average is company-wide, not per warehouse
+
+Version 1 maintains one average per product across all warehouses. This is what makes a
+transfer value-neutral: both legs are costed at the same average, so moving stock between
+warehouses changes neither company value nor the average. The `PostInventoryTransaction`
+lock is taken on the **product** row for exactly this reason.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that
@@ -188,18 +268,15 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `warehouses` | **Multiple warehouses must be supported.** A single default `MAIN` / "Main Warehouse" is created in a later task. See `INVENTORY_RULES.md` §5. |
-| `inventory_movements` (ledger) | Must carry **a warehouse reference** and **an optional lot/batch reference**, plus every field in `INVENTORY_RULES.md` §3. |
-| `inventory_lots` | **Lot/batch traceability must be supported.** See `INVENTORY_RULES.md` §6. |
-| `suppliers`, `customers` | Not started |
-| `purchase_orders`, `sales_orders` | Not started |
+| `purchase_orders`, `sales_orders` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
 | `production_orders` (dehusking / chipping / copra) | Must record production **waste** that does not create inventory. See `BUSINESS_RULES.md` §5. |
 | `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |
 
 ## 4. Conventions
 
-- Money and measurable quantities use **`decimal`**, never float. (No such columns exist
-  yet — Product Master stores no quantities.)
+- Money and measurable quantities use **`decimal`**, never float. Quantities are
+  `decimal(20,3)` and costs `decimal(20,6)`; all arithmetic runs through
+  `App\Support\DecimalMath` (BCMath), never PHP floats.
 - Foreign keys are declared at the database level.
 - Business records are **not hard-deleted**; use `is_active`, or reversal for transactions.

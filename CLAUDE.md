@@ -87,6 +87,31 @@ There is no separate "Qty" unit — "Qty" is UI wording for a `NOS` count.
 
 ---
 
+## Inventory engine rules (Phase 3 — implemented)
+
+The inventory engine exists and is tested. These rules are permanent:
+
+- **All inventory is written through `App\Actions\Inventory\PostInventoryTransaction`.**
+  Never insert `inventory_transaction_lines` directly, and never put inventory arithmetic in
+  a controller. Purchasing, sales and production must all post through this action so the
+  locking, negative-stock and costing guarantees apply uniformly.
+- **Posted transactions and lines are immutable.** The models throw on update and delete.
+  The only permitted post-write is the `reversed_by_id` audit pointer. Correct mistakes with
+  `ReverseInventoryTransaction`, never by editing.
+- **Use `App\Support\DecimalMath` (BCMath) for every quantity and cost calculation.**
+  PHP floats must never appear in the costing path. Quantities are `decimal(20,3)`, costs
+  `decimal(20,6)`.
+- **Quantities are always stored positive.** `direction` (`IN`/`OUT`) alone decides the sign.
+- **Weighted average cost is company-wide per product, not per warehouse.** This is what
+  makes transfers value-neutral. Lock the *product* row when posting.
+- **Outgoing stock is never priced by the caller** — it is valued at the weighted average in
+  force at posting time. The one exception is an internal system cost used by transfers and
+  reversals.
+- **Stock is always derived from the ledger.** No stock column on any table, and no cache.
+  If a cache is ever added it must be documented as non-authoritative and rebuildable.
+
+---
+
 ## Critical accounting rules
 
 - Use **double-entry accounting**.
@@ -175,13 +200,17 @@ warehouses) and to every master added later:
 ## Current scope
 
 Implemented: project documentation, **Product Master** (products + units of measure),
-**Supplier Master**, **Customer Master**, **Warehouse Master**.
+**Supplier Master**, **Customer Master**, **Warehouse Master**, and the
+**Inventory engine** (ledger, lots, weighted-average costing, transfers, reversals) with
+read-only Stock on Hand / Stock Ledger / Lots screens.
 
-**Not yet started — do not begin without instruction:** Inventory ledger, Purchasing,
-Production, Sales, Finance, Costing, role-based permissions, REST API.
+**Not yet started — do not begin without instruction:** Purchasing, Production, Sales,
+Finance, Costing, role-based permissions, REST API.
 
-Authenticated users may currently access all master data. Role-based permissions come
-later.
+The inventory engine has no posting UI by design — business documents will drive it.
+
+Authenticated users may currently access all master data and view inventory. Role-based
+permissions come later.
 
 ---
 

@@ -65,14 +65,19 @@ See `DATA_MODEL.md` decision D-1.
 - **Supplier Master** — one supplier table for every material bought. Full CRUD UI.
 - **Customer Master** — one customer table for every product sold. Full CRUD UI.
 - **Warehouse Master** — multi-warehouse, one seeded default (`MAIN`). Full CRUD UI.
+- **Inventory engine** — ledger, lots, weighted-average costing, transfers, reversals, and
+  three read-only screens (Stock on Hand, Stock Ledger, Lots).
 
-No master record can be deleted through the UI; all use active/inactive status.
+No master record can be deleted through the UI; all use active/inactive status. Posted
+inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Inventory ledger, Purchasing, Production (dehusking / husk chipping / copra), Sales,
-Finance (double-entry), Costing, role-based permissions, REST API for the Flutter mobile
-application.
+Purchasing, Production (dehusking / husk chipping / copra), Sales, Finance (double-entry),
+Costing, role-based permissions, REST API for the Flutter mobile application.
+
+The inventory engine exists but **no business document calls it yet**. Real inventory is
+zero, and nothing seeds stock.
 
 ## 5. Non-functional requirements
 
@@ -93,6 +98,10 @@ application.
 | 3 | **Lot/batch** tracking | **Must be supported** by the architecture. Movements may reference a lot/batch (nullable). Not implemented yet. |
 | 4 | **Negative inventory** | **Not allowed by default.** A transaction taking stock below zero must fail atomically. |
 | 5 | `QTY` vs `NOS` for shell | **No separate `QTY` unit.** Shell uses Primary `NOS`, Secondary `KG`. |
+| 6 | Stock scope | Tracked per **product + warehouse**, and per **product + warehouse + lot** where lots apply. |
+| 7 | Costing scope | **Weighted average at company/product level**, not per warehouse — so transfers are value-neutral. |
+| 8 | Transfer behaviour | OUT + IN at the **same unit cost**, atomic; same-warehouse and inactive-warehouse transfers rejected. |
+| 9 | Posted inventory | **Immutable.** Corrections are reversals, never edits. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -110,3 +119,7 @@ application.
 | 8 | Is stock valued **per warehouse or globally**? | Inventory / Costing |
 | 9 | **Lot numbering scheme**; are lots mandatory for particular products? | Inventory ledger |
 | 10 | Should production **waste carry an allocated cost**? | Costing |
+| 13 | Decision **I-1** — should a reversal use the **original** unit cost (current behaviour) or the **current** weighted average? | Inventory |
+| 14 | Decision **I-2** — should secondary quantity (shell KG) be **mandatory** for dual-UOM products? Currently optional and not negative-guarded. | Inventory |
+| 15 | Should posting be **blocked for inactive products**? Currently allowed, so discontinued stock can still be issued out. | Inventory |
+| 16 | Are inter-warehouse **transfer documents/screens** required, or is the service sufficient? | Inventory |

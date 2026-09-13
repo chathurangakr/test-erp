@@ -1,144 +1,243 @@
 # Inventory Rules — Coconut Factory ERP
 
-> **Status:** Rules confirmed. Implementation **not started** — the inventory ledger is a
-> future task. This document defines the contract that implementation must satisfy.
+> **Status:** ✅ **IMPLEMENTED** (Phase 3). The inventory engine exists and is tested.
+> The business documents that will *call* it — purchasing, sales, production — are not
+> built yet.
 
 ## 1. The fundamental rule
 
 **Stock must be derived from inventory transactions.**
 
-On-hand quantity is *always* the sum of the movements in the inventory ledger. It is never
-read from a stored total.
+On-hand quantity is *always* computed from `inventory_transaction_lines`. It is never read
+from a stored total.
+
+**Implementation:** `App\Services\Inventory\StockQueryService`.
 
 ## 2. Prohibited
 
 **Never directly maintain inventory by simply changing a product stock field.**
 
-Specifically:
-
-- There must be **no `current_stock` column on `products`** (enforced by an automated test).
-- No `UPDATE products SET stock = ...` anywhere.
-- No cached balance may be treated as the source of truth. A performance snapshot table is
-  permitted **only** if it is rebuildable from the ledger and never authoritative.
+- There is **no `current_stock` column on `products`** (or on `warehouses`) — enforced by
+  an automated test.
+- No `UPDATE products SET stock = ...` exists anywhere.
+- **No cache.** Every figure on every screen is computed from the ledger on request. If a
+  performance cache is ever added it must be documented as non-authoritative and
+  rebuildable from the ledger — none exists today.
 
 **Why:** a stored total has no history. If it drifts, there is no way to discover when or
 why. A ledger can always be recomputed and audited.
 
-## 3. Required fields on every stock movement
+## 3. How stock is calculated
 
-Every stock movement must record **at minimum**:
+Every line stores a **positive** quantity plus a `direction` of `IN` or `OUT`. Direction
+alone decides the sign.
 
-| Field | Notes |
+```
+quantity = SUM(IN quantity)   − SUM(OUT quantity)
+value    = SUM(IN total_cost) − SUM(OUT total_cost)
+```
+
+Because every OUT line records the weighted-average unit cost **in force at the moment it
+was posted**, value is a simple signed sum — no ledger replay is needed, and the remaining
+value is always correct.
+
+Stock is queryable at four grains:
+
+| Grain | Method |
 | --- | --- |
-| product | FK to `products` |
-| warehouse | FK to `warehouses` — **required on every movement** (§5) |
-| quantity | `decimal`, never float |
-| UOM | FK to `units_of_measure` |
-| movement direction / type | in / out (and movement classification) |
-| transaction / source type | e.g. purchase, sale, production input, production output |
-| source record ID | the document that caused the movement |
-| date / time | when the movement occurred |
-| user | who caused it |
-| cost | where relevant |
-| lot / batch | nullable FK — **must be supported** (§6) |
+| Product (company-wide) | `quantityForProduct()` |
+| Product + warehouse | `quantityForProductInWarehouse()` |
+| Lot | `quantityForLot()` |
+| Product + warehouse + lot | `quantityForProductWarehouseLot()` |
 
-## 4. Negative inventory — ✅ **DECIDED**
+## 4. Required fields on every stock movement
 
-**Negative inventory is NOT allowed by default.**
+| Field | Column | Notes |
+| --- | --- | --- |
+| product | `product_id` | FK, restrict on delete |
+| warehouse | `warehouse_id` | FK, **required on every line** |
+| quantity | `quantity` | `decimal(20,3)`, always positive |
+| secondary quantity | `secondary_quantity` | `decimal(20,3)`, nullable — §7 |
+| UOM | *(from the product)* | Primary/secondary UOM live on `products` |
+| direction | `direction` | `IN` / `OUT` |
+| transaction type | `inventory_transactions.transaction_type` | §11 |
+| source record | `source_type` / `source_id` | Nullable; set by the calling document |
+| date / time | `inventory_transactions.transaction_date` | |
+| user | `inventory_transactions.posted_by` | FK to `users` |
+| cost | `unit_cost`, `total_cost` | `decimal(20,6)` |
+| lot / batch | `lot_id` | Nullable FK — §6 |
 
-A transaction that would take available stock below zero **must fail atomically** — the
-entire transaction is rolled back, leaving no partial movements behind.
+## 5. Negative inventory — prohibited
 
-Requirements for the future implementation:
+**Negative inventory is NOT allowed.**
 
-- The check runs **inside** the same database transaction that writes the movements, so a
-  concurrent transaction cannot slip past it.
-- Failure rolls back **every** movement in the business event, not just the offending line.
-- The guard is a deliberate, **configurable** rule (a future setting may permit negative
-  stock for specific cases) — never an accident of ordering.
+Any operation that would take available stock below zero **fails atomically** — the entire
+transaction is rolled back, leaving no partial movements.
 
-`TBD` — the exact configuration surface that would permit negative stock, and for which
-products or warehouses. Default remains "not allowed".
+**Implementation:** inside `PostInventoryTransaction`, within the same database transaction
+that writes the lines:
 
-## 5. Warehouses — ✅ **DECIDED**
+1. Every product involved is locked `FOR UPDATE` (ordered by id, to avoid deadlocks), so
+   two concurrent posts cannot both read the same pre-post balance.
+2. Lines are walked **in order**, maintaining a running balance seeded from the ledger.
+3. A line that would drive **product + warehouse** — or **product + warehouse + lot** —
+   below zero raises a validation error, aborting everything.
 
-**The ERP must support multiple warehouses.**
+The guard is checked per warehouse *and* per lot, so a lot cannot go negative even when the
+warehouse holds other unlotted stock of the same product.
 
-- Every inventory transaction **requires a warehouse reference**.
-- **Version 1** operates with a single default warehouse, created in a later task:
+`TBD` — the configuration surface that would ever permit negative stock. There is none
+today, and the default is "not allowed".
 
-  | Code | Name |
-  | --- | --- |
-  | `MAIN` | Main Warehouse |
+## 6. Lots / batches
 
-- The schema must **not** assume a single warehouse. Multi-warehouse support is structural,
-  not a later migration.
+- A lot belongs to **exactly one product**; using it for another product's movement is
+  rejected.
+- The lot reference on a movement is **nullable** — not every product needs lots.
+- **Internal numbering: `LOT-YYYYMMDD-000001`**, a daily sequence generated by
+  `GenerateInventoryReference`.
+- The lot number **encodes no business meaning** — nothing about purchase or production.
+  The origin lives in `source_type` / `source_id`, so a document can be re-classified
+  without the permanent identifier becoming misleading.
+- A supplier's own batch reference is stored **separately** in `supplier_lot_number`.
+- Stock cannot be received **into** an inactive lot; existing lot stock can still be issued
+  out.
 
-Possible future warehouses — **examples only, not to be seeded**: Coconut Yard, Husk Yard,
-Copra Store, Shell Yard, Finished Goods Store.
+## 7. Dual unit of measure (secondary quantity)
 
-Warehouse Master is **not implemented in the current task**.
+Raw Coconut Shell is stocked in `NOS` and also sold by `KG`.
 
-`TBD` — whether inter-warehouse transfers are required, and whether stock is valued per
-warehouse or globally.
+- A movement may carry a `secondary_quantity` alongside the primary quantity.
+- **No fixed conversion is ever applied.** Actual weights are entered, because shell
+  weights vary.
+- For a product **without** a secondary UOM, `secondary_quantity` must be `null` — supplying
+  one is rejected.
+- Quantities are validated against the UOM's `decimal_places` (NOS = 0, KG = 3), so a
+  fractional coconut is rejected.
 
-## 6. Lot / batch traceability — ✅ **DECIDED**
+**Decision I-2 — secondary quantity is informational.** Because secondary quantities are
+recorded only "where known", some movements legitimately carry `null` KG. The secondary
+balance is therefore **not** a reliable running total and is **deliberately not guarded
+against going negative**. Only the primary quantity is strictly enforced.
+`TBD` — confirm this is acceptable, or decide that KG must always be captured for shell.
 
-**The inventory architecture must support lot/batch traceability.**
+## 8. Costing — Weighted Average Cost
 
-Future inventory transactions **may reference a lot/batch**. Lot tracking is expected to be
-used especially for:
+**Version 1 maintains weighted average at company/product level, not per warehouse.**
 
-- coconut purchases
-- raw husk purchases
-- dehusking production
-- husk chipping production
-- copra production
-- shell outputs
+**Incoming receipt:**
 
-The lot/batch reference is **nullable** on a movement — not every movement will carry one —
-but the schema must accommodate it from the start rather than retrofitting it later.
+```
+new average = (current value + incoming value) / (current quantity + incoming quantity)
+```
 
-Inventory lots are **not implemented in the current task**.
+**Outgoing movement:** valued at the weighted average in force at the moment of posting.
+It reduces quantity and value but does **not** re-derive a purchase price. Callers may not
+price an OUT line — supplying `unit_cost` on an outgoing line is rejected.
 
-`TBD` — lot numbering scheme, whether lots are mandatory per product, and expiry handling
-(if any).
+**Zero quantity is handled safely:** the average of nothing is `0`, never a division error.
 
-## 7. Dual unit of measure (Raw Coconut Shell)
+**All arithmetic uses BCMath via `App\Support\DecimalMath`.** PHP floating point is never
+used for quantities or costs anywhere in the costing path.
 
-Raw Coconut Shell is stocked in `NOS` and may also be sold by `KG`. The user interface may
-label the `NOS` count as "Qty"; the inventory unit is `NOS`.
+Joint-product cost allocation (dehusking, chipping, copra) remains **`TBD`** and is not
+implemented.
 
-- Inventory must preserve **both actual quantity and actual weight where available**.
-- **No fixed NOS↔KG conversion may be applied**, because shell weights vary.
-- A movement may therefore carry a secondary quantity alongside the primary quantity.
+## 9. Warehouse transfers
 
-`TBD` — whether other products will ever need dual UOM.
+A transfer posts **one OUT from the source and one IN to the destination**, in a single
+atomic transaction, with:
 
-## 8. Costing
+- the same product
+- the same lot, where applicable
+- **the same unit cost on both legs** — the company average at the moment of transfer
 
-- Intended method: **Weighted Average Cost**.
-- Cost is recorded on movements where relevant.
-- Joint-product cost allocation (dehusking, chipping, copra) is **`TBD`** and must not be
-  implemented yet.
+Consequently a transfer leaves company **quantity**, company **value** and the **weighted
+average** all unchanged. Only the per-warehouse split moves. Tests assert all three.
 
-## 9. Transactional integrity
+Rejected: transferring to the **same** warehouse, and any transfer involving an **inactive**
+warehouse. Posting to an inactive warehouse is rejected generally, not only for transfers.
 
-- All stock movements for one business event must be written **inside a single database
-  transaction**. A dehusking that decreased Whole Coconut but failed before increasing
-  Dehusked Coconut would corrupt stock.
-- Movements are **never edited or deleted**. Corrections are made by posting a reversing
-  movement.
+**Implementation:** `App\Actions\Inventory\TransferStock`. There is no transfer UI yet.
 
-## 10. Remaining open questions (`TBD`)
+## 10. Transaction immutability
+
+**Posted inventory transactions and lines are immutable.**
+
+- The models refuse `updating` and `deleting` outright by throwing, so the rule holds on
+  every code path — controller, console command, tinker or a future REST API — not merely
+  because no route exists.
+- The **single** permitted write to a posted header is the `reversed_by_id` audit pointer,
+  an append-only link to its reversal.
+- The inventory module registers **read-only GET routes only**. A test asserts every
+  `inventory/*` route is GET and that no `destroy` route exists.
+
+## 11. Transaction types
+
+`App\Enums\InventoryTransactionType` — extensible:
+
+`OPENING_BALANCE`, `PURCHASE_RECEIPT`, `SALES_ISSUE`, `PRODUCTION_CONSUMPTION`,
+`PRODUCTION_OUTPUT`, `TRANSFER`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`, `REVERSAL`.
+
+The engine supports these types; the business documents behind them are separate, later
+modules.
+
+Transaction references follow **`INV-YYYYMMDD-000001`**, a daily sequence. Like lot numbers,
+the reference encodes no business meaning.
+
+## 12. Reversal
+
+A reversal is a **new transaction**, never an edit.
+
+- Every original line is mirrored with the **opposite direction**.
+- `reversal_of_id` points at the original; the original's `reversed_by_id` points back.
+- **A transaction can be reversed at most once** — enforced in the action under a row lock
+  *and* by a unique index on `reversal_of_id`.
+- **A reversal cannot itself be reversed.**
+- **A reversal that would cause negative stock is rejected**, using the ordinary guard. If
+  stock has already been issued onward, the receipt that brought it in cannot be reversed.
+- The original transaction and its lines are **never modified or deleted**.
+
+**Decision I-1 — a reversal reuses the original line's unit cost**, rather than the current
+weighted average.
+
+A reversal is an undo of one specific posting. If a receipt of 100 @ 10 were reversed after
+the average had moved to 12, costing the reversal at 12 would remove 1,200 of value when
+only 1,000 ever went in — silently corrupting the valuation. Reusing the original cost makes
+the reversal cancel the original *exactly*, in both quantity and value.
+
+This is a deliberate exception to the general "OUT uses current average" rule in §8.
+`TBD` — please confirm.
+
+## 13. Posting is the only way in
+
+Inventory is written **only** through `App\Actions\Inventory\PostInventoryTransaction`.
+Controllers never perform inventory arithmetic. Every future module — purchasing, sales,
+production — must post through this action so the guarantees above apply uniformly.
+
+The posting sequence:
+
+1. Validate products, warehouses (active), quantities and UOM precision.
+2. Validate secondary quantity against the product's secondary UOM.
+3. Validate lot ownership and lot status.
+4. Open a database transaction.
+5. Lock the product rows `FOR UPDATE`.
+6. Compute current stock and value from the ledger.
+7. Reject any OUT that would create negative stock.
+8. Determine weighted-average cost for outgoing lines.
+9. Create the header.
+10. Create the lines.
+11. Commit — all lines or none.
+
+## 14. Remaining open questions (`TBD`)
 
 | # | Question |
 | --- | --- |
-| 1 | Are inter-warehouse transfers required? |
-| 2 | Is stock valued per warehouse or globally? |
-| 3 | Lot numbering scheme; are lots mandatory for particular products? |
-| 4 | The configuration surface that would permit negative stock, if ever |
+| 1 | Are inter-warehouse transfer **documents/screens** required, or is the service enough? |
+| 2 | Should stock ever be **valued per warehouse** rather than company-wide? |
+| 3 | Should lots be **mandatory** for particular products? |
+| 4 | Any configuration that would permit negative stock? |
 | 5 | Joint-product cost allocation method (see `ACCOUNTING_RULES.md`) |
-
-**Resolved:** warehouse support (§5), lot/batch support (§6), negative inventory (§4).
-Husk-chipping waste is resolved in `BUSINESS_RULES.md` §5 — waste creates **no** inventory.
+| 6 | Decision **I-1** — reversal cost basis (original cost vs current average) |
+| 7 | Decision **I-2** — should secondary quantity be mandatory for dual-UOM products? |
+| 8 | Should posting to an **inactive product** be blocked? Currently allowed, so remaining stock of a discontinued product can still be issued out. |

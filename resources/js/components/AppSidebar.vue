@@ -2,10 +2,13 @@
 import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
+    Boxes,
     Building2,
     FolderGit2,
     LayoutGrid,
+    Layers,
     Package,
+    ScrollText,
     Truck,
     Users,
 } from '@lucide/vue';
@@ -24,6 +27,9 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as customersIndex } from '@/routes/customers';
+import { index as ledgerIndex } from '@/routes/inventory/ledger';
+import { index as lotsIndex } from '@/routes/inventory/lots';
+import { index as stockIndex } from '@/routes/inventory/stock';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -35,6 +41,9 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+];
+
+const masterNavItems: NavItem[] = [
     {
         title: 'Products',
         href: productsIndex(),
@@ -54,6 +63,24 @@ const mainNavItems: NavItem[] = [
         title: 'Warehouses',
         href: warehousesIndex(),
         icon: Building2,
+    },
+];
+
+const inventoryNavItems: NavItem[] = [
+    {
+        title: 'Stock on Hand',
+        href: stockIndex(),
+        icon: Boxes,
+    },
+    {
+        title: 'Stock Ledger',
+        href: ledgerIndex(),
+        icon: ScrollText,
+    },
+    {
+        title: 'Lots',
+        href: lotsIndex(),
+        icon: Layers,
     },
 ];
 
@@ -87,6 +114,8 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain :items="masterNavItems" label="Master data" />
+            <NavMain :items="inventoryNavItems" label="Inventory" />
         </SidebarContent>
 
         <SidebarFooter>
