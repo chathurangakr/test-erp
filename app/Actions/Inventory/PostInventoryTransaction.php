@@ -64,7 +64,7 @@ class PostInventoryTransaction
             $warehouses = $this->loadWarehouses($lines);
             $lots = $this->loadLots($lines);
 
-            $this->validateLines($lines, $products, $warehouses, $lots);
+            $this->validateLines($type, $lines, $products, $warehouses, $lots);
 
             $costed = $this->costAndCheckLines($lines, $products);
 
@@ -162,8 +162,13 @@ class PostInventoryTransaction
      * @param  array<int, Warehouse>  $warehouses
      * @param  array<int, InventoryLot>  $lots
      */
-    private function validateLines(array $lines, array $products, array $warehouses, array $lots): void
-    {
+    private function validateLines(
+        InventoryTransactionType $type,
+        array $lines,
+        array $products,
+        array $warehouses,
+        array $lots,
+    ): void {
         foreach ($lines as $index => $line) {
             $field = "lines.{$index}";
 
@@ -186,6 +191,17 @@ class PostInventoryTransaction
             if (! $warehouse->is_active) {
                 throw ValidationException::withMessages([
                     $field.'.warehouse_id' => __('Stock cannot be posted to an inactive warehouse.'),
+                ]);
+            }
+
+            // Inactive products may be issued OUT so existing stock can be cleared, but
+            // must never receive NEW stock. Transfers and reversals are exempt: they move
+            // or undo stock that already exists. See docs/INVENTORY_RULES.md §14.
+            if ($line->direction->isIn() && $type->bringsNewStock() && ! $product->is_active) {
+                throw ValidationException::withMessages([
+                    $field.'.product_id' => __('Product :product is inactive and cannot receive new stock.', [
+                        'product' => $product->code,
+                    ]),
                 ]);
             }
 

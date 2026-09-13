@@ -6,10 +6,17 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/suppliers';
+import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
+import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import type { Supplier } from '@/types';
 
 defineProps<{
     supplier: Supplier;
+    purchaseHistory: {
+        purchase_orders: { id: number; po_number: string; order_date: string | null; status_label: string }[];
+        goods_receipts: { id: number; grn_number: string; receipt_date: string | null; status_label: string }[];
+        total_received_value: string;
+    };
 }>();
 
 defineOptions({
@@ -126,6 +133,71 @@ function formatDate(value: string | null): string {
                     <dd class="mt-1 text-sm">{{ formatDate(supplier.updated_at) }}</dd>
                 </div>
             </dl>
+        </div>
+
+        <!-- Purchase history -->
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-medium">Purchase history</h3>
+                <p class="text-sm">
+                    Total received value:
+                    <span class="ml-1 font-mono font-medium">
+                        {{ purchaseHistory.total_received_value }}
+                    </span>
+                </p>
+            </div>
+
+            <div class="mt-4 grid gap-6 sm:grid-cols-2">
+                <div>
+                    <p class="text-muted-foreground text-xs font-medium">Recent purchase orders</p>
+                    <ul v-if="purchaseHistory.purchase_orders.length" class="mt-2 space-y-1.5">
+                        <li
+                            v-for="po in purchaseHistory.purchase_orders"
+                            :key="po.id"
+                            class="flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                            <Link
+                                :href="`${purchaseOrdersIndex().url}/${po.id}`"
+                                class="font-mono hover:underline"
+                            >
+                                {{ po.po_number }}
+                            </Link>
+                            <span class="text-muted-foreground">{{ po.order_date }}</span>
+                            <Badge variant="secondary">{{ po.status_label }}</Badge>
+                        </li>
+                    </ul>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                </div>
+
+                <div>
+                    <p class="text-muted-foreground text-xs font-medium">Recent goods receipts</p>
+                    <ul v-if="purchaseHistory.goods_receipts.length" class="mt-2 space-y-1.5">
+                        <li
+                            v-for="grn in purchaseHistory.goods_receipts"
+                            :key="grn.id"
+                            class="flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                            <Link
+                                :href="`${goodsReceiptsIndex().url}/${grn.id}`"
+                                class="font-mono hover:underline"
+                            >
+                                {{ grn.grn_number }}
+                            </Link>
+                            <span class="text-muted-foreground">{{ grn.receipt_date }}</span>
+                            <Badge variant="secondary">{{ grn.status_label }}</Badge>
+                        </li>
+                    </ul>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                </div>
+            </div>
+
+            <p class="text-muted-foreground mt-4 text-xs">
+                Total received value counts posted receipts only. Amounts owed to this
+                supplier are not shown — payables belong to the finance module, which is not
+                yet built.
+            </p>
         </div>
     </div>
 </template>

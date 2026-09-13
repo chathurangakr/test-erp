@@ -1,8 +1,8 @@
 # Inventory Rules — Coconut Factory ERP
 
-> **Status:** ✅ **IMPLEMENTED** (Phase 3). The inventory engine exists and is tested.
-> The business documents that will *call* it — purchasing, sales, production — are not
-> built yet.
+> **Status:** ✅ **IMPLEMENTED** (Phase 3), and now driven by Purchasing (Phase 4).
+> Goods receipts post `PURCHASE_RECEIPT` movements through the engine. Sales and production
+> are not built yet.
 
 ## 1. The fundamental rule
 
@@ -115,15 +115,16 @@ Raw Coconut Shell is stocked in `NOS` and also sold by `KG`.
 - Quantities are validated against the UOM's `decimal_places` (NOS = 0, KG = 3), so a
   fractional coconut is rejected.
 
-**Decision I-2 — secondary quantity is informational.** Because secondary quantities are
+**Decision I-2 — secondary quantity is informational. ✅ CONFIRMED.** Because secondary quantities are
 recorded only "where known", some movements legitimately carry `null` KG. The secondary
 balance is therefore **not** a reliable running total and is **deliberately not guarded
-against going negative**. Only the primary quantity is strictly enforced.
-`TBD` — confirm this is acceptable, or decide that KG must always be captured for shell.
+against going negative**. The primary quantity is authoritative for negative-stock
+prevention, and **no fixed NOS↔KG conversion exists**.
 
 ## 8. Costing — Weighted Average Cost
 
 **Version 1 maintains weighted average at company/product level, not per warehouse.**
+✅ **CONFIRMED** by the business.
 
 **Incoming receipt:**
 
@@ -199,15 +200,15 @@ A reversal is a **new transaction**, never an edit.
 - The original transaction and its lines are **never modified or deleted**.
 
 **Decision I-1 — a reversal reuses the original line's unit cost**, rather than the current
-weighted average.
+weighted average. ✅ **CONFIRMED** by the business.
 
 A reversal is an undo of one specific posting. If a receipt of 100 @ 10 were reversed after
 the average had moved to 12, costing the reversal at 12 would remove 1,200 of value when
 only 1,000 ever went in — silently corrupting the valuation. Reusing the original cost makes
 the reversal cancel the original *exactly*, in both quantity and value.
 
-This is a deliberate exception to the general "OUT uses current average" rule in §8.
-`TBD` — please confirm.
+This is a deliberate exception to the general "OUT uses current average" rule in §8, and is
+now a permanent rule.
 
 ## 13. Posting is the only way in
 
@@ -229,7 +230,34 @@ The posting sequence:
 10. Create the lines.
 11. Commit — all lines or none.
 
-## 14. Remaining open questions (`TBD`)
+## 14. Inactive products — ✅ **CONFIRMED**
+
+**An inactive product may be issued OUT, but must never receive NEW stock.**
+
+Deactivating a product means "stop buying and making this", not "freeze whatever is left in
+the warehouse". Remaining stock must still be sellable and clearable, so:
+
+| Movement | Inactive product |
+| --- | --- |
+| `PURCHASE_RECEIPT` (IN) | ❌ **Rejected** |
+| `PRODUCTION_OUTPUT` (IN) | ❌ **Rejected** |
+| `OPENING_BALANCE` (IN) | ❌ **Rejected** |
+| `ADJUSTMENT_IN` (IN) | ❌ **Rejected** |
+| `SALES_ISSUE`, `PRODUCTION_CONSUMPTION`, `ADJUSTMENT_OUT` (OUT) | ✅ Allowed |
+| `TRANSFER` (either direction) | ✅ Allowed |
+| `REVERSAL` (either direction) | ✅ Allowed |
+
+**Why transfers and reversals are exempt:** neither introduces new stock. A transfer
+relocates stock that already exists — blocking it would strand a discontinued product in one
+warehouse. A reversal undoes a posting that already happened — blocking it would make an
+error uncorrectable, which contradicts §12.
+
+**Implementation:** `InventoryTransactionType::bringsNewStock()` marks the four types that
+introduce stock; `PostInventoryTransaction` rejects an IN line for an inactive product only
+for those types. Goods receipt posting checks this too, to give a clearer message before
+doing lot work that would be rolled back. Tests cover both the allowed and rejected paths.
+
+## 15. Remaining open questions (`TBD`)
 
 | # | Question |
 | --- | --- |
@@ -238,6 +266,8 @@ The posting sequence:
 | 3 | Should lots be **mandatory** for particular products? |
 | 4 | Any configuration that would permit negative stock? |
 | 5 | Joint-product cost allocation method (see `ACCOUNTING_RULES.md`) |
-| 6 | Decision **I-1** — reversal cost basis (original cost vs current average) |
-| 7 | Decision **I-2** — should secondary quantity be mandatory for dual-UOM products? |
-| 8 | Should posting to an **inactive product** be blocked? Currently allowed, so remaining stock of a discontinued product can still be issued out. |
+| 6 | Should landed costs ever be allocated on a basis other than material value (e.g. weight, volume) for specific cost types? |
+| 7 | When total material value is zero but landed costs exist, posting is refused. Should free-goods receipts be supported some other way? |
+
+**Confirmed and closed:** I-1 (reversal cost basis), I-2 (secondary quantity informational),
+I-3 (company-wide weighted average), and the inactive-product rule (§15).

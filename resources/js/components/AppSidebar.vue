@@ -3,12 +3,14 @@ import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
     Boxes,
+    ClipboardList,
     Building2,
     FolderGit2,
     LayoutGrid,
     Layers,
     Package,
     ScrollText,
+    ShoppingCart,
     Truck,
     Users,
 } from '@lucide/vue';
@@ -30,6 +32,8 @@ import { index as customersIndex } from '@/routes/customers';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import { index as stockIndex } from '@/routes/inventory/stock';
+import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
+import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -84,6 +88,19 @@ const inventoryNavItems: NavItem[] = [
     },
 ];
 
+const purchasingNavItems: NavItem[] = [
+    {
+        title: 'Purchase Orders',
+        href: purchaseOrdersIndex(),
+        icon: ClipboardList,
+    },
+    {
+        title: 'Goods Receipts',
+        href: goodsReceiptsIndex(),
+        icon: ShoppingCart,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -116,6 +133,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="mainNavItems" />
             <NavMain :items="masterNavItems" label="Master data" />
             <NavMain :items="inventoryNavItems" label="Inventory" />
+            <NavMain :items="purchasingNavItems" label="Purchasing" />
         </SidebarContent>
 
         <SidebarFooter>

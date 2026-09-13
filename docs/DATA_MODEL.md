@@ -1,7 +1,7 @@
 # Data Model — Coconut Factory ERP
 
-> **Status:** Master data (Phases 1-2) and the inventory engine (Phase 3) implemented.
-> Business documents — purchasing, sales, production, finance — are not started.
+> **Status:** Master data (Phases 1-2), the inventory engine (Phase 3) and Purchasing
+> (Phase 4) implemented. Sales, production and finance are not started.
 
 ## 1. Implemented tables
 
@@ -193,6 +193,88 @@ written after posting.
 **This table is the single source of truth for stock.** No stock column exists on any
 master table, and there is no cache.
 
+
+### 1.9 `purchase_orders`
+
+An intention to buy. Creates **no inventory**.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `po_number` | string(50), **unique** | `PO-YYYYMMDD-000001` |
+| `supplier_id` | FK → `suppliers.id` | `restrictOnDelete` |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
+| `order_date` | date | |
+| `expected_date` | date, nullable | |
+| `status` | string(30) | `App\Enums\PurchaseOrderStatus` |
+| `supplier_reference` | string(100), nullable | |
+| `notes` | text, nullable | |
+| `created_by` / `approved_by` / `cancelled_by` | FK → `users.id`, nullable | |
+| `approved_at` / `cancelled_at` | datetime, nullable | |
+| `created_at` / `updated_at` | timestamps | |
+
+### 1.10 `purchase_order_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `purchase_order_id` | FK → `purchase_orders.id` | `cascadeOnDelete` — a line has no meaning without its draft header |
+| `product_id` | FK → `products.id` | `restrictOnDelete` |
+| `quantity` | **`decimal(20,3)`** | |
+| `unit_price` | **`decimal(20,6)`** | |
+| `line_total` | **`decimal(20,6)`** | |
+| `received_quantity` | **`decimal(20,3)`**, default `0` | A **progress counter**, not stock |
+| `created_at` / `updated_at` | timestamps | |
+
+`received_quantity` is maintained by goods-receipt posting and reversal. It is never a
+source of stock — stock lives only in `inventory_transaction_lines`.
+
+### 1.11 `goods_receipts`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `grn_number` | string(50), **unique** | `GRN-YYYYMMDD-000001` |
+| `supplier_id` | FK → `suppliers.id` | `restrictOnDelete` |
+| `purchase_order_id` | FK → `purchase_orders.id`, **nullable** | Null = direct purchase |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
+| `receipt_date` | date | |
+| `supplier_delivery_reference` | string(100), nullable | |
+| `transport_cost` / `loading_cost` / `other_cost` | **`decimal(20,6)`**, default `0` | Header landed costs |
+| `status` | string(30) | `App\Enums\GoodsReceiptStatus` |
+| `inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | The ledger posting this receipt created |
+| `reversal_inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | Its reversal, if any |
+| | | Status values: `DRAFT`, `POSTED`, `REVERSED`, `CANCELLED` |
+| `reversed_at` / `reversed_by` | datetime / FK users, nullable | |
+| `posted_by` / `posted_at` | FK users / datetime, nullable | |
+| `created_by` | FK → `users.id`, nullable | |
+| `created_at` / `updated_at` | timestamps | |
+
+**Immutable once posted.** The model throws on update unless the change is confined to the
+reversal audit fields, and refuses deletion of anything but a draft.
+
+### 1.12 `goods_receipt_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `goods_receipt_id` | FK → `goods_receipts.id` | `cascadeOnDelete` |
+| `purchase_order_line_id` | FK → `purchase_order_lines.id`, **nullable** | `restrictOnDelete` |
+| `product_id` | FK → `products.id` | `restrictOnDelete` |
+| `quantity` | **`decimal(20,3)`** | |
+| `secondary_quantity` | **`decimal(20,3)`**, nullable | Dual-UOM products only |
+| `unit_price` | **`decimal(20,6)`** | The bare purchase price |
+| `material_cost` | **`decimal(20,6)`** | `quantity × unit_price` |
+| `allocated_landed_cost` | **`decimal(20,6)`** | This line's share of the header costs |
+| `final_unit_cost` | **`decimal(20,6)`** | **What is posted to inventory** |
+| `lot_id` | FK → `inventory_lots.id`, nullable | Created at posting time |
+| `supplier_lot_number` | string(100), nullable | The supplier's own batch reference |
+| `created_at` / `updated_at` | timestamps | |
+
+The three cost columns exist so a posted receipt can always be **explained**: they record
+how the landed unit cost was arrived at. They are calculated by the server and never
+accepted from a request.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -237,7 +319,7 @@ make another warehouse the default first.
 
 `TBD` — please confirm this is the behaviour you want.
 
-### I-1 — a reversal reuses the original line's unit cost — ⚠️ **needs confirmation**
+### I-1 — a reversal reuses the original line's unit cost — ✅ **CONFIRMED**
 
 The general rule is that outgoing stock is valued at the current weighted average. A
 reversal is the exception: it reuses the **original line's** unit cost, so that it cancels
@@ -247,12 +329,30 @@ Reversing a receipt of 100 @ 10 after the average had drifted to 12 would otherw
 1,200 of value when only 1,000 went in — corrupting the valuation silently.
 See `INVENTORY_RULES.md` §12.
 
-### I-2 — secondary quantity is informational — ⚠️ **needs confirmation**
+### I-2 — secondary quantity is informational — ✅ **CONFIRMED**
 
 Secondary quantities (shell KG) are recorded "where known", so some movements carry `null`.
 The secondary balance is therefore not a reliable running total, and is **not** guarded
 against going negative. Only the primary quantity is strictly enforced.
 See `INVENTORY_RULES.md` §7.
+
+### P-1 — landed cost is allocated by material value, never by quantity
+
+Lines on one goods receipt may use different units of measure, so quantities are not
+comparable — 1,000 NOS of coconut against 400 KG of husk has no meaningful quantity ratio.
+Material value is the only common basis. The last line absorbs the rounding remainder so
+allocations sum exactly to the header total.
+
+`TBD` — whether specific cost types (e.g. freight by weight) should ever use a different
+basis. See `BUSINESS_RULES.md` §13.
+
+### P-2 — posting is refused when material value is zero but landed costs exist
+
+Allocation by value is undefined with no value to allocate against. Rather than silently
+falling back to quantity — which the rule above rejects — the posting is refused with a
+clear message.
+
+`TBD` — how free-goods receipts carrying transport cost should be handled, if that arises.
 
 ### I-3 — the weighted average is company-wide, not per warehouse
 
@@ -268,7 +368,7 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `purchase_orders`, `sales_orders` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
+| `sales_orders`, `delivery_notes` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
 | `production_orders` (dehusking / chipping / copra) | Must record production **waste** that does not create inventory. See `BUSINESS_RULES.md` §5. |
 | `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |

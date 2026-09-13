@@ -109,6 +109,48 @@ The inventory engine exists and is tested. These rules are permanent:
   reversals.
 - **Stock is always derived from the ledger.** No stock column on any table, and no cache.
   If a cache is ever added it must be documented as non-authoritative and rebuildable.
+- **Inactive products may be issued OUT but must never receive NEW stock.** Purchases,
+  production outputs, opening balances and adjustments in are rejected for an inactive
+  product; transfers and reversals are exempt, because they relocate or undo stock that
+  already exists. Use `InventoryTransactionType::bringsNewStock()` — never a blanket check
+  on direction. See `docs/INVENTORY_RULES.md` §14.
+- **A reversal reuses the original line's unit cost**, not the current weighted average, so
+  it cancels the original exactly in both quantity and value.
+- **Secondary quantity is informational.** It is recorded where known, is not guarded
+  against going negative, and has **no fixed conversion** to the primary unit. The primary
+  quantity is authoritative for negative-stock prevention.
+
+---
+
+## Purchasing rules (Phase 4 — implemented)
+
+- **A purchase order never creates inventory.** Stock appears only when a goods receipt is
+  posted. `received_quantity` on a purchase order line is a progress counter, not stock.
+- **Only a DRAFT document may be edited.** An approved purchase order and a posted goods
+  receipt are controlled documents; correct them by cancellation or reversal, never by
+  editing. The `GoodsReceipt` model throws on any post-posting change beyond its reversal
+  audit fields.
+- **Post goods receipts through `App\Actions\Purchasing\PostGoodsReceipt`**, which in turn
+  posts through the inventory engine. Never write ledger rows from a purchasing controller.
+- **The landed unit cost is what reaches inventory** — never the bare purchase price.
+- **Allocate header landed costs by line material value, never by quantity**, because lines
+  may use different units of measure. The last line absorbs the rounding remainder so
+  allocations sum exactly. See `docs/BUSINESS_RULES.md` §13.
+- **Never accept a calculated cost from a request.** `material_cost`,
+  `allocated_landed_cost` and `final_unit_cost` are computed server-side and shown
+  read-only.
+- **Purchasable products are not hard-coded.** Any active product may be purchased.
+- **Purchasing creates no accounting entries** — no payables, no journals. Finance is a
+  later phase, and a test asserts those tables do not exist.
+- **`REVERSED` and `CANCELLED` are different states.** A cancelled goods receipt never
+  reached inventory (a draft, abandoned); a reversed one did and was undone by an opposite
+  ledger transaction. Only a draft may be cancelled; a posted receipt must be reversed.
+- **Landed-cost allocation must sum exactly to the header total.** The last line absorbs the
+  rounding residual. A separate, bounded residue exists at the inventory layer because a
+  *unit* cost stored to six decimals cannot always reproduce its line total — that is
+  inherent to posting unit costs, not an allocation defect.
+- **Document numbers encode no business meaning:** `PO-YYYYMMDD-000001`,
+  `GRN-YYYYMMDD-000001`, generated via `App\Support\DailyDocumentSequence`.
 
 ---
 
@@ -200,17 +242,19 @@ warehouses) and to every master added later:
 ## Current scope
 
 Implemented: project documentation, **Product Master** (products + units of measure),
-**Supplier Master**, **Customer Master**, **Warehouse Master**, and the
+**Supplier Master**, **Customer Master**, **Warehouse Master**, the
 **Inventory engine** (ledger, lots, weighted-average costing, transfers, reversals) with
-read-only Stock on Hand / Stock Ledger / Lots screens.
+read-only Stock on Hand / Stock Ledger / Lots screens, and **Purchasing** (purchase orders,
+goods receipts, landed cost, lot creation, posting and reversal).
 
-**Not yet started — do not begin without instruction:** Purchasing, Production, Sales,
-Finance, Costing, role-based permissions, REST API.
+**Not yet started — do not begin without instruction:** Production, Sales, Finance,
+Payables, Receivables, Costing beyond purchase landed cost, role-based permissions,
+REST API.
 
-The inventory engine has no posting UI by design — business documents will drive it.
+The inventory engine still has no direct posting UI by design — business documents drive it.
 
-Authenticated users may currently access all master data and view inventory. Role-based
-permissions come later.
+Authenticated users may currently access all master data, view inventory, and use
+purchasing. Role-based permissions come later.
 
 ---
 

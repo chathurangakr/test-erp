@@ -36,6 +36,28 @@ enum InventoryTransactionType: string
     }
 
     /**
+     * Whether this type introduces NEW stock, as opposed to relocating or undoing existing
+     * stock.
+     *
+     * Inactive products may not receive new stock, but must still be movable and
+     * correctable: a transfer relocates stock that already exists, and a reversal undoes a
+     * posting that already happened. Blocking those would strand stock of a discontinued
+     * product and make errors uncorrectable.
+     *
+     * See docs/INVENTORY_RULES.md §14.
+     */
+    public function bringsNewStock(): bool
+    {
+        return match ($this) {
+            self::PurchaseReceipt,
+            self::ProductionOutput,
+            self::OpeningBalance,
+            self::AdjustmentIn => true,
+            default => false,
+        };
+    }
+
+    /**
      * A reversal may not itself be reversed — see docs/INVENTORY_RULES.md §12.
      */
     public function isReversible(): bool

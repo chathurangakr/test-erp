@@ -56,15 +56,25 @@ The foundation for everything downstream.
 **Deliberately not implemented:** posting UI, transfer UI, manual lot creation UI,
 financial journals, joint-product cost allocation.
 
-## Phase 4 — Purchasing (not started) ◀ NEXT
+## Phase 4 — Purchasing & Goods Receipt ✅ COMPLETE
 
-Purchase of Whole Coconut and direct purchase of Raw Husk.
+- [x] `purchase_orders`, `purchase_order_lines`, `goods_receipts`, `goods_receipt_lines`
+- [x] Purchase order lifecycle: DRAFT → APPROVED → PARTIALLY_RECEIVED → RECEIVED, plus
+      CANCELLED; only a draft is freely editable
+- [x] Goods receipts **against a purchase order** and **direct**, with no order
+- [x] Landed cost — transport, loading and other, allocated by material value, with the
+      landed unit cost posted to inventory
+- [x] Lot creation per receipt line, supplier batch reference stored separately
+- [x] Posting through `PostInventoryTransaction` as `PURCHASE_RECEIPT`, fully atomic
+- [x] Reversal through `ReverseInventoryTransaction`, restoring purchase order quantities
+- [x] Inactive-product incoming-stock rule enforced and tested
+- [x] Purchase order and goods receipt screens; supplier purchase history
+- [x] 43 purchasing tests
 
-**Must post through `App\Actions\Inventory\PostInventoryTransaction`** — never write to
-the ledger directly. The engine already provides the `PURCHASE_RECEIPT` type, lot creation
-and weighted-average costing.
+**Deliberately not implemented:** supplier payables, invoice matching, purchase returns to
+supplier, approval hierarchies, and any general-ledger posting.
 
-## Phase 5 — Production (not started)
+## Phase 5 — Production (not started) ◀ NEXT
 
 1. **Dehusking** — fixed 1:1:1.
 2. **Husk chipping** — operator-entered output weights; no fixed conversion; waste support.
@@ -105,6 +115,9 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 | All inventory written via `PostInventoryTransaction` | `INVENTORY_RULES.md` §13 |
 | Posted inventory is immutable; correct by reversal | `INVENTORY_RULES.md` §10, §12 |
 | Decimal-safe arithmetic via `DecimalMath` (BCMath) | `INVENTORY_RULES.md` §8 |
+| Inactive products: issue out yes, receive new stock no | `INVENTORY_RULES.md` §14 |
+| Landed cost allocated by material value, never quantity | `BUSINESS_RULES.md` §13 |
+| Calculated costs are never accepted from a request | `BUSINESS_RULES.md` §13 |
 | Debits = Credits on every journal | `ACCOUNTING_RULES.md` §2 |
 | `decimal` for money/quantities, never float | `CLAUDE.md` |
 | Transactions for inventory/production/accounting | `CLAUDE.md` |

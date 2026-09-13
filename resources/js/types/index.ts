@@ -3,4 +3,5 @@ export * from './inventory';
 export * from './masters';
 export * from './navigation';
 export * from './products';
+export * from './purchasing';
 export * from './ui';
