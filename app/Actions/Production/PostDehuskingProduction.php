@@ -10,11 +10,11 @@ use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Models\InventoryLot;
-use App\Models\Product;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
 use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
+use App\Services\Production\ProductionCostAllocator;
 use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,6 +50,7 @@ class PostDehuskingProduction
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
         private readonly CreateInventoryLot $createLot,
+        private readonly ProductionCostAllocator $allocator,
     ) {}
 
     public function handle(ProductionOrder $order, ?int $userId = null): ProductionOrder
@@ -164,51 +165,37 @@ class PostDehuskingProduction
     }
 
     /**
-     * Share the consumed value across the outputs, and derive their quantities.
+     * Derive each output's quantity from the recipe ratio, then hand the whole set to the
+     * shared allocator, which shares the consumed value and guarantees the totals are
+     * exact.
      *
-     * Quantity comes from the recipe ratio, so the 1:1:1 rule is configuration rather than
-     * a constant buried in code. The final output takes `consumed value - everything
-     * already allocated`, which makes the allocations sum EXACTLY to the consumed value
-     * whatever the percentages are.
+     * The ratio is what encodes the 1:1:1 rule — it is configuration, not a constant in
+     * code. Dehusking always produces every output, so every one participates.
      *
-     * @return list<array{product: Product, quantity: string, percent: string, allocated_cost: string, unit_cost: string}>
+     * @return list<array<string, mixed>>
      */
     private function allocate(ProductionRecipe $recipe, string $inputQuantity, string $consumedValue): array
     {
-        $outputs = $recipe->outputs;
-        $lastIndex = $outputs->count() - 1;
-
-        $running = DecimalMath::zero();
-        $allocations = [];
-
-        foreach ($outputs->values() as $index => $output) {
-            /** @var ProductionRecipeOutput $output */
-            $quantity = DecimalMath::quantity(
-                DecimalMath::mul($inputQuantity, DecimalMath::of($output->output_ratio))
-            );
-
-            if ($index === $lastIndex) {
-                // Absorbs the rounding remainder so nothing is created or destroyed.
-                $allocated = DecimalMath::cost(DecimalMath::sub($consumedValue, $running));
-            } else {
-                $allocated = DecimalMath::cost(DecimalMath::mul(
-                    $consumedValue,
-                    DecimalMath::div(DecimalMath::of($output->allocation_percent), '100'),
-                ));
-                $running = DecimalMath::add($running, $allocated);
-            }
-
-            $allocations[] = [
+        $outputs = $recipe->outputs->values()->map(function (ProductionRecipeOutput $output) use ($inputQuantity): array {
+            return [
                 'product' => $output->product,
-                'quantity' => $quantity,
-                'percent' => DecimalMath::round(DecimalMath::of($output->allocation_percent), 6),
-                'allocated_cost' => $allocated,
-                // Guarded division: a zero-quantity output would otherwise divide by zero.
-                'unit_cost' => DecimalMath::cost(DecimalMath::div($allocated, $quantity)),
+                'quantity' => DecimalMath::quantity(
+                    DecimalMath::mul($inputQuantity, DecimalMath::of($output->output_ratio ?? '0'))
+                ),
+                'percent' => DecimalMath::of($output->allocation_percent),
             ];
-        }
+        })->all();
 
-        return $allocations;
+        return array_map(
+            fn (array $allocation): array => [
+                'product' => $allocation['product'],
+                'quantity' => $allocation['quantity'],
+                'percent' => $allocation['configured_percent'],
+                'allocated_cost' => $allocation['allocated_cost'],
+                'unit_cost' => $allocation['unit_cost'],
+            ],
+            $this->allocator->allocate($outputs, $consumedValue),
+        );
     }
 
     private function assertPostable(ProductionOrder $order): void

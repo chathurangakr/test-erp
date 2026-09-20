@@ -52,6 +52,13 @@ class DehuskingTest extends TestCase
         $this->dehusked = Product::factory()->create(['code' => 'DEHUSKED-COCONUT', 'name' => 'Dehusked Coconut', 'primary_uom_id' => $nos->id]);
         $this->husk = Product::factory()->create(['code' => 'RAW-HUSK', 'name' => 'Raw Coconut Husk', 'primary_uom_id' => $nos->id]);
 
+        // The recipe seeder configures every production type at once, so the husk chipping
+        // products must exist too.
+        $kg = UnitOfMeasure::factory()->weight()->create(['code' => 'KG']);
+        foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C'] as $code) {
+            Product::factory()->create(['code' => $code, 'primary_uom_id' => $kg->id]);
+        }
+
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
         $this->seed(ProductionRecipeSeeder::class);

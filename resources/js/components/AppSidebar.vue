@@ -10,6 +10,7 @@ import {
     Layers,
     Package,
     Factory,
+    Grid2x2,
     Receipt,
     ScrollText,
     ShoppingCart,
@@ -40,6 +41,7 @@ import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as dehuskingIndex } from '@/routes/dehusking';
+import { index as huskChippingIndex } from '@/routes/husk-chipping';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -125,6 +127,11 @@ const productionNavItems: NavItem[] = [
         title: 'Dehusking',
         href: dehuskingIndex(),
         icon: Factory,
+    },
+    {
+        title: 'Husk Chipping',
+        href: huskChippingIndex(),
+        icon: Grid2x2,
     },
 ];
 

@@ -438,10 +438,9 @@ the secondary quantity is informational, exactly as in `INVENTORY_RULES.md` §7.
 
 ## 18. Production — dehusking
 
-**Only dehusking is implemented.** Husk chipping and copra production are declared in
-`ProductionType` so the architecture is shaped for them, but they are not postable: their
-output weights are operator-entered and their waste and joint-cost rules are unresolved.
-`ProductionType::isImplemented()` enforces that.
+**Dehusking and husk chipping are implemented** (§19). Copra production is declared in
+`ProductionType` so the architecture is shaped for it, but it is not postable: its shell
+weight rules are unresolved. `ProductionType::isImplemented()` enforces that.
 
 ### The 1:1:1 rule
 
@@ -569,5 +568,163 @@ Both reuse their original unit costs, so value returns exactly as it left.
 onward — because the stock is no longer there to remove. Reversing the outputs first means
 that rejection happens before any coconut is restored, and the whole operation rolls back
 regardless. Produce 1,000, sell 500, attempt to reverse: **rejected**.
+
+Double reversal is prohibited, and the original run is never deleted or altered.
+
+---
+
+## 19. Production — husk chipping
+
+Husk chipping shares the whole production engine with dehusking — the same order, the same
+two ledger transactions, the same reversal and cancellation actions, the same recipe tables.
+There is **no second production engine**.
+
+What differs is one thing, and it changes a lot: **the yields are measured, not derived.**
+
+### The operator enters the actual weights
+
+```
+Input:   2,000 Raw Husk   (NOS)
+Output:    150.500 kg  7C     ← weighed
+           205.250 kg  9C     ← weighed
+           281.750 kg 10C     ← weighed
+           waste / loss       ← recorded, NOT stocked
+```
+
+**There is no fixed conversion from husks to kilograms, and there must never be one.**
+Chipping yields vary with the husk itself, the moisture and the machine, so a standard
+"1 husk = X kg" figure would be fiction — and fiction in a costing path becomes a wrong
+stock value on every single run.
+
+This is enforced structurally, not by convention. `production_recipe_outputs.output_ratio`
+is **nullable**, and every husk chipping output has it set to `NULL`:
+
+| Type | `output_ratio` | Meaning |
+| --- | --- | --- |
+| Dehusking | `1.000000` | Derive the output quantity from the input |
+| Husk chipping | `NULL` | **No ratio exists.** The operator measures the output |
+
+`ProductionType::hasFixedOutputRatio()` is false for chipping and
+`hasOperatorEnteredOutputs()` is true. There is no number anywhere for a weight to be
+derived from, so deriving one is impossible rather than merely discouraged.
+
+**The two quantities are not comparable.** Husk is counted in `NOS`; chips are weighed in
+`KG`. The system never converts between them, and no screen implies that it does.
+
+### Which weights are accepted
+
+| Rule | Detail |
+| --- | --- |
+| Zero for one grade | **Allowed.** A batch that produced no 9C records `0` for 9C |
+| Zero for every grade | **Refused.** There would be nothing to carry the consumed value |
+| Negative | **Refused**, in the form request and again at posting |
+| A grade left out | **Refused.** An explicit `0` is a measurement; a missing line is an omission |
+| A product outside the recipe | **Refused** |
+
+### Waste is information only
+
+Waste and loss are recorded on the production order as `waste_quantity` + `waste_uom_id`
+and go no further. They create:
+
+- **no inventory line** — nothing enters or leaves stock;
+- **no lot**;
+- **no product** — there is deliberately **no `DUST` product**;
+- **no cost** — waste takes none of the consumed value.
+
+Both fields are **optional**, because the factory has not confirmed how (or whether) waste
+is measured. When it is recorded, the unit is chosen from the real UOM master rather than
+invented, so no physically incorrect unit can be stored.
+
+> `TBD-1` — the measurement basis for chipping waste (weight, husk count, or estimate), and
+> whether it should later carry an allocated cost. Until the factory confirms this, the
+> field records what was measured and asserts nothing about what it means.
+
+### Value conservation
+
+The consumed husk value is shared across the grades and **sums exactly**:
+
+```
+Consumed:  2,000 Raw Husk @ Rs.20.000000        Rs.40,000
+Produced:    150 kg  7C    30%                  Rs.12,000   Rs.80.000000 / kg
+             200 kg  9C    30%                  Rs.12,000   Rs.60.000000 / kg
+             280 kg 10C    40%                  Rs.16,000   Rs.57.142857 / kg
+                                                ─────────
+                                                Rs.40,000   ← unchanged
+```
+
+The consumed value is read back from the ledger after the consumption posts — never
+recomputed — so it is always the weighted average actually charged.
+
+No labour, electricity, machine, packaging or overhead cost is added. Total input inventory
+value equals total output inventory value exactly, and a test asserts that no such columns
+or tables exist.
+
+### Cost allocation — configurable, currently 30 / 30 / 40
+
+| Output | Share |
+| --- | --- |
+| 7C | **30%** |
+| 9C | **30%** |
+| 10C | **40%** |
+
+**These numbers are provisional and are expected to change.** They live in
+`production_recipe_outputs.allocation_percent`, seeded by `ProductionRecipeSeeder`, and
+nowhere else. Changing the factory's costing policy is a data change, not a code change.
+
+**Percentages must total exactly 100**, or the recipe is refused at posting time.
+
+### Zero-output redistribution
+
+A grade that was not produced has no stock for value to sit on, so it must take none. The
+shares of the grades that *were* produced are renormalised to total 100% again:
+
+```
+Configured:  7C 30    9C 30    10C 40
+Produced:    7C ✓     9C 0     10C ✓
+
+Applied:     7C = 30 / (30 + 40) = 42.857143%
+             10C = 40 / (30 + 40) = 57.142857%
+             9C  = nothing, and no lot is created for it
+```
+
+On Rs.40,000 consumed that is Rs.17,142.857143 to 7C and Rs.22,857.142857 to 10C — still
+exactly Rs.40,000.
+
+The **share actually applied** is what gets stored on the output line, so a historic run can
+always be explained: `allocated cost = consumed value × stored share` holds for every line,
+including the zero one.
+
+**Rounding:** as everywhere, the last participating output receives
+`consumed value − everything already allocated`, so the allocation sums exactly. (The ledger
+stores a *unit* cost at six decimals, so re-multiplied ledger value can differ by at most
+`quantity × 0.0000005` per line — see §13.)
+
+This logic lives in `App\Services\Production\ProductionCostAllocator`, which **both**
+production types use, so value conservation is guaranteed in exactly one place.
+
+### Lots and traceability
+
+The raw husk lot must be **explicitly selected**. Posting creates a **new lot for each grade
+that was actually produced** — and none for a grade that measured zero:
+
+```
+Supplier → Husk GRN → Raw Husk Lot ─┬─▶ Chipping run ─┬─▶ 7C Lot
+Dehusking → Raw Husk Lot  ──────────┘                 ├─▶ 9C Lot
+                                                      └─▶ 10C Lot
+```
+
+Each chip lot records the production order as its source and names the consumed husk lot in
+its notes, so stock traces in both directions.
+
+### Reversal
+
+Reversal uses the **same** `ReverseProduction` action as dehusking: the `PRODUCTION_OUTPUT`
+is reversed first, then the `PRODUCTION_CONSUMPTION`, both at their original unit costs.
+
+**If any one grade has been consumed — sold or processed onward — the entire reversal is
+refused.** There is no partial reversal: reversing the outputs first means the rejection
+happens before any husk is restored, and the whole operation rolls back regardless. Sell
+100 kg of the 7C and the run can no longer be reversed, even though the 9C and 10C are
+untouched.
 
 Double reversal is prohibited, and the original run is never deleted or altered.

@@ -30,4 +30,12 @@ class ProductionOrderFactory extends Factory
             'created_by' => null,
         ];
     }
+
+    /**
+     * A husk chipping order, whose output weights the operator measures.
+     */
+    public function huskChipping(): static
+    {
+        return $this->state(fn (): array => ['production_type' => ProductionType::HuskChipping]);
+    }
 }

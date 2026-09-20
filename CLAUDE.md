@@ -183,22 +183,29 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Production rules (Phase 6 — dehusking implemented)
+## Production rules (Phases 6 & 7 — dehusking and husk chipping implemented)
 
-- **Only dehusking is postable.** `HUSK_CHIPPING` and `COPRA` exist in `ProductionType` so
-  the architecture fits them, but `isImplemented()` blocks posting. Do not build them
-  without instruction.
+- **Dehusking and husk chipping are postable; `COPRA` is not.** It exists in
+  `ProductionType` so the architecture fits it, but `isImplemented()` blocks posting. Do not
+  build it without instruction.
+- **There is ONE production engine.** Husk chipping reuses the production order, the two
+  ledger transactions, `ReverseProduction`, `CancelProduction` and
+  `ProductionCostAllocator`. Never add a parallel engine for a new production type.
 - **Product codes live only in `ProductionRecipeSeeder`.** Everything resolves products
   through `production_recipes` / `production_recipe_outputs`. Never reference `COCONUT`,
-  `DEHUSKED-COCONUT` or `RAW-HUSK` in a controller, service or action.
-- **The 1:1:1 ratio is configuration, not code.** It is the recipe's `output_ratio`.
-  Output quantities are derived from the input and are never accepted from a request.
+  `DEHUSKED-COCONUT`, `RAW-HUSK`, `HUSK-7C`, `HUSK-9C` or `HUSK-10C` in a controller,
+  service or action.
+- **The 1:1:1 dehusking ratio is configuration, not code.** It is the recipe's
+  `output_ratio`. Dehusking output quantities are derived and never accepted from a request.
 - **Production conserves inventory value.** Item count rises — one coconut becomes two
   things — but money does not. Allocated output costs must sum **exactly** to the consumed
   value, with the final output absorbing the rounding remainder.
 - **The allocation percentages must total exactly 100**, enforced by
-  `ProductionRecipe::assertAllocationIsComplete()`. The current 85/15 split is
-  **provisional** and configurable; never hard-code it.
+  `ProductionRecipe::assertAllocationIsComplete()`. The current 85/15 (dehusking) and
+  30/30/40 (chipping) splits are **provisional** and configurable; never hard-code them.
+- **An output that produced nothing takes no value and gets no lot.** Only positive-quantity
+  outputs participate in allocation, and their percentages are renormalised to 100%. Store
+  the share **actually applied**, not the configured one.
 - **Consumed cost is read back from the ledger**, never recomputed in production code.
 - **Posting writes TWO inventory transactions** — `PRODUCTION_CONSUMPTION` and
   `PRODUCTION_OUTPUT` — inside one database transaction. See `docs/DATA_MODEL.md` P-3.
@@ -207,6 +214,21 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Reverse outputs before the consumption**, so a reversal blocked by already-consumed
   output fails before any input is restored.
 - **No labour, electricity, machine, fuel or overhead cost** is added in this phase.
+
+### Husk chipping specifically
+
+- **There is NO fixed conversion from husk (NOS) to chips (KG), and one must never be
+  added.** Yields vary; a standard figure would be fiction in a costing path. The recipe's
+  `output_ratio` is `NULL` for every chipping output precisely so that no number exists to
+  derive a weight from. Do not seed a placeholder ratio.
+- **The operator enters the actual measured output weights.** They are accepted from the
+  request — the one place production quantities are — but every cost figure still comes
+  from the ledger and the recipe.
+- **Zero is valid for one grade, never for all of them.** Negatives are refused in the form
+  request and again at posting.
+- **Waste is information only.** `waste_quantity` + `waste_uom_id` on the order; no
+  inventory line, no lot, **no `DUST` product**, and no cost. Both fields are optional
+  because the measurement basis is unconfirmed — do not invent a unit to fill them.
 
 ---
 
@@ -247,7 +269,7 @@ Can be sold directly, or used for copra production.
 Enters inventory from two sources: internal dehusking, or direct supplier purchase.
 Processed through husk chipping.
 
-### Husk Chipping
+### Husk Chipping — implemented
 
 Input: Raw Husk in `NOS`. Outputs: `7C`, `9C`, `10C` — all in `KG`.
 
@@ -256,6 +278,8 @@ Input: Raw Husk in `NOS`. Outputs: `7C`, `9C`, `10C` — all in `KG`.
   another by-product. **Do not create a `DUST` product.**
 - **Actual output weights are entered by the operator.**
 - **Do not use a fixed conversion from husks to KG.**
+- Value is split 30 / 30 / 40 (provisional, configurable), redistributed across the grades
+  a batch actually produced. See `docs/BUSINESS_RULES.md` §19.
 
 ### Copra Production
 
@@ -305,18 +329,20 @@ Implemented: project documentation, **Product Master** (products + units of meas
 read-only Stock on Hand / Stock Ledger / Lots screens, **Purchasing** (purchase orders,
 goods receipts, landed cost, lot creation, posting and reversal), **Sales** (sales orders,
 deliveries, cost of goods sold, gross profit, lot selection, dual-unit pricing, posting and
-reversal), and **Dehusking production** (recipe-driven 1:1:1 conversion, traceable output
-lots, configurable value allocation, posting and reversal).
+reversal), **Dehusking production** (recipe-driven 1:1:1 conversion, traceable output lots,
+configurable value allocation, posting and reversal), and **Husk chipping production**
+(operator-measured output weights with no husk-to-KG conversion, zero-output
+redistribution, informational waste, traceable output lots, posting and reversal).
 
-**Not yet started — do not begin without instruction:** Husk chipping, copra production,
-Finance, Payables, Receivables, customer payments, production expenses, the permanent
-joint-product costing method, production planning, BOM editor, maintenance, role-based
-permissions, REST API.
+**Not yet started — do not begin without instruction:** Copra production, Finance,
+Payables, Receivables, customer payments, production expenses, the permanent joint-product
+costing method, production planning, BOM editor, maintenance, role-based permissions,
+REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing, sales and dehusking production. Role-based permissions come later.
+purchasing, sales and production. Role-based permissions come later.
 
 ---
 

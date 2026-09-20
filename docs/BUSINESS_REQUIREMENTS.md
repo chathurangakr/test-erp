@@ -75,14 +75,19 @@ See `DATA_MODEL.md` decision D-1.
   Supports both deliveries against a sales order and direct deliveries.
 - **Dehusking production** — converts whole coconut into dehusked coconut and raw husk at
   the confirmed 1:1:1 ratio, creating traceable output lots and sharing the consumed value
-  by configurable percentages, with reversal. Husk chipping and copra are not built.
+  by configurable percentages, with reversal.
+- **Husk chipping production** — converts raw husk (NOS) into 7C, 9C and 10C chips (KG)
+  using the **weights the operator actually measured**; there is no husk-to-KG conversion
+  in the system. Waste is recorded for information only and creates no stock. Value is
+  shared by configurable percentages, redistributed when a grade produces nothing, with
+  traceable output lots and reversal. Copra is not built.
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Husk chipping, copra production, Finance (double-entry), Payables, Receivables, customer
+Copra production, Finance (double-entry), Payables, Receivables, customer
 payments, production expenses (labour / electricity / machine / fuel / overhead), the
 permanent joint-product costing method, role-based permissions, REST API for the Flutter
 mobile application.
@@ -136,6 +141,10 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 19 | Production value | **Conserved.** Item count rises; total inventory value does not. Allocated output costs sum exactly to the consumed value. |
 | 20 | Dehusking cost split | **Configurable fixed percentages**, currently 85% dehusked / 15% husk — provisional until the costing policy is set. Must total 100%. |
 | 21 | Production expenses | **None yet.** No labour, electricity, machine, fuel or overhead cost is added in this phase. |
+| 22 | Husk chipping yields | **Measured, never derived.** The operator enters the actual 7C / 9C / 10C weights. The recipe stores **no** husk-to-KG ratio, so none can be applied. |
+| 23 | Husk chipping cost split | **Configurable fixed percentages**, currently 30% 7C / 30% 9C / 40% 10C — provisional. Must total 100%. |
+| 24 | A grade that produced nothing | Takes **no cost and no lot**; its share is redistributed across the grades that were produced. |
+| 25 | Chipping waste | **Optional and informational.** No inventory line, no lot, no product, no cost. Its unit comes from the UOM master; no unit is invented. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -147,6 +156,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 4 | Is **tax** (VAT/SVAT) in scope? | Finance |
 | 5 | What **roles and permissions** are required? | Permissions |
 | 6 | Is **partial/failed production output** possible (input consumed, no output)? | Production |
+| 7 | What is the **measurement basis for chipping waste** — weight, husk count or estimate? And should waste ever carry an allocated cost? | Husk chipping (recorded but not interpreted) |
 | 11 | Should **deactivating the default warehouse** be refused, or should the default move automatically? Currently refused — see `DATA_MODEL.md` D-3. | Warehouse Master |
 | 12 | Do suppliers or customers need a **price list or product restriction**? Currently any party may trade any product. | Purchasing / Sales |
 | 7 | Are **inter-warehouse transfers** required? | Inventory ledger |

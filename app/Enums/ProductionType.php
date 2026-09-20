@@ -5,11 +5,11 @@ namespace App\Enums;
 /**
  * Kinds of production the factory runs.
  *
- * Only DEHUSKING is implemented. The other two are declared so the architecture, the
- * recipe table and the screens are shaped for them from the start, but `isImplemented()`
- * keeps an unbuilt type from being posted by accident.
+ * DEHUSKING and HUSK_CHIPPING are implemented. COPRA is declared so the architecture, the
+ * recipe table and the screens are shaped for it, but `isImplemented()` keeps an unbuilt
+ * type from being posted by accident.
  *
- * See docs/BUSINESS_RULES.md §18.
+ * See docs/BUSINESS_RULES.md §18 (dehusking) and §19 (husk chipping).
  */
 enum ProductionType: string
 {
@@ -34,18 +34,30 @@ enum ProductionType: string
      */
     public function isImplemented(): bool
     {
-        return $this === self::Dehusking;
+        return in_array($this, [self::Dehusking, self::HuskChipping], true);
     }
 
     /**
      * Whether outputs are derived from the input rather than entered by the operator.
      *
-     * Dehusking is the only confirmed fixed-ratio conversion in the business
-     * (docs/BUSINESS_RULES.md §2); the other two must never assume a ratio.
+     * Dehusking is the ONLY confirmed fixed-ratio conversion in the business
+     * (docs/BUSINESS_RULES.md §2). Husk chipping and copra must never assume a ratio:
+     * their yields genuinely vary, so the operator enters the measured output.
      */
     public function hasFixedOutputRatio(): bool
     {
         return $this === self::Dehusking;
+    }
+
+    /**
+     * Whether the operator measures and enters the output quantities.
+     *
+     * The inverse of a fixed ratio, stated positively because it is what the screens and
+     * the posting action actually branch on.
+     */
+    public function hasOperatorEnteredOutputs(): bool
+    {
+        return ! $this->hasFixedOutputRatio();
     }
 
     /**

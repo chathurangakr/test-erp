@@ -1,9 +1,9 @@
 # Inventory Rules — Coconut Factory ERP
 
 > **Status:** ✅ **IMPLEMENTED** (Phase 3), and driven by Purchasing (Phase 4), Sales
-> (Phase 5) and Dehusking production (Phase 6). Goods receipts post `PURCHASE_RECEIPT`,
-> deliveries post `SALES_ISSUE`, and dehusking posts `PRODUCTION_CONSUMPTION` plus
-> `PRODUCTION_OUTPUT`. Husk chipping and copra are not built yet.
+> (Phase 5) and Production — dehusking (Phase 6) and husk chipping (Phase 7). Goods
+> receipts post `PURCHASE_RECEIPT`, deliveries post `SALES_ISSUE`, and both production
+> types post `PRODUCTION_CONSUMPTION` plus `PRODUCTION_OUTPUT`. Copra is not built yet.
 
 ## 1. The fundamental rule
 
@@ -142,13 +142,22 @@ price an OUT line — supplying `unit_cost` on an outgoing line is rejected.
 **All arithmetic uses BCMath via `App\Support\DecimalMath`.** PHP floating point is never
 used for quantities or costs anywhere in the costing path.
 
-**Joint-product allocation for dehusking is implemented as configurable fixed percentages**
-(currently 85 / 15, provisional) held in `production_recipe_outputs`. The allocated output
-costs sum exactly to the consumed value, so production conserves inventory value: physical
-item count rises, money does not. See `BUSINESS_RULES.md` §18.
+**Joint-product allocation is implemented as configurable fixed percentages** held in
+`production_recipe_outputs` — dehusking 85 / 15, husk chipping 30 / 30 / 40, both
+provisional. One shared service, `App\Services\Production\ProductionCostAllocator`, applies
+them for every production type, so the allocated output costs sum exactly to the consumed
+value and production conserves inventory value: physical item count rises, money does not.
+See `BUSINESS_RULES.md` §18 and §19.
 
-The permanent costing method — and allocation for husk chipping and copra — remains
-**`TBD`**.
+**An output that produced nothing takes no value.** Only positive-quantity outputs
+participate; their percentages are renormalised to 100%, and no lot is created for a grade
+that measured zero. Inventory value must sit on stock that exists.
+
+**Quantities are not always derived.** Where a recipe output's `output_ratio` is `NULL` —
+every husk chipping grade — the quantity entering the ledger is the weight the **operator
+measured**. There is no husk-to-KG conversion anywhere in the system, by design.
+
+The permanent costing method — and allocation for copra — remains **`TBD`**.
 
 ## 9. Warehouse transfers
 

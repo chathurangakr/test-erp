@@ -80,8 +80,7 @@ supplier, approval hierarchies, and any general-ledger posting.
 
 - [x] `production_recipes`, `production_recipe_outputs`, `production_orders`,
       `production_inputs`, `production_outputs`
-- [x] Extensible `ProductionType` (DEHUSKING implemented; HUSK_CHIPPING and COPRA declared
-      but not postable)
+- [x] Extensible `ProductionType` (DEHUSKING implemented; COPRA declared but not postable)
 - [x] Lifecycle DRAFT → POSTED → REVERSED, plus CANCELLED
 - [x] Fixed 1:1:1 conversion held as recipe configuration, outputs derived and read-only
 - [x] Posts `PRODUCTION_CONSUMPTION` + `PRODUCTION_OUTPUT` atomically
@@ -91,18 +90,8 @@ supplier, approval hierarchies, and any general-ledger posting.
 - [x] Dehusking index / create / show screens
 - [x] 44 production tests
 
-**Deliberately not implemented:** husk chipping, copra, production planning, BOM editor,
-maintenance, labour/electricity/machine/fuel/overhead costs, and any general-ledger posting.
-
-1. **Dehusking** — fixed 1:1:1.
-2. **Husk chipping** — operator-entered output weights; no fixed conversion; waste support.
-3. **Copra production** — operator-entered copra weight; shell as `NOS` **and** `KG`.
-
-**Unblocked.** Chipping waste is recorded as **production waste and creates no inventory**.
-No `DUST` product is to be created; a by-product may be promoted to a stocked product later
-if the factory begins selling it.
-
-**Still open:** partial/failed production output; whether waste carries allocated cost.
+**Deliberately not implemented:** copra, production planning, BOM editor, maintenance,
+labour/electricity/machine/fuel/overhead costs, and any general-ledger posting.
 
 ## Phase 6 — Sales & Dispatch ✅ COMPLETE
 
@@ -121,17 +110,43 @@ if the factory begins selling it.
 **Deliberately not implemented:** accounts receivable, customer balances, payments, sales
 returns as a distinct document, price lists, and any general-ledger posting.
 
-## Phase 7 — Finance (not started)
+## Phase 7 — Production — Husk Chipping ✅ COMPLETE
+
+Built on the Phase 5 production engine — no second engine, no duplicated posting code.
+
+- [x] `HUSK_CHIPPING` becomes an implemented `ProductionType`
+- [x] `output_ratio` made **nullable**; `NULL` means *no fixed conversion — the operator
+      measures the output*, which is what makes a husk→KG ratio structurally impossible
+- [x] Recipe seeded `RAW-HUSK` → `HUSK-7C` / `HUSK-9C` / `HUSK-10C`, 30 / 30 / 40 provisional
+- [x] Operator-entered output weights; zero allowed per grade, never for every grade;
+      negatives refused in the request and again at posting
+- [x] Shared `ProductionCostAllocator` with **zero-output redistribution**, used by
+      dehusking too
+- [x] `waste_quantity` + `waste_uom_id` — informational only, optional, no product, no lot,
+      no cost, no `DUST`
+- [x] A new lot per **produced** grade, traceable to the consumed husk lot
+- [x] Reversal via the existing `ReverseProduction`, refused entirely if any grade has been
+      consumed
+- [x] Index / create / edit / show screens with a live allocation preview; sidebar entry
+- [x] 55 husk chipping tests
+
+**Deliberately not implemented:** copra, finance, GL, production planning, maintenance,
+generic BOM editor.
+
+**Still open:** the waste measurement basis (`BUSINESS_RULES.md` §19 TBD-1); whether waste
+should ever carry an allocated cost; the permanent joint-product costing method.
+
+## Phase 8 — Finance (not started)
 
 Double-entry: chart of accounts, journals, balanced posting, derived balances.
 Then Weighted Average Cost and configurable joint-product allocation.
 **Blocked on:** chart of accounts, allocation method, currency, tax.
 
-## Phase 8 — Permissions (not started)
+## Phase 9 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 9 — REST API for Flutter (not started)
+## Phase 10 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 
@@ -161,5 +176,5 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 Resolved decisions are recorded in `BUSINESS_REQUIREMENTS.md` §6; remaining questions in
 §7. **No question currently blocks Phase 2 or Phase 3** — both may proceed when instructed.
 
-The remaining questions cluster around Finance (Phase 7): chart of accounts, currency, tax,
+The remaining questions cluster around Finance (Phase 8): chart of accounts, currency, tax,
 and joint-product cost allocation. These do not block inventory or production work.

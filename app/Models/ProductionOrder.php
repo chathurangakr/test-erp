@@ -32,6 +32,8 @@ class ProductionOrder extends Model
         'warehouse_id',
         'status',
         'notes',
+        'waste_quantity',
+        'waste_uom_id',
         'inventory_transaction_id',
         'output_inventory_transaction_id',
         'reversal_inventory_transaction_id',
@@ -49,6 +51,7 @@ class ProductionOrder extends Model
             'production_type' => ProductionType::class,
             'status' => ProductionStatus::class,
             'production_date' => 'date',
+            'waste_quantity' => 'decimal:3',
             'posted_at' => 'datetime',
             'reversed_at' => 'datetime',
         ];
@@ -120,6 +123,19 @@ class ProductionOrder extends Model
     }
 
     /**
+     * The unit the recorded waste was measured in.
+     *
+     * Waste is information only — it creates no inventory — so this points at the real UOM
+     * master rather than inventing a unit. See docs/BUSINESS_RULES.md §19.
+     *
+     * @return BelongsTo<UnitOfMeasure, $this>
+     */
+    public function wasteUom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'waste_uom_id');
+    }
+
+    /**
      * @return BelongsTo<InventoryTransaction, $this>
      */
     public function consumptionTransaction(): BelongsTo
@@ -169,7 +185,7 @@ class ProductionOrder extends Model
         return DecimalMath::cost($this->outputs->reduce(
             fn (string $carry, ProductionOutput $output): string => DecimalMath::add(
                 $carry,
-                DecimalMath::of($output->allocated_cost),
+                DecimalMath::of($output->allocated_cost ?? '0'),
             ),
             DecimalMath::zero(),
         ));

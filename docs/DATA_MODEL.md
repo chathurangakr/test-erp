@@ -380,7 +380,7 @@ else in the application except the seeder.
 | `id` | bigint unsigned, PK | |
 | `production_recipe_id` | FK → `production_recipes.id` | `cascadeOnDelete` |
 | `product_id` | FK → `products.id` | `restrictOnDelete`; unique per recipe |
-| `output_ratio` | **`decimal(20,6)`**, default `1` | units of output per unit of input — **this is what encodes the 1:1:1 rule** |
+| `output_ratio` | **`decimal(20,6)`**, **nullable**, default `1` | units of output per unit of input. `NULL` = **no fixed ratio; the operator measures the output** — see decision **P-6** |
 | `allocation_percent` | **`decimal(9,6)`** | share of consumed value; **must total exactly 100** |
 | `sort_order` | unsigned smallint | |
 
@@ -391,8 +391,16 @@ else in the application except the seeder.
 | `COCONUT` | `DEHUSKED-COCONUT` | 1.000000 | **85%** |
 | `COCONUT` | `RAW-HUSK` | 1.000000 | **15%** |
 
+**Seeded recipe — HUSK_CHIPPING**
+
+| Input | Output | Ratio | Allocation |
+| --- | --- | --- | --- |
+| `RAW-HUSK` | `HUSK-7C` | **`NULL`** — operator-entered | **30%** |
+| `RAW-HUSK` | `HUSK-9C` | **`NULL`** — operator-entered | **30%** |
+| `RAW-HUSK` | `HUSK-10C` | **`NULL`** — operator-entered | **40%** |
+
 The percentages are **provisional** pending the factory's costing policy. See
-`BUSINESS_RULES.md` §18.
+`BUSINESS_RULES.md` §18 and §19.
 
 ### 1.18 `production_orders`
 
@@ -405,6 +413,8 @@ The percentages are **provisional** pending the factory's costing policy. See
 | `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
 | `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
 | `notes` | text, nullable | |
+| `waste_quantity` | **`decimal(20,3)`**, nullable | informational only — creates **no** inventory, lot or cost |
+| `waste_uom_id` | FK → `units_of_measure.id`, nullable | required when waste is recorded; the real UOM master, never an invented unit |
 | `inventory_transaction_id` | FK, nullable | the `PRODUCTION_CONSUMPTION` |
 | `output_inventory_transaction_id` | FK, nullable | the `PRODUCTION_OUTPUT` |
 | `reversal_inventory_transaction_id` | FK, nullable | reversal of the consumption |
@@ -425,7 +435,7 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | --- | --- | --- |
 | `production_order_id` | FK, `cascadeOnDelete` | |
 | `product_id` | FK → `products.id` | |
-| `lot_id` | FK → `inventory_lots.id`, nullable | **required for dehusking** — traceability |
+| `lot_id` | FK → `inventory_lots.id`, nullable | **required for dehusking and husk chipping** — traceability |
 | `quantity` | **`decimal(20,3)`** | |
 | `unit_cost` / `total_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
 
@@ -435,11 +445,11 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | --- | --- | --- |
 | `production_order_id` | FK, `cascadeOnDelete` | |
 | `product_id` | FK → `products.id` | |
-| `lot_id` | FK → `inventory_lots.id`, nullable | a **new** lot created at posting |
-| `quantity` | **`decimal(20,3)`** | derived from the recipe ratio |
-| `allocation_percent` | **`decimal(9,6)`** | the share applied, snapshotted |
-| `allocated_cost` | **`decimal(20,6)`** | sums **exactly** to the consumed value |
-| `unit_cost` | **`decimal(20,6)`** | allocated cost / quantity |
+| `lot_id` | FK → `inventory_lots.id`, nullable | a **new** lot created at posting; stays `NULL` for a grade that measured zero |
+| `quantity` | **`decimal(20,3)`** | derived from the recipe ratio, or **measured by the operator** where the ratio is `NULL` |
+| `allocation_percent` | **`decimal(9,6)`** | the share **actually applied**, snapshotted — `0` for a grade that produced nothing |
+| `allocated_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; sums **exactly** to the consumed value once posted |
+| `unit_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; allocated cost / quantity once posted |
 
 No labour, electricity, machine, fuel or overhead columns exist anywhere — a test asserts
 their absence.
@@ -564,6 +574,42 @@ does, only the seeded numbers change.
 `TBD` — the permanent joint-product costing method (market value / NRV / other), and
 whether allocation should vary by period or by product grade.
 
+### P-6 — "no fixed husk-to-KG conversion" is enforced by a NULL, not by a convention
+
+`production_recipe_outputs.output_ratio` is nullable, and every husk chipping output stores
+`NULL`. A nullable column says something a missing feature cannot: *no ratio exists here*.
+Deriving a chip weight from a husk count is therefore impossible rather than merely
+discouraged — there is no number to derive it from, in the seeder, the model or the posting
+action. `ProductionType::hasOperatorEnteredOutputs()` reads the same fact from the enum.
+
+The alternative — seeding a placeholder ratio and ignoring it — was rejected: a stored
+number invites use, and one careless multiplication would put a fabricated weight into the
+ledger.
+
+### P-7 — a grade that produced nothing takes no value, and its share is redistributed
+
+Inventory value must sit on stock. A grade with zero quantity has none, so giving it a share
+would strand value on a line with no lot behind it. Instead the producing grades'
+percentages are renormalised to 100% (7C 30 → 42.857143% when 9C produces nothing), and the
+**share actually applied** is stored on the line — so `allocated cost = consumed value ×
+stored share` holds for every row, including the zero one, and a historic run can be
+explained years later.
+
+All of this lives in `App\Services\Production\ProductionCostAllocator`, used by **both**
+production types, so value conservation is implemented exactly once.
+
+### P-8 — chipping waste is recorded without asserting what it means
+
+`waste_quantity` + `waste_uom_id` are **both optional**, and the unit is chosen from the UOM
+master rather than assumed. The factory has not confirmed whether waste is weighed, counted
+or estimated, and inventing a unit to satisfy a column would put a physically meaningless
+number into a business record.
+
+Waste creates no inventory line, no lot, no product (**there is no `DUST` product**) and
+takes no cost — the whole consumed value stays with the saleable grades.
+
+`TBD` — the measurement basis, and whether waste should later carry an allocated cost.
+
 ### I-3 — the weighted average is company-wide, not per warehouse
 
 Version 1 maintains one average per product across all warehouses. This is what makes a
@@ -578,8 +624,7 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `production_orders` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
-| `production_orders` (dehusking / chipping / copra) | Must record production **waste** that does not create inventory. See `BUSINESS_RULES.md` §5. |
+| `production_orders` (copra) | Not started. Must post through `App\Actions\Inventory\PostInventoryTransaction`, and must capture **both** shell count (`NOS`) and weight (`KG`) with no fixed conversion. See `BUSINESS_RULES.md` §6. |
 | `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |
 

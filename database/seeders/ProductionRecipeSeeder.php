@@ -29,7 +29,11 @@ class ProductionRecipeSeeder extends Seeder
      * has not finalised its joint-product costing policy; when it does, only these numbers
      * change. The percentages must always total exactly 100.
      *
-     * @var array<string, array{input: string, outputs: list<array{code: string, ratio: string, percent: string}>}>
+     * Husk chipping has NO fixed ratio: a `ratio` of null records that the operator
+     * measures and enters the actual KG produced. Its 30 / 30 / 40 value split is likewise
+     * provisional and configurable. See docs/BUSINESS_RULES.md §19.
+     *
+     * @var array<string, array{input: string, outputs: list<array{code: string, ratio: string|null, percent: string}>}>
      */
     private const RECIPES = [
         ProductionType::Dehusking->value => [
@@ -37,6 +41,14 @@ class ProductionRecipeSeeder extends Seeder
             'outputs' => [
                 ['code' => 'DEHUSKED-COCONUT', 'ratio' => '1.000000', 'percent' => '85.000000'],
                 ['code' => 'RAW-HUSK', 'ratio' => '1.000000', 'percent' => '15.000000'],
+            ],
+        ],
+        ProductionType::HuskChipping->value => [
+            'input' => 'RAW-HUSK',
+            'outputs' => [
+                ['code' => 'HUSK-7C', 'ratio' => null, 'percent' => '30.000000'],
+                ['code' => 'HUSK-9C', 'ratio' => null, 'percent' => '30.000000'],
+                ['code' => 'HUSK-10C', 'ratio' => null, 'percent' => '40.000000'],
             ],
         ],
     ];
