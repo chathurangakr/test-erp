@@ -1,7 +1,7 @@
 # Data Model — Coconut Factory ERP
 
-> **Status:** Master data (Phases 1-2), the inventory engine (Phase 3) and Purchasing
-> (Phase 4) implemented. Sales, production and finance are not started.
+> **Status:** Master data (Phases 1-2), the inventory engine (Phase 3), Purchasing
+> (Phase 4) and Sales (Phase 5) implemented. Production and finance are not started.
 
 ## 1. Implemented tables
 
@@ -275,6 +275,86 @@ The three cost columns exist so a posted receipt can always be **explained**: th
 how the landed unit cost was arrived at. They are calculated by the server and never
 accepted from a request.
 
+
+### 1.13 `sales_orders`
+
+An intention to sell. Reserves nothing and creates **no inventory movement**.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `so_number` | string(50), **unique** | `SO-YYYYMMDD-000001` |
+| `customer_id` | FK → `customers.id` | `restrictOnDelete` |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
+| `order_date` | date | |
+| `expected_delivery_date` | date, nullable | |
+| `customer_reference` | string(100), nullable | |
+| `status` | string(30) | `App\Enums\SalesOrderStatus` |
+| `notes` | text, nullable | |
+| `created_by` / `approved_by` / `cancelled_by` | FK → `users.id`, nullable | |
+| `approved_at` / `cancelled_at` | datetime, nullable | |
+| `created_at` / `updated_at` | timestamps | |
+
+### 1.14 `sales_order_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `sales_order_id` | FK → `sales_orders.id` | `cascadeOnDelete` |
+| `product_id` | FK → `products.id` | `restrictOnDelete` |
+| `quantity` | **`decimal(20,3)`** | |
+| `secondary_quantity` | **`decimal(20,3)`**, nullable | dual-UOM products |
+| `pricing_basis` | string(20), default `PRIMARY` | `App\Enums\PricingBasis` |
+| `unit_price` | **`decimal(20,6)`** | |
+| `line_total` | **`decimal(20,6)`** | priced quantity × unit price |
+| `delivered_quantity` | **`decimal(20,3)`**, default `0` | a **progress counter**, not stock |
+| `delivered_secondary_quantity` | **`decimal(20,3)`**, nullable | |
+| `created_at` / `updated_at` | timestamps | |
+
+### 1.15 `deliveries`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `delivery_number` | string(50), **unique** | `DN-YYYYMMDD-000001` |
+| `customer_id` | FK → `customers.id` | `restrictOnDelete` |
+| `sales_order_id` | FK → `sales_orders.id`, **nullable** | Null = direct delivery |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
+| `delivery_date` | date | |
+| `customer_reference` / `vehicle_number` / `driver_name` | string, nullable | dispatch details |
+| `status` | string(30) | `App\Enums\DeliveryStatus` — DRAFT / POSTED / REVERSED / CANCELLED |
+| `inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | the `SALES_ISSUE` it created |
+| `reversal_inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | its reversal, if any |
+| `posted_by` / `posted_at` | FK users / datetime, nullable | |
+| `reversed_by` / `reversed_at` | FK users / datetime, nullable | |
+| `created_by` | FK → `users.id`, nullable | |
+| `created_at` / `updated_at` | timestamps | |
+
+**Immutable once posted.** The model throws on update unless the change is confined to the
+reversal audit fields, and refuses deletion of anything but a draft.
+
+### 1.16 `delivery_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `delivery_id` | FK → `deliveries.id` | `cascadeOnDelete` |
+| `sales_order_line_id` | FK → `sales_order_lines.id`, nullable | `restrictOnDelete` |
+| `product_id` | FK → `products.id` | `restrictOnDelete` |
+| `lot_id` | FK → `inventory_lots.id`, nullable | required where lotted stock exists |
+| `quantity` | **`decimal(20,3)`** | what leaves stock |
+| `secondary_quantity` | **`decimal(20,3)`**, nullable | |
+| `pricing_basis` | string(20) | which quantity revenue follows |
+| `unit_price` | **`decimal(20,6)`** | commercial price |
+| `sales_value` | **`decimal(20,6)`** | priced quantity × unit price |
+| `inventory_unit_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
+| `cost_of_goods_sold` | **`decimal(20,6)`**, **nullable** | primary quantity × inventory unit cost |
+| `created_at` / `updated_at` | timestamps | |
+
+Both cost columns stay `null` until the delivery is posted — a draft has no cost because no
+stock has moved. **Gross profit and margin are computed, never stored**, so they cannot
+drift from the figures they derive from.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -354,6 +434,24 @@ clear message.
 
 `TBD` — how free-goods receipts carrying transport cost should be handled, if that arises.
 
+### S-1 — cost of goods sold always follows the PRIMARY quantity
+
+Even on a line priced per KG, stock leaves in the primary unit, so cost is
+`primary quantity × inventory unit cost`. Revenue follows the pricing basis, cost follows
+the stock movement. A consequence worth knowing when reading margins: gross margin on a
+weight-priced shell line depends on the NOS↔KG ratio of that specific delivery, because no
+fixed conversion exists.
+
+### S-2 — a lot must be chosen whenever lotted stock exists
+
+`lot_id` is required if the product holds any lot with positive stock in the warehouse;
+`null` is accepted only where no lot does. This prevents the system silently assuming a lot,
+and avoids the confusing "unlotted bucket is empty" error that a naive null would produce.
+Since every goods receipt creates a lot, purchased stock is always lotted in practice.
+
+`TBD` — whether an automatic allocation strategy (FIFO/FEFO across lots) should be offered
+later as an explicit user choice.
+
 ### I-3 — the weighted average is company-wide, not per warehouse
 
 Version 1 maintains one average per product across all warehouses. This is what makes a
@@ -368,7 +466,7 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `sales_orders`, `delivery_notes` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
+| `production_orders` | Not started. Must post inventory through `App\Actions\Inventory\PostInventoryTransaction`, never directly. |
 | `production_orders` (dehusking / chipping / copra) | Must record production **waste** that does not create inventory. See `BUSINESS_RULES.md` §5. |
 | `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |

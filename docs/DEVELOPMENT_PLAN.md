@@ -76,6 +76,8 @@ supplier, approval hierarchies, and any general-ledger posting.
 
 ## Phase 5 — Production (not started) ◀ NEXT
 
+*(Numbered before Sales in the original plan; Sales was built first at the user's direction.)*
+
 1. **Dehusking** — fixed 1:1:1.
 2. **Husk chipping** — operator-entered output weights; no fixed conversion; waste support.
 3. **Copra production** — operator-entered copra weight; shell as `NOS` **and** `KG`.
@@ -86,10 +88,22 @@ if the factory begins selling it.
 
 **Still open:** partial/failed production output; whether waste carries allocated cost.
 
-## Phase 6 — Sales (not started)
+## Phase 6 — Sales & Dispatch ✅ COMPLETE
 
-Sale of Whole Coconut, Dehusked Coconut, Copra, 7C/9C/10C, and Raw Shell (by `NOS` count
-or by `KG`).
+- [x] `sales_orders`, `sales_order_lines`, `deliveries`, `delivery_lines`
+- [x] Sales order lifecycle: DRAFT → APPROVED → PARTIALLY_DELIVERED → DELIVERED, plus
+      CANCELLED; only a draft is freely editable
+- [x] Deliveries **against a sales order** and **direct**, with no order
+- [x] Posting issues `SALES_ISSUE` through the inventory engine, fully atomic
+- [x] Cost of goods sold read back from the ledger; gross profit and margin computed
+- [x] Explicit lot selection wherever lotted stock exists
+- [x] Dual-unit pricing via `pricing_basis`, driven by the product's units
+- [x] Reversal restoring stock at original cost and sales order quantities
+- [x] Sales order and delivery screens; customer sales history
+- [x] 51 sales tests
+
+**Deliberately not implemented:** accounts receivable, customer balances, payments, sales
+returns as a distinct document, price lists, and any general-ledger posting.
 
 ## Phase 7 — Finance (not started)
 

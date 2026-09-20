@@ -154,6 +154,35 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
+## Sales rules (Phase 5 — implemented)
+
+- **A sales order never creates or reserves inventory.** Stock leaves only when a delivery
+  is posted. `delivered_quantity` on a sales order line is a progress counter, not stock.
+- **Only a DRAFT document may be edited.** An approved sales order and a posted delivery are
+  controlled documents; correct them by cancellation or reversal. The `Delivery` model
+  throws on any post-posting change beyond its reversal audit fields.
+- **Post deliveries through `App\Actions\Sales\PostDelivery`**, which posts a
+  `SALES_ISSUE` through the inventory engine. Never write ledger rows from a sales
+  controller.
+- **Selling price and inventory cost are entirely separate.** The seller never states what
+  stock cost: the engine values the issue at the weighted average and the delivery reads
+  that cost back. A high selling price must never influence the weighted average.
+- **Cost of goods sold always uses the PRIMARY quantity**, even on a line priced per KG,
+  because the primary quantity is what leaves stock. Revenue follows `pricing_basis`; cost
+  follows the stock movement. See `docs/DATA_MODEL.md` S-1.
+- **`pricing_basis` is governed by the product's `secondary_uom_id`, never by a product
+  code.** `SECONDARY` is permitted only where a secondary unit exists; everything else is
+  `PRIMARY`. The priced quantity is derived from the basis, never typed separately.
+- **A lot must be explicitly chosen wherever lotted stock exists.** Never silently assume
+  one. See `docs/DATA_MODEL.md` S-2.
+- **Gross profit and margin are computed, never stored**, so they cannot drift. Zero sales
+  value yields a zero margin, never a division error.
+- **Sales creates no accounting entries** — no receivables, no customer balances, no
+  payments, no journals. A test asserts those tables do not exist.
+- **Document numbers:** `SO-YYYYMMDD-000001`, `DN-YYYYMMDD-000001`.
+
+---
+
 ## Critical accounting rules
 
 - Use **double-entry accounting**.
@@ -244,17 +273,19 @@ warehouses) and to every master added later:
 Implemented: project documentation, **Product Master** (products + units of measure),
 **Supplier Master**, **Customer Master**, **Warehouse Master**, the
 **Inventory engine** (ledger, lots, weighted-average costing, transfers, reversals) with
-read-only Stock on Hand / Stock Ledger / Lots screens, and **Purchasing** (purchase orders,
-goods receipts, landed cost, lot creation, posting and reversal).
+read-only Stock on Hand / Stock Ledger / Lots screens, **Purchasing** (purchase orders,
+goods receipts, landed cost, lot creation, posting and reversal), and **Sales** (sales
+orders, deliveries, cost of goods sold, gross profit, lot selection, dual-unit pricing,
+posting and reversal).
 
-**Not yet started — do not begin without instruction:** Production, Sales, Finance,
-Payables, Receivables, Costing beyond purchase landed cost, role-based permissions,
-REST API.
+**Not yet started — do not begin without instruction:** Production, Finance, Payables,
+Receivables, customer payments, Costing beyond purchase landed cost, role-based
+permissions, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing. Role-based permissions come later.
+purchasing and sales. Role-based permissions come later.
 
 ---
 

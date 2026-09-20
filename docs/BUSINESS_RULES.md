@@ -285,3 +285,153 @@ request does not accept them.
 - The lot records the receipt as its origin (`source_type` / `source_id`), giving full
   traceability from stock back to the delivery — which is what enables lot traceability for
   coconut and raw husk purchases.
+
+## 15. Sales — sales order lifecycle
+
+**A sales order records an intention to sell. It reserves nothing and creates no inventory
+movement.**
+
+```
+DRAFT ──approve──▶ APPROVED ──deliver──▶ PARTIALLY_DELIVERED ──deliver──▶ DELIVERED
+  │                    │                           │
+  └────cancel────▶ CANCELLED ◀────────cancel───────┘
+```
+
+| Rule | Detail |
+| --- | --- |
+| Free editing | **Only a `DRAFT`** may have its header or lines changed |
+| Controlled document | Once `APPROVED`, the commercial values — quantities and prices — are preserved |
+| Approval requires lines | An order with no lines cannot be approved |
+| Cancellation | Allowed from `DRAFT` or `APPROVED`. A **cancelled order can never be delivered against** |
+| Partially delivered | Set automatically when some, but not all, ordered quantity has been delivered |
+| Fully delivered | Set automatically when every line is complete; no further quantity may be delivered |
+| Over-delivery | **Rejected.** A delivery may not exceed a line's outstanding quantity |
+| History | Orders are never deleted |
+
+`delivered_quantity` on a line is a **progress counter**, not stock. The order status is
+always **recomputed from the line quantities** after a delivery is posted or reversed, so it
+can never drift.
+
+**Numbering:** `SO-YYYYMMDD-000001`, from the same daily sequence as every other document.
+
+**Sellable products are not hard-coded.** Any active product with available stock may be
+sold.
+
+## 16. Sales — delivery lifecycle
+
+```
+DRAFT ──post──▶ POSTED ──reverse──▶ REVERSED
+  │
+  └──cancel──▶ CANCELLED
+```
+
+| Rule | Detail |
+| --- | --- |
+| Draft | Creates **no inventory movement at all**. Freely editable |
+| Posted | Issues `SALES_ISSUE` movements. **Immutable** thereafter |
+| Correction | A posted delivery is corrected by **reversal**, never by editing |
+| Cancelled | A draft abandoned before posting; creates no stock. Only a draft may be cancelled |
+| Reversed | A posted delivery undone by an opposite ledger transaction |
+| Double posting / double reversal | **Prohibited**, enforced under a row lock |
+
+**Two ways to deliver**, both fully supported:
+
+1. **Against an approved sales order** — lines may be pre-filled from its outstanding
+   quantities, and posting updates the order.
+2. **Direct, with no sales order** — requires an active customer, active warehouse, product,
+   quantity and selling price.
+
+**Posting validates, in order:** delivery is `DRAFT` → customer active → warehouse active →
+product exists → quantity greater than zero → pricing basis valid for the product → lot
+belongs to the product and is explicitly chosen where required → sales order open and
+matching → no over-delivery. The inventory engine then independently enforces stock
+availability, including per-lot.
+
+**Everything happens in one database transaction.** If any step fails there is no inventory
+movement, no sales order update and no partially posted delivery.
+
+### Cost of goods sold
+
+The seller never states what stock cost. Posting hands the lines to the inventory engine,
+which values the `SALES_ISSUE` at the weighted average in force; the delivery then **reads
+back** the cost the ledger actually used:
+
+```
+sales_value         = selling quantity x unit_price
+inventory_unit_cost = the weighted average the LEDGER used
+cost_of_goods_sold  = PRIMARY quantity x inventory_unit_cost
+gross_profit        = sales_value - cost_of_goods_sold
+gross_margin %      = gross_profit / sales_value x 100      (0 when sales value is 0)
+```
+
+**Worked example** — 2,000 Whole Coconut sold at Rs.130 against a weighted average of
+Rs.102.50:
+
+| | |
+| --- | --- |
+| Revenue | 2,000 × 130 = **Rs.260,000** |
+| Inventory OUT | 2,000 NOS |
+| Cost of goods sold | 2,000 × 102.50 = **Rs.205,000** |
+| Gross profit | **Rs.55,000** |
+| Gross margin | **21.15%** |
+
+**Selling price never affects the weighted average cost.** The two are entirely separate:
+the engine refuses a caller-supplied price on an outgoing line, so a high selling price
+cannot inflate inventory valuation.
+
+**Reversal of a delivery:**
+
+- reverses the `SALES_ISSUE` through the inventory engine, which reuses each original line's
+  unit cost, so stock returns at exactly the value it left at — not at whatever the average
+  has drifted to since;
+- restores the sales order's delivered quantities and recomputes its status;
+- marks the delivery `REVERSED` with audit references;
+- **never deletes the original delivery or its lines**;
+- is refused if already reversed, or if it would violate the engine's rules.
+
+**Numbering:** `DN-YYYYMMDD-000001`.
+
+### Lot selection
+
+A lot must be **explicitly chosen** whenever the product holds any lotted stock in the
+warehouse — the system never silently assumes one. `null` is accepted only where no lot
+holds stock (unlotted opening balances or adjustments). Where exactly one lot is eligible
+the UI preselects it, but posting still validates it.
+
+Lot stock can never go negative: the engine checks the lot bucket separately from the
+warehouse bucket, so a lot cannot be over-issued even when the warehouse holds other stock
+of the same product.
+
+## 17. Sales — dual-unit pricing (`pricing_basis`)
+
+Raw Coconut Shell is stocked in `NOS` but may be sold by weight. A sales or delivery line
+therefore carries a **pricing basis**:
+
+| Basis | Revenue calculated from |
+| --- | --- |
+| `PRIMARY` | the stocked quantity, e.g. Rs/NOS |
+| `SECONDARY` | the secondary quantity, e.g. Rs/KG |
+
+**The priced quantity is derived from the basis — never typed independently.** It is always
+one of the two quantities already recorded on the line.
+
+**`SECONDARY` is permitted only where the PRODUCT has a secondary unit of measure.** This is
+driven entirely by the product's units, never by a hard-coded product code, so any future
+dual-UOM product gets the behaviour automatically and every single-UOM product is restricted
+to `PRIMARY`. Choosing `SECONDARY` also requires a secondary quantity to be present.
+
+**Worked example** — 500 shell at 208.750 KG, priced per KG at Rs.80:
+
+```
+sales_value = 208.750 × 80 = Rs.16,700      ← revenue follows the WEIGHT
+inventory OUT = 500 NOS                      ← stock follows the COUNT
+cost_of_goods_sold = 500 × unit cost         ← cost follows the COUNT
+```
+
+**Cost always follows the primary quantity**, because that is what leaves stock. A
+consequence worth knowing: gross margin on a weight-priced line depends on the NOS↔KG ratio
+of that particular delivery, since **no fixed conversion exists** — actual weights are
+recorded because shell weights genuinely vary.
+
+For Version 1 the **primary quantity remains authoritative** for negative-stock validation;
+the secondary quantity is informational, exactly as in `INVENTORY_RULES.md` §7.

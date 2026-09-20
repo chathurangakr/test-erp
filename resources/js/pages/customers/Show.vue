@@ -6,10 +6,17 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/customers';
+import { index as deliveriesIndex } from '@/routes/deliveries';
+import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import type { Customer } from '@/types';
 
 defineProps<{
     customer: Customer;
+    salesHistory: {
+        sales_orders: { id: number; so_number: string; order_date: string | null; status_label: string }[];
+        deliveries: { id: number; delivery_number: string; delivery_date: string | null; status_label: string }[];
+        delivered_value: string;
+    };
 }>();
 
 defineOptions({
@@ -130,6 +137,61 @@ function formatDate(value: string | null): string {
                     <dd class="mt-1 text-sm">{{ formatDate(customer.updated_at) }}</dd>
                 </div>
             </dl>
+        </div>
+
+        <!-- Sales history -->
+        <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-medium">Sales history</h3>
+                <p class="text-sm">
+                    Delivered value:
+                    <span class="ml-1 font-mono font-medium">{{ salesHistory.delivered_value }}</span>
+                </p>
+            </div>
+
+            <div class="mt-4 grid gap-6 sm:grid-cols-2">
+                <div>
+                    <p class="text-muted-foreground text-xs font-medium">Recent sales orders</p>
+                    <ul v-if="salesHistory.sales_orders.length" class="mt-2 space-y-1.5">
+                        <li
+                            v-for="so in salesHistory.sales_orders"
+                            :key="so.id"
+                            class="flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                            <Link :href="`${salesOrdersIndex().url}/${so.id}`" class="font-mono hover:underline">
+                                {{ so.so_number }}
+                            </Link>
+                            <span class="text-muted-foreground">{{ so.order_date }}</span>
+                            <Badge variant="secondary">{{ so.status_label }}</Badge>
+                        </li>
+                    </ul>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                </div>
+
+                <div>
+                    <p class="text-muted-foreground text-xs font-medium">Recent deliveries</p>
+                    <ul v-if="salesHistory.deliveries.length" class="mt-2 space-y-1.5">
+                        <li
+                            v-for="dn in salesHistory.deliveries"
+                            :key="dn.id"
+                            class="flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                            <Link :href="`${deliveriesIndex().url}/${dn.id}`" class="font-mono hover:underline">
+                                {{ dn.delivery_number }}
+                            </Link>
+                            <span class="text-muted-foreground">{{ dn.delivery_date }}</span>
+                            <Badge variant="secondary">{{ dn.status_label }}</Badge>
+                        </li>
+                    </ul>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                </div>
+            </div>
+
+            <p class="text-muted-foreground mt-4 text-xs">
+                Delivered value counts posted deliveries only. Amounts owed by this customer
+                are not shown — receivables belong to the finance module, which is not yet
+                built.
+            </p>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">

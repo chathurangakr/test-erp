@@ -70,15 +70,22 @@ See `DATA_MODEL.md` decision D-1.
 - **Purchasing** — purchase orders and goods receipts, with landed-cost calculation, lot
   creation, posting to the inventory ledger, and reversal. Supports both receipts against a
   purchase order and direct receipts with no order.
+- **Sales** — sales orders and deliveries, issuing `SALES_ISSUE` movements, recording cost
+  of goods sold and gross profit, with lot selection, dual-unit pricing, and reversal.
+  Supports both deliveries against a sales order and direct deliveries.
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Production (dehusking / husk chipping / copra), Sales, Finance (double-entry), Payables,
-Receivables, Costing beyond purchase landed cost, role-based permissions, REST API for the
-Flutter mobile application.
+Production (dehusking / husk chipping / copra), Finance (double-entry), Payables,
+Receivables, customer payments, Costing beyond purchase landed cost, role-based permissions,
+REST API for the Flutter mobile application.
+
+**Sales creates no accounting entries.** A delivery moves stock and records operational
+profitability; nothing is receivable, posted to a ledger account, or tracked as a customer
+balance. A test asserts no accounts, journals, receivable or payment tables exist.
 
 **Purchasing creates no accounting entries.** A goods receipt moves stock and records its
 landed cost; nothing is owed, posted to a ledger account, or tracked as a payable. A test
@@ -113,6 +120,10 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 11 | Purchasable products | **Not hard-coded.** Any active product may be purchased; coconut and husk are simply the first. |
 | 12 | Landed cost | Transport, loading and other costs are **allocated by material value**, and the landed unit cost is what reaches inventory. |
 | 13 | Goods receipts | Supported **both** against a purchase order and **directly** without one. |
+| 14 | Selling price vs cost | Entirely separate. Selling price never affects the weighted average cost. |
+| 15 | Cost of goods sold | `primary quantity × the weighted average the ledger used`. Never typed by a seller. |
+| 16 | Dual-unit pricing | `pricing_basis` chooses which recorded quantity revenue follows; allowed only where the product has a secondary unit. |
+| 17 | Lot selection on issue | A lot must be explicitly chosen wherever lotted stock exists. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -136,6 +147,10 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 16 | Are inter-warehouse **transfer documents/screens** required, or is the service sufficient? | Inventory |
 | 17 | Should a purchase order support **partial cancellation** of remaining quantity, rather than all-or-nothing? | Purchasing |
 | 18 | Should goods receipts capture **supplier invoice numbers / dates** ahead of the payables module? | Purchasing / Finance |
+| 19 | Should an automatic lot allocation strategy (FIFO/FEFO) be offered as an option, rather than always choosing manually? See `DATA_MODEL.md` S-2. | Sales |
+| 20 | Should **sales returns** from customers be a distinct document, or handled purely by delivery reversal? | Sales |
+| 21 | Are **customer-specific price lists** required, or does price remain per-order? | Sales |
+| 22 | Should a sales order **reserve** stock, or continue to reserve nothing until delivery? | Sales / Inventory |
 
 **Confirmed and closed this phase:** reversal cost basis (I-1), secondary quantity (I-2),
 company-wide weighted average (I-3), and the inactive-product incoming-stock rule.

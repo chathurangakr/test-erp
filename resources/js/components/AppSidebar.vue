@@ -9,8 +9,10 @@ import {
     LayoutGrid,
     Layers,
     Package,
+    Receipt,
     ScrollText,
     ShoppingCart,
+    Truck as TruckIcon,
     Truck,
     Users,
 } from '@lucide/vue';
@@ -34,6 +36,8 @@ import { index as lotsIndex } from '@/routes/inventory/lots';
 import { index as stockIndex } from '@/routes/inventory/stock';
 import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
+import { index as deliveriesIndex } from '@/routes/deliveries';
+import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -101,6 +105,19 @@ const purchasingNavItems: NavItem[] = [
     },
 ];
 
+const salesNavItems: NavItem[] = [
+    {
+        title: 'Sales Orders',
+        href: salesOrdersIndex(),
+        icon: Receipt,
+    },
+    {
+        title: 'Deliveries',
+        href: deliveriesIndex(),
+        icon: TruckIcon,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -134,6 +151,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="masterNavItems" label="Master data" />
             <NavMain :items="inventoryNavItems" label="Inventory" />
             <NavMain :items="purchasingNavItems" label="Purchasing" />
+            <NavMain :items="salesNavItems" label="Sales" />
         </SidebarContent>
 
         <SidebarFooter>
