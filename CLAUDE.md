@@ -183,6 +183,33 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
+## Production rules (Phase 6 — dehusking implemented)
+
+- **Only dehusking is postable.** `HUSK_CHIPPING` and `COPRA` exist in `ProductionType` so
+  the architecture fits them, but `isImplemented()` blocks posting. Do not build them
+  without instruction.
+- **Product codes live only in `ProductionRecipeSeeder`.** Everything resolves products
+  through `production_recipes` / `production_recipe_outputs`. Never reference `COCONUT`,
+  `DEHUSKED-COCONUT` or `RAW-HUSK` in a controller, service or action.
+- **The 1:1:1 ratio is configuration, not code.** It is the recipe's `output_ratio`.
+  Output quantities are derived from the input and are never accepted from a request.
+- **Production conserves inventory value.** Item count rises — one coconut becomes two
+  things — but money does not. Allocated output costs must sum **exactly** to the consumed
+  value, with the final output absorbing the rounding remainder.
+- **The allocation percentages must total exactly 100**, enforced by
+  `ProductionRecipe::assertAllocationIsComplete()`. The current 85/15 split is
+  **provisional** and configurable; never hard-code it.
+- **Consumed cost is read back from the ledger**, never recomputed in production code.
+- **Posting writes TWO inventory transactions** — `PRODUCTION_CONSUMPTION` and
+  `PRODUCTION_OUTPUT` — inside one database transaction. See `docs/DATA_MODEL.md` P-3.
+- **An input lot is required**, and each output gets a new lot recording the run as its
+  source, so stock is traceable in both directions.
+- **Reverse outputs before the consumption**, so a reversal blocked by already-consumed
+  output fails before any input is restored.
+- **No labour, electricity, machine, fuel or overhead cost** is added in this phase.
+
+---
+
 ## Critical accounting rules
 
 - Use **double-entry accounting**.
@@ -208,6 +235,8 @@ Can be purchased from suppliers, sold directly to customers, or sent to dehuskin
 Example — input 1,000 Whole Coconut produces 1,000 Dehusked Coconut and 1,000 Raw Coconut
 Husk. Whole Coconut decreases by 1,000; Dehusked Coconut increases by 1,000; Raw Husk
 increases by 1,000. This is a **fixed 1:1:1 relationship**.
+
+✅ **Implemented** — see the Production rules section above.
 
 ### Dehusked Coconut — primary UOM `NOS`
 
@@ -274,18 +303,20 @@ Implemented: project documentation, **Product Master** (products + units of meas
 **Supplier Master**, **Customer Master**, **Warehouse Master**, the
 **Inventory engine** (ledger, lots, weighted-average costing, transfers, reversals) with
 read-only Stock on Hand / Stock Ledger / Lots screens, **Purchasing** (purchase orders,
-goods receipts, landed cost, lot creation, posting and reversal), and **Sales** (sales
-orders, deliveries, cost of goods sold, gross profit, lot selection, dual-unit pricing,
-posting and reversal).
+goods receipts, landed cost, lot creation, posting and reversal), **Sales** (sales orders,
+deliveries, cost of goods sold, gross profit, lot selection, dual-unit pricing, posting and
+reversal), and **Dehusking production** (recipe-driven 1:1:1 conversion, traceable output
+lots, configurable value allocation, posting and reversal).
 
-**Not yet started — do not begin without instruction:** Production, Finance, Payables,
-Receivables, customer payments, Costing beyond purchase landed cost, role-based
+**Not yet started — do not begin without instruction:** Husk chipping, copra production,
+Finance, Payables, Receivables, customer payments, production expenses, the permanent
+joint-product costing method, production planning, BOM editor, maintenance, role-based
 permissions, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing and sales. Role-based permissions come later.
+purchasing, sales and dehusking production. Role-based permissions come later.
 
 ---
 

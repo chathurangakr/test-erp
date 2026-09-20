@@ -1,0 +1,233 @@
+<script setup lang="ts">
+import { useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
+
+const props = defineProps<{
+    method: 'post' | 'put';
+    action: string;
+    submitLabel: string;
+    cancelHref: string;
+    warehouses: OptionRef[];
+    lots: ProductionLotOption[];
+    recipe: ProductionRecipeInfo;
+    inputStock: string;
+    initial?: {
+        production_date: string | null;
+        warehouse_id: number | null;
+        lot_id: number | null;
+        quantity: string | null;
+        notes: string | null;
+    } | null;
+}>();
+
+const today = new Date().toISOString().slice(0, 10);
+
+const form = useForm({
+    production_date: props.initial?.production_date ?? today,
+    warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
+    lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
+    quantity: props.initial?.quantity ?? '',
+    notes: props.initial?.notes ?? '',
+});
+
+/** Lots holding coconut in the chosen warehouse. */
+const availableLots = computed(() => {
+    if (!form.warehouse_id) {
+        return [];
+    }
+
+    return props.lots.filter((lot) =>
+        lot.warehouses.some((w) => String(w.warehouse_id) === form.warehouse_id),
+    );
+});
+
+const selectedLotQuantity = computed(() => {
+    const lot = props.lots.find((l) => String(l.id) === form.lot_id);
+
+    return (
+        lot?.warehouses.find((w) => String(w.warehouse_id) === form.warehouse_id)?.quantity ??
+        null
+    );
+});
+
+const inputQuantity = computed(() => {
+    const parsed = Number(form.quantity);
+
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+});
+
+/**
+ * Output preview. Quantities come from the recipe's ratio, which is what encodes the
+ * 1:1:1 rule — they are shown read-only and are recalculated server-side at posting.
+ */
+const outputPreview = computed(() =>
+    props.recipe.outputs.map((output) => ({
+        ...output,
+        quantity: (inputQuantity.value * Number(output.ratio)).toFixed(3),
+    })),
+);
+
+const exceedsLot = computed(() => {
+    const available = Number(selectedLotQuantity.value ?? 0);
+
+    return inputQuantity.value > 0 && available > 0 && inputQuantity.value > available;
+});
+
+function submit(): void {
+    form.submit(props.method, props.action, { preserveScroll: true });
+}
+
+const selectClass =
+    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+</script>
+
+<template>
+    <form class="space-y-8" @submit.prevent="submit">
+        <section class="space-y-4">
+            <h3 class="text-sm font-medium">Production details</h3>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-2">
+                    <Label for="production_date">
+                        Production date <span class="text-destructive">*</span>
+                    </Label>
+                    <Input id="production_date" v-model="form.production_date" type="date" required />
+                    <InputError :message="form.errors.production_date" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="warehouse_id">Warehouse <span class="text-destructive">*</span></Label>
+                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
+                        <option value="" disabled>Select a warehouse…</option>
+                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
+                            {{ w.code }} — {{ w.name }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.warehouse_id" />
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="text-sm font-medium">
+                    Input — {{ recipe.input_code }}
+                </h3>
+                <p class="text-muted-foreground text-xs">
+                    Company stock on hand:
+                    <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
+                </p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-2">
+                    <Label for="lot_id">Coconut lot <span class="text-destructive">*</span></Label>
+                    <select
+                        id="lot_id"
+                        v-model="form.lot_id"
+                        required
+                        :disabled="!form.warehouse_id"
+                        :class="selectClass"
+                    >
+                        <option value="" disabled>
+                            {{ form.warehouse_id ? 'Select a lot…' : 'Choose a warehouse first' }}
+                        </option>
+                        <option v-for="lot in availableLots" :key="lot.id" :value="String(lot.id)">
+                            {{ lot.lot_number }}
+                        </option>
+                    </select>
+                    <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
+                        Available in this lot:
+                        <span class="font-mono">{{ selectedLotQuantity }}</span>
+                        {{ recipe.input_uom }}
+                    </p>
+                    <InputError :message="form.errors.lot_id" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="quantity">
+                        Quantity to process ({{ recipe.input_uom }})
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <Input
+                        id="quantity"
+                        v-model="form.quantity"
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        required
+                    />
+                    <p v-if="exceedsLot" class="text-destructive text-xs">
+                        This exceeds the {{ selectedLotQuantity }} available in the selected lot.
+                    </p>
+                    <InputError :message="form.errors.quantity" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Derived outputs — read only -->
+        <section class="space-y-4">
+            <h3 class="text-sm font-medium">Outputs</h3>
+
+            <div
+                class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
+            >
+                <table class="w-full text-sm">
+                    <thead class="bg-muted/50 text-left">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Product</th>
+                            <th class="px-4 py-3 text-right font-medium">Quantity</th>
+                            <th class="px-4 py-3 font-medium">UOM</th>
+                            <th class="px-4 py-3 text-right font-medium">Cost share</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="output in outputPreview"
+                            :key="output.code ?? ''"
+                            class="border-sidebar-border/70 dark:border-sidebar-border border-t"
+                        >
+                            <td class="px-4 py-3">
+                                <span class="font-mono text-xs">{{ output.code }}</span>
+                                <span class="text-muted-foreground block text-xs">{{ output.name }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono">{{ output.quantity }}</td>
+                            <td class="text-muted-foreground px-4 py-3">{{ output.uom }}</td>
+                            <td class="px-4 py-3 text-right font-mono">
+                                {{ Number(output.allocation_percent).toFixed(2) }}%
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-muted-foreground text-xs">
+                Output quantities are derived from the input — one coconut yields one
+                dehusked coconut and one husk — and cannot be edited. The cost shares are
+                configuration: the consumed inventory value is divided between the outputs
+                in these proportions, so production neither creates nor destroys value.
+                Actual costs are calculated by the ledger when you post.
+            </p>
+        </section>
+
+        <div class="grid gap-2">
+            <Label for="prd_notes">Notes</Label>
+            <textarea
+                id="prd_notes"
+                v-model="form.notes"
+                rows="3"
+                class="border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            />
+            <InputError :message="form.errors.notes" />
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+        </div>
+    </form>
+</template>

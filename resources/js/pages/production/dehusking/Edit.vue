@@ -1,0 +1,35 @@
+<script setup lang="ts">
+import { Head } from '@inertiajs/vue3';
+import DehuskingForm from '@/components/production/DehuskingForm.vue';
+import Heading from '@/components/Heading.vue';
+import { index } from '@/routes/dehusking';
+import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
+
+const props = defineProps<{
+    order: {
+        id: number;
+        production_number: string;
+        production_date: string | null;
+        warehouse_id: number | null;
+        lot_id: number | null;
+        quantity: string | null;
+        notes: string | null;
+    };
+    warehouses: OptionRef[];
+    lots: ProductionLotOption[];
+    recipe: ProductionRecipeInfo;
+    inputStock: string;
+}>();
+
+defineOptions({ layout: { breadcrumbs: [{ title: 'Dehusking', href: index() }] } });
+</script>
+
+<template>
+    <Head :title="`Edit ${props.order.production_number}`" />
+    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+        <Heading :title="`Edit ${props.order.production_number}`" description="Only a draft production order can be edited." />
+        <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-5xl rounded-xl border p-4 sm:p-6">
+            <DehuskingForm method="put" :action="`${index().url}/${props.order.id}`" submit-label="Save changes" :cancel-href="`${index().url}/${props.order.id}`" :warehouses="warehouses" :lots="lots" :recipe="recipe" :input-stock="inputStock" :initial="props.order" />
+        </div>
+    </div>
+</template>

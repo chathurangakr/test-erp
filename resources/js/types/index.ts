@@ -2,6 +2,7 @@ export * from './auth';
 export * from './inventory';
 export * from './masters';
 export * from './navigation';
+export * from './production';
 export * from './products';
 export * from './purchasing';
 export * from './sales';

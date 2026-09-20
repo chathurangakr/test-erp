@@ -1,8 +1,9 @@
 # Inventory Rules — Coconut Factory ERP
 
-> **Status:** ✅ **IMPLEMENTED** (Phase 3), and now driven by Purchasing (Phase 4).
-> Goods receipts post `PURCHASE_RECEIPT` movements through the engine. Sales and production
-> are not built yet.
+> **Status:** ✅ **IMPLEMENTED** (Phase 3), and driven by Purchasing (Phase 4), Sales
+> (Phase 5) and Dehusking production (Phase 6). Goods receipts post `PURCHASE_RECEIPT`,
+> deliveries post `SALES_ISSUE`, and dehusking posts `PRODUCTION_CONSUMPTION` plus
+> `PRODUCTION_OUTPUT`. Husk chipping and copra are not built yet.
 
 ## 1. The fundamental rule
 
@@ -141,8 +142,13 @@ price an OUT line — supplying `unit_cost` on an outgoing line is rejected.
 **All arithmetic uses BCMath via `App\Support\DecimalMath`.** PHP floating point is never
 used for quantities or costs anywhere in the costing path.
 
-Joint-product cost allocation (dehusking, chipping, copra) remains **`TBD`** and is not
-implemented.
+**Joint-product allocation for dehusking is implemented as configurable fixed percentages**
+(currently 85 / 15, provisional) held in `production_recipe_outputs`. The allocated output
+costs sum exactly to the consumed value, so production conserves inventory value: physical
+item count rises, money does not. See `BUSINESS_RULES.md` §18.
+
+The permanent costing method — and allocation for husk chipping and copra — remains
+**`TBD`**.
 
 ## 9. Warehouse transfers
 

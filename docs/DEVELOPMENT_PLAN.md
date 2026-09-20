@@ -74,9 +74,25 @@ financial journals, joint-product cost allocation.
 **Deliberately not implemented:** supplier payables, invoice matching, purchase returns to
 supplier, approval hierarchies, and any general-ledger posting.
 
-## Phase 5 — Production (not started) ◀ NEXT
+## Phase 5 — Production — Dehusking ✅ COMPLETE
 
 *(Numbered before Sales in the original plan; Sales was built first at the user's direction.)*
+
+- [x] `production_recipes`, `production_recipe_outputs`, `production_orders`,
+      `production_inputs`, `production_outputs`
+- [x] Extensible `ProductionType` (DEHUSKING implemented; HUSK_CHIPPING and COPRA declared
+      but not postable)
+- [x] Lifecycle DRAFT → POSTED → REVERSED, plus CANCELLED
+- [x] Fixed 1:1:1 conversion held as recipe configuration, outputs derived and read-only
+- [x] Posts `PRODUCTION_CONSUMPTION` + `PRODUCTION_OUTPUT` atomically
+- [x] Configurable value allocation (85/15, provisional) summing exactly to consumed value
+- [x] New traceable output lot per output, linked to the run and the consumed lot
+- [x] Reversal restoring stock at original cost, refused once output has been consumed
+- [x] Dehusking index / create / show screens
+- [x] 44 production tests
+
+**Deliberately not implemented:** husk chipping, copra, production planning, BOM editor,
+maintenance, labour/electricity/machine/fuel/overhead costs, and any general-ledger posting.
 
 1. **Dehusking** — fixed 1:1:1.
 2. **Husk chipping** — operator-entered output weights; no fixed conversion; waste support.

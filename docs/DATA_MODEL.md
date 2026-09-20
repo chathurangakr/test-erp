@@ -1,7 +1,8 @@
 # Data Model — Coconut Factory ERP
 
 > **Status:** Master data (Phases 1-2), the inventory engine (Phase 3), Purchasing
-> (Phase 4) and Sales (Phase 5) implemented. Production and finance are not started.
+> (Phase 4), Sales (Phase 5) and Dehusking production (Phase 6) implemented. Husk
+> chipping, copra and finance are not started.
 
 ## 1. Implemented tables
 
@@ -355,6 +356,94 @@ Both cost columns stay `null` until the delivery is posted — a draft has no co
 stock has moved. **Gross profit and margin are computed, never stored**, so they cannot
 drift from the figures they derive from.
 
+
+### 1.17 `production_recipes` and `production_recipe_outputs`
+
+Configuration, not transactions. These two tables are the **only** place that knows which
+products a production type involves and how it shares value — product codes appear nowhere
+else in the application except the seeder.
+
+`production_recipes`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `production_type` | string(30), **unique** | `App\Enums\ProductionType` |
+| `input_product_id` | FK → `products.id` | `restrictOnDelete` |
+| `notes` | text, nullable | |
+| `is_active` | boolean, default `true` | |
+
+`production_recipe_outputs`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `production_recipe_id` | FK → `production_recipes.id` | `cascadeOnDelete` |
+| `product_id` | FK → `products.id` | `restrictOnDelete`; unique per recipe |
+| `output_ratio` | **`decimal(20,6)`**, default `1` | units of output per unit of input — **this is what encodes the 1:1:1 rule** |
+| `allocation_percent` | **`decimal(9,6)`** | share of consumed value; **must total exactly 100** |
+| `sort_order` | unsigned smallint | |
+
+**Seeded recipe — DEHUSKING**
+
+| Input | Output | Ratio | Allocation |
+| --- | --- | --- | --- |
+| `COCONUT` | `DEHUSKED-COCONUT` | 1.000000 | **85%** |
+| `COCONUT` | `RAW-HUSK` | 1.000000 | **15%** |
+
+The percentages are **provisional** pending the factory's costing policy. See
+`BUSINESS_RULES.md` §18.
+
+### 1.18 `production_orders`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `production_number` | string(50), **unique** | `PRD-YYYYMMDD-000001` |
+| `production_type` | string(30) | `App\Enums\ProductionType` |
+| `production_date` | date | |
+| `warehouse_id` | FK → `warehouses.id` | `restrictOnDelete` |
+| `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `notes` | text, nullable | |
+| `inventory_transaction_id` | FK, nullable | the `PRODUCTION_CONSUMPTION` |
+| `output_inventory_transaction_id` | FK, nullable | the `PRODUCTION_OUTPUT` |
+| `reversal_inventory_transaction_id` | FK, nullable | reversal of the consumption |
+| `output_reversal_transaction_id` | FK, nullable | reversal of the output |
+| `created_by` / `posted_by` / `reversed_by` | FK users, nullable | |
+| `posted_at` / `reversed_at` | datetime, nullable | |
+
+**Four transaction links, not two** — see decision **P-3** below.
+
+**Immutable once posted.** The model throws on update unless the change is confined to the
+reversal audit fields, and refuses deletion of anything but a draft.
+
+### 1.19 `production_inputs` and `production_outputs`
+
+`production_inputs`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `production_order_id` | FK, `cascadeOnDelete` | |
+| `product_id` | FK → `products.id` | |
+| `lot_id` | FK → `inventory_lots.id`, nullable | **required for dehusking** — traceability |
+| `quantity` | **`decimal(20,3)`** | |
+| `unit_cost` / `total_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
+
+`production_outputs`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `production_order_id` | FK, `cascadeOnDelete` | |
+| `product_id` | FK → `products.id` | |
+| `lot_id` | FK → `inventory_lots.id`, nullable | a **new** lot created at posting |
+| `quantity` | **`decimal(20,3)`** | derived from the recipe ratio |
+| `allocation_percent` | **`decimal(9,6)`** | the share applied, snapshotted |
+| `allocated_cost` | **`decimal(20,6)`** | sums **exactly** to the consumed value |
+| `unit_cost` | **`decimal(20,6)`** | allocated cost / quantity |
+
+No labour, electricity, machine, fuel or overhead columns exist anywhere — a test asserts
+their absence.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -451,6 +540,29 @@ Since every goods receipt creates a lot, purchased stock is always lotted in pra
 
 `TBD` — whether an automatic allocation strategy (FIFO/FEFO across lots) should be offered
 later as an explicit user choice.
+
+### P-3 — a production order links FOUR inventory transactions, not two
+
+The ledger records one transaction type per transaction, and production involves two:
+`PRODUCTION_CONSUMPTION` for the input and `PRODUCTION_OUTPUT` for the outputs. Forcing
+both into a single transaction would mislabel half the lines, so the order carries a link
+to each, plus a reversal link for each. All four are written inside one database
+transaction, so atomicity is unchanged.
+
+### P-4 — output quantities and costs are never accepted from a request
+
+Outputs come from the recipe ratio; the consumed cost comes from the ledger. The form
+request binds neither, and a test submits bogus output quantities and costs to prove they
+are ignored. This keeps the 1:1:1 rule and the valuation impossible to subvert from the UI.
+
+### P-5 — the 85 / 15 allocation is configuration, and provisional
+
+Stored in `production_recipe_outputs`, validated to total exactly 100%, and referenced only
+through the recipe. The factory has not finalised its joint-product costing policy; when it
+does, only the seeded numbers change.
+
+`TBD` — the permanent joint-product costing method (market value / NRV / other), and
+whether allocation should vary by period or by product grade.
 
 ### I-3 — the weighted average is company-wide, not per warehouse
 

@@ -73,15 +73,23 @@ See `DATA_MODEL.md` decision D-1.
 - **Sales** — sales orders and deliveries, issuing `SALES_ISSUE` movements, recording cost
   of goods sold and gross profit, with lot selection, dual-unit pricing, and reversal.
   Supports both deliveries against a sales order and direct deliveries.
+- **Dehusking production** — converts whole coconut into dehusked coconut and raw husk at
+  the confirmed 1:1:1 ratio, creating traceable output lots and sharing the consumed value
+  by configurable percentages, with reversal. Husk chipping and copra are not built.
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Production (dehusking / husk chipping / copra), Finance (double-entry), Payables,
-Receivables, customer payments, Costing beyond purchase landed cost, role-based permissions,
-REST API for the Flutter mobile application.
+Husk chipping, copra production, Finance (double-entry), Payables, Receivables, customer
+payments, production expenses (labour / electricity / machine / fuel / overhead), the
+permanent joint-product costing method, role-based permissions, REST API for the Flutter
+mobile application.
+
+**Production creates no accounting entries and adds no expenses.** Total input inventory
+value equals total output inventory value exactly. A test asserts no ledger, costing or
+overhead tables exist.
 
 **Sales creates no accounting entries.** A delivery moves stock and records operational
 profitability; nothing is receivable, posted to a ledger account, or tracked as a customer
@@ -124,6 +132,10 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 15 | Cost of goods sold | `primary quantity × the weighted average the ledger used`. Never typed by a seller. |
 | 16 | Dual-unit pricing | `pricing_basis` chooses which recorded quantity revenue follows; allowed only where the product has a secondary unit. |
 | 17 | Lot selection on issue | A lot must be explicitly chosen wherever lotted stock exists. |
+| 18 | Dehusking ratio | **Fixed 1:1:1**, held as recipe configuration, not code. Outputs are derived and never typed. |
+| 19 | Production value | **Conserved.** Item count rises; total inventory value does not. Allocated output costs sum exactly to the consumed value. |
+| 20 | Dehusking cost split | **Configurable fixed percentages**, currently 85% dehusked / 15% husk — provisional until the costing policy is set. Must total 100%. |
+| 21 | Production expenses | **None yet.** No labour, electricity, machine, fuel or overhead cost is added in this phase. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -151,6 +163,11 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 20 | Should **sales returns** from customers be a distinct document, or handled purely by delivery reversal? | Sales |
 | 21 | Are **customer-specific price lists** required, or does price remain per-order? | Sales |
 | 22 | Should a sales order **reserve** stock, or continue to reserve nothing until delivery? | Sales / Inventory |
+| 23 | What is the **permanent joint-product costing method** (market value / NRV / other), replacing the provisional 85/15? | Costing |
+| 24 | Should the dehusking allocation vary by **period or coconut grade**, rather than being a single fixed pair? | Costing |
+| 25 | How are **labour, electricity, machine, fuel and overhead** costs captured and absorbed into production? | Costing |
+| 26 | Does dehusking ever produce **waste or loss** (shrinkage, rejects), or is 1:1:1 absolute? | Production |
+| 27 | Should production record **machine, shift or operator** for throughput reporting? | Production |
 
 **Confirmed and closed this phase:** reversal cost basis (I-1), secondary quantity (I-2),
 company-wide weighted average (I-3), and the inactive-product incoming-stock rule.

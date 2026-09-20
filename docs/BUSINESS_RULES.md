@@ -435,3 +435,139 @@ recorded because shell weights genuinely vary.
 
 For Version 1 the **primary quantity remains authoritative** for negative-stock validation;
 the secondary quantity is informational, exactly as in `INVENTORY_RULES.md` §7.
+
+## 18. Production — dehusking
+
+**Only dehusking is implemented.** Husk chipping and copra production are declared in
+`ProductionType` so the architecture is shaped for them, but they are not postable: their
+output weights are operator-entered and their waste and joint-cost rules are unresolved.
+`ProductionType::isImplemented()` enforces that.
+
+### The 1:1:1 rule
+
+```
+Input:   1,000 Whole Coconut   (NOS)
+Output:  1,000 Dehusked Coconut (NOS)
+         1,000 Raw Coconut Husk (NOS)
+```
+
+| Product | Movement |
+| --- | --- |
+| Whole Coconut | **−1,000** NOS |
+| Dehusked Coconut | **+1,000** NOS |
+| Raw Coconut Husk | **+1,000** NOS |
+
+**Output quantities are derived, never typed.** The operator enters only the input
+quantity; the recipe's `output_ratio` (1.0 for each output) produces the rest. The screens
+show outputs read-only, and the form request does not accept them at all.
+
+### Production order lifecycle
+
+```
+DRAFT ──post──▶ POSTED ──reverse──▶ REVERSED
+  │
+  └──cancel──▶ CANCELLED
+```
+
+| Rule | Detail |
+| --- | --- |
+| Draft | Consumes and produces **nothing**. Freely editable |
+| Posted | Converts stock. **Immutable** thereafter |
+| Correction | A posted run is corrected by **reversal**, never by editing |
+| Cancelled | A draft abandoned before posting; only a draft may be cancelled |
+| Reversed | A posted run undone by opposite ledger transactions |
+| Double posting / double reversal | **Prohibited**, enforced under a row lock |
+
+**Numbering:** `PRD-YYYYMMDD-000001`.
+
+### Inventory posting
+
+Posting writes **two** inventory transactions, because the ledger records one transaction
+type per transaction:
+
+| Transaction | Lines |
+| --- | --- |
+| `PRODUCTION_CONSUMPTION` | Whole Coconut **OUT**, from the selected lot |
+| `PRODUCTION_OUTPUT` | Dehusked Coconut **IN** and Raw Husk **IN**, each into a new lot |
+
+Both are written inside **one database transaction**. Any failure leaves no consumed stock,
+no output stock, no lots and no posted order.
+
+### Lot traceability
+
+The input lot must be **explicitly selected** — without it the output could not be traced
+back to the coconut it came from.
+
+Posting creates a **new lot for each output**, each recording the production order as its
+source and naming the consumed lot in its notes. The chain is therefore complete in both
+directions:
+
+```
+Supplier → Coconut GRN → Coconut Lot → Dehusking run → Dehusked Lot
+                                                      → Raw Husk Lot
+```
+
+### Value conservation — the important rule
+
+Dehusking **increases the physical item count**: one coconut becomes two things. This must
+never be read as inventory value doubling.
+
+```
+Before:  1,000 Coconut                    Rs.102,500
+After:   1,000 Dehusked Coconut  85%      Rs. 87,125
+       + 1,000 Raw Husk          15%      Rs. 15,375
+                                          ──────────
+                                          Rs.102,500   ← unchanged
+```
+
+Unit costs become Rs.87.125 and Rs.15.375 respectively.
+
+**Quantity doubles across product types; money does not.** The consumed value is whatever
+the ledger charged at the weighted average in force, read back after the consumption is
+posted — never recomputed by the production code.
+
+### Cost allocation — configurable, currently 85 / 15
+
+Joint-product costing has **not been finalised by the factory**. Version 1 therefore uses a
+**fixed percentage** split, stored as configuration in `production_recipes` /
+`production_recipe_outputs`:
+
+| Output | Share |
+| --- | --- |
+| Dehusked Coconut | **85%** |
+| Raw Husk | **15%** |
+
+**These numbers are provisional and are expected to change.** They live in the seeder and
+nowhere else — changing the factory's costing policy is a data change, not a code change.
+
+**Percentages must total exactly 100.** A recipe that does not is refused at posting time,
+because it would create or destroy inventory value on every run.
+
+**Rounding:** shares are computed to six decimals for every output except the last, which
+receives `consumed value − everything already allocated`. The allocated costs therefore sum
+**exactly** to the consumed value whatever the percentages are. (As elsewhere, the ledger
+stores a *unit* cost at six decimals, so ledger value can differ by at most
+`quantity × 0.0000005` per line — see §13.)
+
+### No production expenses yet
+
+Labour, electricity, machine, fuel and overhead costs are **deliberately excluded**. For
+this phase, total input inventory value equals total output inventory value exactly. Those
+costs arrive in a later costing phase, and a test asserts no such columns or tables exist.
+
+### Reversal
+
+Reversal undoes both halves, **outputs first**:
+
+1. the `PRODUCTION_OUTPUT` is reversed, taking the dehusked coconut and husk back out of
+   stock;
+2. the `PRODUCTION_CONSUMPTION` is reversed, putting the whole coconut back.
+
+Both reuse their original unit costs, so value returns exactly as it left.
+
+**Reversal is refused if the output has already been consumed** — sold, or processed
+onward — because the stock is no longer there to remove. Reversing the outputs first means
+that rejection happens before any coconut is restored, and the whole operation rolls back
+regardless. Produce 1,000, sell 500, attempt to reverse: **rejected**.
+
+Double reversal is prohibited, and the original run is never deleted or altered.

@@ -9,6 +9,7 @@ import {
     LayoutGrid,
     Layers,
     Package,
+    Factory,
     Receipt,
     ScrollText,
     ShoppingCart,
@@ -38,6 +39,7 @@ import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
+import { index as dehuskingIndex } from '@/routes/dehusking';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -118,6 +120,14 @@ const salesNavItems: NavItem[] = [
     },
 ];
 
+const productionNavItems: NavItem[] = [
+    {
+        title: 'Dehusking',
+        href: dehuskingIndex(),
+        icon: Factory,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -152,6 +162,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="inventoryNavItems" label="Inventory" />
             <NavMain :items="purchasingNavItems" label="Purchasing" />
             <NavMain :items="salesNavItems" label="Sales" />
+            <NavMain :items="productionNavItems" label="Production" />
         </SidebarContent>
 
         <SidebarFooter>

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UnitOfMeasureSeeder::class,
             ProductSeeder::class,
             WarehouseSeeder::class,
+            ProductionRecipeSeeder::class,
         ]);
 
         // User::factory(10)->create();
