@@ -377,6 +377,10 @@ purchasing, sales and production. Role-based permissions come later.
 ## Working agreement
 
 - Read `docs/` before implementing a business feature.
+- `tests/Feature/Integration/FactoryWorkflowIntegrationTest.php` walks one realistic flow
+  across every module and asserts the figures in `docs/END_TO_END_VALIDATION.md`. If a
+  change to purchasing, sales, inventory or production breaks it, the modules have stopped
+  agreeing with each other — fix the cause, never the expected figures.
 - Run `vendor/bin/pint --dirty` after changing PHP files.
 - Run `php artisan test` and `npm run build` before reporting work complete.
 - Use forward migrations. **Do not use `migrate:fresh`** without explaining why first.

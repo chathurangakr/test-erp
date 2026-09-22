@@ -168,6 +168,29 @@ BOM editor, activated carbon / shell processing.
 **Still open:** drying / moisture / process loss (`BUSINESS_RULES.md` §20 TBD-3); the
 permanent joint-product costing method that replaces 75 / 25 (TBD-2).
 
+## Cross-cutting — End-to-end factory validation ✅ COMPLETE
+
+Not a business module: a validation phase proving the finished modules agree with one
+another. No new business logic was built.
+
+- [x] `tests/Feature/Integration/FactoryWorkflowIntegrationTest.php` — one realistic flow
+      across master data, purchasing, inventory, sales, all three production types, dual-UOM
+      shell stock, lot traceability, weighted average costing and reversals
+- [x] Value conservation asserted exactly at document level and within the documented
+      rounding bound at ledger level, for all three production types
+- [x] Reconciliation sweep: no negative product/lot/warehouse stock, warehouse totals equal
+      company totals, every weighted average recomputes from the ledger, no orphan lots,
+      document lines or transactions
+- [x] Reversal safety: all three production runs, and the coconut receipt, refuse reversal
+      once downstream stock has been sold — atomically, with no partial restoration
+- [x] Document lifecycle: posted documents immutable, drafts move no stock, reversed records
+      stay historically visible
+- [x] Scenario, arithmetic and findings written up in `docs/END_TO_END_VALIDATION.md`
+
+**Found and fixed:** `PostDehuskingProduction` did not refuse a draft that already carried
+output rows, which would have duplicated its outputs and double-counted the run's value. No
+current caller could reach that state, but the planned REST API would reuse the action.
+
 ## Phase 9 — Finance (not started)
 
 Double-entry: chart of accounts, journals, balanced posting, derived balances.

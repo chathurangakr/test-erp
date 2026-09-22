@@ -209,6 +209,16 @@ class PostDehuskingProduction
             ]);
         }
 
+        // Dehusking writes its own output rows, because every dehusking quantity is derived
+        // from the recipe and none may be supplied (decision P-4). A draft that somehow
+        // already carries output lines would therefore end up with duplicates — and a
+        // duplicated output would double-count the run's value. Refuse rather than merge.
+        if ($order->outputs()->exists()) {
+            throw ValidationException::withMessages([
+                'outputs' => __('Dehusking output quantities are derived from the recipe, so a draft must not carry output lines.'),
+            ]);
+        }
+
         // Belt and braces against double posting.
         if ($order->inventory_transaction_id !== null || $order->output_inventory_transaction_id !== null) {
             throw ValidationException::withMessages([

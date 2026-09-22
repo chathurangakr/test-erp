@@ -18,6 +18,7 @@ use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOutput;
 use App\Models\ProductionRecipe;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
@@ -305,6 +306,36 @@ class DehuskingTest extends TestCase
     }
 
     // ------------------------------------------------------------- validation
+
+    /**
+     * Dehusking derives every output, so it writes its own output rows. A draft that
+     * already carried some would be duplicated rather than replaced, and the run's value
+     * would be double-counted — so it is refused.
+     */
+    #[Test]
+    public function a_draft_carrying_output_lines_is_rejected(): void
+    {
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('6000.000', '100.000000', $lot);
+
+        $order = $this->draftOrder('1000.000', $lot);
+        ProductionOutput::factory()->create([
+            'production_order_id' => $order->id,
+            'product_id' => $this->dehusked->id,
+            'quantity' => '999.000',
+        ]);
+
+        try {
+            $this->runProduction($order->refresh());
+            $this->fail('Expected a draft carrying output lines to be rejected.');
+        } catch (ValidationException) {
+            // expected
+        }
+
+        $this->assertSame(1, $order->fresh()->outputs()->count());
+        $this->assertSame('6000.000', $this->stock()->quantityForProduct($this->coconut->id));
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($this->dehusked->id));
+    }
 
     #[Test]
     public function an_input_lot_is_required(): void

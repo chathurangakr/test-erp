@@ -1,9 +1,10 @@
 # Inventory Rules — Coconut Factory ERP
 
 > **Status:** ✅ **IMPLEMENTED** (Phase 3), and driven by Purchasing (Phase 4), Sales
-> (Phase 5) and Production — dehusking (Phase 6) and husk chipping (Phase 7). Goods
-> receipts post `PURCHASE_RECEIPT`, deliveries post `SALES_ISSUE`, and both production
-> types post `PRODUCTION_CONSUMPTION` plus `PRODUCTION_OUTPUT`. Copra is not built yet.
+> (Phase 5) and Production — dehusking (Phase 6), husk chipping (Phase 7) and copra
+> (Phase 8). Goods receipts post `PURCHASE_RECEIPT`, deliveries post `SALES_ISSUE`, and all
+> three production types post `PRODUCTION_CONSUMPTION` plus `PRODUCTION_OUTPUT`. The whole
+> chain is exercised together by `docs/END_TO_END_VALIDATION.md`.
 
 ## 1. The fundamental rule
 
