@@ -467,6 +467,69 @@ reversal audit fields, and refuses deletion of anything but a draft.
 No labour, electricity, machine, fuel, drying or overhead columns exist anywhere — a test
 asserts their absence.
 
+### 1.20 `fiscal_periods`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `name` | string(100), **unique** | e.g. "September 2026" |
+| `start_date` / `end_date` | date | Arbitrary — **nothing assumes a calendar year** |
+| `status` | string(20) | OPEN / CLOSED |
+| `closed_at` / `closed_by` | datetime, FK users, nullable | |
+
+A journal posts only into an **OPEN** period containing its date. Periods must not overlap.
+Reopening is deliberately not implemented. See `ACCOUNTING_RULES.md` §7.
+
+### 1.21 `accounts`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `code` | string(20), **unique** | Uppercased by `HasUppercaseCode` |
+| `name` | string(255) | |
+| `account_type` | string(30) | `App\Enums\AccountType` |
+| `parent_id` | FK → `accounts.id`, nullable | `restrictOnDelete` |
+| `normal_balance` | string(10) | DEBIT / CREDIT — stored explicitly, defaulted by type |
+| `is_control_account` | boolean | Reconciled from a subsidiary ledger |
+| `allow_manual_posting` | boolean | False for group headers |
+| `is_active` | boolean | |
+
+**There is NO balance column, and there must never be one** — see decision **A-1**. An
+account with journal history refuses deletion; there is no destroy route.
+
+### 1.22 `journal_entries`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `journal_number` | string(50), **unique** | `JV-YYYYMMDD-000001` |
+| `journal_date` | date | Must fall inside its fiscal period |
+| `fiscal_period_id` | FK → `fiscal_periods.id` | `restrictOnDelete` |
+| `source_type` / `source_id` | string / bigint, nullable | **Null on a manual entry.** Reserved for generated journals — see decision **A-3** |
+| `description` | string(500) | |
+| `status` | string(20) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `reversal_of_id` | FK, nullable, **unique** | Points at the original |
+| `reversed_by_id` | FK, nullable | Points at the reversal |
+| `created_by` / `posted_by` / `posted_at` / `reversed_by_user_id` / `reversed_at` | | Full audit trail |
+
+**Immutable once posted.** The model throws on update unless the change is confined to the
+reversal audit fields, and refuses deletion of anything but a draft. The **unique** index on
+`reversal_of_id` makes a second reversal impossible at the database level, not only in code.
+
+### 1.23 `journal_entry_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `journal_entry_id` | FK, `cascadeOnDelete` | |
+| `account_id` | FK → `accounts.id` | `restrictOnDelete` |
+| `description` | string(500), nullable | |
+| `debit` | **`decimal(20,6)`**, default 0 | Positive |
+| `credit` | **`decimal(20,6)`**, default 0 | Positive |
+
+A line is a debit **or** a credit — never both, never neither — see decision **A-2**. Lines
+of a posted entry are immutable, so history cannot be edited from underneath the header.
+
+The scale matches `inventory_transaction_lines.total_cost` **on purpose**: when Finance
+later posts inventory values, the authoritative figure must transfer without rounding
+(decision **I-4**).
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -703,6 +766,38 @@ transfer value-neutral: both legs are costed at the same average, so moving stoc
 warehouses changes neither company value nor the average. The `PostInventoryTransaction`
 lock is taken on the **product** row for exactly this reason.
 
+### A-1 — account balances are derived, never stored
+
+There is no balance column on `accounts`, for the same reason there is no stock column on
+`products`: a stored total has no history. When it drifts there is no way to discover when
+or why, and no way to rebuild it. `AccountingBalanceService` computes every figure from
+posted journal lines on request, and the general ledger's running balance is calculated per
+view rather than persisted.
+
+Only POSTED and REVERSED entries count. A REVERSED entry's own lines remain posted — the
+reversing entry cancels them — because removing them would rewrite history.
+
+### A-2 — debit and credit are separate positive columns, not one signed amount
+
+A line stores `debit` **or** `credit`, both positive. The alternative — one signed column —
+makes direction a convention someone has to remember, and makes an unbalanced entry a sign
+error rather than a total that does not match. Separate columns are also what a trial
+balance reads directly, with no interpretation step.
+
+### A-3 — `source_type` exists before anything generates journals
+
+The column is nullable and unused by manual entries, but it is what distinguishes a
+**manual** journal from a **system** one — and that distinction is already load-bearing: a
+manual entry may not touch a control account, a generated one may. It also means the later
+AP/AR/inventory integrations need no schema change to name the document they came from.
+
+### A-4 — `COST_OF_SALES` is an account type, not an expense subtype
+
+Gross profit (revenue less cost of sales, before operating expenses) is already first-class
+in this system. As a subtype, every report would need a magic value to split the P&L
+correctly. Both post on the DEBIT side, so a distinct case costs nothing and removes a class
+of misreporting. See `ACCOUNTING_RULES.md` §6.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that
@@ -710,7 +805,6 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |
 
 ## 4. Conventions

@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './finance';
 export * from './inventory';
 export * from './masters';
 export * from './navigation';

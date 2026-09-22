@@ -12,6 +12,11 @@ import {
     Factory,
     Grid2x2,
     Sun,
+    BookMarked,
+    Calculator,
+    CalendarRange,
+    Scale,
+    Wallet,
     Receipt,
     ScrollText,
     ShoppingCart,
@@ -44,6 +49,11 @@ import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as dehuskingIndex } from '@/routes/dehusking';
 import { index as huskChippingIndex } from '@/routes/husk-chipping';
 import { index as copraIndex } from '@/routes/copra';
+import { index as accountsIndex } from '@/routes/accounts';
+import { index as journalsIndex } from '@/routes/journals';
+import { index as generalLedgerIndex } from '@/routes/general-ledger';
+import { index as trialBalanceIndex } from '@/routes/trial-balance';
+import { index as fiscalPeriodsIndex } from '@/routes/fiscal-periods';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -142,6 +152,34 @@ const productionNavItems: NavItem[] = [
     },
 ];
 
+const financeNavItems: NavItem[] = [
+    {
+        title: 'Chart of Accounts',
+        href: accountsIndex(),
+        icon: BookMarked,
+    },
+    {
+        title: 'Journal Entries',
+        href: journalsIndex(),
+        icon: Calculator,
+    },
+    {
+        title: 'General Ledger',
+        href: generalLedgerIndex(),
+        icon: Wallet,
+    },
+    {
+        title: 'Trial Balance',
+        href: trialBalanceIndex(),
+        icon: Scale,
+    },
+    {
+        title: 'Fiscal Periods',
+        href: fiscalPeriodsIndex(),
+        icon: CalendarRange,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -177,6 +215,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="purchasingNavItems" label="Purchasing" />
             <NavMain :items="salesNavItems" label="Sales" />
             <NavMain :items="productionNavItems" label="Production" />
+            <NavMain :items="financeNavItems" label="Finance" />
         </SidebarContent>
 
         <SidebarFooter>

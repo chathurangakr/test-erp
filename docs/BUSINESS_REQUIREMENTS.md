@@ -87,14 +87,19 @@ See `DATA_MODEL.md` decision D-1.
   count (`NOS`) and its measured weight (`KG`), with no conversion between them. Value is
   shared by configurable percentages (provisionally 75 / 25), with traceable output lots and
   reversal.
+- **Accounting foundation** — a chart of accounts, fiscal periods, manual double-entry
+  journals with reversal, derived account balances, a general ledger and a trial balance.
+  Every posted journal balances exactly; balances are never stored. **No operational
+  document generates a journal yet.**
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Finance (double-entry), Payables, Receivables, customer
-payments, production expenses (labour / electricity / machine / fuel / overhead), the
+Accounts Payable, Accounts Receivable, customer
+payments, purchase and sales invoices, automatic journals from operational documents,
+VAT/SVAT, payroll, bank reconciliation, P&L and balance sheet, year-end closing, production expenses (labour / electricity / machine / fuel / overhead), the
 permanent joint-product costing method, role-based permissions, REST API for the Flutter
 mobile application.
 
@@ -158,6 +163,13 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 30 | Raw shell valuation | Costed against its **primary `NOS` quantity**. A per-KG figure may be displayed, clearly labelled **informational**; it is never stored and never used as a weighted average. |
 | 31 | Copra cost split | **Configurable fixed percentages**, currently 75% copra / 25% shell — provisional. Must total 100%. |
 | 32 | Drying / moisture loss | **Not modelled in version 1.** No waste product, no mass-balance between NOS input and KG output, no loss quantity captured. |
+| 33 | Accounting method | **True double-entry.** Every posted journal satisfies Total Debit = Total Credit exactly, at `decimal(20,6)`. |
+| 34 | Account balances | **Derived from posted journal lines, never stored.** No balance column exists on any account. |
+| 35 | Posted journals | **Immutable.** Corrections are reversing entries preserving the exact original amounts; nothing is deleted. |
+| 36 | Fiscal periods | Journals post only into an **OPEN** period containing their date. A period with drafts cannot be closed. Reopening is not offered. |
+| 37 | Control accounts | Receivables, payables and inventory accounts **refuse manual posting** — they belong to the system actions that will later own them. |
+| 38 | Base currency | **LKR**, held as configuration rather than a literal. Multi-currency is TBD. |
+| 39 | Operational accounting | **Not yet.** No GRN, delivery or production run creates a journal; the account mapping is still to be confirmed. |
 
 ## 7. Remaining open questions (`TBD`)
 

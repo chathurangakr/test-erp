@@ -14,6 +14,8 @@ use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
@@ -1028,12 +1030,17 @@ class CopraProductionTest extends TestCase
         $this->dry($this->draftOrder('1000.000', $lot));
 
         foreach ([
-            'accounts', 'journals', 'journal_lines', 'general_ledger',
+            'journals', 'journal_lines', 'general_ledger',
             'production_costs', 'labour_costs', 'overheads', 'packaging_costs',
             'payables', 'receivables', 'payments',
         ] as $table) {
             $this->assertFalse(Schema::hasTable($table), "Copra production must not create a [{$table}] table.");
         }
+
+        // The accounting foundation exists (Finance Phase 1), but operational documents do
+        // not generate journals yet — that integration is a later, deliberate phase.
+        $this->assertSame(0, JournalEntry::count());
+        $this->assertSame(0, JournalEntryLine::count());
     }
 
     #[Test]

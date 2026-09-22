@@ -21,6 +21,9 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             WarehouseSeeder::class,
             ProductionRecipeSeeder::class,
+            // Accounting configuration. No fiscal period and no journal is seeded — the
+            // books start genuinely empty.
+            ChartOfAccountsSeeder::class,
         ]);
 
         // User::factory(10)->create();

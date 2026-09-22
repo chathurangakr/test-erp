@@ -21,6 +21,8 @@ use App\Models\Delivery;
 use App\Models\DeliveryLine;
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
@@ -866,7 +868,7 @@ class SalesTest extends TestCase
         ]));
 
         foreach ([
-            'accounts', 'journals', 'journal_lines', 'accounts_receivable',
+            'journals', 'journal_lines', 'accounts_receivable',
             'receivables', 'customer_payments', 'payments', 'cash_transactions',
         ] as $table) {
             $this->assertFalse(
@@ -874,6 +876,11 @@ class SalesTest extends TestCase
                 "Sales must not create a [{$table}] table — finance is a later phase."
             );
         }
+
+        // The accounting foundation exists (Finance Phase 1), but operational documents do
+        // not generate journals yet — that integration is a later, deliberate phase.
+        $this->assertSame(0, JournalEntry::count());
+        $this->assertSame(0, JournalEntryLine::count());
 
         foreach (['balance', 'receivable', 'outstanding'] as $column) {
             $this->assertFalse(Schema::hasColumn('customers', $column));

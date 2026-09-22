@@ -24,6 +24,8 @@ use App\Models\GoodsReceiptLine;
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
@@ -1102,7 +1104,7 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->runFactoryFlow();
 
         foreach ([
-            'accounts', 'journals', 'journal_lines', 'general_ledger', 'ledger_accounts',
+            'journals', 'journal_lines', 'general_ledger', 'ledger_accounts',
             'payables', 'receivables', 'payments', 'customer_payments', 'supplier_payments',
             'production_costs', 'labour_costs', 'overheads',
         ] as $table) {
@@ -1111,5 +1113,10 @@ class FactoryWorkflowIntegrationTest extends TestCase
                 "The factory flow must not create a [{$table}] table.",
             );
         }
+
+        // The accounting foundation exists (Finance Phase 1), but operational documents do
+        // not generate journals yet — that integration is a later, deliberate phase.
+        $this->assertSame(0, JournalEntry::count());
+        $this->assertSame(0, JournalEntryLine::count());
     }
 }

@@ -937,3 +937,25 @@ Selling some of the copra blocks the reversal even though the shell is untouched
 reverse is equally true.
 
 Double reversal is prohibited, and the original run is never deleted or altered.
+
+## 21. Accounting — the foundation
+
+The accounting engine exists as of Finance Phase 1. The rules live in full in
+`docs/ACCOUNTING_RULES.md`; the ones that constrain everything else are:
+
+- **Double entry, always.** Every posted journal satisfies `Total Debit = Total Credit`
+  exactly, enforced before the status changes and inside one database transaction.
+- **Balances are derived**, never stored — the same rule as ledger-derived stock.
+- **Posted journals are immutable**, lines included. Corrections are reversing entries that
+  mirror the original at its exact amounts; both sides stay on the record.
+- **A journal belongs to an OPEN fiscal period containing its date.** A period holding a
+  draft cannot be closed, and a reversal posts into the period containing its own date.
+- **Control accounts and group headers refuse manual posting.** Control accounts belong to
+  the system actions that will later own them.
+- **Base currency is LKR, held as configuration.** Multi-currency is TBD.
+
+**No operational document generates a journal yet.** Posting a goods receipt, a delivery or
+any production run creates no accounting entry — the account mappings that would decide
+which account each movement touches do not exist, so a journal posted now would be a guess
+written permanently into the books. When that integration arrives it must post the inventory
+ledger's authoritative `total_cost` (§13, `INVENTORY_RULES.md` §8.1).

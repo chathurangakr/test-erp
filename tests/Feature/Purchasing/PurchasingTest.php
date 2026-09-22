@@ -19,6 +19,8 @@ use App\Models\GoodsReceiptLine;
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
@@ -670,12 +672,17 @@ class PurchasingTest extends TestCase
         ]));
 
         // Finance is a later phase; nothing here may create accounting artefacts.
-        foreach (['accounts', 'journals', 'journal_lines', 'supplier_payables', 'payables'] as $table) {
+        foreach (['journals', 'journal_lines', 'supplier_payables', 'payables'] as $table) {
             $this->assertFalse(
                 Schema::hasTable($table),
                 "Purchasing must not create a [{$table}] table — finance is a later phase."
             );
         }
+
+        // The accounting foundation exists (Finance Phase 1), but operational documents do
+        // not generate journals yet — that integration is a later, deliberate phase.
+        $this->assertSame(0, JournalEntry::count());
+        $this->assertSame(0, JournalEntryLine::count());
 
         foreach (['balance', 'payable', 'outstanding'] as $column) {
             $this->assertFalse(Schema::hasColumn('suppliers', $column));

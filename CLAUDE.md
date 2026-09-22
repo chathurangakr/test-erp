@@ -268,11 +268,36 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Critical accounting rules
+## Accounting rules (Finance Phase 1 — the foundation is implemented)
 
-- Use **double-entry accounting**.
-- **Never directly modify account balances.** Balances are derived from posted journals.
-- Every posted journal must satisfy **Total Debit = Total Credit**.
+- Use **double-entry accounting**. Every posted journal satisfies **Total Debit = Total
+  Credit**, exactly, enforced by `App\Actions\Accounting\PostJournalEntry` inside one
+  database transaction — before the status changes.
+- **Never directly modify account balances.** There is no balance column on `accounts` and
+  there must never be one. Balances are derived from posted journal lines by
+  `App\Services\Accounting\AccountingBalanceService`, exactly as stock is derived from the
+  inventory ledger. The general ledger's running balance is calculated per request and never
+  persisted.
+- **A journal line is a debit OR a credit** — never both, never neither, never negative, and
+  both columns hold positive amounts.
+- **Posted journals are immutable**, lines included. Correct them with a reversing entry,
+  which mirrors every line with debit and credit swapped **at the exact original amounts**.
+  A reversal cannot itself be reversed, and nothing is ever deleted.
+- **Journals post only into an OPEN fiscal period containing their date.** A period holding
+  a DRAFT cannot be closed. A reversal posts into the open period containing its own date,
+  never back into a closed one.
+- **Control accounts and group headers refuse manual posting.** Control accounts are the
+  system's to post to — an entry naming a `source_type` may use them; a manual one may not.
+- **Accounts are deactivated, never deleted**, and an account with journal history refuses
+  deletion outright. No destroy route exists anywhere in Finance.
+- **Base currency is configuration**, in `config/accounting.php` — never the literal "LKR"
+  in business logic. Multi-currency is TBD.
+- **When Finance later posts inventory values it must use the authoritative `total_cost`**,
+  never `quantity × rounded unit cost`. The accounting scale is `decimal(20,6)` to match the
+  ledger exactly. See `docs/ACCOUNTING_RULES.md` §8.
+- **Operational documents do NOT generate journals yet.** A GRN, delivery or production run
+  creates no accounting entry, and a test asserts it. That integration is a later,
+  deliberate phase — do not begin it without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
 
@@ -373,17 +398,20 @@ configurable value allocation, posting and reversal), and **Husk chipping produc
 redistribution, informational waste, traceable output lots, posting and reversal), and
 **Copra production** (measured copra and shell weights, a 1:1 derived shell count that
 cannot be overridden, dual-unit shell stock, provisional 75/25 value allocation, traceable
-output lots, posting and reversal).
+output lots, posting and reversal), and the **accounting foundation** (chart of accounts,
+fiscal periods, manual journal entries with reversal, derived balances, general ledger and
+trial balance — with no automatic journals from operational documents).
 
-**Not yet started — do not begin without instruction:** Finance,
-Payables, Receivables, customer payments, production expenses, the permanent joint-product
-costing method, production planning, BOM editor, maintenance, role-based permissions,
-REST API.
+**Not yet started — do not begin without instruction:** Accounts Payable, Accounts
+Receivable, supplier payments, customer receipts, purchase and sales invoices, automatic
+journals from operational documents, production expenses, VAT/SVAT, payroll, bank
+reconciliation, P&L and balance sheet, year-end closing, the permanent joint-product costing
+method, production planning, BOM editor, maintenance, role-based permissions, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing, sales and production. Role-based permissions come later.
+purchasing, sales, production and finance. Role-based permissions come later.
 
 ---
 

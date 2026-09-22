@@ -213,17 +213,47 @@ can reconcile. No new business logic, no schema change.
 
 **Result:** dehusking, husk chipping and copra all conserve ledger value to the last decimal.
 
-## Phase 9 — Finance (not started)
+## Phase 9 — Finance 1: accounting foundation ✅ COMPLETE
 
-Double-entry: chart of accounts, journals, balanced posting, derived balances.
-Then Weighted Average Cost and configurable joint-product allocation.
-**Blocked on:** chart of accounts, allocation method, currency, tax.
+The accounting engine only. No operational document generates a journal yet.
 
-## Phase 10 — Permissions (not started)
+- [x] `fiscal_periods`, `accounts`, `journal_entries`, `journal_entry_lines` — four
+      forward-only migrations, no balance column anywhere
+- [x] Enums: `AccountType` (with `COST_OF_SALES` as its own type), `NormalBalance`,
+      `FiscalPeriodStatus`, `JournalEntryStatus`
+- [x] `config/accounting.php` — base currency LKR as configuration, never a literal
+- [x] 46-account starting chart, seeded and idempotent; control accounts and group headers
+      refuse manual posting
+- [x] `PostJournalEntry` enforcing all eleven posting rules atomically, including
+      **debits == credits exactly**
+- [x] `ReverseJournalEntry` — new entry, sides swapped at the exact original amounts,
+      linked both ways, double reversal impossible at the database level
+- [x] `CancelJournalEntry`, `CloseFiscalPeriod` (refuses while a draft remains),
+      `GenerateJournalReference` (`JV-YYYYMMDD-000001`)
+- [x] `AccountingBalanceService` — every figure derived from posted lines: totals, net,
+      normal-side balance, as-of date, per period, by type, general ledger, trial balance
+- [x] Screens: chart of accounts, journal entries (dynamic lines with a live
+      debit/credit/difference footer), general ledger, trial balance, fiscal periods
+- [x] 108 finance tests, including `NoOperationalAccountingTest` asserting that GRN,
+      delivery and all three production types create **no** journal
+
+**Deliberately not implemented:** AP, AR, payments, invoices, automatic journals from
+operational documents, production expense accounting, VAT/SVAT, payroll, bank
+reconciliation, P&L, balance sheet, year-end closing.
+
+**Still open:** which business events generate journals and with what account mappings
+(`ACCOUNTING_RULES.md` §12).
+
+## Phase 10 — Finance 2: operational integration (not started)
+
+AP, AR, payments, and journals generated from goods receipts, deliveries and production.
+**Blocked on:** the account mapping — which account each movement touches.
+
+## Phase 11 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 11 — REST API for Flutter (not started)
+## Phase 12 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 
@@ -253,5 +283,5 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 Resolved decisions are recorded in `BUSINESS_REQUIREMENTS.md` §6; remaining questions in
 §7. **No question currently blocks Phase 2 or Phase 3** — both may proceed when instructed.
 
-The remaining questions cluster around Finance (Phase 9): chart of accounts, currency, tax,
+The remaining questions cluster around Finance integration (Phase 10): chart of accounts, currency, tax,
 and joint-product cost allocation. These do not block inventory or production work.
