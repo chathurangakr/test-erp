@@ -2,6 +2,7 @@
 
 namespace App\Actions\Production;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\ProductionStatus;
 use App\Models\ProductionOrder;
@@ -28,7 +29,10 @@ use Illuminate\Validation\ValidationException;
  */
 class ReverseProduction
 {
-    public function __construct(private readonly ReverseInventoryTransaction $reverseInventory) {}
+    public function __construct(
+        private readonly ReverseInventoryTransaction $reverseInventory,
+        private readonly RecordOperationalJournal $accounting,
+    ) {}
 
     public function handle(ProductionOrder $order, ?int $userId = null): ProductionOrder
     {
@@ -81,6 +85,8 @@ class ReverseProduction
                 ]),
                 'posted_by' => $userId ?? auth()->id(),
             ]);
+
+            $this->accounting->reverseFor($locked, $userId);
 
             $locked->forceFill([
                 'status' => ProductionStatus::Reversed,

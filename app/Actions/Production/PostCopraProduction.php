@@ -2,6 +2,7 @@
 
 namespace App\Actions\Production;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
@@ -57,6 +58,7 @@ class PostCopraProduction
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
         private readonly CreateInventoryLot $createLot,
+        private readonly RecordOperationalJournal $accounting,
         private readonly ProductionCostAllocator $allocator,
     ) {}
 
@@ -178,6 +180,11 @@ class PostCopraProduction
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
+
+            // Dr output inventory, Cr input inventory — value moving between asset
+            // accounts at the exact figures the ledger holds. Accounting never recalculates
+            // the allocation percentages; it records what they already produced.
+            $this->accounting->forProduction($locked, $consumption, $outputTransaction, $userId);
 
             return $locked->refresh()->load(['inputs', 'outputs']);
         });

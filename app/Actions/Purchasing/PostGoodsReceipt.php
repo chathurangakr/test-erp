@@ -2,6 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
@@ -36,6 +37,7 @@ class PostGoodsReceipt
         private readonly PostInventoryTransaction $postInventory,
         private readonly CreateInventoryLot $createLot,
         private readonly LandedCostAllocator $allocator,
+        private readonly RecordOperationalJournal $accounting,
         private readonly PurchaseOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -120,6 +122,12 @@ class PostGoodsReceipt
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
+
+            // Dr inventory, Cr Goods Received Not Invoiced — at the exact landed value that
+            // reached stock. Inside this transaction, so a refused journal (an unmapped
+            // product, a closed period) leaves no posted receipt and no stock behind.
+            // Returns null, and posts nothing, while the accounting cutover is not reached.
+            $this->accounting->forGoodsReceipt($locked, $transaction, $userId);
 
             return $locked->refresh()->load(['lines', 'inventoryTransaction']);
         });

@@ -954,8 +954,30 @@ The accounting engine exists as of Finance Phase 1. The rules live in full in
   the system actions that will later own them.
 - **Base currency is LKR, held as configuration.** Multi-currency is TBD.
 
-**No operational document generates a journal yet.** Posting a goods receipt, a delivery or
-any production run creates no accounting entry — the account mappings that would decide
-which account each movement touches do not exist, so a journal posted now would be a guess
-written permanently into the books. When that integration arrives it must post the inventory
-ledger's authoritative `total_cost` (§13, `INVENTORY_RULES.md` §8.1).
+## 22. Accounting — inventory integration
+
+Stock movements reach the general ledger, governed by a **cutover date** that an accountant
+sets and a seeder never invents. While it is unset nothing changes; on or after it:
+
+| Event | Journal |
+| --- | --- |
+| Goods receipt | Dr product inventory / Cr Goods Received Not Invoiced |
+| Delivery | Dr product cost of sales / Cr product inventory |
+| Production | Dr output inventory / Cr input inventory |
+| Warehouse transfer | **none** — same product, same value, same account |
+| Any reversal | the original journal reversed exactly |
+
+- **Every amount is the inventory ledger's authoritative `total_cost`.** Finance recalculates
+  nothing — not the landed-cost allocation, not the 85/15, 30/30/40 or 75/25 production
+  splits. It records what the ledger already holds, which is why debits and credits agree
+  exactly and a control account reconciles to stock.
+- **A delivery recognises no revenue.** It is a physical issue. Revenue and receivables
+  belong to the sales invoice, which is not built — so GRNI and cost of sales accumulate
+  without matching entries for now.
+- **Accounting and stock commit together.** An unmapped product, a closed period or no open
+  period fails the whole posting: no stock, no lot, no journal, document still a draft.
+- **A product with no account mapping cannot move stock.** It is refused, not guessed at.
+- **Account codes appear only in the two seeders.** Everything else resolves accounts through
+  `product_account_mappings`.
+
+Full detail in `docs/ACCOUNTING_RULES.md` §13-§15.

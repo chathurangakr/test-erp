@@ -2,6 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\GoodsReceiptStatus;
 use App\Models\GoodsReceipt;
@@ -26,6 +27,7 @@ class ReverseGoodsReceipt
 {
     public function __construct(
         private readonly ReverseInventoryTransaction $reverseInventory,
+        private readonly RecordOperationalJournal $accounting,
         private readonly PurchaseOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -72,6 +74,11 @@ class ReverseGoodsReceipt
             ]);
 
             $this->statusUpdater->applyReceipt($locked, $locked->lines()->orderBy('id')->get(), reverse: true);
+
+            // The accounting entry is reversed exactly — every line mirrored at its
+            // original amount. Does nothing when the receipt predates the cutover and never
+            // had a journal.
+            $this->accounting->reverseFor($locked, $userId);
 
             $locked->forceFill([
                 // REVERSED, not CANCELLED: this receipt did reach inventory and was then

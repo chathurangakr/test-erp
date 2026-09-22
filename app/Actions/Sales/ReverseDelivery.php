@@ -2,6 +2,7 @@
 
 namespace App\Actions\Sales;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\DeliveryStatus;
 use App\Models\Delivery;
@@ -28,6 +29,7 @@ class ReverseDelivery
 {
     public function __construct(
         private readonly ReverseInventoryTransaction $reverseInventory,
+        private readonly RecordOperationalJournal $accounting,
         private readonly SalesOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -72,6 +74,8 @@ class ReverseDelivery
             ]);
 
             $this->statusUpdater->applyDelivery($locked, $locked->lines()->orderBy('id')->get(), reverse: true);
+
+            $this->accounting->reverseFor($locked, $userId);
 
             $locked->forceFill([
                 // REVERSED, not CANCELLED: stock really left and was put back.

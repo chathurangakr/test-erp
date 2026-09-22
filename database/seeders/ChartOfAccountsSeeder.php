@@ -19,9 +19,10 @@ use Illuminate\Database\Seeder;
  *
  *  - **group headers** (1000, 1100, 1300…), which exist to organise the chart. Posting to a
  *    header and to its children would double-count in any report that rolls them up.
- *  - **control accounts** (receivables, payables, inventory), which are reconciled from a
- *    subsidiary ledger. A hand-written line would put the control account and its subsidiary
- *    out of step with nothing to explain the difference.
+ *  - **control accounts** (receivables, payables, GRNI, inventory), which are reconciled
+ *    from a subsidiary ledger. A hand-written line would put the control account and its
+ *    subsidiary out of step with nothing to explain the difference. The system actions that
+ *    own those subsidiary ledgers post to them instead.
  *
  * Idempotent: re-running updates the definition without disturbing posted history.
  */
@@ -59,6 +60,8 @@ class ChartOfAccountsSeeder extends Seeder
         ['2000', 'Liabilities', AccountType::Liability, true, false],
         ['2100', 'Accounts Payable', AccountType::Liability, true, false],
         ['2110', 'Trade Payables', AccountType::Liability, false, true],
+        // The liability a goods receipt creates before the supplier's invoice is recorded.
+        ['2120', 'Goods Received Not Invoiced', AccountType::Liability, false, true],
 
         ['2200', 'Accrued Expenses', AccountType::Liability, false, false],
         ['2300', 'Taxes Payable', AccountType::Liability, false, false],
@@ -76,6 +79,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['4130', 'Husk Chip Sales', AccountType::Revenue, false, false],
         ['4140', 'Copra Sales', AccountType::Revenue, false, false],
         ['4150', 'Raw Shell Sales', AccountType::Revenue, false, false],
+        ['4160', 'Raw Husk Sales', AccountType::Revenue, false, false],
 
         // --------------------------------------------------------- cost of sales
         ['5000', 'Cost of Sales', AccountType::CostOfSales, true, false],
@@ -85,6 +89,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['5130', 'Husk Chip COGS', AccountType::CostOfSales, false, false],
         ['5140', 'Copra COGS', AccountType::CostOfSales, false, false],
         ['5150', 'Raw Shell COGS', AccountType::CostOfSales, false, false],
+        ['5160', 'Raw Husk COGS', AccountType::CostOfSales, false, false],
 
         // ---------------------------------------------------- operating expenses
         ['6000', 'Operating Expenses', AccountType::Expense, true, false],

@@ -530,6 +530,28 @@ The scale matches `inventory_transaction_lines.total_cost` **on purpose**: when 
 later posts inventory values, the authoritative figure must transfer without rounding
 (decision **I-4**).
 
+### 1.24 `accounting_settings`
+
+A single row of configuration.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `operational_accounting_start_date` | date, **nullable** | The **cutover**. NULL means operational accounting is not switched on. **Never seeded** — see decision **A-5** |
+| `grni_account_id` | FK → `accounts.id`, nullable | Goods Received Not Invoiced |
+| `updated_by` | FK users, nullable | |
+
+### 1.25 `product_account_mappings`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `product_id` | FK → `products.id`, **unique**, `cascadeOnDelete` | |
+| `inventory_account_id` | FK → `accounts.id` | Must be an **ASSET** account |
+| `cogs_account_id` | FK → `accounts.id` | Must be a **COST_OF_SALES** account |
+| `revenue_account_id` | FK → `accounts.id`, nullable | Must be a **REVENUE** account. Configured now, unused until sales invoicing |
+
+The only place a product meets the chart of accounts — see decision **A-6**. A product with
+no row here cannot move stock once the cutover is reached.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -797,6 +819,36 @@ Gross profit (revenue less cost of sales, before operating expenses) is already 
 in this system. As a subtype, every report would need a magic value to split the P&L
 correctly. Both post on the DEBIT side, so a distinct case costs nothing and removes a class
 of misreporting. See `ACCOUNTING_RULES.md` §6.
+
+### A-5 — the accounting cutover is a date, and it is frozen once used
+
+Operational accounting is switched on by setting one nullable date. Before it, and while it
+is NULL, the operational modules behave exactly as they did before Finance existed. That is
+what allows accounting to start against a system already holding operational history: nothing
+is backfilled and nothing already posted is reinterpreted.
+
+**No seeder sets it.** A seeded cutover would silently decide that months of existing history
+either should or should not have been accounted for — a decision only an accountant can make.
+
+**Once any journal carries a `source_type`, the date can no longer change.** Moving it later
+orphans documents already accounted for; moving it earlier leaves a gap of documents that
+should have been and never will be. Neither is detectable afterwards by reading the books, so
+the change is refused rather than reasoned about. A manual journal does not lock it — manual
+entries are independent of the cutover.
+
+### A-6 — a product reaches the ledger only through its mapping
+
+`product_account_mappings` is the single join between the product master and the chart of
+accounts. No posting action contains an account code, so renumbering the chart is a data
+change.
+
+An **unmapped product is refused**, not defaulted. A default would post real money to a
+plausible-looking account and keep doing it until somebody noticed; a refusal is visible
+immediately and corrupts nothing. The hand-created QA product is deliberately left unmapped
+and shows as such in Accounting Setup.
+
+The mapping is also what grants access to control accounts: the journal it produces names its
+source document, and a sourced journal may post where a manual one may not (decision **A-3**).
 
 ## 3. Not yet designed — required future shape
 

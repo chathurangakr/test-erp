@@ -295,9 +295,25 @@ The inventory engine exists and is tested. These rules are permanent:
 - **When Finance later posts inventory values it must use the authoritative `total_cost`**,
   never `quantity × rounded unit cost`. The accounting scale is `decimal(20,6)` to match the
   ledger exactly. See `docs/ACCOUNTING_RULES.md` §8.
-- **Operational documents do NOT generate journals yet.** A GRN, delivery or production run
-  creates no accounting entry, and a test asserts it. That integration is a later,
-  deliberate phase — do not begin it without instruction.
+- **Operational documents generate journals, governed by a cutover date.** While
+  `accounting_settings.operational_accounting_start_date` is NULL nothing changes; once set,
+  documents on or after it must journal, and the date is then **frozen**. It is never
+  invented by a seeder — an accountant sets it. See `docs/ACCOUNTING_RULES.md` §13.
+- **The journal is written inside the operational action's own transaction.** An unmapped
+  product, a closed period or a missing period fails the whole posting: never stock without
+  its journal, never a journal without its posting.
+- **Event → journal:** GRN `Dr inventory / Cr GRNI` · delivery `Dr cost of sales / Cr
+  inventory` · production `Dr output inventory / Cr input inventory` · **warehouse transfer
+  posts nothing** (same product, same value, same account).
+- **A delivery recognises NO revenue.** It is a physical issue; revenue and receivables
+  belong to the sales invoice, which is not built. GRNI and cost of sales will accumulate
+  without matching entries until then — that is expected.
+- **Account codes live only in `ChartOfAccountsSeeder` and `ProductAccountMappingSeeder`.**
+  Everything resolves accounts through `product_account_mappings`. Never write an account
+  number into a posting action.
+- **An unmapped product cannot move stock once accounting applies.** It is refused, not
+  guessed at — the QA test product is deliberately left unmapped.
+- **Do not start Accounts Payable or Accounts Receivable** without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
 
@@ -400,11 +416,13 @@ redistribution, informational waste, traceable output lots, posting and reversal
 cannot be overridden, dual-unit shell stock, provisional 75/25 value allocation, traceable
 output lots, posting and reversal), and the **accounting foundation** (chart of accounts,
 fiscal periods, manual journal entries with reversal, derived balances, general ledger and
-trial balance — with no automatic journals from operational documents).
+trial balance), and **inventory accounting integration** (goods receipts, deliveries and all
+three production types generating journals behind a configurable cutover date, with
+product-to-account mappings and a GRNI accrual).
 
 **Not yet started — do not begin without instruction:** Accounts Payable, Accounts
-Receivable, supplier payments, customer receipts, purchase and sales invoices, automatic
-journals from operational documents, production expenses, VAT/SVAT, payroll, bank
+Receivable, supplier payments, customer receipts, purchase and sales invoices, revenue
+recognition, production expenses, VAT/SVAT, payroll, bank
 reconciliation, P&L and balance sheet, year-end closing, the permanent joint-product costing
 method, production planning, BOM editor, maintenance, role-based permissions, REST API.
 

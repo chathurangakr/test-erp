@@ -244,16 +244,44 @@ reconciliation, P&L, balance sheet, year-end closing.
 **Still open:** which business events generate journals and with what account mappings
 (`ACCOUNTING_RULES.md` §12).
 
-## Phase 10 — Finance 2: operational integration (not started)
+## Phase 10 — Finance 2: inventory accounting integration ✅ COMPLETE
 
-AP, AR, payments, and journals generated from goods receipts, deliveries and production.
-**Blocked on:** the account mapping — which account each movement touches.
+Stock movements now reach the general ledger. No second accounting engine: the operational
+actions build a draft and hand it to the existing `PostJournalEntry`.
 
-## Phase 11 — Permissions (not started)
+- [x] `accounting_settings` (the cutover date and GRNI account) and
+      `product_account_mappings` — two forward-only migrations
+- [x] Chart extended: `2120` Goods Received Not Invoiced (liability, control),
+      `4160` Raw Husk Sales, `5160` Raw Husk COGS → 49 accounts
+- [x] The eight official products mapped; the QA product deliberately left **unmapped**
+- [x] `AccountingPolicy` — does accounting apply to this date, which account, which period
+- [x] `RecordOperationalJournal` — builds journals from the authoritative `total_cost` and
+      posts them through the existing engine; owns reversal too
+- [x] Hooks in all six operational actions, **inside their own transactions**, so stock and
+      accounting commit or roll back together
+- [x] GRN `Dr inventory / Cr GRNI` · delivery `Dr COGS / Cr inventory` (no revenue) ·
+      production `Dr output / Cr input` · **transfer posts nothing**
+- [x] Cutover frozen once operational journals exist
+- [x] `/finance/accounting-setup` — cutover, GRNI, mapping table with unmapped warnings
+- [x] 39 new tests: exact journals, reconciliation to the inventory ledger, trial balance
+      balanced after every step, atomicity, duplicates, control-account access
+
+**Deliberately not implemented:** supplier invoices and payables, sales invoices and
+receivables, payments, revenue recognition, tax, payroll, bank reconciliation, year-end.
+
+**Expected for this phase:** GRNI accumulates the purchase accrual and cost of sales
+accumulates without revenue, because no invoice clears either yet.
+
+## Phase 11 — Finance 3: payables and receivables (not started)
+
+Supplier invoices (`Dr GRNI / Cr Trade Payables`), sales invoices (`Dr Trade Receivables /
+Cr Revenue`), and payments. **Blocked on:** invoice document design, tax scope.
+
+## Phase 12 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 12 — REST API for Flutter (not started)
+## Phase 13 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 

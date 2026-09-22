@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
             // Accounting configuration. No fiscal period and no journal is seeded — the
             // books start genuinely empty.
             ChartOfAccountsSeeder::class,
+            // Connects the product master to the chart. Sets no cutover date — switching
+            // operational accounting on is an accountant's decision.
+            ProductAccountMappingSeeder::class,
         ]);
 
         // User::factory(10)->create();

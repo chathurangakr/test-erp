@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Product master record.
@@ -33,6 +34,19 @@ class Product extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * How this product's stock movements reach the general ledger.
+     *
+     * Null means the product has no accounting meaning yet. Once the cutover date is set, a
+     * movement of an unmapped product is refused rather than guessed at.
+     *
+     * @return HasOne<ProductAccountMapping, $this>
+     */
+    public function accountMapping(): HasOne
+    {
+        return $this->hasOne(ProductAccountMapping::class);
     }
 
     /**

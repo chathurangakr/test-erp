@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\AccountingSetupController;
 use App\Http\Controllers\Accounting\FiscalPeriodController;
 use App\Http\Controllers\Accounting\GeneralLedgerController;
 use App\Http\Controllers\Accounting\JournalEntryActionController;
@@ -41,6 +42,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('finance/trial-balance', [TrialBalanceController::class, 'index'])
         ->name('trial-balance.index');
+
+    Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
+        ->name('accounting-setup.index');
+    Route::patch('finance/accounting-setup/settings', [AccountingSetupController::class, 'updateSettings'])
+        ->name('accounting-setup.settings');
+    Route::patch('finance/accounting-setup/products/{product}', [AccountingSetupController::class, 'updateMapping'])
+        ->name('accounting-setup.mapping');
 
     Route::get('finance/fiscal-periods', [FiscalPeriodController::class, 'index'])
         ->name('fiscal-periods.index');

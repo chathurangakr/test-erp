@@ -16,6 +16,7 @@ import {
     Calculator,
     CalendarRange,
     Scale,
+    SlidersHorizontal,
     Wallet,
     Receipt,
     ScrollText,
@@ -54,6 +55,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { index as trialBalanceIndex } from '@/routes/trial-balance';
 import { index as fiscalPeriodsIndex } from '@/routes/fiscal-periods';
+import { index as accountingSetupIndex } from '@/routes/accounting-setup';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -177,6 +179,11 @@ const financeNavItems: NavItem[] = [
         title: 'Fiscal Periods',
         href: fiscalPeriodsIndex(),
         icon: CalendarRange,
+    },
+    {
+        title: 'Accounting Setup',
+        href: accountingSetupIndex(),
+        icon: SlidersHorizontal,
     },
 ];
 

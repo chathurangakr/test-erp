@@ -149,3 +149,28 @@ export type TrialBalanceReport = {
     /** Must always be true: every posted entry balances. */
     balanced: boolean;
 };
+
+/* ------------------------------------------------------- accounting setup */
+
+export type AccountRef = { id: number; code: string; name: string } | null;
+
+export type AccountingSettingsView = {
+    base_currency: string;
+    /** Null until an accountant switches operational accounting on. */
+    operational_accounting_start_date: string | null;
+    grni_account: AccountRef;
+    /** True once operational journals exist: the cutover can no longer move. */
+    cutover_locked: boolean;
+    operational_journal_count: number;
+};
+
+export type ProductMappingRow = {
+    id: number;
+    code: string;
+    name: string;
+    is_active: boolean;
+    inventory_account: AccountRef;
+    cogs_account: AccountRef;
+    revenue_account: AccountRef;
+    is_mapped: boolean;
+};

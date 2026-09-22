@@ -216,6 +216,24 @@ cannot pass a contradictory pair.
 total-cost key at all**. There is no writable inventory cost field in any form, controller
 or route, and a sales user still cannot price an OUT line. See `DATA_MODEL.md` **I-4**.
 
+### 8.1a The ledger is what Finance posts
+
+Since Finance Phase 2, a posted stock movement also writes a journal — and the amount is this
+same authoritative `total_cost`, never `quantity × unit_cost`. That is what lets a general
+ledger inventory control account reconcile to the inventory ledger exactly.
+
+| Movement | Journal |
+| --- | --- |
+| `PURCHASE_RECEIPT` | Dr inventory / Cr Goods Received Not Invoiced |
+| `SALES_ISSUE` | Dr cost of sales / Cr inventory |
+| `PRODUCTION_CONSUMPTION` + `PRODUCTION_OUTPUT` | Dr output inventory / Cr input inventory |
+| `TRANSFER` | **nothing** — company value is unchanged, so there is nothing to record |
+| `REVERSAL` | the original journal reversed exactly |
+
+Journals are generated only on or after the configured accounting cutover date, and the
+journal is written inside the same database transaction as the stock movement. See
+`ACCOUNTING_RULES.md` §13-§15.
+
 ### 8.2 Full depletion leaves nothing behind — ✅ **CONFIRMED**
 
 An ordinary OUT movement is valued at `quantity × weighted average`. The **exception** is an

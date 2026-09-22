@@ -2,6 +2,7 @@
 
 namespace App\Actions\Sales;
 
+use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\DeliveryStatus;
@@ -40,6 +41,7 @@ class PostDelivery
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
         private readonly StockQueryService $stock,
+        private readonly RecordOperationalJournal $accounting,
         private readonly SalesOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -130,6 +132,11 @@ class PostDelivery
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
+
+            // Dr cost of sales, Cr inventory — the physical issue only. Revenue and
+            // receivables belong to the sales invoice, which is a later phase, so the
+            // selling price does not appear in this journal at all.
+            $this->accounting->forDelivery($locked, $transaction, $userId);
 
             return $locked->refresh()->load(['lines', 'inventoryTransaction']);
         });

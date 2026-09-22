@@ -137,10 +137,12 @@ class ChartOfAccountsTest extends TestCase
     {
         $this->seed(ChartOfAccountsSeeder::class);
 
-        $this->assertSame(46, Account::count());
+        $this->assertSame(49, Account::count());
 
         foreach (['1110' => 'Cash on Hand', '1210' => 'Trade Receivables', '4140' => 'Copra Sales',
-            '5140' => 'Copra COGS', '6400' => 'Electricity', '3200' => 'Retained Earnings'] as $code => $name) {
+            '5140' => 'Copra COGS', '6400' => 'Electricity', '3200' => 'Retained Earnings',
+            '2120' => 'Goods Received Not Invoiced', '4160' => 'Raw Husk Sales',
+            '5160' => 'Raw Husk COGS'] as $code => $name) {
             $this->assertSame($name, Account::where('code', $code)->value('name'), $code);
         }
     }
@@ -165,7 +167,7 @@ class ChartOfAccountsTest extends TestCase
     {
         $this->seed(ChartOfAccountsSeeder::class);
 
-        foreach (['1210', '1310', '1320', '1330', '1340', '1350', '1360', '2110'] as $code) {
+        foreach (['1210', '1310', '1320', '1330', '1340', '1350', '1360', '2110', '2120'] as $code) {
             $account = Account::where('code', $code)->firstOrFail();
 
             $this->assertTrue($account->is_control_account, "{$code} should be a control account");
@@ -199,13 +201,46 @@ class ChartOfAccountsTest extends TestCase
         }
     }
 
+    /**
+     * Goods Received Not Invoiced: the liability a receipt creates before the supplier's
+     * invoice arrives. It is the system's to post to, never a person's.
+     */
+    #[Test]
+    public function the_grni_account_is_a_liability_control_account_under_payables(): void
+    {
+        $this->seed(ChartOfAccountsSeeder::class);
+
+        $grni = Account::where('code', '2120')->firstOrFail();
+
+        $this->assertSame(AccountType::Liability, $grni->account_type);
+        $this->assertSame(NormalBalance::Credit, $grni->normal_balance);
+        $this->assertSame('2100', $grni->parent->code);
+        $this->assertTrue($grni->is_control_account);
+        $this->assertFalse($grni->acceptsManualPosting());
+    }
+
+    #[Test]
+    public function raw_husk_has_its_own_revenue_and_cost_of_sales_accounts(): void
+    {
+        $this->seed(ChartOfAccountsSeeder::class);
+
+        $sales = Account::where('code', '4160')->firstOrFail();
+        $cogs = Account::where('code', '5160')->firstOrFail();
+
+        $this->assertSame(AccountType::Revenue, $sales->account_type);
+        $this->assertSame('4100', $sales->parent->code);
+
+        $this->assertSame(AccountType::CostOfSales, $cogs->account_type);
+        $this->assertSame('5100', $cogs->parent->code);
+    }
+
     #[Test]
     public function reseeding_the_chart_does_not_duplicate_accounts(): void
     {
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
 
-        $this->assertSame(46, Account::count());
+        $this->assertSame(49, Account::count());
     }
 
     #[Test]

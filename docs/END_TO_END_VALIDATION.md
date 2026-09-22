@@ -291,3 +291,31 @@ the posting actions do not.
 Also still open and deliberately unmodelled: drying / moisture / process loss
 (§20 TBD-3), chipping waste measurement basis (§19 TBD-1), and production expenses — no
 labour, fuel, electricity, machine or overhead cost is added anywhere in this scenario.
+
+---
+
+## 9. Accounting
+
+This scenario runs with **no accounting cutover set**, so it generates no journals — the
+operational behaviour it validates is unchanged by Finance.
+
+The accounting-enabled equivalent lives in
+`tests/Feature/Finance/InventoryAccountingTest.php`, which walks the same purchase → sell →
+dehusk → chip → dry sequence with a cutover date, an open fiscal period and the eight product
+mappings in place, and asserts:
+
+| Step | Journal |
+| --- | --- |
+| Buy 10,000 coconut | `Dr 1310` 1,025,000 · `Cr 2120 GRNI` 1,025,000 |
+| Sell 2,000 coconut | `Dr 5110` 205,000 · `Cr 1310` 205,000 — **no revenue** |
+| Dehusk 3,000 | `Dr 1320` 261,375 · `Dr 1330` 46,125 · `Cr 1310` 307,500 |
+| Chip 2,000 husk | `Dr 1340` 40,000 · `Cr 1330` 40,000 |
+| Dry 1,000 dehusked | `Dr 1350` 75,000 · `Dr 1360` 25,000 · `Cr 1320` 100,000 |
+
+and that after **every** step the trial balance is exactly balanced, and each inventory
+control account equals the inventory ledger value of the products mapped to it. Every amount
+is the authoritative `total_cost` (§5) — which is precisely why the two ledgers reconcile to
+the last decimal.
+
+A warehouse transfer produces no journal at all: the company owns the same product, valued
+the same, in the same account.
