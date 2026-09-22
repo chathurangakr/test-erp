@@ -80,14 +80,20 @@ See `DATA_MODEL.md` decision D-1.
   using the **weights the operator actually measured**; there is no husk-to-KG conversion
   in the system. Waste is recorded for information only and creates no stock. Value is
   shared by configurable percentages, redistributed when a grade produces nothing, with
-  traceable output lots and reversal. Copra is not built.
+  traceable output lots and reversal.
+- **Copra production** — dries dehusked coconut (NOS) into copra (KG) and raw coconut shell.
+  The copra weight and the shell weight are both **measured by the operator**; only the
+  shell **count** is derived, one shell per coconut processed. Shell stock keeps both its
+  count (`NOS`) and its measured weight (`KG`), with no conversion between them. Value is
+  shared by configurable percentages (provisionally 75 / 25), with traceable output lots and
+  reversal.
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Copra production, Finance (double-entry), Payables, Receivables, customer
+Finance (double-entry), Payables, Receivables, customer
 payments, production expenses (labour / electricity / machine / fuel / overhead), the
 permanent joint-product costing method, role-based permissions, REST API for the Flutter
 mobile application.
@@ -145,6 +151,13 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 23 | Husk chipping cost split | **Configurable fixed percentages**, currently 30% 7C / 30% 9C / 40% 10C — provisional. Must total 100%. |
 | 24 | A grade that produced nothing | Takes **no cost and no lot**; its share is redistributed across the grades that were produced. |
 | 25 | Chipping waste | **Optional and informational.** No inventory line, no lot, no product, no cost. Its unit comes from the UOM master; no unit is invented. |
+| 26 | Copra input | **Dehusked Coconut in `NOS`**, from an explicitly chosen lot and warehouse. |
+| 27 | Copra output | **Measured, never derived.** The operator enters the actual copra KG. There is **no** coconut-to-KG ratio in the recipe, so none can be applied. |
+| 28 | Raw shell count | **Derived 1:1** — one shell per coconut processed. Held as recipe configuration, never typed; a submitted figure is **refused**, and the server recalculates it regardless. |
+| 29 | Raw shell weight | **Measured and required.** No NOS↔KG conversion exists. Recorded as the inventory secondary quantity. |
+| 30 | Raw shell valuation | Costed against its **primary `NOS` quantity**. A per-KG figure may be displayed, clearly labelled **informational**; it is never stored and never used as a weighted average. |
+| 31 | Copra cost split | **Configurable fixed percentages**, currently 75% copra / 25% shell — provisional. Must total 100%. |
+| 32 | Drying / moisture loss | **Not modelled in version 1.** No waste product, no mass-balance between NOS input and KG output, no loss quantity captured. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -178,6 +191,9 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 25 | How are **labour, electricity, machine, fuel and overhead** costs captured and absorbed into production? | Costing |
 | 26 | Does dehusking ever produce **waste or loss** (shrinkage, rejects), or is 1:1:1 absolute? | Production |
 | 27 | Should production record **machine, shift or operator** for throughput reporting? | Production |
+| 28 | Should **drying / moisture / process loss** be captured for copra, and on what basis (input weight vs. output weight, per batch or per dryer run)? | Copra production |
+| 29 | Is the **1 coconut = 1 shell** rule absolute, or do broken shells and rejects need recording? | Copra production |
+| 30 | Should copra be gradeable (edible / milling / rejected), each grade taking its own share? | Copra production / Costing |
 
 **Confirmed and closed this phase:** reversal cost basis (I-1), secondary quantity (I-2),
 company-wide weighted average (I-3), and the inactive-product incoming-stock rule.

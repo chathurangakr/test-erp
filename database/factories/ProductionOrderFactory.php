@@ -38,4 +38,12 @@ class ProductionOrderFactory extends Factory
     {
         return $this->state(fn (): array => ['production_type' => ProductionType::HuskChipping]);
     }
+
+    /**
+     * A copra production order: the copra weight is measured, the shell count derived.
+     */
+    public function copra(): static
+    {
+        return $this->state(fn (): array => ['production_type' => ProductionType::Copra]);
+    }
 }

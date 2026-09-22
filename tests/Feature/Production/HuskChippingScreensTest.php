@@ -49,6 +49,12 @@ class HuskChippingScreensTest extends TestCase
 
         Product::factory()->create(['code' => 'COCONUT', 'primary_uom_id' => $nos->id]);
         Product::factory()->create(['code' => 'DEHUSKED-COCONUT', 'primary_uom_id' => $nos->id]);
+        Product::factory()->create(['code' => 'COPRA', 'primary_uom_id' => $this->kg->id]);
+        Product::factory()->create([
+            'code' => 'RAW-SHELL',
+            'primary_uom_id' => $nos->id,
+            'secondary_uom_id' => $this->kg->id,
+        ]);
 
         $this->husk = Product::factory()->create(['code' => 'RAW-HUSK', 'name' => 'Raw Coconut Husk', 'primary_uom_id' => $nos->id]);
         $this->c7 = Product::factory()->create(['code' => 'HUSK-7C', 'name' => '7C Husk Chips', 'primary_uom_id' => $this->kg->id]);

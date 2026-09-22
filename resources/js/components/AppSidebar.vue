@@ -11,6 +11,7 @@ import {
     Package,
     Factory,
     Grid2x2,
+    Sun,
     Receipt,
     ScrollText,
     ShoppingCart,
@@ -42,6 +43,7 @@ import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as dehuskingIndex } from '@/routes/dehusking';
 import { index as huskChippingIndex } from '@/routes/husk-chipping';
+import { index as copraIndex } from '@/routes/copra';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -132,6 +134,11 @@ const productionNavItems: NavItem[] = [
         title: 'Husk Chipping',
         href: huskChippingIndex(),
         icon: Grid2x2,
+    },
+    {
+        title: 'Copra Production',
+        href: copraIndex(),
+        icon: Sun,
     },
 ];
 

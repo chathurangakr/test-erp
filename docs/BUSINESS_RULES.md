@@ -728,3 +728,209 @@ happens before any husk is restored, and the whole operation rolls back regardle
 untouched.
 
 Double reversal is prohibited, and the original run is never deleted or altered.
+
+## 20. Production — copra and raw coconut shell
+
+Copra production shares the whole production engine with dehusking and husk chipping — the
+same order, the same two ledger transactions, the same reversal and cancellation actions,
+the same recipe tables and the same cost allocator. There is **no second production
+engine**.
+
+What is new is that its two outputs behave **differently from each other**. Dehusking
+derives every output; chipping measures every output. Copra does both at once:
+
+```
+Input:   1,000 Dehusked Coconut  (NOS)   ← chosen lot, chosen warehouse
+
+Output:    190.500 kg  Copra             ← MEASURED by the operator
+         1,000     NOS Raw Shell         ← DERIVED, one shell per coconut
+           420.750 kg  Raw Shell         ← MEASURED by the operator
+```
+
+### The shell count is derived; every weight is measured
+
+**One dehusked coconut processed leaves one shell.** That is a confirmed factory rule, and
+it is the only fixed relationship in this process. It lives in the recipe as
+`output_ratio = 1.000000`, never in code.
+
+**Copra weight is not derivable from a coconut count, and neither is shell weight.** Drying
+loss, nut size and moisture all vary, so a standard "1 coconut = X kg" figure would be
+fiction — and fiction in a costing path becomes a wrong stock value on every run. Both
+weights are entered by the operator from the scale.
+
+| Output | Primary quantity | Secondary quantity |
+| --- | --- | --- |
+| `COPRA` (KG) | **Measured.** `output_ratio` is `NULL` | none — copra has no secondary unit |
+| `RAW-SHELL` (NOS) | **Derived.** `output_ratio` is `1.000000` | **Measured KG, and required** |
+
+This is structural, not conventional. `output_ratio` is nullable *per output*, so one
+recipe can hold both kinds:
+
+- `ProductionRecipeOutput::derivesQuantity()` — "is there a ratio?" — is the authority for
+  an individual output. `ProductionType::hasFixedOutputRatio()` is only a coarse type-level
+  summary, and it is **false** for copra because not every output is derived.
+- `production_recipe_outputs.requires_secondary_quantity` (added for copra) says an output
+  must also be weighed.
+
+Both are read from the recipe, so **no product code appears in the posting action, the form
+request, the controller or any screen.** Product codes live only in
+`ProductionRecipeSeeder`.
+
+### Shell weight is required here, even though the engine treats it as informational
+
+`docs/INVENTORY_RULES.md` says secondary quantity is informational: recorded where known,
+never guarded against going negative, never convertible to the primary unit. That remains
+true of the **engine**.
+
+Copra production adds a **process-level** requirement on top of it: the shell weight must be
+present and greater than zero, because the factory sells shell by weight and a shell lot
+with no weight is operationally useless. This is enforced twice — in `CopraRequest` and
+again in `PostCopraProduction` — and it changes nothing about how the engine values stock.
+
+### Which quantities are accepted
+
+| Rule | Detail |
+| --- | --- |
+| Copra KG | **Required, must be > 0** |
+| Shell NOS | **Refused if submitted.** Sending a figure — even the correct one — is an error, not something to ignore. The server recalculates it from `input × ratio` regardless |
+| Shell KG | **Required, must be > 0** |
+| A weight on an output with no secondary unit | **Refused** |
+| An output left out, or one outside the recipe | **Refused** |
+| Any cost figure | **Never accepted.** Costs come from the ledger |
+
+### Value conservation
+
+The consumed coconut value is shared between copra and shell and **sums exactly**:
+
+```
+Consumed:  1,000 Dehusked Coconut @ Rs.100.000000     Rs.100,000
+Produced:    200     kg  Copra       75%              Rs. 75,000   Rs.375.000000 / kg
+           1,000    NOS  Raw Shell   25%              Rs. 25,000   Rs. 25.000000 / NOS
+             420     kg  (measured weight)                         Rs. 59.523810 / kg  ← informational
+                                                      ──────────
+                                                      Rs.100,000   ← unchanged
+```
+
+And with the factory's own figures:
+
+```
+Consumed:  1,000 Dehusked Coconut @ Rs.87.125000      Rs. 87,125
+Produced:    190.500 kg  Copra      75%               Rs. 65,343.750000
+           1,000     NOS Raw Shell  25%               Rs. 21,781.250000
+             420.750 kg  (measured weight)
+                                                      ─────────────────
+                                                      Rs. 87,125.000000
+```
+
+The consumed value is read back from the ledger after the consumption posts — never
+recomputed — so it is always the weighted average actually charged.
+
+No drying labour, fuel, electricity, machine or overhead cost is added. Total input
+inventory value equals total output inventory value **exactly at stored precision**, and a
+test asserts that no such columns or tables exist.
+
+### Shell is valued by its count, not its weight
+
+The inventory engine values raw shell in `NOS`, because that is its primary unit. So:
+
+```
+Shell inventory unit cost  =  allocated shell cost ÷ shell NOS   =  25,000 ÷ 1,000  =  Rs.25.000000 / NOS
+```
+
+The measured `KG` stays where it belongs — as the ledger's secondary quantity. A cost per
+kilogram **may be displayed**, because the factory thinks about shell by weight:
+
+```
+Informational only  =  allocated shell cost ÷ measured KG  =  25,000 ÷ 420  =  Rs.59.523810 / kg
+```
+
+It is **labelled informational wherever it appears**, is never stored, and is never used as
+a weighted average cost. Deriving a per-KG cost and treating it as authoritative would
+silently contradict how the engine values the product.
+
+### Cost allocation — configurable, currently 75 / 25
+
+| Output | Share |
+| --- | --- |
+| Copra | **75%** |
+| Raw Shell | **25%** |
+
+**These numbers are provisional and are expected to change.** They live in
+`production_recipe_outputs.allocation_percent`, seeded by `ProductionRecipeSeeder`, and
+nowhere else — never in the posting action. Changing the factory's costing policy is a data
+change, not a code change.
+
+**Percentages must total exactly 100**, or the recipe is refused at posting time.
+
+> `TBD-2` — the permanent joint-product costing method. 75 / 25 is a placeholder chosen so
+> the process can run end to end; the intended replacement is a **market-value / NRV**
+> method that shares the consumed value by what each output is actually worth. When that
+> lands, it replaces the percentages in configuration — the posting action does not change.
+
+**Rounding:** as everywhere, the last participating output receives
+`consumed value − everything already allocated`, so the allocation sums exactly. The shared
+`App\Services\Production\ProductionCostAllocator` does this for all three production types,
+so value conservation is guaranteed in exactly one place.
+
+### Moisture and process loss
+
+Drying removes a large amount of water: 1,000 coconuts do not become 1,000 kg of anything.
+For version 1 the system **does not model this at all**:
+
+- **no waste inventory product** — nothing like `MOISTURE` or `WASTE` exists;
+- **no mass-balance equation** between the coconut count and the output weights. Counting
+  `NOS` and weighing `KG` are not comparable, and the system never converts between them;
+- **no loss quantity is captured** on the copra order.
+
+> `TBD-3` — whether drying / moisture / process loss should be recorded, and on what basis
+> (input weight vs. output weight, per batch or per dryer run). Until the factory confirms
+> it, recording a number would assert something nobody has measured.
+
+### Lots and traceability
+
+The dehusked coconut lot must be **explicitly selected**. Posting creates a **new lot for
+each output**, each recording the copra run as its source and naming the consumed lot in its
+notes:
+
+```
+Supplier
+   └─▶ Whole Coconut GRN
+          └─▶ Whole Coconut Lot
+                 └─▶ Dehusking run
+                        └─▶ Dehusked Coconut Lot
+                               └─▶ Copra run ─┬─▶ Copra Lot
+                                              └─▶ Raw Shell Lot
+```
+
+Stock traces in both directions: forward from a supplier's delivery to the shell sold, and
+backward from a shell lot to the coconut it came from.
+
+### Inventory posting
+
+Two transactions, one database transaction:
+
+| Transaction | Lines |
+| --- | --- |
+| `PRODUCTION_CONSUMPTION` | Dehusked Coconut **OUT** — selected quantity, warehouse and lot |
+| `PRODUCTION_OUTPUT` | Copra **IN** — measured KG, new lot |
+| | Raw Shell **IN** — derived NOS *and* measured KG, new lot |
+
+If anything fails — insufficient stock, an inactive product, a missing weight — **nothing**
+is written: no coconut consumed, no output stock, no output lots, no partial state.
+
+### Reversal
+
+Reversal uses the **same** `ReverseProduction` action as the other production types: the
+`PRODUCTION_OUTPUT` is reversed first, then the `PRODUCTION_CONSUMPTION`, both at their
+**original** unit costs rather than at whatever the weighted averages have drifted to.
+
+The shell's measured weight is mirrored onto the reversing line, so the count and the weight
+leave stock together and neither is left stranded.
+
+**If either output has been consumed — sold or processed onward — the entire reversal is
+refused.** There is no partial reversal: reversing the outputs first means the rejection
+happens before any coconut is restored, and the whole operation rolls back regardless.
+Selling some of the copra blocks the reversal even though the shell is untouched, and the
+reverse is equally true.
+
+Double reversal is prohibited, and the original run is never deleted or altered.

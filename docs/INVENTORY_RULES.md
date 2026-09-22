@@ -122,6 +122,32 @@ balance is therefore **not** a reliable running total and is **deliberately not 
 against going negative**. The primary quantity is authoritative for negative-stock
 prevention, and **no fixed NOS↔KG conversion exists**.
 
+### A business process may still require a weight
+
+"Informational" describes the **engine**, not every process that feeds it. Copra production
+requires the measured shell weight and refuses a run without one, because the factory sells
+shell by weight and a shell lot with no weight is useless. That requirement lives in the
+copra form request and posting action; the engine's behaviour is unchanged. See
+`BUSINESS_RULES.md` §20.
+
+### Value always follows the primary quantity
+
+A product with two units is still costed in **one** of them — its primary unit. Raw shell is
+valued per `NOS`:
+
+```
+allocated cost ÷ shell NOS  →  the stored inventory unit cost and the weighted average
+allocated cost ÷ shell KG   →  informational only; never stored, never a weighted average
+```
+
+A screen may display the per-KG figure, clearly labelled informational. Nothing in the
+costing path may read it back.
+
+### Reversal mirrors the secondary quantity
+
+`ReverseInventoryTransaction` copies `secondary_quantity` onto the opposite line, so a
+count and its weight leave stock together and neither is left stranded.
+
 ## 8. Costing — Weighted Average Cost
 
 **Version 1 maintains weighted average at company/product level, not per warehouse.**

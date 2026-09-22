@@ -5,11 +5,10 @@ namespace App\Enums;
 /**
  * Kinds of production the factory runs.
  *
- * DEHUSKING and HUSK_CHIPPING are implemented. COPRA is declared so the architecture, the
- * recipe table and the screens are shaped for it, but `isImplemented()` keeps an unbuilt
- * type from being posted by accident.
+ * All three are implemented. `isImplemented()` remains as the guard that keeps a future,
+ * unbuilt type from being posted by accident.
  *
- * See docs/BUSINESS_RULES.md §18 (dehusking) and §19 (husk chipping).
+ * See docs/BUSINESS_RULES.md §18 (dehusking), §19 (husk chipping) and §20 (copra).
  */
 enum ProductionType: string
 {
@@ -29,20 +28,24 @@ enum ProductionType: string
     /**
      * Whether a posting workflow exists for this type yet.
      *
-     * Husk chipping and copra have operator-entered output weights and unresolved waste
-     * and joint-cost rules, so they are deliberately not postable.
+     * Every declared type is currently postable. The check is kept because the enum is how
+     * a new production type is introduced, and a type must not become postable simply by
+     * being named.
      */
     public function isImplemented(): bool
     {
-        return in_array($this, [self::Dehusking, self::HuskChipping], true);
+        return in_array($this, [self::Dehusking, self::HuskChipping, self::Copra], true);
     }
 
     /**
-     * Whether outputs are derived from the input rather than entered by the operator.
+     * Whether EVERY output is derived from the input rather than entered by the operator.
      *
-     * Dehusking is the ONLY confirmed fixed-ratio conversion in the business
-     * (docs/BUSINESS_RULES.md §2). Husk chipping and copra must never assume a ratio:
-     * their yields genuinely vary, so the operator enters the measured output.
+     * Dehusking is the only type where that is true of all outputs: one coconut always
+     * yields one dehusked coconut and one husk (docs/BUSINESS_RULES.md §2).
+     *
+     * This is a coarse, type-level answer. The authority on any individual output is
+     * `ProductionRecipeOutput::derivesQuantity()`, because copra mixes the two — its shell
+     * count is derived 1:1 while its copra weight is measured.
      */
     public function hasFixedOutputRatio(): bool
     {
@@ -50,10 +53,10 @@ enum ProductionType: string
     }
 
     /**
-     * Whether the operator measures and enters the output quantities.
+     * Whether the operator measures and enters AT LEAST ONE output quantity.
      *
-     * The inverse of a fixed ratio, stated positively because it is what the screens and
-     * the posting action actually branch on.
+     * The inverse of the above, stated positively because it is what the screens branch on
+     * when deciding whether to show an input box or a derived, read-only figure.
      */
     public function hasOperatorEnteredOutputs(): bool
     {

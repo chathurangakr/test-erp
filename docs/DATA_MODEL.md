@@ -381,6 +381,7 @@ else in the application except the seeder.
 | `production_recipe_id` | FK → `production_recipes.id` | `cascadeOnDelete` |
 | `product_id` | FK → `products.id` | `restrictOnDelete`; unique per recipe |
 | `output_ratio` | **`decimal(20,6)`**, **nullable**, default `1` | units of output per unit of input. `NULL` = **no fixed ratio; the operator measures the output** — see decision **P-6** |
+| `requires_secondary_quantity` | boolean, default `false` | this output must also be **measured in its secondary unit** — see decision **P-9** |
 | `allocation_percent` | **`decimal(9,6)`** | share of consumed value; **must total exactly 100** |
 | `sort_order` | unsigned smallint | |
 
@@ -399,8 +400,19 @@ else in the application except the seeder.
 | `RAW-HUSK` | `HUSK-9C` | **`NULL`** — operator-entered | **30%** |
 | `RAW-HUSK` | `HUSK-10C` | **`NULL`** — operator-entered | **40%** |
 
+**Seeded recipe — COPRA**
+
+| Input | Output | Ratio | Secondary required | Allocation |
+| --- | --- | --- | --- | --- |
+| `DEHUSKED-COCONUT` | `COPRA` | **`NULL`** — operator-entered KG | no | **75%** |
+| `DEHUSKED-COCONUT` | `RAW-SHELL` | **`1.000000`** — one shell per coconut | **yes — measured KG** | **25%** |
+
+Copra is the first recipe that mixes both kinds of output in one row set: the shell *count*
+is derived while its *weight*, and the copra weight, are measured. That is why
+`output_ratio` is per output and nullable rather than a property of the production type.
+
 The percentages are **provisional** pending the factory's costing policy. See
-`BUSINESS_RULES.md` §18 and §19.
+`BUSINESS_RULES.md` §18, §19 and §20.
 
 ### 1.18 `production_orders`
 
@@ -435,7 +447,7 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | --- | --- | --- |
 | `production_order_id` | FK, `cascadeOnDelete` | |
 | `product_id` | FK → `products.id` | |
-| `lot_id` | FK → `inventory_lots.id`, nullable | **required for dehusking and husk chipping** — traceability |
+| `lot_id` | FK → `inventory_lots.id`, nullable | **required for every implemented production type** — traceability |
 | `quantity` | **`decimal(20,3)`** | |
 | `unit_cost` / `total_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
 
@@ -447,12 +459,13 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | `product_id` | FK → `products.id` | |
 | `lot_id` | FK → `inventory_lots.id`, nullable | a **new** lot created at posting; stays `NULL` for a grade that measured zero |
 | `quantity` | **`decimal(20,3)`** | derived from the recipe ratio, or **measured by the operator** where the ratio is `NULL` |
+| `secondary_quantity` | **`decimal(20,3)`**, **nullable** | the operator's measurement in the product's secondary unit — raw shell KG. **Never a conversion of `quantity`** |
 | `allocation_percent` | **`decimal(9,6)`** | the share **actually applied**, snapshotted — `0` for a grade that produced nothing |
 | `allocated_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; sums **exactly** to the consumed value once posted |
-| `unit_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; allocated cost / quantity once posted |
+| `unit_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; allocated cost / **primary** quantity once posted |
 
-No labour, electricity, machine, fuel or overhead columns exist anywhere — a test asserts
-their absence.
+No labour, electricity, machine, fuel, drying or overhead columns exist anywhere — a test
+asserts their absence.
 
 ## 2. Resolved decisions
 
@@ -595,7 +608,7 @@ percentages are renormalised to 100% (7C 30 → 42.857143% when 9C produces noth
 stored share` holds for every row, including the zero one, and a historic run can be
 explained years later.
 
-All of this lives in `App\Services\Production\ProductionCostAllocator`, used by **both**
+All of this lives in `App\Services\Production\ProductionCostAllocator`, used by **all three**
 production types, so value conservation is implemented exactly once.
 
 ### P-8 — chipping waste is recorded without asserting what it means
@@ -609,6 +622,47 @@ Waste creates no inventory line, no lot, no product (**there is no `DUST` produc
 takes no cost — the whole consumed value stays with the saleable grades.
 
 `TBD` — the measurement basis, and whether waste should later carry an allocated cost.
+
+### P-9 — one recipe may mix derived and measured outputs
+
+Dehusking derives every output; husk chipping measures every one. Copra does both at once —
+the shell count follows the coconuts processed 1:1, while the copra weight and the shell
+weight are measured.
+
+Rather than special-casing `RAW-SHELL` in business logic, the distinction was pushed into
+the data that already existed. `output_ratio` is **per output** and nullable, so
+`ProductionRecipeOutput::derivesQuantity()` answers the question for one output; the
+type-level `ProductionType::hasFixedOutputRatio()` remains only a coarse summary and is
+**false** for copra. One new boolean, `requires_secondary_quantity`, says an output must
+also be weighed.
+
+That is the whole schema change. The posting action never asks "is this product
+`RAW-SHELL`?" — it asks the recipe — so product codes stay in `ProductionRecipeSeeder`,
+where they have always lived.
+
+### P-10 — raw shell is valued by its count; the per-KG figure is informational
+
+The inventory engine values a product in its **primary** unit, and raw shell's primary unit
+is `NOS`. So the allocated shell cost is divided by the shell **count**:
+
+```
+Rs.25,000 ÷ 1,000 NOS = Rs.25.000000 / NOS     ← the stored inventory cost
+Rs.25,000 ÷   420 KG  = Rs.59.523810 / kg      ← display only, labelled informational
+```
+
+The per-kilogram figure is shown because the factory thinks about shell by weight, but it is
+never stored and never used as a weighted average. Treating it as authoritative would
+silently contradict how the engine costs the product — and because shell weight varies per
+batch, it would also drift for reasons that have nothing to do with cost.
+
+A **process-level** rule sits on top of decision **I-2**: for copra the shell weight is
+*required* and must be positive, even though the engine treats secondary quantity as
+informational in general. A shell lot with no weight is operationally useless, so the
+requirement is enforced in `CopraRequest` and again in `PostCopraProduction` — and it
+changes nothing about how stock is valued.
+
+`TBD` — whether drying / moisture / process loss should be captured, and on what basis. No
+waste product, no mass-balance equation and no loss quantity exist in version 1.
 
 ### I-3 — the weighted average is company-wide, not per warehouse
 
@@ -624,7 +678,6 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `production_orders` (copra) | Not started. Must post through `App\Actions\Inventory\PostInventoryTransaction`, and must capture **both** shell count (`NOS`) and weight (`KG`) with no fixed conversion. See `BUSINESS_RULES.md` §6. |
 | `accounts`, `journals`, `journal_lines` | `ACCOUNTING_RULES.md` |
 | `roles`, `permissions` | Deferred by instruction |
 

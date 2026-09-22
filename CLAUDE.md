@@ -183,18 +183,20 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Production rules (Phases 6 & 7 — dehusking and husk chipping implemented)
+## Production rules (Phases 6, 7 & 8 — dehusking, husk chipping and copra implemented)
 
-- **Dehusking and husk chipping are postable; `COPRA` is not.** It exists in
-  `ProductionType` so the architecture fits it, but `isImplemented()` blocks posting. Do not
-  build it without instruction.
-- **There is ONE production engine.** Husk chipping reuses the production order, the two
-  ledger transactions, `ReverseProduction`, `CancelProduction` and
-  `ProductionCostAllocator`. Never add a parallel engine for a new production type.
+- **All three production types are postable** — dehusking, husk chipping and copra.
+- **There is ONE production engine.** Every type reuses the production order, the two ledger
+  transactions, `ReverseProduction`, `CancelProduction` and `ProductionCostAllocator`. Never
+  add a parallel engine for a new production type.
 - **Product codes live only in `ProductionRecipeSeeder`.** Everything resolves products
   through `production_recipes` / `production_recipe_outputs`. Never reference `COCONUT`,
-  `DEHUSKED-COCONUT`, `RAW-HUSK`, `HUSK-7C`, `HUSK-9C` or `HUSK-10C` in a controller,
-  service or action.
+  `DEHUSKED-COCONUT`, `RAW-HUSK`, `HUSK-7C`, `HUSK-9C`, `HUSK-10C`, `COPRA` or `RAW-SHELL`
+  in a controller, service or action.
+- **Whether an output is derived or measured is a per-OUTPUT fact, not a per-type one.**
+  `ProductionRecipeOutput::derivesQuantity()` (is there an `output_ratio`?) is the
+  authority; `ProductionType::hasFixedOutputRatio()` is only a coarse summary, and copra
+  mixes both kinds inside one recipe.
 - **The 1:1:1 dehusking ratio is configuration, not code.** It is the recipe's
   `output_ratio`. Dehusking output quantities are derived and never accepted from a request.
 - **Production conserves inventory value.** Item count rises — one coconut becomes two
@@ -213,7 +215,28 @@ The inventory engine exists and is tested. These rules are permanent:
   source, so stock is traceable in both directions.
 - **Reverse outputs before the consumption**, so a reversal blocked by already-consumed
   output fails before any input is restored.
-- **No labour, electricity, machine, fuel or overhead cost** is added in this phase.
+- **No labour, electricity, machine, fuel, drying or overhead cost** is added in this phase.
+
+### Copra specifically
+
+- **The shell COUNT is derived; every WEIGHT is measured.** One dehusked coconut leaves one
+  shell — the recipe's `output_ratio` of `1.000000`. Copra KG and shell KG are both entered
+  by the operator, and **no fixed NOS↔KG conversion may ever be added** for either.
+- **A submitted shell count is refused, not ignored.** `CopraRequest` marks a derived
+  output's quantity prohibited, and `PostCopraProduction` recalculates it from
+  `input × ratio` regardless. Two independent guards, on purpose.
+- **Shell KG is operationally required here**, even though secondary quantity is
+  informational in the engine generally. It is enforced through the recipe's
+  `requires_secondary_quantity` flag, never by checking for `RAW-SHELL`.
+- **Shell is valued against its PRIMARY quantity (`NOS`).** A cost per KG may be *displayed*
+  and must be labelled informational; it is never stored and never used as a weighted
+  average. See `docs/DATA_MODEL.md` P-10.
+- **Value is split 75 / 25 (provisional, configurable)** between copra and shell, in
+  `production_recipe_outputs.allocation_percent` — never in the posting action. The intended
+  replacement is market-value / NRV costing.
+- **Moisture and drying loss are not modelled.** No waste product, no mass-balance equation
+  between the NOS input and the KG outputs, no loss quantity. See `docs/BUSINESS_RULES.md`
+  §20 TBD-3.
 
 ### Husk chipping specifically
 
@@ -281,13 +304,15 @@ Input: Raw Husk in `NOS`. Outputs: `7C`, `9C`, `10C` — all in `KG`.
 - Value is split 30 / 30 / 40 (provisional, configurable), redistributed across the grades
   a batch actually produced. See `docs/BUSINESS_RULES.md` §19.
 
-### Copra Production
+### Copra Production — implemented
 
 Input: Dehusked Coconut in `NOS`. Outputs: Copra in `KG`, plus Raw Coconut Shell.
 
-- Raw Shell must support **both quantity (`NOS`) and weight (`KG`)**.
-- One coconut yields one shell quantity, unless this rule changes later.
-- **Do not use a fixed NOS-to-KG conversion** — shell weights vary.
+- Raw Shell holds **both quantity (`NOS`) and weight (`KG`)**.
+- One coconut yields one shell quantity — the only fixed relationship in this process.
+- **Do not use a fixed NOS-to-KG conversion** — shell and copra weights vary and are
+  measured.
+- Value is split 75 / 25 (provisional, configurable). See `docs/BUSINESS_RULES.md` §20.
 
 ### Raw Coconut Shell
 
@@ -332,9 +357,12 @@ deliveries, cost of goods sold, gross profit, lot selection, dual-unit pricing, 
 reversal), **Dehusking production** (recipe-driven 1:1:1 conversion, traceable output lots,
 configurable value allocation, posting and reversal), and **Husk chipping production**
 (operator-measured output weights with no husk-to-KG conversion, zero-output
-redistribution, informational waste, traceable output lots, posting and reversal).
+redistribution, informational waste, traceable output lots, posting and reversal), and
+**Copra production** (measured copra and shell weights, a 1:1 derived shell count that
+cannot be overridden, dual-unit shell stock, provisional 75/25 value allocation, traceable
+output lots, posting and reversal).
 
-**Not yet started — do not begin without instruction:** Copra production, Finance,
+**Not yet started — do not begin without instruction:** Finance,
 Payables, Receivables, customer payments, production expenses, the permanent joint-product
 costing method, production planning, BOM editor, maintenance, role-based permissions,
 REST API.

@@ -17,6 +17,7 @@ class ProductionOutput extends Model
         'product_id',
         'lot_id',
         'quantity',
+        'secondary_quantity',
         'allocation_percent',
         'allocated_cost',
         'unit_cost',
@@ -26,6 +27,9 @@ class ProductionOutput extends Model
     {
         return [
             'quantity' => 'decimal:3',
+            // The measured weight of an output that is also counted — raw shell. Never a
+            // conversion of the primary quantity; no fixed NOS-to-KG relationship exists.
+            'secondary_quantity' => 'decimal:3',
             'allocation_percent' => 'decimal:6',
             'allocated_cost' => 'decimal:6',
             'unit_cost' => 'decimal:6',

@@ -48,11 +48,18 @@ class DehuskingScreensTest extends TestCase
         $this->husk = Product::factory()->create(['code' => 'RAW-HUSK', 'name' => 'Raw Coconut Husk', 'primary_uom_id' => $nos->id]);
 
         // The recipe seeder configures every production type at once, so the husk chipping
-        // products must exist too.
+        // and copra products must exist too.
         $kg = UnitOfMeasure::factory()->weight()->create(['code' => 'KG']);
         foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C'] as $code) {
             Product::factory()->create(['code' => $code, 'primary_uom_id' => $kg->id]);
         }
+
+        Product::factory()->create(['code' => 'COPRA', 'primary_uom_id' => $kg->id]);
+        Product::factory()->create([
+            'code' => 'RAW-SHELL',
+            'primary_uom_id' => $nos->id,
+            'secondary_uom_id' => $kg->id,
+        ]);
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
         $this->seed(ProductionRecipeSeeder::class);

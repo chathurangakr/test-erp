@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Production\CopraActionController;
+use App\Http\Controllers\Production\CopraController;
 use App\Http\Controllers\Production\DehuskingActionController;
 use App\Http\Controllers\Production\DehuskingController;
 use App\Http\Controllers\Production\HuskChippingActionController;
@@ -7,9 +9,7 @@ use App\Http\Controllers\Production\HuskChippingController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * Production — dehusking and husk chipping.
- *
- * Copra is deliberately not routed: its shell weight rules are unresolved.
+ * Production — dehusking, husk chipping and copra.
  *
  * There are NO destroy routes. A draft may be edited or cancelled; a posted order is a
  * controlled document, corrected by reversal.
@@ -38,4 +38,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('husk-chipping.reverse');
     Route::patch('production/husk-chipping/{huskChipping}/cancel', [HuskChippingActionController::class, 'cancel'])
         ->name('husk-chipping.cancel');
+
+    Route::resource('production/copra', CopraController::class)
+        ->parameters(['copra' => 'copra'])
+        ->names('copra')
+        ->except(['destroy']);
+
+    Route::patch('production/copra/{copra}/post', [CopraActionController::class, 'post'])
+        ->name('copra.post');
+    Route::patch('production/copra/{copra}/reverse', [CopraActionController::class, 'reverse'])
+        ->name('copra.reverse');
+    Route::patch('production/copra/{copra}/cancel', [CopraActionController::class, 'cancel'])
+        ->name('copra.cancel');
 });

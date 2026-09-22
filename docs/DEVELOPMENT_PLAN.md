@@ -80,7 +80,8 @@ supplier, approval hierarchies, and any general-ledger posting.
 
 - [x] `production_recipes`, `production_recipe_outputs`, `production_orders`,
       `production_inputs`, `production_outputs`
-- [x] Extensible `ProductionType` (DEHUSKING implemented; COPRA declared but not postable)
+- [x] Extensible `ProductionType` (DEHUSKING implemented; HUSK_CHIPPING and COPRA declared
+      but not yet postable — both built in later phases)
 - [x] Lifecycle DRAFT → POSTED → REVERSED, plus CANCELLED
 - [x] Fixed 1:1:1 conversion held as recipe configuration, outputs derived and read-only
 - [x] Posts `PRODUCTION_CONSUMPTION` + `PRODUCTION_OUTPUT` atomically
@@ -90,7 +91,8 @@ supplier, approval hierarchies, and any general-ledger posting.
 - [x] Dehusking index / create / show screens
 - [x] 44 production tests
 
-**Deliberately not implemented:** copra, production planning, BOM editor, maintenance,
+**Deliberately not implemented at the time:** copra (built in Phase 8), production
+planning, BOM editor, maintenance,
 labour/electricity/machine/fuel/overhead costs, and any general-ledger posting.
 
 ## Phase 6 — Sales & Dispatch ✅ COMPLETE
@@ -130,23 +132,53 @@ Built on the Phase 5 production engine — no second engine, no duplicated posti
 - [x] Index / create / edit / show screens with a live allocation preview; sidebar entry
 - [x] 55 husk chipping tests
 
-**Deliberately not implemented:** copra, finance, GL, production planning, maintenance,
-generic BOM editor.
+**Deliberately not implemented at the time:** copra (built in Phase 8), finance, GL,
+production planning, maintenance, generic BOM editor.
 
 **Still open:** the waste measurement basis (`BUSINESS_RULES.md` §19 TBD-1); whether waste
 should ever carry an allocated cost; the permanent joint-product costing method.
 
-## Phase 8 — Finance (not started)
+## Phase 8 — Production — Copra & Raw Coconut Shell ✅ COMPLETE
+
+Built on the same production engine again — still no second engine, still no duplicated
+posting code.
+
+- [x] `COPRA` becomes an implemented `ProductionType`
+- [x] `production_outputs.secondary_quantity` added — the operator's measured weight, never
+      a conversion of the primary quantity
+- [x] `production_recipe_outputs.requires_secondary_quantity` added — the smallest reusable
+      extension that lets one recipe hold a **derived** output and a **measured** one
+      together, with no product code in business logic
+- [x] Recipe seeded `DEHUSKED-COCONUT` → `COPRA` (ratio `NULL`, 75%) + `RAW-SHELL`
+      (ratio `1.000000`, secondary required, 25%)
+- [x] Operator-entered copra KG and shell KG, both required and positive; a submitted shell
+      **count** is refused by the request and recalculated by the posting action regardless
+- [x] Shared `ProductionCostAllocator` — value conserved exactly, shell valued per `NOS`
+- [x] Informational shell cost per KG, computed for display only and labelled as such
+- [x] A new lot per output, traceable back through dehusking to the whole coconut lot
+- [x] Reversal via the existing `ReverseProduction`, mirroring the measured weight, refused
+      entirely if either output has been consumed
+- [x] Index / create / edit / show screens with a read-only derived shell count and a
+      provisional allocation preview; sidebar entry
+- [x] 74 copra tests
+
+**Deliberately not implemented:** finance, GL, production planning, maintenance, generic
+BOM editor, activated carbon / shell processing.
+
+**Still open:** drying / moisture / process loss (`BUSINESS_RULES.md` §20 TBD-3); the
+permanent joint-product costing method that replaces 75 / 25 (TBD-2).
+
+## Phase 9 — Finance (not started)
 
 Double-entry: chart of accounts, journals, balanced posting, derived balances.
 Then Weighted Average Cost and configurable joint-product allocation.
 **Blocked on:** chart of accounts, allocation method, currency, tax.
 
-## Phase 9 — Permissions (not started)
+## Phase 10 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 10 — REST API for Flutter (not started)
+## Phase 11 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 
@@ -176,5 +208,5 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 Resolved decisions are recorded in `BUSINESS_REQUIREMENTS.md` §6; remaining questions in
 §7. **No question currently blocks Phase 2 or Phase 3** — both may proceed when instructed.
 
-The remaining questions cluster around Finance (Phase 8): chart of accounts, currency, tax,
+The remaining questions cluster around Finance (Phase 9): chart of accounts, currency, tax,
 and joint-product cost allocation. These do not block inventory or production work.
