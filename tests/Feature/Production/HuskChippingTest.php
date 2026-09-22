@@ -283,14 +283,10 @@ class HuskChippingTest extends TestCase
                 6,
             ), '0.000000');
 
-        // The document conserves value exactly. The ledger stores a *unit* cost rounded to
-        // six decimals, so the re-multiplied stock value carries a residue bounded by half a
-        // unit-cost tick per output line. See docs/BUSINESS_RULES.md §13.
-        $residue = bcsub($valueBefore, $totalAfter, 6);
-        $bound = bcmul('637.500', '0.0000005', 6); // total output KG x half a tick
-
-        $this->assertLessThanOrEqual(0, bccomp(bcsub('0', $bound, 6), $residue, 6));
-        $this->assertLessThanOrEqual(0, bccomp($residue, $bound, 6));
+        // Nothing is lost: the ledger stores the allocator's exact figures, so the company
+        // holds precisely the value it held before chipping — a unit cost that repeats in
+        // decimal no longer erodes it. See docs/INVENTORY_RULES.md §8.1.
+        $this->assertSame($valueBefore, $totalAfter);
     }
 
     #[Test]

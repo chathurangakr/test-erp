@@ -584,10 +584,10 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->assertStock('COCONUT', '5000.000', '512500.000000', '102.500000');
         $this->assertStock('DEHUSKED-COCONUT', '1000.000', '87125.000000', '87.125000');
         $this->assertStock('RAW-HUSK', '6000.000', '109593.750000', '18.265625');
-        $this->assertStock('HUSK-7C', '100.500', '7318.386584', '72.819767');
-        $this->assertStock('HUSK-9C', '205.250', '10959.375063', '53.395250');
-        $this->assertStock('HUSK-10C', '281.750', '14612.499990', '51.863354');
-        $this->assertStock('COPRA', '100.000', '34301.181100', '343.011811');
+        $this->assertStock('HUSK-7C', '100.500', '7318.386650', '72.819768');
+        $this->assertStock('HUSK-9C', '205.250', '10959.375000', '53.395250');
+        $this->assertStock('HUSK-10C', '281.750', '14612.500000', '51.863354');
+        $this->assertStock('COPRA', '100.000', '34301.181104', '343.011811');
         $this->assertStock('RAW-SHELL', '500.000', '10890.625000', '21.781250');
 
         // Shell keeps its measured weight alongside its count.
@@ -613,23 +613,29 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
             $this->assertSame($order->inputs->first()->total_cost, DecimalMath::cost($allocated), "{$key} allocation");
 
-            // And bounded at ledger level. A *unit* cost stored to six decimals cannot
-            // always reproduce its line total, so the re-multiplied ledger value differs by
-            // at most half a tick per unit — see docs/BUSINESS_RULES.md §13.
-            $consumedLedger = DecimalMath::of($order->consumptionTransaction->lines->sum(fn ($l): string => $l->total_cost));
+            // And exact at LEDGER level too: total_cost is authoritative, so the allocated
+            // figures reach the ledger unchanged and nothing is lost re-deriving them from a
+            // rounded unit cost. See docs/INVENTORY_RULES.md §8.1.
+            $consumedLedger = DecimalMath::cost(
+                DecimalMath::of($order->consumptionTransaction->lines->sum(fn ($l): string => $l->total_cost))
+            );
+
             $outputLedger = DecimalMath::zero();
-            $bound = DecimalMath::zero();
 
             foreach ($order->outputTransaction->lines as $line) {
                 $outputLedger = DecimalMath::add($outputLedger, DecimalMath::of($line->total_cost));
-                $bound = DecimalMath::add($bound, DecimalMath::mul(DecimalMath::of($line->quantity), '0.0000005'));
             }
 
-            $residue = DecimalMath::sub($consumedLedger, $outputLedger);
+            $this->assertSame(
+                $consumedLedger,
+                DecimalMath::cost($outputLedger),
+                "{$key} ledger value is not conserved exactly",
+            );
 
-            $this->assertTrue(
-                DecimalMath::compare($residue, $bound) <= 0 && DecimalMath::compare($residue, "-{$bound}") >= 0,
-                "{$key} ledger residue {$residue} exceeded the bound {$bound}",
+            $this->assertSame(
+                '0.000000',
+                DecimalMath::cost(DecimalMath::sub($consumedLedger, $outputLedger)),
+                "{$key} left a monetary residue",
             );
         }
     }
@@ -729,10 +735,28 @@ class FactoryWorkflowIntegrationTest extends TestCase
                 $this->assertNotNull($line->warehouse_id);
                 $this->assertFalse(DecimalMath::isNegative(DecimalMath::of($line->unit_cost)));
 
-                // total_cost is quantity x unit_cost at stored precision.
+                // total_cost is AUTHORITATIVE, so it is not required to equal
+                // quantity x unit_cost. What must hold is that unit_cost is an honest
+                // rounded representation of it: the two may differ only by that rounding,
+                // at most half a unit-cost tick per unit.
+                $this->assertFalse(DecimalMath::isNegative(DecimalMath::of($line->total_cost)));
+
+                $difference = DecimalMath::sub(
+                    DecimalMath::of($line->total_cost),
+                    DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_cost)),
+                );
+                $tolerance = DecimalMath::mul(DecimalMath::of($line->quantity), '0.0000005');
+
+                $this->assertTrue(
+                    DecimalMath::compare($difference, $tolerance) <= 0
+                        && DecimalMath::compare($difference, '-'.$tolerance) >= 0,
+                    "Line {$line->id}: total {$line->total_cost} cannot be explained by unit cost {$line->unit_cost}",
+                );
+
+                // And the unit cost really is the total divided by the quantity.
                 $this->assertSame(
-                    DecimalMath::cost(DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_cost))),
-                    $line->total_cost,
+                    DecimalMath::cost(DecimalMath::div(DecimalMath::of($line->total_cost), DecimalMath::of($line->quantity))),
+                    $line->unit_cost,
                 );
             }
         }

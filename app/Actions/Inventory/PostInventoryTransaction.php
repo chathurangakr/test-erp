@@ -25,7 +25,10 @@ use Illuminate\Validation\ValidationException;
  *  - product rows are locked FOR UPDATE so concurrent posts cannot both pass the
  *    negative-stock check;
  *  - OUT movements are costed at the weighted average in force at the moment of posting;
- *  - any line that would drive stock below zero aborts the entire transaction.
+ *  - any line that would drive stock below zero aborts the entire transaction;
+ *  - `total_cost` is the AUTHORITATIVE monetary value of a movement. A trusted domain
+ *    service may supply it exactly (see PendingInventoryLine::withAuthoritativeCost);
+ *    `unit_cost` is only its rounded per-unit representation.
  *
  * See docs/INVENTORY_RULES.md §§1-4, 8-9.
  */
@@ -377,7 +380,15 @@ class PostInventoryTransaction
 
             if ($line->direction->isIn()) {
                 $unitCost = DecimalMath::cost($line->systemUnitCost ?? $line->unitCost ?? '0');
-                $totalCost = DecimalMath::cost(DecimalMath::mul($line->quantity, $unitCost));
+
+                // An authoritative total is stored exactly as the calling domain service
+                // calculated it. Only when none is supplied does the engine reconstruct the
+                // value from the rounded unit cost.
+                $totalCost = $line->systemTotalCost !== null
+                    ? DecimalMath::cost($line->systemTotalCost)
+                    : DecimalMath::cost(DecimalMath::mul($line->quantity, $unitCost));
+
+                $this->assertCostRepresentation($line, $unitCost, $totalCost, $index);
 
                 $company[$productId]['quantity'] = DecimalMath::add($company[$productId]['quantity'], $line->quantity);
                 $company[$productId]['value'] = DecimalMath::add($company[$productId]['value'], $totalCost);
@@ -393,7 +404,25 @@ class PostInventoryTransaction
                     ? DecimalMath::cost($line->systemUnitCost)
                     : $this->currentAverage($company[$productId]);
 
-                $totalCost = DecimalMath::cost(DecimalMath::mul($line->quantity, $unitCost));
+                if ($line->systemTotalCost !== null) {
+                    // A reversal removes exactly what the original line added; a transfer's
+                    // two legs share one figure. Neither may be re-derived from a rounded
+                    // unit cost.
+                    $totalCost = DecimalMath::cost($line->systemTotalCost);
+                } elseif ($line->systemUnitCost !== null) {
+                    $totalCost = DecimalMath::cost(DecimalMath::mul($line->quantity, $unitCost));
+                } else {
+                    // The ordinary case — a sale or a production consumption — priced at the
+                    // running weighted average, and taking ALL the remaining value when it
+                    // takes all the remaining quantity.
+                    $totalCost = $this->stock->issueValue(
+                        $line->quantity,
+                        $company[$productId]['quantity'],
+                        $company[$productId]['value'],
+                    );
+                }
+
+                $this->assertCostRepresentation($line, $unitCost, $totalCost, $index);
 
                 $newWarehouseBalance = DecimalMath::sub($warehouseBalances[$warehouseKey], $line->quantity);
 
@@ -442,6 +471,45 @@ class PostInventoryTransaction
         }
 
         return $costed;
+    }
+
+    /**
+     * The line's two money columns must tell the same story.
+     *
+     * `total_cost` is the authoritative monetary value of the movement and `unit_cost` is
+     * its rounded per-unit representation, so the two may differ only by the rounding
+     * itself: at most half a unit-cost tick per unit, i.e. `quantity x 0.0000005`. Anything
+     * wider means the caller supplied a contradictory pair — a mistake that would otherwise
+     * be invisible until someone tried to reconcile the ledger.
+     *
+     * A negative value is refused outright: stock cannot be worth less than nothing.
+     */
+    private function assertCostRepresentation(
+        PendingInventoryLine $line,
+        string $unitCost,
+        string $totalCost,
+        int $index,
+    ): void {
+        if (DecimalMath::isNegative($totalCost)) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.total_cost" => __('An inventory line value cannot be negative.'),
+            ]);
+        }
+
+        $reconstructed = DecimalMath::mul($line->quantity, $unitCost);
+        $difference = DecimalMath::sub($totalCost, $reconstructed);
+        $tolerance = DecimalMath::mul($line->quantity, '0.0000005');
+
+        if (DecimalMath::compare($difference, $tolerance) > 0
+            || DecimalMath::compare($difference, '-'.$tolerance) < 0) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.total_cost" => __('The supplied line value :total does not match its unit cost :unit for :quantity unit(s).', [
+                    'total' => $totalCost,
+                    'unit' => $unitCost,
+                    'quantity' => $line->quantity,
+                ]),
+            ]);
+        }
     }
 
     /**

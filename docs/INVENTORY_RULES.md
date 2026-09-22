@@ -147,7 +147,8 @@ costing path may read it back.
 ### Reversal mirrors the secondary quantity
 
 `ReverseInventoryTransaction` copies `secondary_quantity` onto the opposite line, so a
-count and its weight leave stock together and neither is left stranded.
+count and its weight leave stock together and neither is left stranded. It copies the
+line's authoritative `total_cost` too — see §8.1.
 
 ## 8. Costing — Weighted Average Cost
 
@@ -165,6 +166,85 @@ It reduces quantity and value but does **not** re-derive a purchase price. Calle
 price an OUT line — supplying `unit_cost` on an outgoing line is rejected.
 
 **Zero quantity is handled safely:** the average of nothing is `0`, never a division error.
+
+### 8.1 `total_cost` is authoritative — ✅ **CONFIRMED**
+
+A ledger line carries two money columns, and they do **not** have equal standing:
+
+| Column | Meaning |
+| --- | --- |
+| `total_cost` | **The authoritative monetary value of the movement.** |
+| `unit_cost` | Its **rounded per-unit representation**, normally `round(total_cost ÷ quantity, 6)`. |
+
+**`total_cost == quantity × unit_cost` is NOT an invariant, and must never be asserted as
+one.** A unit cost stored to six decimals cannot always reproduce a total that was derived
+the other way round:
+
+```
+Allocated to 10C:   Rs.16,000.000000   over 280 KG
+Unit cost stored:      Rs.57.142857     (the rate repeats)
+280 × 57.142857   =  Rs.15,999.999960   ← NOT what the ledger stores
+Ledger total_cost =  Rs.16,000.000000   ← the authoritative value
+```
+
+Before this rule, every production run quietly eroded inventory value by a few millionths of
+a rupee. Individually trivial; as the opening balance of a double-entry ledger, a figure
+nobody can reconcile or explain.
+
+**What must hold instead:**
+
+- `quantity > 0` — always, direction decides the sign;
+- `total_cost >= 0` and `unit_cost >= 0`;
+- `unit_cost == round(total_cost ÷ quantity, 6)` — the unit cost is an honest representation;
+- therefore `|total_cost − quantity × unit_cost| <= quantity × 0.0000005` — any difference
+  comes from that rounding and nothing else.
+
+The engine enforces the last two on every line that carries a supplied total, so a caller
+cannot pass a contradictory pair.
+
+**Who may supply an authoritative total.** Only trusted domain services, through
+`PendingInventoryLine::withAuthoritativeCost()`:
+
+| Caller | Authoritative value |
+| --- | --- |
+| `PostGoodsReceipt` | the exact landed line value — material + allocated landed cost |
+| `PostDehuskingProduction` / `PostHuskChippingProduction` / `PostCopraProduction` | the allocator's exact `allocated_cost`, unchanged |
+| `TransferStock` | one figure, shared by both legs |
+| `ReverseInventoryTransaction` | the original line's `total_cost`, exactly |
+
+`PendingInventoryLine::fromArray()` — the path any request-shaped data would take — has **no
+total-cost key at all**. There is no writable inventory cost field in any form, controller
+or route, and a sales user still cannot price an OUT line. See `DATA_MODEL.md` **I-4**.
+
+### 8.2 Full depletion leaves nothing behind — ✅ **CONFIRMED**
+
+An ordinary OUT movement is valued at `quantity × weighted average`. The **exception** is an
+issue that takes the entire remaining company quantity: it takes the entire remaining
+company **value**.
+
+```
+On hand:  13 units worth Rs.139.999999   (average rounds to Rs.10.769231)
+13 × 10.769231  =  Rs.140.000003         ← would over-issue by Rs.0.000004
+Issue value     =  Rs.139.999999         ← the whole remaining value
+
+After:    quantity 0.000, value 0.000000, average 0.000000
+```
+
+**A product with no stock must be worth nothing.** Rounding would otherwise strand a residue
+on an empty product, which no later process could clear — you cannot issue stock you do not
+have in order to write off a fraction of a rupee.
+
+The rule lives in one place, `StockQueryService::issueValue()`, used both by the engine
+(against its in-transaction running balance) and by `TransferStock` (against the ledger
+balance). The existing `FOR UPDATE` product lock makes it concurrency-safe: two issues
+cannot both read the same pre-issue balance.
+
+### 8.3 Transfers are exactly value-neutral
+
+Both legs of a transfer receive the **same** unit cost and the **same** authoritative total,
+so the OUT removes precisely what the IN puts back. The IN value is never re-derived from
+the rounded unit cost. Company quantity, company value and the weighted average are all
+unchanged, to the last decimal.
 
 **All arithmetic uses BCMath via `App\Support\DecimalMath`.** PHP floating point is never
 used for quantities or costs anywhere in the costing path.
@@ -233,6 +313,8 @@ the reference encodes no business meaning.
 A reversal is a **new transaction**, never an edit.
 
 - Every original line is mirrored with the **opposite direction**.
+- The reversal reuses the original line's unit cost **and its authoritative `total_cost`**,
+  so it removes exactly the value that was added — never a re-derivation of it (§8.1).
 - `reversal_of_id` points at the original; the original's `reversed_by_id` points back.
 - **A transaction can be reversed at most once** — enforced in the action under a row lock
   *and* by a unique index on `reversal_of_id`.
@@ -312,4 +394,5 @@ doing lot work that would be rolled back. Tests cover both the allowed and rejec
 | 7 | When total material value is zero but landed costs exist, posting is refused. Should free-goods receipts be supported some other way? |
 
 **Confirmed and closed:** I-1 (reversal cost basis), I-2 (secondary quantity informational),
-I-3 (company-wide weighted average), and the inactive-product rule (§15).
+I-3 (company-wide weighted average), I-4 (total cost authoritative, §8.1-8.3), and the
+inactive-product rule (§15).

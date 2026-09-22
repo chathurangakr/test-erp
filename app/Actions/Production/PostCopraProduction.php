@@ -142,7 +142,7 @@ class PostCopraProduction
                     'unit_cost' => $allocation['unit_cost'],
                 ])->save();
 
-                $outputLines[] = new PendingInventoryLine(
+                $outputLines[] = (new PendingInventoryLine(
                     productId: $allocation['product']->id,
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
@@ -153,8 +153,10 @@ class PostCopraProduction
                     secondaryQuantity: $line->secondary_quantity === null
                         ? null
                         : DecimalMath::quantity(DecimalMath::of($line->secondary_quantity)),
-                    unitCost: $allocation['unit_cost'],
-                );
+                ))
+                    // Valuation stays entirely on the PRIMARY quantity: the allocator's
+                    // exact figure, against the count. The weight never enters the money.
+                    ->withAuthoritativeCost($allocation['unit_cost'], $allocation['allocated_cost']);
             }
 
             $outputTransaction = $this->postInventory->handle(

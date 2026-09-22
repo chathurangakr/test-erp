@@ -184,8 +184,8 @@ written after posting.
 | `direction` | string(3) | `IN` / `OUT` — decides the sign |
 | `quantity` | **`decimal(20,3)`** | always positive |
 | `secondary_quantity` | **`decimal(20,3)`**, nullable | dual-UOM products only |
-| `unit_cost` | **`decimal(20,6)`** | weighted average at posting time for OUT |
-| `total_cost` | **`decimal(20,6)`** | |
+| `unit_cost` | **`decimal(20,6)`** | the **rounded per-unit representation** of `total_cost`; weighted average at posting time for an ordinary OUT |
+| `total_cost` | **`decimal(20,6)`** | **AUTHORITATIVE.** The monetary value of the movement. Not required to equal `quantity × unit_cost` — see decision **I-4** |
 | `created_at` / `updated_at` | timestamps | |
 
 **Immutable**, like the header. Indexed on `(product_id, warehouse_id)` and
@@ -663,6 +663,38 @@ changes nothing about how stock is valued.
 
 `TBD` — whether drying / moisture / process loss should be captured, and on what basis. No
 waste product, no mass-balance equation and no loss quantity exist in version 1.
+
+### I-4 — `total_cost` is authoritative; `unit_cost` merely represents it
+
+An inventory line's `total_cost` is the monetary value of the movement. `unit_cost` is its
+rounded per-unit representation, and **`total_cost = quantity × unit_cost` is not an
+invariant**: a unit cost at six decimals cannot always reproduce a total derived the other
+way round (Rs.16,000 over 280 KG stores Rs.57.142857, which re-multiplies to
+Rs.15,999.999960).
+
+Reconstructing value from the unit cost eroded inventory by millionths of a rupee on every
+production run. The alternative — widening `unit_cost` — only moves the rounding point; the
+totals would still not reconcile, because the exact figure the business calculated is a
+*line total*, not a rate. So the line total is stored as calculated and the rate is derived
+from it, not the reverse.
+
+What is enforced instead, on every line carrying a supplied total:
+
+```
+quantity > 0,  total_cost >= 0,  unit_cost >= 0
+unit_cost == round(total_cost / quantity, 6)
+|total_cost − quantity × unit_cost| <= quantity × 0.0000005
+```
+
+Only trusted domain services may supply a total, through
+`PendingInventoryLine::withAuthoritativeCost()`. `fromArray()` — the request-shaped path —
+has no total-cost key, so no payload can set the monetary value of a stock movement, and an
+OUT line still refuses a caller-supplied price. **No migration was needed:** `total_cost`
+already existed as `decimal(20,6)` and no posted history was rewritten.
+
+Two consequences are rules in their own right (`INVENTORY_RULES.md` §8.2-8.3): an issue that
+takes the last of a product takes its entire remaining value, leaving zero quantity **and**
+zero value; and a transfer's two legs share one total, so it is exactly value-neutral.
 
 ### I-3 — the weighted average is company-wide, not per warehouse
 

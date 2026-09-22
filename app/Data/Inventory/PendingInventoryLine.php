@@ -18,10 +18,16 @@ final class PendingInventoryLine
      * @param  string|null  $unitCost  Required for IN. For OUT it must be null — the
      *                                 service costs outgoing movements at the weighted
      *                                 average in force at posting time. The only exceptions
-     *                                 are transfers and reversals, which set
+     *                                 are the trusted domain services, which set
      *                                 $systemUnitCost internally.
      * @param  string|null  $systemUnitCost  Internal cost override. Never accept this from
      *                                       user input.
+     * @param  string|null  $systemTotalCost  The AUTHORITATIVE monetary value of this
+     *                                        movement, supplied by a trusted domain service
+     *                                        that calculated it exactly. When present the
+     *                                        engine stores it unchanged instead of
+     *                                        reconstructing quantity x unit cost. Never
+     *                                        accept this from user input.
      */
     public function __construct(
         public readonly int $productId,
@@ -32,6 +38,7 @@ final class PendingInventoryLine
         public readonly ?string $secondaryQuantity = null,
         public readonly ?string $unitCost = null,
         public readonly ?string $systemUnitCost = null,
+        public readonly ?string $systemTotalCost = null,
     ) {}
 
     /**
@@ -44,6 +51,10 @@ final class PendingInventoryLine
      *     secondary_quantity?: int|string|float|null,
      *     unit_cost?: int|string|float|null,
      * }  $attributes
+     *
+     * Deliberately has NO total-cost key. An authoritative line total may only be supplied
+     * through withAuthoritativeCost() by a trusted domain service, so no request payload —
+     * however it is shaped — can set the monetary value of a stock movement.
      */
     public static function fromArray(array $attributes): self
     {
@@ -66,9 +77,18 @@ final class PendingInventoryLine
     }
 
     /**
-     * Copy this line with an internally determined unit cost (transfers, reversals).
+     * Copy this line with a cost the calling domain service calculated exactly.
+     *
+     * `$totalCost` is the authoritative monetary value of the movement and is stored
+     * unchanged; `$unitCost` is its rounded per-unit representation, normally
+     * `round($totalCost / quantity, 6)`. The engine rejects a pair that cannot be explained
+     * by that rounding, so the two cannot silently disagree.
+     *
+     * Used by purchasing (exact landed line value), all three production types (the
+     * allocator's exact allocated cost), transfers (one total shared by both legs) and
+     * reversals (the original line's total). Never reachable from a request.
      */
-    public function withSystemUnitCost(string $unitCost): self
+    public function withAuthoritativeCost(string $unitCost, string $totalCost): self
     {
         return new self(
             productId: $this->productId,
@@ -79,6 +99,7 @@ final class PendingInventoryLine
             secondaryQuantity: $this->secondaryQuantity,
             unitCost: null,
             systemUnitCost: $unitCost,
+            systemTotalCost: $totalCost,
         );
     }
 

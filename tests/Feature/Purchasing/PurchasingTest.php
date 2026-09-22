@@ -842,18 +842,32 @@ class PurchasingTest extends TestCase
         );
         $this->assertSame('400.000000', $lineTotals);
 
-        // Inventory value is quantity x unit_cost, and a UNIT cost stored to six decimals
-        // cannot always reproduce its line total: 10 x 13.333333 = 133.333330, not
-        // 133.333333. The shortfall is bounded by half a unit-cost tick per line
-        // (quantity x 0.0000005) and is inherent to posting unit costs rather than line
-        // totals. See docs/BUSINESS_RULES.md §13.
+        // And the exact landed LINE VALUE is what reaches inventory, not a value rebuilt
+        // from the rounded unit cost. 10 x 13.333333 would have been 133.333330; the
+        // authoritative total keeps the 133.333333 that was actually calculated, so the
+        // three products together hold exactly the 400 that was spent.
+        // See docs/INVENTORY_RULES.md §8.1.
         $posted = $posted->fresh(['lines']);
-        $inventoryValue = $this->stock()->valueForProduct($this->coconut->id);
-        $this->assertSame('133.333330', $inventoryValue);
 
-        $shortfall = bcsub('400.000000', bcmul('3', $inventoryValue, 6), 6);
-        $this->assertSame('0.000010', $shortfall);
-        $this->assertLessThanOrEqual(0, bccomp($shortfall, '0.000015', 6));
+        $this->assertSame('133.333333', $this->stock()->valueForProduct($this->coconut->id));
+        $this->assertSame('133.333333', $this->stock()->valueForProduct($this->husk->id));
+        $this->assertSame('133.333334', $this->stock()->valueForProduct($third->id));
+
+        $inventoryTotal = collect([$this->coconut, $this->husk, $third])->reduce(
+            fn (string $carry, Product $product): string => bcadd(
+                $carry,
+                $this->stock()->valueForProduct($product->id),
+                6,
+            ),
+            '0.000000',
+        );
+
+        $this->assertSame('400.000000', $inventoryTotal, 'No value may be lost to unit-cost rounding.');
+
+        // The unit cost is still the rounded per-unit representation of that total.
+        $this->assertSame('13.333333', $posted->lines->first()->final_unit_cost);
+        $this->assertSame('13.333333', $posted->inventoryTransaction->lines->first()->unit_cost);
+        $this->assertSame('133.333333', $posted->inventoryTransaction->lines->first()->total_cost);
     }
 
     #[Test]

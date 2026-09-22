@@ -191,6 +191,28 @@ another. No new business logic was built.
 output rows, which would have duplicated its outputs and double-counted the run's value. No
 current caller could reach that state, but the planned REST API would reuse the action.
 
+## Cross-cutting — Inventory valuation hardening ✅ COMPLETE
+
+A precision fix taken **before** Finance, because accounting cannot open on a balance nobody
+can reconcile. No new business logic, no schema change.
+
+- [x] `total_cost` is the **authoritative** monetary value of a ledger line;
+      `unit_cost` is only its rounded per-unit representation
+- [x] `total_cost == quantity × unit_cost` retired as an invariant and replaced with
+      representation rules (`INVENTORY_RULES.md` §8.1)
+- [x] `PendingInventoryLine::withAuthoritativeCost()` — trusted domain services only;
+      `fromArray()` has no total-cost key, so no request can value a stock movement
+- [x] Purchasing passes the exact landed line value; all three production types pass the
+      allocator's exact `allocated_cost`; transfers share one total across both legs;
+      reversals reuse the original total
+- [x] **Full depletion** takes the entire remaining value, so a sold-out product holds zero
+      quantity *and* zero value — one rule, in `StockQueryService::issueValue()`
+- [x] 19 new tests in `AuthoritativeCostTest`; two existing tests that asserted the old
+      limitation **strengthened to exactness**, none weakened
+- [x] End-to-end production conservation is now exact: residue `0.000000` for all three
+
+**Result:** dehusking, husk chipping and copra all conserve ledger value to the last decimal.
+
 ## Phase 9 — Finance (not started)
 
 Double-entry: chart of accounts, journals, balanced posting, derived balances.

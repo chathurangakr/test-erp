@@ -84,7 +84,7 @@ class PostGoodsReceipt
                     'lot_id' => $lot?->id,
                 ])->save();
 
-                $pendingLines[] = new PendingInventoryLine(
+                $pendingLines[] = (new PendingInventoryLine(
                     productId: $line->product_id,
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
@@ -93,9 +93,11 @@ class PostGoodsReceipt
                     secondaryQuantity: $line->secondary_quantity === null
                         ? null
                         : DecimalMath::of($line->secondary_quantity),
-                    // The landed unit cost is what reaches inventory, not the raw price.
-                    unitCost: $costs['final_unit_cost'],
-                );
+                ))
+                    // The landed unit cost is what reaches inventory, not the raw price —
+                    // and the exact landed LINE VALUE is what the ledger stores, so a
+                    // material cost that does not divide evenly is not lost to rounding.
+                    ->withAuthoritativeCost($costs['final_unit_cost'], $costs['total_cost']);
             }
 
             $transaction = $this->postInventory->handle(

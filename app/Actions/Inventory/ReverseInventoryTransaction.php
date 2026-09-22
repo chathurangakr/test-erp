@@ -17,8 +17,8 @@ use Illuminate\Validation\ValidationException;
  * is never deleted. The reversal:
  *
  *  - mirrors every original line with the opposite direction;
- *  - reuses each original line's unit cost, so the reversal cancels the original exactly in
- *    both quantity and value (see docs/INVENTORY_RULES.md decision I-1);
+ *  - reuses each original line's unit cost AND its authoritative total, so the reversal
+ *    cancels the original exactly in both quantity and value (docs/INVENTORY_RULES.md I-1);
  *  - is refused if the original was already reversed (also enforced by a unique index);
  *  - is refused for a reversal itself;
  *  - is refused if reversing would drive stock negative — the normal negative-stock guard
@@ -80,7 +80,12 @@ class ReverseInventoryTransaction
                     secondaryQuantity: $line->secondary_quantity === null
                         ? null
                         : DecimalMath::of($line->secondary_quantity),
-                ))->withSystemUnitCost(DecimalMath::of($line->unit_cost));
+                ))->withAuthoritativeCost(
+                    DecimalMath::of($line->unit_cost),
+                    // The exact original value, not a re-derivation of it: a reversal must
+                    // remove precisely what was added.
+                    DecimalMath::of($line->total_cost),
+                );
             }
 
             $reversal = $this->post->handle(

@@ -114,8 +114,19 @@ The inventory engine exists and is tested. These rules are permanent:
   product; transfers and reversals are exempt, because they relocate or undo stock that
   already exists. Use `InventoryTransactionType::bringsNewStock()` — never a blanket check
   on direction. See `docs/INVENTORY_RULES.md` §14.
-- **A reversal reuses the original line's unit cost**, not the current weighted average, so
-  it cancels the original exactly in both quantity and value.
+- **A reversal reuses the original line's unit cost AND its authoritative total**, not the
+  current weighted average, so it cancels the original exactly in both quantity and value.
+- **`total_cost` is the authoritative monetary value of a ledger line; `unit_cost` is only
+  its rounded per-unit representation.** Never assert or rely on
+  `total_cost == quantity × unit_cost` — a six-decimal rate cannot always reproduce a total
+  derived the other way round. Trusted domain services pass the exact figure through
+  `PendingInventoryLine::withAuthoritativeCost()`; `fromArray()` has no total-cost key, so
+  no request can set a stock movement's value. See `docs/INVENTORY_RULES.md` §8.1.
+- **An issue that takes the last of a product takes its entire remaining value**, so a
+  sold-out product holds zero quantity *and* zero value. The rule lives once, in
+  `StockQueryService::issueValue()`. See `docs/INVENTORY_RULES.md` §8.2.
+- **A transfer's two legs share one authoritative total**, so it is exactly value-neutral.
+  Never re-derive the IN value from a rounded unit cost.
 - **Secondary quantity is informational.** It is recorded where known, is not guarded
   against going negative, and has **no fixed conversion** to the primary unit. The primary
   quantity is authoritative for negative-stock prevention.
@@ -201,7 +212,9 @@ The inventory engine exists and is tested. These rules are permanent:
   `output_ratio`. Dehusking output quantities are derived and never accepted from a request.
 - **Production conserves inventory value.** Item count rises — one coconut becomes two
   things — but money does not. Allocated output costs must sum **exactly** to the consumed
-  value, with the final output absorbing the rounding remainder.
+  value, with the final output absorbing the rounding remainder — and those exact figures
+  reach the ledger unchanged, so consumption and output transactions balance to the last
+  decimal.
 - **The allocation percentages must total exactly 100**, enforced by
   `ProductionRecipe::assertAllocationIsComplete()`. The current 85/15 (dehusking) and
   30/30/40 (chipping) splits are **provisional** and configurable; never hard-code them.

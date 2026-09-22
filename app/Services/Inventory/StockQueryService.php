@@ -102,6 +102,35 @@ class StockQueryService
     }
 
     /**
+     * The authoritative monetary value of issuing `$quantity` from a given balance.
+     *
+     * Normally `quantity x weighted average`, rounded once. The exception is **full
+     * depletion**: when the issue takes the entire remaining company quantity it takes the
+     * entire remaining company value, so a product that is sold out is left holding
+     * zero quantity AND zero value. Rounding `quantity x average` would instead strand a
+     * few millionths of a rupee on a product with nothing in stock, which no later
+     * accounting could explain or clear.
+     *
+     * The balances are passed in rather than read here, because the inventory engine costs
+     * lines against a RUNNING balance inside its own transaction, while a transfer costs
+     * against the ledger balance. Both must use this one rule.
+     */
+    public function issueValue(string $quantity, string $onHandQuantity, string $onHandValue): string
+    {
+        if (DecimalMath::compare($quantity, $onHandQuantity) === 0) {
+            return DecimalMath::cost($onHandValue);
+        }
+
+        if (DecimalMath::isZero($onHandQuantity)) {
+            return DecimalMath::zero(DecimalMath::COST_SCALE);
+        }
+
+        $average = DecimalMath::cost(DecimalMath::div($onHandValue, $onHandQuantity));
+
+        return DecimalMath::cost(DecimalMath::mul($quantity, $average));
+    }
+
+    /**
      * Secondary quantity on hand (e.g. KG of Raw Coconut Shell) for a product/warehouse.
      *
      * Secondary quantities are recorded only where known, so this total is informational

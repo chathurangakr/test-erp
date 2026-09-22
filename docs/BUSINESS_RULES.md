@@ -695,9 +695,10 @@ always be explained: `allocated cost = consumed value × stored share` holds for
 including the zero one.
 
 **Rounding:** as everywhere, the last participating output receives
-`consumed value − everything already allocated`, so the allocation sums exactly. (The ledger
-stores a *unit* cost at six decimals, so re-multiplied ledger value can differ by at most
-`quantity × 0.0000005` per line — see §13.)
+`consumed value − everything already allocated`, so the allocation sums exactly — and those
+exact figures now reach the inventory ledger unchanged, because `total_cost` is
+authoritative (`INVENTORY_RULES.md` §8.1). Ledger input value equals ledger output value to
+the last decimal.
 
 This logic lives in `App\Services\Production\ProductionCostAllocator`, which **both**
 production types use, so value conservation is guaranteed in exactly one place.
@@ -870,7 +871,9 @@ change, not a code change.
 **Rounding:** as everywhere, the last participating output receives
 `consumed value − everything already allocated`, so the allocation sums exactly. The shared
 `App\Services\Production\ProductionCostAllocator` does this for all three production types,
-so value conservation is guaranteed in exactly one place.
+so value conservation is guaranteed in exactly one place — and because inventory
+`total_cost` is authoritative (`INVENTORY_RULES.md` §8.1), those exact figures reach the
+ledger unchanged even when the per-unit rate repeats.
 
 ### Moisture and process loss
 

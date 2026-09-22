@@ -20,8 +20,9 @@ use Illuminate\Validation\ValidationException;
  *
  * Weighted average cost is maintained at company/product level in Version 1, so a transfer
  * must leave company quantity, company value and the weighted average unchanged. That is
- * achieved by costing BOTH lines at the same unit cost — the average in force at the moment
- * of transfer — so the OUT removes exactly what the IN puts back.
+ * achieved by giving BOTH lines the same unit cost and the same authoritative total — the
+ * average in force at the moment of transfer — so the OUT removes exactly what the IN puts
+ * back, to the last decimal.
  *
  * See docs/INVENTORY_RULES.md §8 and §10.
  */
@@ -83,8 +84,15 @@ class TransferStock
         $secondary = $secondary === null ? null : DecimalMath::of($secondary);
 
         return DB::transaction(function () use ($product, $from, $to, $quantity, $secondary, $lot, $attributes): InventoryTransaction {
-            // Both legs share this cost, so company value and average cannot move.
+            // Both legs share one unit cost AND one authoritative total, so company value
+            // and the average cannot move. Deriving the IN value separately from the rounded
+            // unit cost would leak a few millionths of a rupee on every transfer.
             $unitCost = $this->stock->weightedAverageCostForProduct($product->id);
+            $totalCost = $this->stock->issueValue(
+                $quantity,
+                $this->stock->quantityForProduct($product->id),
+                $this->stock->valueForProduct($product->id),
+            );
 
             $out = (new PendingInventoryLine(
                 productId: $product->id,
@@ -93,7 +101,7 @@ class TransferStock
                 quantity: $quantity,
                 lotId: $lot?->id,
                 secondaryQuantity: $secondary,
-            ))->withSystemUnitCost($unitCost);
+            ))->withAuthoritativeCost($unitCost, $totalCost);
 
             $in = (new PendingInventoryLine(
                 productId: $product->id,
@@ -102,7 +110,7 @@ class TransferStock
                 quantity: $quantity,
                 lotId: $lot?->id,
                 secondaryQuantity: $secondary,
-            ))->withSystemUnitCost($unitCost);
+            ))->withAuthoritativeCost($unitCost, $totalCost);
 
             return $this->post->handle(
                 InventoryTransactionType::Transfer,

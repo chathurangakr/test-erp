@@ -182,10 +182,10 @@ The shell sale is the sharpest test in the scenario:
 | `COCONUT` | 5,000.000 NOS | Rs.512,500.000000 | Rs.102.500000 |
 | `DEHUSKED-COCONUT` | 1,000.000 NOS | Rs.87,125.000000 | Rs.87.125000 |
 | `RAW-HUSK` | 6,000.000 NOS | Rs.109,593.750000 | Rs.18.265625 |
-| `HUSK-7C` | 100.500 KG | Rs.7,318.386584 | Rs.72.819767 |
-| `HUSK-9C` | 205.250 KG | Rs.10,959.375063 | Rs.53.395250 |
-| `HUSK-10C` | 281.750 KG | Rs.14,612.499990 | Rs.51.863354 |
-| `COPRA` | 100.000 KG | Rs.34,301.181100 | Rs.343.011811 |
+| `HUSK-7C` | 100.500 KG | Rs.7,318.386650 | Rs.72.819768 |
+| `HUSK-9C` | 205.250 KG | Rs.10,959.375000 | Rs.53.395250 |
+| `HUSK-10C` | 281.750 KG | Rs.14,612.500000 | Rs.51.863354 |
+| `COPRA` | 100.000 KG | Rs.34,301.181104 | Rs.343.011811 |
 | `RAW-SHELL` | 500.000 NOS **/ 212.000 KG** | Rs.10,890.625000 | Rs.21.781250 |
 
 Raw husk by warehouse: `MAIN` 1,000 (internal lot, 2,000 chipped away) + `STORE` 5,000
@@ -193,32 +193,39 @@ Raw husk by warehouse: `MAIN` 1,000 (internal lot, 2,000 chipped away) + `STORE`
 
 ---
 
-## 5. Value conservation, and the one honest caveat
+## 5. Value conservation — exact
 
-Every production run conserves value **exactly at document level**:
+Every production run conserves value **exactly**, at both levels:
 
 ```
-production input total_cost  ==  Σ output allocated_cost
+production input total_cost          ==  Σ output allocated_cost      (document)
+PRODUCTION_CONSUMPTION total_cost    ==  Σ PRODUCTION_OUTPUT total_cost (ledger)
 ```
-
-asserted for dehusking, chipping and copra.
-
-At **ledger** level a tiny residue exists, and the test asserts a bound rather than
-equality:
 
 | Run | Consumed | Ledger output | Residue |
 | --- | --- | --- | --- |
-| Dehusking | Rs.307,500.000000 | Rs.307,500.000000 | 0.000000 |
-| Husk chipping | Rs.36,531.250000 | Rs.36,531.249987 | **0.000013** |
-| Copra | Rs.87,125.000000 | Rs.87,124.999996 | **0.000004** |
+| Dehusking | Rs.307,500.000000 | Rs.307,500.000000 | **0.000000** |
+| Husk chipping | Rs.36,531.250000 | Rs.36,531.250000 | **0.000000** |
+| Copra | Rs.87,125.000000 | Rs.87,125.000000 | **0.000000** |
 
-**Why:** the ledger stores a *unit* cost at six decimals, and `quantity × unit_cost` cannot
-always reproduce a line total that was derived the other way round. The bound is
-`Σ (quantity × 0.0000005)` — half a tick per unit, per line. This is the same inherent
-residue `BUSINESS_RULES.md` §13 documents for landed cost, not an allocation defect.
-Dehusking shows zero because its unit costs happen to divide exactly.
+> **This used to be a caveat.** The first run of this validation recorded residues of
+> 0.000013 (chipping) and 0.000004 (copra), because the ledger stored a six-decimal *unit*
+> cost and rebuilt each line's value as `quantity × unit_cost`. A rate like Rs.57.142857 per
+> KG cannot reproduce the Rs.16,000 it came from.
+>
+> That was fixed before Finance was started: **`total_cost` is now the authoritative
+> monetary value** of a ledger line and `unit_cost` is only its rounded per-unit
+> representation. The allocator's exact figures reach the ledger unchanged. See
+> `INVENTORY_RULES.md` §8.1 and `DATA_MODEL.md` **I-4**.
 
----
+Because of that change, `total_cost == quantity × unit_cost` is **no longer asserted** as a
+ledger invariant. What the test asserts instead, for every line in the scenario:
+
+```
+quantity > 0,  total_cost >= 0,  unit_cost >= 0
+unit_cost == round(total_cost / quantity, 6)
+|total_cost − quantity × unit_cost| <= quantity × 0.0000005
+```
 
 ## 6. What else is asserted
 
@@ -231,7 +238,8 @@ Dehusking shows zero because its unit costs happen to divide exactly.
 | **Negative stock** | No product, no lot and no product+warehouse balance is negative |
 | **Warehouse reconciliation** | For every product, Σ(warehouse quantity) == company quantity, and Σ(warehouse value) == company value |
 | **WAC reconciliation** | For every product, `round(value ÷ quantity, 6)` equals the reported weighted average |
-| **Ledger integrity** | Every transaction has lines and a date; every line has a warehouse, a positive quantity, a non-negative unit cost, and `total_cost == round(quantity × unit_cost, 6)` |
+| **Ledger integrity** | Every transaction has lines and a date; every line has a warehouse, a positive quantity, non-negative costs, a `unit_cost` equal to `round(total_cost ÷ quantity, 6)`, and a `total_cost` differing from `quantity × unit_cost` by no more than that rounding |
+| **Exact conservation** | For each production run, `PRODUCTION_CONSUMPTION total_cost == Σ PRODUCTION_OUTPUT total_cost`, residue exactly `0.000000` |
 | **No orphans** | Every lot has a product, a source document that exists, and at least one movement. Every production input/output, delivery line, receipt line, sales order line and purchase order line belongs to an existing document. Every ledger transaction points at an existing source |
 | **Posted → transaction** | Every posted GRN, delivery and production order points at a real inventory transaction of the right type |
 | **Immutability** | A posted GRN, delivery and production order all refuse `update()` and `delete()` |
@@ -254,6 +262,10 @@ output is the kind of corruption that cannot be reconstructed afterwards. The ac
 **refuses** such a draft, and `DehuskingTest` covers it.
 
 **One stale document line, corrected.** `INVENTORY_RULES.md` still said copra was not built.
+
+**One precision limitation, since fixed.** The ledger residues recorded in §5 were real, and
+were corrected in the pre-Finance hardening phase by making `total_cost` authoritative. The
+figures in §4 and §5 are the post-fix ones.
 
 Nothing else. Every expected figure in this document matched the engine on the first run —
 purchasing, sales, all three production types, dual-unit shell stock, lot traceability and

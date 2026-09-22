@@ -146,14 +146,17 @@ class PostHuskChippingProduction
                     'unit_cost' => $allocation['unit_cost'],
                 ])->save();
 
-                $outputLines[] = new PendingInventoryLine(
+                $outputLines[] = (new PendingInventoryLine(
                     productId: $allocation['product']->id,
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
                     quantity: $allocation['quantity'],
                     lotId: $lot->id,
-                    unitCost: $allocation['unit_cost'],
-                );
+                ))
+                    // The allocator's exact allocated cost reaches the ledger unchanged, so
+                    // the outputs sum to the consumed value to the last decimal even when
+                    // the per-unit rate repeats.
+                    ->withAuthoritativeCost($allocation['unit_cost'], $allocation['allocated_cost']);
             }
 
             $outputTransaction = $this->postInventory->handle(
