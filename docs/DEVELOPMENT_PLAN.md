@@ -331,11 +331,39 @@ accounting, year-end closing.
 **Still open:** credit notes are a separate commercial feature — reversal is an audit correction
 and must not be used in their place (`ACCOUNTING_RULES.md` §19).
 
-## Phase 13 — Permissions (not started)
+## Phase 13 — Finance 5: cash, bank and expenses ✅ COMPLETE
+
+Where the money physically is, what leaves it immediately, and moving it between accounts.
+
+- [x] `cash_bank_accounts`, `expense_vouchers`, `expense_voucher_lines`, `fund_transfers` —
+      four forward-only migrations, no balance column on any of them
+- [x] One rule for "may money move through this account" —
+      `AccountingPolicy::assertCashBankAccount()`: active, ASSET, not a control account, not a
+      header, **and configured**. Supplier payments and customer receipts now require it too, so
+      an ordinary asset account is no longer accepted merely for being an asset
+- [x] Expense vouchers — `Dr each expense / Cr cash or bank` in one journal, raising **no
+      payable**; supplier optional and reporting-only; cost of sales deliberately not chargeable
+- [x] Fund transfers — `Dr destination / Cr source`, one figure used twice; no P&L, no AP, no
+      AR, no inventory, combined cash+bank unchanged
+- [x] `CashBankBookService` — money in, money out and a running balance derived entirely from
+      posted journal lines, with no module special-cased
+- [x] Screens: cash/bank accounts with derived balances, cash/bank book, expense vouchers,
+      fund transfers
+- [x] 78 new tests asserting the fourth invariant throughout: book closing balance == that
+      account's general-ledger balance, across every kind of document that moves money
+
+**Deliberately not implemented:** bank reconciliation, cheque lifecycle, VAT/SVAT, payroll,
+foreign currency, credit notes, customer and supplier advances, loans, fixed assets, year-end
+closing, production overhead allocation.
+
+**Still open:** the negative-cash and overdraft policy (`ACCOUNTING_RULES.md` §23) — three
+business questions, deliberately unanswered rather than guessed at.
+
+## Phase 14 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 14 — REST API for Flutter (not started)
+## Phase 15 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 

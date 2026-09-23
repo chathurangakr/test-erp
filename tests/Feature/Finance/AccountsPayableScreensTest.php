@@ -19,6 +19,7 @@ use App\Models\SupplierPayment;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
+use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Database\Seeders\ProductionRecipeSeeder;
@@ -63,6 +64,8 @@ class AccountsPayableScreensTest extends TestCase
 
         $this->seed(ProductionRecipeSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
+        // Money may only move through a configured cash or bank account.
+        $this->seed(CashBankAccountSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->period = FiscalPeriod::factory()->create([
@@ -329,8 +332,10 @@ class AccountsPayableScreensTest extends TestCase
                 ->component('finance/supplier-payments/Create')
                 ->has('outstandingInvoices', 1)
                 ->where('outstandingInvoices.0.outstanding', '1000000.000000')
-                // Only ordinary asset accounts may pay.
-                ->has('paymentAccounts', 4));
+                // Only CONFIGURED cash/bank accounts may pay — not every asset account.
+                ->has('paymentAccounts', 2)
+                ->where('paymentAccounts.0.code', '1110')
+                ->where('paymentAccounts.1.code', '1120'));
     }
 
     #[Test]

@@ -44,6 +44,7 @@ use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
+use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Database\Seeders\ProductionRecipeSeeder;
@@ -106,6 +107,8 @@ class AccountsReceivableTest extends TestCase
 
         $this->seed(ProductionRecipeSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
+        // Money may only move through a configured cash or bank account.
+        $this->seed(CashBankAccountSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->period = FiscalPeriod::factory()->create([
@@ -907,7 +910,9 @@ class AccountsReceivableTest extends TestCase
         $delivery = $this->coconutDelivery();
         $invoice = $this->postInvoice($this->draftInvoice([['line' => $delivery->lines->first(), 'amount' => '1000.000000']]));
 
-        foreach (['1210', '1310', '4110'] as $code) {
+        // 1400 Other Current Assets is the important one: an active, hand-postable ASSET
+        // that is simply not configured as somewhere money is held.
+        foreach (['1210', '1310', '4110', '1400'] as $code) {
             $receipt = $this->draftReceipt(
                 [['invoice' => $invoice, 'amount' => '1000.000000']],
                 '1000.000000',

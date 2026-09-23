@@ -7,6 +7,12 @@ use App\Http\Controllers\Accounting\GeneralLedgerController;
 use App\Http\Controllers\Accounting\JournalEntryActionController;
 use App\Http\Controllers\Accounting\JournalEntryController;
 use App\Http\Controllers\Accounting\TrialBalanceController;
+use App\Http\Controllers\Cash\CashBankAccountController;
+use App\Http\Controllers\Cash\CashBankBookController;
+use App\Http\Controllers\Cash\ExpenseVoucherActionController;
+use App\Http\Controllers\Cash\ExpenseVoucherController;
+use App\Http\Controllers\Cash\FundTransferActionController;
+use App\Http\Controllers\Cash\FundTransferController;
 use App\Http\Controllers\Payables\ApAgingController;
 use App\Http\Controllers\Payables\GrniReconciliationController;
 use App\Http\Controllers\Payables\SupplierInvoiceActionController;
@@ -112,6 +118,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finance/ar-aging', [ArAgingController::class, 'index'])->name('ar-aging.index');
     Route::get('finance/unbilled-deliveries', [UnbilledDeliveryController::class, 'index'])
         ->name('unbilled-deliveries.index');
+
+    // ------------------------------------------------------------ cash and bank
+    // No destroy route: a configuration money has moved through is deactivated, and a
+    // posted voucher or transfer is reversed. Nothing here is ever deleted.
+    Route::resource('finance/cash-bank-accounts', CashBankAccountController::class)
+        ->parameters(['cash-bank-accounts' => 'cashBankAccount'])
+        ->names('cash-bank-accounts')
+        ->except(['destroy', 'show']);
+
+    Route::get('finance/cash-bank-book', [CashBankBookController::class, 'index'])
+        ->name('cash-bank-book.index');
+
+    Route::resource('finance/expense-vouchers', ExpenseVoucherController::class)
+        ->parameters(['expense-vouchers' => 'expenseVoucher'])
+        ->names('expense-vouchers')
+        ->except(['destroy']);
+
+    Route::patch('finance/expense-vouchers/{expenseVoucher}/post', [ExpenseVoucherActionController::class, 'post'])
+        ->name('expense-vouchers.post');
+    Route::patch('finance/expense-vouchers/{expenseVoucher}/reverse', [ExpenseVoucherActionController::class, 'reverse'])
+        ->name('expense-vouchers.reverse');
+    Route::patch('finance/expense-vouchers/{expenseVoucher}/cancel', [ExpenseVoucherActionController::class, 'cancel'])
+        ->name('expense-vouchers.cancel');
+
+    Route::resource('finance/fund-transfers', FundTransferController::class)
+        ->parameters(['fund-transfers' => 'fundTransfer'])
+        ->names('fund-transfers')
+        ->only(['index', 'create', 'store', 'show']);
+
+    Route::patch('finance/fund-transfers/{fundTransfer}/post', [FundTransferActionController::class, 'post'])
+        ->name('fund-transfers.post');
+    Route::patch('finance/fund-transfers/{fundTransfer}/reverse', [FundTransferActionController::class, 'reverse'])
+        ->name('fund-transfers.reverse');
+    Route::patch('finance/fund-transfers/{fundTransfer}/cancel', [FundTransferActionController::class, 'cancel'])
+        ->name('fund-transfers.cancel');
 
     Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
         ->name('accounting-setup.index');

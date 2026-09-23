@@ -37,6 +37,7 @@ use App\Services\Accounting\AccountsPayableService;
 use App\Services\Accounting\GrniReconciliationService;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
+use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Database\Seeders\ProductionRecipeSeeder;
@@ -101,6 +102,8 @@ class AccountsPayableTest extends TestCase
 
         $this->seed(ProductionRecipeSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
+        // Money may only move through a configured cash or bank account.
+        $this->seed(CashBankAccountSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->period = FiscalPeriod::factory()->create([
@@ -843,7 +846,9 @@ class AccountsPayableTest extends TestCase
         $receipt = $this->postReceipt();
         $invoice = $this->postInvoice($this->draftInvoice([['grn' => $receipt, 'amount' => '1000.000000']]));
 
-        foreach (['1310', '2110', '6400'] as $code) {
+        // 1400 Other Current Assets is the important one: an active, hand-postable ASSET
+        // that is simply not configured as somewhere money is held.
+        foreach (['1310', '2110', '6400', '1400'] as $code) {
             $payment = $this->draftPayment(
                 [['invoice' => $invoice, 'amount' => '1000.000000']],
                 '1000.000000',

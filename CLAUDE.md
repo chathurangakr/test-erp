@@ -269,7 +269,7 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Accounting rules (Finance Phases 1-4 — foundation, inventory, AP and AR implemented)
+## Accounting rules (Finance Phases 1-5 — foundation, inventory, AP, AR and cash implemented)
 
 - Use **double-entry accounting**. Every posted journal satisfies **Total Debit = Total
   Credit**, exactly, enforced by `App\Actions\Accounting\PostJournalEntry` inside one
@@ -370,8 +370,48 @@ The inventory engine exists and is tested. These rules are permanent:
 - **The third invariant:** Trade Receivables balance == total sales invoice outstanding.
   Revenue reconciles **per invoice journal**, not globally — a manual journal may legitimately
   credit revenue. See `docs/ACCOUNTING_RULES.md` §20-§21.
-- **Do not start credit notes, sales returns, VAT/SVAT or bank reconciliation** without
-  instruction.
+- **Cash and bank management is implemented.** Which ledger accounts hold money is
+  **configuration**, in `cash_bank_accounts` — not a guess from the chart's shape.
+- **`cash_bank_accounts` has no balance column and must never grow one.** What is in the till
+  or the bank is derived from posted journal lines, exactly as stock is derived from the
+  inventory ledger.
+- **One rule decides whether money may move through an account:**
+  `AccountingPolicy::assertCashBankAccount()` — active, ASSET, not a control account,
+  hand-postable (which excludes headers), **and configured and active**. That last condition is
+  the strict one: `1400 Other Current Assets` passes every other test and is still not somewhere
+  cash may be paid into or out of.
+- **Supplier payments and customer receipts now require a CONFIGURED account too.** Being an
+  asset account is no longer sufficient. Never relax this back to a blanket asset check.
+- **An expense voucher and a supplier invoice are different workflows and must never be
+  combined.** A voucher is an expense already paid — `Dr expense / Cr cash or bank`, raising
+  **no payable**. A supplier invoice is an expense owed — `Dr expense / Cr Trade Payables` —
+  settled later by a payment. A voucher for a credit purchase loses the debt; an invoice for an
+  immediate payment invents one.
+- **A voucher's supplier is reporting only.** Naming one creates no Trade Payables and changes
+  nothing about the journal.
+- **A voucher may charge ordinary EXPENSE accounts only.** `COST_OF_SALES` is deliberately
+  excluded — it is derived from stock movements, and charging it by hand would put it out of
+  step with the inventory ledger. Inventory, revenue, equity and control accounts are excluded
+  by the type check.
+- **A fund transfer is a balance-sheet event and nothing else.** `Dr destination / Cr source`,
+  the same figure used twice. No expense, no revenue, no payable, no receivable, no inventory,
+  and combined cash + bank is unchanged. The same account on both sides is refused.
+- **Neither document touches inventory** — no quantity, no ledger row, no weighted average, no
+  lot.
+- **The cash/bank book derives entirely from posted journal lines** and special-cases no
+  module. Payments, receipts, vouchers, transfers and manual journals appear because each wrote
+  a line. Money in is a debit, money out a credit, and the running balance is never persisted.
+- **The fourth invariant:** cash/bank book closing balance == that account's general-ledger
+  balance. It holds by construction — both read the same rows. See
+  `docs/ACCOUNTING_RULES.md` §22.
+- **Negative cash and overdrafts are `TBD`.** Nothing currently prevents an account going
+  below zero; **no policy was invented**, and a test records the current behaviour so that
+  adding one later is a visible change. See `docs/ACCOUNTING_RULES.md` §23.
+- **`Rule::exists()->where($column, false)` matches nothing** — the value is stringified, and
+  `(string) false` is `''`. Use `0` and `1` in exists/unique rules, never booleans.
+- **Do not start bank reconciliation, cheque lifecycle, credit notes, sales returns, customer
+  or supplier advances, VAT/SVAT, loans, fixed assets or production overhead accounting**
+  without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
 
@@ -482,17 +522,20 @@ invoices, supplier payments allocated to invoices, AP aging and GRNI reconciliat
 **accounts receivable** (sales invoices billing delivered goods at the delivery's own
 authoritative value, revenue resolved through product mappings, partial billing in both
 directions, customer receipts allocated to invoices, AR aging and an unbilled-deliveries
-report).
+report), and **cash and bank management** (configured cash/bank accounts with derived
+balances, expense vouchers for immediately-paid expenses, cash and bank fund transfers, and a
+cash/bank book that reconciles exactly to the general ledger).
 
-**Not yet started — do not begin without instruction:** credit notes, sales returns and
-allowances, customer advances and deposits, production expenses, VAT/SVAT, payroll, bank
-reconciliation, P&L and balance sheet, year-end closing, the permanent joint-product costing
-method, production planning, BOM editor, maintenance, role-based permissions, REST API.
+**Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
+credit notes, sales returns and allowances, customer and supplier advances, production expense
+accounting, VAT/SVAT, payroll, loans, fixed assets, P&L and balance sheet, year-end closing,
+the permanent joint-product costing method, production planning, BOM editor, maintenance,
+role-based permissions, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing, sales, production and finance. Role-based permissions come later.
+purchasing, sales, production and finance, including cash and bank. Role-based permissions come later.
 
 ---
 

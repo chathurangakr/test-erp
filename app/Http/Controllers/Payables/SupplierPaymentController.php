@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Payables;
 
 use App\Actions\Payables\GeneratePayableReference;
-use App\Enums\AccountType;
 use App\Enums\SupplierPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payables\StoreSupplierPaymentRequest;
-use App\Models\Account;
+use App\Models\CashBankAccount;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
@@ -72,13 +71,9 @@ class SupplierPaymentController extends Controller
 
         return Inertia::render('finance/supplier-payments/Create', [
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'paymentAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('account_type', AccountType::Asset)
-                ->where('allow_manual_posting', true)
-                ->where('is_control_account', false)
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            // Only accounts the factory has configured as cash or bank. Being an asset
+            // account is not enough — see AccountingPolicy::assertCashBankAccount().
+            'paymentAccounts' => $this->cashBankOptions(),
             'supplierId' => $supplierId,
             'outstandingInvoices' => $supplier === null ? [] : $this->outstandingFor($supplier),
             'currency' => config('accounting.base_currency'),
@@ -153,6 +148,29 @@ class SupplierPaymentController extends Controller
                 'total' => $this->payables->invoiceTotal($invoice),
                 'paid' => $this->payables->paidAmount($invoice),
                 'outstanding' => $this->payables->outstanding($invoice),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The accounts money may legitimately be paid out of.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function cashBankOptions(): array
+    {
+        return CashBankAccount::query()
+            ->with('account:id,code,name,is_active')
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (CashBankAccount $configuration): bool => $configuration->account?->is_active === true)
+            ->sortBy(fn (CashBankAccount $configuration): string => (string) $configuration->account?->code)
+            ->map(fn (CashBankAccount $configuration): array => [
+                'id' => $configuration->account_id,
+                'code' => $configuration->account?->code,
+                'name' => $configuration->display_name,
+                'kind' => $configuration->account_kind->label(),
             ])
             ->values()
             ->all();

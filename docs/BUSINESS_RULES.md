@@ -1055,3 +1055,49 @@ Customer receipt   Dr Cash / Bank            Cr Trade Receivables
 - **No VAT and no foreign currency.** Amounts are tax-unmodelled and in LKR.
 
 Full detail in `docs/ACCOUNTING_RULES.md` §19-§21.
+
+---
+
+## 25. Cash, bank and immediate expenses
+
+```
+Immediate expense   Dr Expense                Cr Cash / Bank        (expense voucher)
+Credit expense      Dr Expense                Cr Trade Payables     (supplier invoice)
+  then paid         Dr Trade Payables         Cr Cash / Bank        (supplier payment)
+Customer receipt    Dr Cash / Bank            Cr Trade Receivables
+Fund transfer       Dr Destination Cash/Bank  Cr Source Cash/Bank
+```
+
+- **Cash and bank balances are derived from posted journals**, never stored. There is no
+  balance column on a cash/bank configuration and there never will be.
+- **Which accounts hold money is configured, not assumed.** `1110 Cash on Hand` and `1120 Bank`
+  are set up as CASH and BANK. More bank accounts are added by an accountant; the software does
+  not invent which banks the factory uses.
+- **Being an asset account is no longer enough to pay from or receive into.** It must be a
+  configured cash or bank account. This applies to supplier payments and customer receipts as
+  well, which previously accepted any asset account.
+- **An expense voucher is for an expense paid immediately** — electricity settled at the
+  counter, fuel bought and paid on the spot. It raises **no payable**, because nothing is owed
+  afterwards.
+- **A supplier invoice is for an expense paid later.** It raises a payable that a supplier
+  payment settles. Do not use one document for the other: a voucher for a credit purchase
+  loses the debt, and an invoice for an immediate payment invents one.
+- **A voucher may name a supplier for reporting only.** It still creates no Trade Payables.
+- **A voucher may charge ordinary operating expenses only.** Cost of sales is excluded because
+  it is derived from stock movements; inventory, revenue, equity and control accounts are
+  excluded outright.
+- **A fund transfer moves money between the factory's own accounts.** Cash→Bank, Bank→Cash and
+  Bank→Bank. No expense, no revenue, no payable, no receivable, no inventory — the combined
+  cash-and-bank total is identical before and after. The same account on both sides is refused.
+- **Neither document touches inventory.** No quantity, no ledger row, no weighted average, no
+  lot.
+- **Both are DRAFT / POSTED / REVERSED / CANCELLED**, immutable once posted, corrected by
+  reversal, never deleted. Numbers are `EXP-YYYYMMDD-000001` and `TRF-YYYYMMDD-000001`.
+- **The cash/bank book shows everything that moved through an account** — payments, receipts,
+  vouchers, transfers and manual journals alike — because each posted a journal line. Money in
+  is a debit, money out a credit, and the closing balance always equals the general ledger.
+- **Whether cash may go negative, and whether banks may overdraw, is `TBD`** — see
+  `docs/ACCOUNTING_RULES.md` §23. Nothing currently prevents it, and no policy was invented.
+- **No bank reconciliation, no cheque lifecycle, no VAT, no foreign currency.**
+
+Full detail in `docs/ACCOUNTING_RULES.md` §22-§23.

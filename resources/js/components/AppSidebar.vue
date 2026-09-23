@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
+    ArrowLeftRight,
     BookOpen,
+    BookOpenCheck,
     Boxes,
+    Landmark,
     ClipboardList,
     Building2,
     FolderGit2,
@@ -72,6 +75,10 @@ import { index as salesInvoicesIndex } from '@/routes/sales-invoices';
 import { index as customerReceiptsIndex } from '@/routes/customer-receipts';
 import { index as arAgingIndex } from '@/routes/ar-aging';
 import { index as unbilledDeliveriesIndex } from '@/routes/unbilled-deliveries';
+import { index as cashBankAccountsIndex } from '@/routes/cash-bank-accounts';
+import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
+import { index as expenseVouchersIndex } from '@/routes/expense-vouchers';
+import { index as fundTransfersIndex } from '@/routes/fund-transfers';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -249,6 +256,29 @@ const receivablesNavItems: NavItem[] = [
     },
 ];
 
+const cashNavItems: NavItem[] = [
+    {
+        title: 'Cash / Bank Accounts',
+        href: cashBankAccountsIndex(),
+        icon: Landmark,
+    },
+    {
+        title: 'Cash / Bank Book',
+        href: cashBankBookIndex(),
+        icon: BookOpenCheck,
+    },
+    {
+        title: 'Expense Vouchers',
+        href: expenseVouchersIndex(),
+        icon: Receipt,
+    },
+    {
+        title: 'Fund Transfers',
+        href: fundTransfersIndex(),
+        icon: ArrowLeftRight,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -287,6 +317,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="financeNavItems" label="Finance" />
             <NavMain :items="payablesNavItems" label="Accounts payable" />
             <NavMain :items="receivablesNavItems" label="Accounts receivable" />
+            <NavMain :items="cashNavItems" label="Cash &amp; bank" />
         </SidebarContent>
 
         <SidebarFooter>

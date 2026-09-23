@@ -659,6 +659,63 @@ no unallocated remainder, because customer advances are not modelled.
 `accounting_settings` also gained **`trade_receivables_account_id`**, seeded to 1210, so no AR
 action contains an account code.
 
+### 1.30 `cash_bank_accounts`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `account_id` | FK → `accounts.id`, **unique** | One configuration per ledger account — decision **C-1** |
+| `account_kind` | string(20) | `CASH` or `BANK` |
+| `display_name` | string(150) | What people call it |
+| `bank_name` / `branch_name` / `account_number` | string, nullable | Meaningful for a BANK only |
+| `notes` | string(500), nullable | |
+| `is_active` | boolean | Deactivated, never deleted |
+
+**No balance column, and there never will be one.** What is in the till or the bank is derived
+from posted journal lines. This table is configuration: it says which ledger accounts are real
+money, so every module that moves money consults one list.
+
+Seeded with `1110 → CASH` and `1120 → BANK`. Nothing else, and no balances.
+
+### 1.31 `expense_vouchers` and `expense_voucher_lines`
+
+`expense_vouchers`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `voucher_number` | string(50), **unique** | `EXP-YYYYMMDD-000001` |
+| `voucher_date` | date | |
+| `fiscal_period_id` | FK, nullable | Resolved at posting |
+| `cash_bank_account_id` | FK → **`cash_bank_accounts.id`** | Not to `accounts` — decision **C-2** |
+| `supplier_id` | FK, nullable | **Reporting only.** Raises no payable |
+| `payee_name` | string(150), nullable | When the payee is not a supplier |
+| `reference` / `description` | string, nullable | |
+| `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+| audit columns | | created / posted / reversed, each with user and timestamp |
+
+**No total column.** The total is the sum of the lines, derived every time.
+
+`expense_voucher_lines` — `expense_voucher_id` + `expense_account_id` +
+`description` + `amount decimal(20,6)`. The account is restricted to ordinary EXPENSE accounts;
+there are **no tax lines**.
+
+### 1.32 `fund_transfers`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `transfer_number` | string(50), **unique** | `TRF-YYYYMMDD-000001` |
+| `transfer_date` | date | |
+| `fiscal_period_id` | FK, nullable | Resolved at posting |
+| `from_cash_bank_account_id` | FK → `cash_bank_accounts.id` | |
+| `to_cash_bank_account_id` | FK → `cash_bank_accounts.id` | Must differ from the source |
+| `amount` | **`decimal(20,6)`** | Used twice in the journal, so the legs cannot disagree |
+| `reference` / `description` | string, nullable | |
+| `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+
+There is no edit screen and no update route: a transfer is three facts, so an incorrect draft is
+cancelled and replaced, and an incorrect posted one is reversed.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -1037,6 +1094,51 @@ delivery already decided the number; the invoice bills it unchanged.
 This makes AR deliberately asymmetric with AP, where the accrual *is* read back from the goods
 receipt's journal. The reason is simply that a delivery's journal holds cost of sales only — it
 recognises no revenue — so the journal has no sales figure to read.
+
+### C-1 — one configuration per ledger account, and the account cannot be repointed
+
+**Decision:** `cash_bank_accounts.account_id` is unique, and the underlying account is absent
+from the update request, so it can never be changed after configuration.
+
+**Why:** two configurations over one account would be two names for the same money, and every
+report that rolled them up would double-count. Repointing an existing configuration is worse
+still: it would silently rewrite the meaning of every voucher and transfer already recorded
+against it, with nothing in the history to show that the meaning had changed. The remedy is to
+deactivate one configuration and create another, which leaves both on the record.
+
+### C-2 — cash documents reference the CONFIGURATION, not the account
+
+**Decision:** `expense_vouchers.cash_bank_account_id` and both of `fund_transfers`' account
+columns are foreign keys to `cash_bank_accounts`, not to `accounts`.
+
+**Why:** CLAUDE.md's rule that "the database is the last line of defence". If these columns
+pointed at `accounts`, the only thing stopping a voucher from crediting Trade Receivables — or
+an inventory control account — would be application validation. Pointing them at the
+configuration table makes it a **structural** guarantee: the database itself cannot hold a
+voucher paid out of an account nobody configured as a source of money.
+
+The trade-off is one extra join to reach the ledger account, which the posting actions do once.
+
+Supplier payments and customer receipts keep their existing `accounts` foreign keys, because
+changing them would rewrite posted history; they are constrained by `AccountingPolicy` instead.
+That difference is deliberate and is the reason the policy check exists as well as the
+constraint.
+
+### C-3 — cash and bank balances are derived, exactly like everything else
+
+**Decision:** no balance column on `cash_bank_accounts`, on `accounts`, or anywhere else. The
+cash/bank book and the account summary both derive from posted journal lines on every request,
+and the running balance is never persisted.
+
+**Why:** the same reason stock has no `current_stock` column. A stored balance is a second
+version of the truth that drifts the moment anything is reversed, and a drifted one cannot be
+explained after the fact. Deriving it makes the invariant — book closing balance == general
+ledger balance — a **consequence of the design** rather than something to maintain, because
+both figures read the same rows.
+
+It also means the book needs no knowledge of what posted each line. A supplier payment, a
+customer receipt, an expense voucher, a fund transfer and a manual journal all appear because
+each wrote a line; a future module that moves money will appear with no change to the report.
 
 ## 3. Not yet designed — required future shape
 

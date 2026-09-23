@@ -566,3 +566,131 @@ export type CustomerReceivablesSummary = {
         amount: string;
     }[];
 };
+
+// ------------------------------------------------------------- cash and bank
+
+export type CashBankAccountRow = {
+    id: number;
+    display_name: string;
+    kind: string;
+    kind_label: string;
+    account_id: number;
+    account_code: string | null;
+    account_name: string | null;
+    bank_name: string | null;
+    branch_name: string | null;
+    account_number: string | null;
+    is_active: boolean;
+    /** Derived from posted journal lines on every request. Never stored. */
+    balance: string;
+};
+
+export type CashBankSummary = {
+    rows: CashBankAccountRow[];
+    cash_total: string;
+    bank_total: string;
+    combined_total: string;
+};
+
+export type CashBankBookRow = {
+    id: number;
+    date: string | null;
+    journal_entry_id: number;
+    journal_number: string | null;
+    source_label: string;
+    source_number: string | null;
+    source_type: string | null;
+    source_id: number | null;
+    description: string | null;
+    money_in: string;
+    money_out: string;
+    /** Calculated per request; never persisted. */
+    running_balance: string;
+};
+
+export type CashBankBook = {
+    opening_balance: string;
+    rows: CashBankBookRow[];
+    money_in_total: string;
+    money_out_total: string;
+    closing_balance: string;
+};
+
+export type CashBankAccountOption = {
+    id: number;
+    code: string | null;
+    name: string;
+    kind: string;
+};
+
+export type ExpenseVoucherRow = {
+    id: number;
+    voucher_number: string;
+    voucher_date: string | null;
+    payee: string | null;
+    supplier_code: string | null;
+    payment_account: string | null;
+    reference: string | null;
+    total: string;
+    status: string;
+    status_label: string;
+};
+
+export type ExpenseVoucherDetail = ExpenseVoucherRow & {
+    description: string | null;
+    payment_account_code: string | null;
+    created_by: string | null;
+    posted_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_edit: boolean;
+    can_post: boolean;
+    can_cancel: boolean;
+    can_reverse: boolean;
+    lines: {
+        id: number;
+        account_code: string | null;
+        account_name: string | null;
+        description: string | null;
+        amount: string;
+    }[];
+    journal: {
+        id: number;
+        journal_number: string;
+        lines: { account_code: string | null; account_name: string | null; debit: string; credit: string }[];
+    } | null;
+    reversal_journal_number: string | null;
+};
+
+export type FundTransferRow = {
+    id: number;
+    transfer_number: string;
+    transfer_date: string | null;
+    from_name: string | null;
+    to_name: string | null;
+    amount: string;
+    reference: string | null;
+    status: string;
+    status_label: string;
+};
+
+export type FundTransferDetail = FundTransferRow & {
+    description: string | null;
+    from_code: string | null;
+    to_code: string | null;
+    created_by: string | null;
+    posted_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_post: boolean;
+    can_cancel: boolean;
+    can_reverse: boolean;
+    journal: {
+        id: number;
+        journal_number: string;
+        lines: { account_code: string | null; account_name: string | null; debit: string; credit: string }[];
+    } | null;
+    reversal_journal_number: string | null;
+};

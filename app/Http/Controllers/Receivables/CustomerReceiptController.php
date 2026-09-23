@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Receivables;
 
 use App\Actions\Receivables\GenerateReceivableReference;
-use App\Enums\AccountType;
 use App\Enums\CustomerReceiptStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreCustomerReceiptRequest;
-use App\Models\Account;
+use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\SalesInvoice;
@@ -72,13 +71,9 @@ class CustomerReceiptController extends Controller
 
         return Inertia::render('finance/customer-receipts/Create', [
             'customers' => Customer::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'receiptAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('account_type', AccountType::Asset)
-                ->where('allow_manual_posting', true)
-                ->where('is_control_account', false)
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            // Only accounts the factory has configured as cash or bank. Being an asset
+            // account is not enough — see AccountingPolicy::assertCashBankAccount().
+            'receiptAccounts' => $this->cashBankOptions(),
             'customerId' => $customerId,
             'outstandingInvoices' => $customer === null ? [] : $this->outstandingFor($customer),
             'currency' => config('accounting.base_currency'),
@@ -134,6 +129,29 @@ class CustomerReceiptController extends Controller
             'receipt' => $this->detail($customerReceipt),
             'currency' => config('accounting.base_currency'),
         ]);
+    }
+
+    /**
+     * The accounts money may legitimately be received into.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function cashBankOptions(): array
+    {
+        return CashBankAccount::query()
+            ->with('account:id,code,name,is_active')
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (CashBankAccount $configuration): bool => $configuration->account?->is_active === true)
+            ->sortBy(fn (CashBankAccount $configuration): string => (string) $configuration->account?->code)
+            ->map(fn (CashBankAccount $configuration): array => [
+                'id' => $configuration->account_id,
+                'code' => $configuration->account?->code,
+                'name' => $configuration->display_name,
+                'kind' => $configuration->account_kind->label(),
+            ])
+            ->values()
+            ->all();
     }
 
     /**

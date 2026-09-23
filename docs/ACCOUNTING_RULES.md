@@ -174,16 +174,14 @@ through the codebase.
 
 ## 10. Not implemented — do not begin without instruction
 
-Accounts Receivable · customer receipts · sales invoices · revenue recognition ·
-production expense accounting · VAT/SVAT · payroll · bank reconciliation · financial
-dashboards · P&L · balance sheet · year-end closing.
+Credit notes · sales returns and allowances · customer advances and deposits · supplier
+advances · production expense accounting · VAT/SVAT · payroll · bank reconciliation ·
+financial dashboards · P&L · balance sheet · year-end closing · loans · fixed assets.
 
-**No revenue is recognised anywhere yet.** A delivery records cost of goods sold and nothing
-else; revenue and receivables belong to the sales invoice.
-
-So **cost of sales accumulates without matching revenue**, and that is correct for this
-phase, not a defect. GRNI no longer accumulates unchecked — supplier invoices clear it, and
-what remains is reported and reconciled (§17).
+**A delivery still recognises no revenue.** It records cost of goods sold and nothing else;
+revenue and the receivable belong to the sales invoice (§20). A delivery that is never
+invoiced therefore shows cost with no matching revenue — which is correct, and the
+unbilled-deliveries report exists to surface it.
 
 **Amounts are tax-unmodelled.** An invoice amount is what the supplier charged; no input-tax
 account exists and none is created. VAT/SVAT is TBD.
@@ -569,3 +567,141 @@ The aging report buckets outstanding amounts by how overdue they are — Current
 reducing what is owed. A separate unbilled-deliveries report shows the other side: posted
 deliveries whose value has not yet been invoiced, each UNBILLED, PARTIALLY_BILLED or
 FULLY_BILLED.
+
+---
+
+## 22. Cash and bank
+
+### Which accounts hold money is configuration, not a guess
+
+`cash_bank_accounts` records which general-ledger accounts the factory treats as a real till
+or a real bank account. **It holds no balance and never will** — what is in the till or the
+bank is derived from posted journal lines, exactly as stock is derived from the inventory
+ledger and an account balance from its lines.
+
+Every module that moves money asks one question of one table, through
+`AccountingPolicy::assertCashBankAccount()`. Two conditions, and both matter:
+
+| The **account** must be | Which excludes |
+| --- | --- |
+| active | a deactivated account |
+| an ASSET | revenue, expenses, liabilities, equity |
+| not a control account | Trade Receivables, Trade Payables, GRNI, every inventory account |
+| hand-postable | group headers like `1100` |
+| | |
+| The **configuration** must exist and be active | everything else |
+
+The last row is the stricter half and the point of the table. An ordinary asset account such
+as `1400 Other Current Assets` passes every account test above and is still **not** somewhere
+cash may be paid into or out of. Requiring a configuration row means an accountant decides
+which accounts are real tills and real bank accounts, rather than the shape of the chart
+deciding it by accident.
+
+This is a **change to existing behaviour**: supplier payments and customer receipts previously
+accepted any active non-control asset account and now require a configured one.
+
+Seeded configuration is `1110 Cash on Hand` (CASH) and `1120 Bank` (BANK). More bank accounts
+are added by an accountant through the UI — the software must not invent which banks a factory
+uses. A configuration money has moved through is deactivated, never deleted, and its
+underlying ledger account can never be changed: repointing it would silently rewrite the
+meaning of every document already recorded against it.
+
+### Four ways money moves, and they are not interchangeable
+
+```
+Immediate expense   Dr Expense                Cr Cash / Bank        ← expense voucher
+Credit expense      Dr Expense                Cr Trade Payables     ← supplier invoice
+  then              Dr Trade Payables         Cr Cash / Bank        ← supplier payment
+Customer receipt    Dr Cash / Bank            Cr Trade Receivables
+Fund transfer       Dr Destination Cash/Bank  Cr Source Cash/Bank
+```
+
+**An expense voucher is for money that has already gone.** Electricity paid at the counter,
+fuel bought and settled on the spot. It debits the expense and credits cash or the bank in one
+journal, and **raises no payable**, because nothing is owed afterwards.
+
+**A supplier invoice is for money that will go later.** It raises a payable, which a supplier
+payment then settles. Recording an immediate payment this way would put a liability on the
+books that never existed; recording a credit purchase as a voucher would lose the debt
+entirely. The two workflows must not be combined.
+
+A voucher may name a **supplier for reporting** — "who did we buy the fuel from". That changes
+nothing about the journal and creates no Trade Payables balance.
+
+**A fund transfer is a balance-sheet event and nothing else.** No expense, no revenue, no
+payable, no receivable, no inventory. The company's combined cash-and-bank total is identical
+before and after, which is the cheapest possible proof it was recorded correctly. The debit and
+the credit are the same figure used twice, so the two legs cannot drift apart. Cash→Bank,
+Bank→Cash and Bank→Bank are all permitted; the same account on both sides is not.
+
+Neither document touches inventory in any way: not a quantity, not a ledger row, not a weighted
+average, not a lot.
+
+Both follow the same lifecycle as every other document here — DRAFT / POSTED / REVERSED /
+CANCELLED, immutable once posted, corrected by reversal through `ReverseJournalEntry`, never
+deleted. Numbers are `EXP-YYYYMMDD-000001` and `TRF-YYYYMMDD-000001`.
+
+### The expense accounts a voucher may charge
+
+Ordinary **EXPENSE** accounts only, active, not control accounts, not headers.
+
+**COST_OF_SALES is deliberately excluded.** It is derived from stock movements by the inventory
+integration, and letting someone charge it by hand would put cost of sales and the inventory
+ledger out of step with nothing to explain the difference. Inventory, receivables, payables,
+GRNI, revenue, equity and the cash accounts themselves are excluded by the type check alone.
+
+The rule is stated twice on purpose: in the form request, so the screen can show a helpful
+error, and again in `AccountingPolicy` when the voucher posts, so an API or a seeder is held to
+the same rule. The request is the convenience; the policy is the guarantee.
+
+### The cash and bank book
+
+`CashBankBookService` derives **entirely from posted journal lines**.
+
+```
+Money In        a DEBIT to the account   (an asset increasing)
+Money Out       a CREDIT to the account  (an asset decreasing)
+Running balance calculated per request, never persisted
+```
+
+A supplier payment, a customer receipt, an expense voucher, a fund transfer and a journal
+written by hand all appear for one reason only — each posted a line to the account. **No module
+is special-cased**, and a future module that moves money will appear with no change to this
+service at all. Source documents are identified through `source_type` / `source_id`, so a row
+can name `PAY-…`, `REC-…`, `EXP-…`, `TRF-…` or simply "Manual journal".
+
+**The fourth critical invariant:**
+
+```
+Cash/Bank Book closing balance  ==  that account's general-ledger balance
+```
+
+It holds by construction, because both read the same lines — there is no second source of truth
+to drift from. The book screen asserts it on every request and says so on the page, because an
+invariant nobody verifies is only a belief.
+
+A reversed document stays in the book with its reversal beside it. Nothing is hidden; the two
+rows simply sum to nothing.
+
+---
+
+## 23. Negative cash and overdrafts — `TBD`
+
+**No overdraft or negative-balance policy exists, and none was invented.** Posting may take a
+cash or bank account below zero, because nothing currently prevents it. This is recorded, not
+endorsed.
+
+Three business questions are open, and they are the factory's to answer, not the software's:
+
+| # | Question |
+| --- | --- |
+| 1 | Should Cash on Hand ever be allowed to go negative? Physically it cannot — a negative till means something was recorded wrongly — so should posting refuse it, warn, or allow it? |
+| 2 | Should bank accounts support overdrafts, and if so is an overdraft a liability account or a negative asset? |
+| 3 | Should any limit be per account, per kind, or global — and who may override it? |
+
+Until they are answered, a test records the current behaviour deliberately, so that introducing
+a policy later is a visible, intentional change rather than a silent one.
+
+Bank reconciliation is **not built**: no statement import, no matching, no reconciled flags, no
+uncleared cheques, no statement-derived charges. This phase is general-ledger cash control only.
+Amounts remain tax-unmodelled and in the base currency.

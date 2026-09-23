@@ -24,6 +24,7 @@ use App\Models\SalesInvoiceLine;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
+use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Database\Seeders\ProductionRecipeSeeder;
@@ -69,6 +70,8 @@ class AccountsReceivableScreensTest extends TestCase
 
         $this->seed(ProductionRecipeSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
+        // Money may only move through a configured cash or bank account.
+        $this->seed(CashBankAccountSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->period = FiscalPeriod::factory()->create([
@@ -327,8 +330,10 @@ class AccountsReceivableScreensTest extends TestCase
                 ->component('finance/customer-receipts/Create')
                 ->has('outstandingInvoices', 1)
                 ->where('outstandingInvoices.0.outstanding', '260000.000000')
-                // Only ordinary asset accounts may receive.
-                ->has('receiptAccounts', 4));
+                // Only CONFIGURED cash/bank accounts may receive — not every asset account.
+                ->has('receiptAccounts', 2)
+                ->where('receiptAccounts.0.code', '1110')
+                ->where('receiptAccounts.1.code', '1120'));
     }
 
     #[Test]

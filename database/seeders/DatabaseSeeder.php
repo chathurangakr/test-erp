@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
             // Connects the product master to the chart. Sets no cutover date — switching
             // operational accounting on is an accountant's decision.
             ProductAccountMappingSeeder::class,
+            // Records which chart accounts are real tills and bank accounts. Configuration
+            // only: no balances, no opening entries, no transactions.
+            CashBankAccountSeeder::class,
         ]);
 
         // User::factory(10)->create();

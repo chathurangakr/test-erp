@@ -5,6 +5,7 @@ namespace App\Services\Accounting;
 use App\Enums\AccountType;
 use App\Models\Account;
 use App\Models\AccountingSetting;
+use App\Models\CashBankAccount;
 use App\Models\FiscalPeriod;
 use App\Models\Product;
 use Carbon\CarbonInterface;
@@ -156,26 +157,13 @@ class AccountingPolicy
 
     /**
      * A cash or bank account a customer receipt may be banked into.
+     *
+     * Being an asset account is no longer enough: it must be one the factory has actually
+     * configured as cash or a bank account. See assertCashBankAccount().
      */
     public function assertReceiptAccount(Account $account): void
     {
-        $this->assertUsable($account, AccountType::Asset, __('a customer receipt'));
-
-        if ($account->is_control_account) {
-            throw ValidationException::withMessages([
-                'receipt_account_id' => __('Account :account is a control account and cannot receive a customer payment directly.', [
-                    'account' => $account->code,
-                ]),
-            ]);
-        }
-
-        if (! $account->allow_manual_posting) {
-            throw ValidationException::withMessages([
-                'receipt_account_id' => __('Account :account is not a cash or bank account.', [
-                    'account' => $account->code,
-                ]),
-            ]);
-        }
+        $this->assertCashBankAccount($account, 'receipt_account_id', __('a customer receipt'));
     }
 
     /**
@@ -208,14 +196,40 @@ class AccountingPolicy
 
     /**
      * A cash or bank account a supplier payment may be made from.
+     *
+     * Being an asset account is no longer enough: it must be one the factory has actually
+     * configured as cash or a bank account. See assertCashBankAccount().
      */
     public function assertPaymentAccount(Account $account): void
     {
-        $this->assertUsable($account, AccountType::Asset, __('a supplier payment'));
+        $this->assertCashBankAccount($account, 'payment_account_id', __('a supplier payment'));
+    }
+
+    /**
+     * The one rule for "may money move through this account".
+     *
+     * Every module that moves money asks this: supplier payments, customer receipts, expense
+     * vouchers and fund transfers. Two conditions, and both matter.
+     *
+     * The **account** must be active, an ASSET, not a control account, and hand-postable —
+     * which between them exclude group headers, Trade Receivables, Trade Payables, GRNI and
+     * every inventory control account, without this method naming a single account code.
+     *
+     * The **configuration** must exist and be active. That is the stricter half: an ordinary
+     * asset account like "Other Current Assets" passes every test above and is still not
+     * somewhere cash may be paid into or out of. Requiring a `cash_bank_accounts` row means
+     * an accountant decides which accounts are real tills and real bank accounts, rather than
+     * the shape of the chart deciding it by accident.
+     */
+    public function assertCashBankAccount(Account $account, string $field = 'cash_bank_account_id', ?string $subject = null): CashBankAccount
+    {
+        $subject ??= __('a cash or bank movement');
+
+        $this->assertUsable($account, AccountType::Asset, $subject);
 
         if ($account->is_control_account) {
             throw ValidationException::withMessages([
-                'payment_account_id' => __('Account :account is a control account and cannot be used to pay a supplier.', [
+                $field => __('Account :account is a control account and money cannot be moved through it directly.', [
                     'account' => $account->code,
                 ]),
             ]);
@@ -223,7 +237,77 @@ class AccountingPolicy
 
         if (! $account->allow_manual_posting) {
             throw ValidationException::withMessages([
-                'payment_account_id' => __('Account :account is not a cash or bank account.', [
+                $field => __('Account :account does not accept postings of this kind.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+
+        $configuration = CashBankAccount::query()->where('account_id', $account->id)->first();
+
+        if ($configuration === null) {
+            throw ValidationException::withMessages([
+                $field => __('Account :account is not configured as a cash or bank account. Configure it under Cash & Bank before using it for :subject.', [
+                    'account' => $account->code,
+                    'subject' => $subject,
+                ]),
+            ]);
+        }
+
+        if (! $configuration->is_active) {
+            throw ValidationException::withMessages([
+                $field => __('Cash/bank account :name is inactive and cannot be used for :subject.', [
+                    'name' => $configuration->display_name,
+                    'subject' => $subject,
+                ]),
+            ]);
+        }
+
+        return $configuration;
+    }
+
+    /**
+     * The configured cash or bank account behind a configuration row, checked end to end.
+     */
+    public function assertUsableCashBankAccount(CashBankAccount $configuration, string $field = 'cash_bank_account_id', ?string $subject = null): CashBankAccount
+    {
+        $account = $configuration->account;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                $field => __('Cash/bank account :name has no general-ledger account.', [
+                    'name' => $configuration->display_name,
+                ]),
+            ]);
+        }
+
+        return $this->assertCashBankAccount($account, $field, $subject);
+    }
+
+    /**
+     * An account an expense voucher may charge.
+     *
+     * Ordinary EXPENSE accounts only. COST_OF_SALES is deliberately excluded: it is derived
+     * from stock movements by the inventory integration, and letting someone charge it by
+     * hand would put cost of sales and the inventory ledger out of step with nothing to
+     * explain the difference. Revenue, equity, receivables, payables, GRNI, inventory and the
+     * cash accounts themselves are excluded by the type check alone.
+     */
+    public function assertExpenseAccount(Account $account, string $field = 'expense_account_id'): void
+    {
+        $this->assertUsable($account, AccountType::Expense, __('an expense voucher line'));
+
+        if ($account->is_control_account) {
+            throw ValidationException::withMessages([
+                $field => __('Account :account is a control account and cannot be charged directly.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+
+        if (! $account->allow_manual_posting) {
+            throw ValidationException::withMessages([
+                $field => __('Account :account does not accept postings of this kind.', [
                     'account' => $account->code,
                 ]),
             ]);
