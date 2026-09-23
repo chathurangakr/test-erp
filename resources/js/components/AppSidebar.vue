@@ -17,6 +17,10 @@ import {
     CalendarRange,
     Scale,
     SlidersHorizontal,
+    FileText,
+    Banknote,
+    CalendarClock,
+    FileCheck2,
     Wallet,
     Receipt,
     ScrollText,
@@ -56,6 +60,10 @@ import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { index as trialBalanceIndex } from '@/routes/trial-balance';
 import { index as fiscalPeriodsIndex } from '@/routes/fiscal-periods';
 import { index as accountingSetupIndex } from '@/routes/accounting-setup';
+import { index as supplierInvoicesIndex } from '@/routes/supplier-invoices';
+import { index as supplierPaymentsIndex } from '@/routes/supplier-payments';
+import { index as apAgingIndex } from '@/routes/ap-aging';
+import { index as grniReconciliationIndex } from '@/routes/grni-reconciliation';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -187,6 +195,29 @@ const financeNavItems: NavItem[] = [
     },
 ];
 
+const payablesNavItems: NavItem[] = [
+    {
+        title: 'Supplier Invoices',
+        href: supplierInvoicesIndex(),
+        icon: FileText,
+    },
+    {
+        title: 'Supplier Payments',
+        href: supplierPaymentsIndex(),
+        icon: Banknote,
+    },
+    {
+        title: 'AP Aging',
+        href: apAgingIndex(),
+        icon: CalendarClock,
+    },
+    {
+        title: 'GRNI Reconciliation',
+        href: grniReconciliationIndex(),
+        icon: FileCheck2,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -223,6 +254,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="salesNavItems" label="Sales" />
             <NavMain :items="productionNavItems" label="Production" />
             <NavMain :items="financeNavItems" label="Finance" />
+            <NavMain :items="payablesNavItems" label="Accounts payable" />
         </SidebarContent>
 
         <SidebarFooter>

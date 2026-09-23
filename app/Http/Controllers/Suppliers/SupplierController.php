@@ -9,6 +9,9 @@ use App\Http\Requests\Suppliers\UpdateSupplierRequest;
 use App\Models\GoodsReceipt;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierPayment;
+use App\Services\Accounting\AccountsPayableService;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +26,8 @@ use Inertia\Response;
  */
 class SupplierController extends Controller
 {
+    public function __construct(private readonly AccountsPayableService $payables) {}
+
     private const PER_PAGE = 15;
 
     public function index(Request $request): Response
@@ -66,7 +71,70 @@ class SupplierController extends Controller
         return Inertia::render('suppliers/Show', [
             'supplier' => $supplier,
             'purchaseHistory' => $this->purchaseHistory($supplier),
+            'payables' => $this->payablesSummary($supplier),
         ]);
+    }
+
+    /**
+     * What this supplier is owed, derived from posted invoices and payments.
+     *
+     * Deliberately NOT stored on the supplier: a master record holds no balance, and this
+     * figure is computed from the documents every time it is asked for.
+     *
+     * @return array<string, mixed>
+     */
+    private function payablesSummary(Supplier $supplier): array
+    {
+        $outstanding = $this->payables->supplierOutstanding($supplier);
+
+        $invoices = SupplierInvoice::query()
+            ->where('supplier_id', $supplier->id)
+            ->with('lines')
+            ->orderByDesc('invoice_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (SupplierInvoice $invoice): array => [
+                'id' => $invoice->id,
+                'internal_invoice_number' => $invoice->internal_invoice_number,
+                'supplier_invoice_number' => $invoice->supplier_invoice_number,
+                'invoice_date' => $invoice->invoice_date?->toDateString(),
+                'due_date' => $invoice->due_date?->toDateString(),
+                'status_label' => $invoice->status->label(),
+                'total' => $this->payables->invoiceTotal($invoice),
+                'outstanding' => $this->payables->outstanding($invoice),
+            ]);
+
+        $payments = SupplierPayment::query()
+            ->where('supplier_id', $supplier->id)
+            ->orderByDesc('payment_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (SupplierPayment $payment): array => [
+                'id' => $payment->id,
+                'payment_number' => $payment->payment_number,
+                'payment_date' => $payment->payment_date?->toDateString(),
+                'status_label' => $payment->status->label(),
+                'amount' => $payment->amount,
+            ]);
+
+        // Overdue is what is outstanding on invoices already past their due date.
+        $overdue = DecimalMath::zero();
+
+        foreach ($this->payables->outstandingInvoices($supplier) as $invoice) {
+            if ($invoice->due_date?->isBefore(now()->startOfDay()) === true) {
+                $overdue = DecimalMath::add($overdue, $this->payables->outstanding($invoice));
+            }
+        }
+
+        return [
+            'outstanding' => $outstanding,
+            'overdue' => DecimalMath::cost($overdue),
+            'currency' => config('accounting.base_currency'),
+            'invoices' => $invoices,
+            'payments' => $payments,
+        ];
     }
 
     /**

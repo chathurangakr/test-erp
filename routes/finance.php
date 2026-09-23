@@ -7,6 +7,12 @@ use App\Http\Controllers\Accounting\GeneralLedgerController;
 use App\Http\Controllers\Accounting\JournalEntryActionController;
 use App\Http\Controllers\Accounting\JournalEntryController;
 use App\Http\Controllers\Accounting\TrialBalanceController;
+use App\Http\Controllers\Payables\ApAgingController;
+use App\Http\Controllers\Payables\GrniReconciliationController;
+use App\Http\Controllers\Payables\SupplierInvoiceActionController;
+use App\Http\Controllers\Payables\SupplierInvoiceController;
+use App\Http\Controllers\Payables\SupplierPaymentActionController;
+use App\Http\Controllers\Payables\SupplierPaymentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +48,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('finance/trial-balance', [TrialBalanceController::class, 'index'])
         ->name('trial-balance.index');
+
+    // ---------------------------------------------------------- accounts payable
+    Route::resource('finance/supplier-invoices', SupplierInvoiceController::class)
+        ->parameters(['supplier-invoices' => 'supplier_invoice'])
+        ->names('supplier-invoices')
+        ->except(['destroy']);
+
+    Route::patch('finance/supplier-invoices/{supplier_invoice}/post', [SupplierInvoiceActionController::class, 'post'])
+        ->name('supplier-invoices.post');
+    Route::patch('finance/supplier-invoices/{supplier_invoice}/reverse', [SupplierInvoiceActionController::class, 'reverse'])
+        ->name('supplier-invoices.reverse');
+    Route::patch('finance/supplier-invoices/{supplier_invoice}/cancel', [SupplierInvoiceActionController::class, 'cancel'])
+        ->name('supplier-invoices.cancel');
+
+    Route::resource('finance/supplier-payments', SupplierPaymentController::class)
+        ->parameters(['supplier-payments' => 'supplier_payment'])
+        ->names('supplier-payments')
+        ->only(['index', 'create', 'store', 'show']);
+
+    Route::patch('finance/supplier-payments/{supplier_payment}/post', [SupplierPaymentActionController::class, 'post'])
+        ->name('supplier-payments.post');
+    Route::patch('finance/supplier-payments/{supplier_payment}/reverse', [SupplierPaymentActionController::class, 'reverse'])
+        ->name('supplier-payments.reverse');
+    Route::patch('finance/supplier-payments/{supplier_payment}/cancel', [SupplierPaymentActionController::class, 'cancel'])
+        ->name('supplier-payments.cancel');
+
+    Route::get('finance/ap-aging', [ApAgingController::class, 'index'])->name('ap-aging.index');
+    Route::get('finance/grni-reconciliation', [GrniReconciliationController::class, 'index'])
+        ->name('grni-reconciliation.index');
 
     Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
         ->name('accounting-setup.index');

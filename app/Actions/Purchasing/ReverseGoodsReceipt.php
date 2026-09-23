@@ -6,7 +6,9 @@ use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\GoodsReceiptStatus;
 use App\Models\GoodsReceipt;
+use App\Services\Accounting\GrniReconciliationService;
 use App\Services\Purchasing\PurchaseOrderStatusUpdater;
+use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -28,6 +30,7 @@ class ReverseGoodsReceipt
     public function __construct(
         private readonly ReverseInventoryTransaction $reverseInventory,
         private readonly RecordOperationalJournal $accounting,
+        private readonly GrniReconciliationService $grni,
         private readonly PurchaseOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -55,6 +58,8 @@ class ReverseGoodsReceipt
                     ]),
                 ]);
             }
+
+            $this->assertNotInvoiced($locked);
 
             $transaction = $locked->inventoryTransaction()->first();
 
@@ -91,5 +96,36 @@ class ReverseGoodsReceipt
 
             return $locked->refresh()->load(['lines', 'reversalInventoryTransaction']);
         });
+    }
+
+    /**
+     * A receipt that accounts payable has already invoiced against cannot be reversed.
+     *
+     * Reversing it would take away the Goods Received Not Invoiced accrual that a supplier
+     * invoice has already cleared — leaving Trade Payables owing money against a receipt the
+     * books say never happened. The supplier invoice has to be reversed first, which
+     * releases the match.
+     */
+    private function assertNotInvoiced(GoodsReceipt $receipt): void
+    {
+        $matched = $this->grni->matchedAmount($receipt);
+
+        if (! DecimalMath::isPositive($matched)) {
+            return;
+        }
+
+        $invoices = $this->grni->matchingLines($receipt)
+            ->map(fn ($line): ?string => $line->invoice?->internal_invoice_number)
+            ->filter()
+            ->unique()
+            ->implode(', ');
+
+        throw ValidationException::withMessages([
+            'status' => __('Goods receipt :reference has :matched invoiced against it by :invoices. Reverse the associated supplier invoice(s) first.', [
+                'reference' => $receipt->grn_number,
+                'matched' => $matched,
+                'invoices' => $invoices,
+            ]),
+        ]);
     }
 }

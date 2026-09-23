@@ -106,6 +106,78 @@ class AccountingPolicy
         return $account;
     }
 
+    /**
+     * Trade Payables — what the factory owes suppliers, once their invoices are recorded.
+     *
+     * A control account, so only a sourced (system) journal may reach it.
+     */
+    public function tradePayablesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->tradePayablesAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'trade_payables_account_id' => __('No Trade Payables account is configured. Set one in Accounting Setup before recording supplier invoices.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Liability, __('Trade Payables'));
+
+        return $account;
+    }
+
+    /**
+     * An account a supplier invoice may charge a direct expense to.
+     *
+     * Restricted to ordinary expense accounts: a direct-expense line must never be a way to
+     * reach an inventory or payables control account by hand, which would let someone move
+     * inventory value without a stock movement behind it.
+     */
+    public function assertDirectExpenseAccount(Account $account): void
+    {
+        $this->assertUsable($account, AccountType::Expense, __('a direct expense line'));
+
+        if ($account->is_control_account) {
+            throw ValidationException::withMessages([
+                'account_id' => __('Account :account is a control account and cannot be charged directly on a supplier invoice.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+
+        if (! $account->allow_manual_posting) {
+            throw ValidationException::withMessages([
+                'account_id' => __('Account :account does not accept postings of this kind.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * A cash or bank account a supplier payment may be made from.
+     */
+    public function assertPaymentAccount(Account $account): void
+    {
+        $this->assertUsable($account, AccountType::Asset, __('a supplier payment'));
+
+        if ($account->is_control_account) {
+            throw ValidationException::withMessages([
+                'payment_account_id' => __('Account :account is a control account and cannot be used to pay a supplier.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+
+        if (! $account->allow_manual_posting) {
+            throw ValidationException::withMessages([
+                'payment_account_id' => __('Account :account is not a cash or bank account.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+    }
+
     private function mappedAccount(Product $product, string $kind, AccountType $expected): Account
     {
         $mapping = $product->accountMapping;

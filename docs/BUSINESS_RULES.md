@@ -981,3 +981,34 @@ sets and a seeder never invents. While it is unset nothing changes; on or after 
   `product_account_mappings`.
 
 Full detail in `docs/ACCOUNTING_RULES.md` §13-§15.
+
+## 23. Accounts payable
+
+```
+Goods receipt      Dr Inventory              Cr Goods Received Not Invoiced
+Supplier invoice   Dr GRNI  or  Dr Expense   Cr Trade Payables
+Supplier payment   Dr Trade Payables         Cr Cash / Bank
+```
+
+- **A supplier invoice never changes inventory.** The goods receipt established what the
+  stock is worth; the invoice records who is owed for it.
+- **One goods receipt may be invoiced by several suppliers.** Goods, transport and loading are
+  commonly three different companies, so matching is partial and per-amount, capped at what
+  the receipt has left uninvoiced. The invoice supplier need not be the receipt supplier.
+- **The accrual is read from the receipt's own posted journal**, never recalculated. A receipt
+  from before the accounting cutover, or one that has been reversed, raised no accrual and
+  cannot be invoiced against.
+- **Nothing is written off automatically.** If the invoices never fully clear a receipt, the
+  remainder stays visible on the GRNI reconciliation. The permanent purchase-price variance
+  policy is TBD.
+- **An invoice cannot be reversed while a posted payment is allocated to it**, and **a goods
+  receipt cannot be reversed once a posted invoice has matched against it**. Each error names
+  what has to be reversed first.
+- **Payments are always allocated to invoices** — no prepayments in Version 1 — and the
+  allocations must total the payment exactly. One payment may settle several invoices; one
+  invoice may take several payments.
+- **Balances are derived, never stored.** A supplier has no payable column; an invoice's
+  outstanding and its PARTIALLY_PAID / PAID status follow from the payments allocated to it.
+- **No VAT and no foreign currency.** Amounts are tax-unmodelled and in LKR.
+
+Full detail in `docs/ACCOUNTING_RULES.md` §16-§18.

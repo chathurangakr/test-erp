@@ -42,7 +42,19 @@ class UpdateAccountingSettings
             }
 
             if (array_key_exists('grni_account_id', $attributes)) {
-                $settings->grni_account_id = $this->validGrniAccountId($attributes['grni_account_id']);
+                $settings->grni_account_id = $this->validLiabilityAccountId(
+                    $attributes['grni_account_id'],
+                    'grni_account_id',
+                    __('Goods Received Not Invoiced'),
+                );
+            }
+
+            if (array_key_exists('trade_payables_account_id', $attributes)) {
+                $settings->trade_payables_account_id = $this->validLiabilityAccountId(
+                    $attributes['trade_payables_account_id'],
+                    'trade_payables_account_id',
+                    __('Trade Payables'),
+                );
             }
 
             $settings->updated_by = $userId ?? auth()->id();
@@ -80,7 +92,10 @@ class UpdateAccountingSettings
         return JournalEntry::query()->whereNotNull('source_type')->exists();
     }
 
-    private function validGrniAccountId(?int $accountId): ?int
+    /**
+     * Both control accounts this module configures must be active liabilities.
+     */
+    private function validLiabilityAccountId(?int $accountId, string $field, string $subject): ?int
     {
         if ($accountId === null) {
             return null;
@@ -90,19 +105,20 @@ class UpdateAccountingSettings
 
         if ($account === null) {
             throw ValidationException::withMessages([
-                'grni_account_id' => __('The selected account does not exist.'),
+                $field => __('The selected account does not exist.'),
             ]);
         }
 
         if (! $account->is_active) {
             throw ValidationException::withMessages([
-                'grni_account_id' => __('Account :account is inactive.', ['account' => $account->code]),
+                $field => __('Account :account is inactive.', ['account' => $account->code]),
             ]);
         }
 
         if ($account->account_type !== AccountType::Liability) {
             throw ValidationException::withMessages([
-                'grni_account_id' => __('Goods Received Not Invoiced must be a liability account; :account is a :type account.', [
+                $field => __(':subject must be a liability account; :account is a :type account.', [
+                    'subject' => $subject,
                     'account' => $account->code,
                     'type' => $account->account_type->label(),
                 ]),

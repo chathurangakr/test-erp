@@ -20,8 +20,9 @@ use RuntimeException;
  * classified would put guessed figures permanently into the books. Such a product simply
  * cannot post once accounting is switched on, and shows as unmapped in Accounting Setup.
  *
- * It also sets the GRNI account, and **never invents a cutover date** — switching accounting
- * on is an accountant's decision, not a seeder's.
+ * It also points the settings at the GRNI and Trade Payables control accounts, and **never
+ * invents a cutover date** — switching accounting on is an accountant's decision, not a
+ * seeder's.
  *
  * Idempotent: re-running updates the mapping without disturbing posted history.
  */
@@ -46,6 +47,8 @@ class ProductAccountMappingSeeder extends Seeder
     ];
 
     private const GRNI_CODE = '2120';
+
+    private const TRADE_PAYABLES_CODE = '2110';
 
     public function run(): void
     {
@@ -79,30 +82,37 @@ class ProductAccountMappingSeeder extends Seeder
             );
         }
 
-        $this->configureGrni($accounts->get(self::GRNI_CODE));
+        $this->configureControlAccounts(
+            $accounts->get(self::GRNI_CODE),
+            $accounts->get(self::TRADE_PAYABLES_CODE),
+        );
     }
 
     /**
-     * Point the settings row at the GRNI account, leaving the cutover date alone.
+     * Point the settings row at the control accounts, leaving the cutover date alone.
      */
-    private function configureGrni(?int $grniAccountId): void
+    private function configureControlAccounts(?int $grniAccountId, ?int $tradePayablesAccountId): void
     {
-        if ($grniAccountId === null) {
+        if ($grniAccountId === null && $tradePayablesAccountId === null) {
             return;
         }
+
+        $attributes = array_filter([
+            'grni_account_id' => $grniAccountId,
+            'trade_payables_account_id' => $tradePayablesAccountId,
+        ], fn (?int $id): bool => $id !== null);
 
         $settings = AccountingSetting::current();
 
         if ($settings === null) {
-            AccountingSetting::create([
+            AccountingSetting::create(array_merge([
                 // NULL on purpose: accounting is not switched on until someone decides to.
                 'operational_accounting_start_date' => null,
-                'grni_account_id' => $grniAccountId,
-            ]);
+            ], $attributes));
 
             return;
         }
 
-        $settings->update(['grni_account_id' => $grniAccountId]);
+        $settings->update($attributes);
     }
 }

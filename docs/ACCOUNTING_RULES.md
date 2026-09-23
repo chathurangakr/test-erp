@@ -1,12 +1,13 @@
 # Accounting Rules — Coconut Factory ERP
 
-> **Status:** ✅ **IMPLEMENTED** through Finance Phase 2. Phase 1 built the engine — chart of
+> **Status:** ✅ **IMPLEMENTED** through Finance Phase 3. Phase 1 built the engine — chart of
 > accounts, fiscal periods, manual journals, reversal, balances, general ledger, trial
-> balance. Phase 2 connected it to inventory: goods receipts, deliveries and all three
-> production types now generate journals, governed by a cutover date. See §13-§15.
+> balance. Phase 2 connected it to inventory behind a cutover date. Phase 3 added accounts
+> payable: supplier invoices clearing the goods-received accrual, supplier payments, AP aging
+> and GRNI reconciliation. See §13-§18.
 >
-> **Not built:** supplier invoices and payables, sales invoices and receivables, payments,
-> tax, payroll, bank reconciliation, year-end closing. See §10.
+> **Not built:** sales invoices and receivables, customer receipts, revenue recognition, tax,
+> payroll, bank reconciliation, year-end closing. See §10.
 
 ---
 
@@ -173,19 +174,21 @@ through the codebase.
 
 ## 10. Not implemented — do not begin without instruction
 
-Accounts Payable · Accounts Receivable · supplier payments · customer receipts · purchase
-invoices · sales invoices · production expense accounting · VAT/SVAT · payroll · bank
-reconciliation · financial dashboards · P&L · balance sheet · year-end closing.
+Accounts Receivable · customer receipts · sales invoices · revenue recognition ·
+production expense accounting · VAT/SVAT · payroll · bank reconciliation · financial
+dashboards · P&L · balance sheet · year-end closing.
 
 **No revenue is recognised anywhere yet.** A delivery records cost of goods sold and nothing
 else; revenue and receivables belong to the sales invoice.
 
-Until those arrive, two balances are expected to sit and grow:
+So **cost of sales accumulates without matching revenue**, and that is correct for this
+phase, not a defect. GRNI no longer accumulates unchecked — supplier invoices clear it, and
+what remains is reported and reconciled (§17).
 
-- **GRNI** accumulates the purchase accrual, because no supplier invoice clears it;
-- **Cost of sales** accumulates without matching revenue.
+**Amounts are tax-unmodelled.** An invoice amount is what the supplier charged; no input-tax
+account exists and none is created. VAT/SVAT is TBD.
 
-That is correct for this phase, not a defect.
+**Base currency only.** Every AP amount is in LKR. There are no exchange-rate fields.
 
 ## 11. Auditability
 
@@ -318,3 +321,112 @@ Delivery          Dr Cost of sales    Cr Inventory         ← implemented
 Sales invoice     Dr Trade Receivables Cr Revenue          ← later
 Customer receipt  Dr Cash / Bank      Cr Trade Receivables ← later
 ```
+
+## 16. Accounts payable
+
+```
+Goods receipt      Dr Inventory              Cr Goods Received Not Invoiced   ← Phase 2
+Supplier invoice   Dr GRNI  or  Dr Expense   Cr Trade Payables                ← this phase
+Supplier payment   Dr Trade Payables         Cr Cash / Bank                   ← this phase
+```
+
+A supplier invoice has two kinds of line, and only two:
+
+| Line type | Debits | Meaning |
+| --- | --- | --- |
+| `GRNI_MATCH` | Goods Received Not Invoiced | Clears part of a goods receipt's accrual |
+| `DIRECT_EXPENSE` | The chosen expense account | An invoice with no goods behind it — electricity, repairs |
+
+Both credit **Trade Payables**, which comes from `accounting_settings` and never appears on a
+line: a user says what is being charged, never where the credit lands. A direct-expense line
+is restricted to ordinary expense accounts — it must never become a way to reach an inventory
+or payables control account by hand.
+
+### Posting an invoice changes no inventory
+
+Not the quantity, not the ledger, not the weighted average, not a production cost. **The
+goods receipt established what the stock is worth**; the invoice records who is owed for it.
+This separation is what lets a receipt be invoiced by someone other than the party who
+supplied the goods.
+
+### No purchase-price variance
+
+A `GRNI_MATCH` line clears the amount the user states, capped at what the receipt has left.
+If the invoices never fully clear a receipt, **the remainder stays visible on the GRNI
+reconciliation** rather than being written off to an expense account nobody asked for.
+
+> `TBD` — the permanent purchase price variance / revaluation policy: whether a persistent
+> difference should be expensed, capitalised into inventory, or left for manual judgement.
+
+## 17. GRNI matching and reconciliation
+
+**One goods receipt may be cleared by several suppliers.** A receipt carrying goods,
+transport and loading accrues one figure but is invoiced by three different companies, so
+matching is **per-amount and partial**, never one-invoice-per-receipt:
+
+```
+Accrued on receipt                    1,025,000
+  Goods supplier invoice              1,000,000   →  remaining 25,000
+  Transport supplier invoice             20,000   →  remaining  5,000
+  Loading contractor invoice              5,000   →  remaining      0
+```
+
+**The original accrual is read from the receipt's own posted journal** — the credit to GRNI —
+never re-derived from quantity × unit cost. The journal is what the books say; anything
+re-derived would eventually disagree with them.
+
+A receipt is matchable only when it is POSTED and raised an accrual that still stands. So a
+**pre-cutover receipt cannot be matched** (it never raised one) and neither can a **reversed
+receipt** (its accrual has been given back). Neither is backfilled.
+
+Concurrent invoices cannot overdraw a receipt: the receipt rows are locked `FOR UPDATE` while
+their remaining balance is checked.
+
+### The critical invariant
+
+```
+GRNI general-ledger balance  ==  total accrual not yet invoiced
+```
+
+Because GRNI is a control account that refuses manual posting, a difference cannot come from
+a stray journal — it would mean a genuine problem, and the reconciliation screen says so
+rather than showing two numbers quietly.
+
+### Two mutual blocking rules
+
+- **A supplier invoice cannot be reversed while a posted payment is allocated to it.** Undoing
+  the payable while money has been allocated would leave the payment settling something that
+  no longer exists. Reverse the payments first.
+- **A goods receipt cannot be reversed once a posted invoice has matched against it.**
+  Reversing would remove an accrual accounts payable has already cleared, leaving Trade
+  Payables owing money against a receipt the books say never happened. Reverse the invoice
+  first — the error names it.
+
+Reversing an invoice **releases its GRNI match automatically**: the reconciliation counts only
+invoices standing in the books, so the accrual becomes uninvoiced again with nothing unwound
+by hand.
+
+## 18. Supplier payments and AP balances
+
+A payment is **always allocated to invoices** — Version 1 has no prepayments or on-account
+credits — so the allocations must total the payment exactly. One payment may settle several
+invoices, and one invoice may be settled by several payments.
+
+A payment **never touches GRNI** (the invoice already cleared it) and never touches inventory.
+Its account must be an ordinary asset account — cash or bank — not a control account.
+
+**AP balances are derived, never stored.** An invoice's outstanding balance is its total less
+the allocations of payments that are still **posted**; a supplier has no payable column and
+must never grow one. That is also what makes reversal clean: a reversed payment's allocations
+stay on the record and simply stop counting, and each affected invoice's status
+(POSTED / PARTIALLY_PAID / PAID) is recalculated from the restored balance.
+
+**The second critical invariant:**
+
+```
+Trade Payables general-ledger balance  ==  total invoice outstanding
+```
+
+The aging report buckets outstanding amounts by how overdue they are — Current, 1-30, 31-60,
+61-90, 90+ — as of any date. A reversed invoice appears nowhere in it; a reversed payment
+stops reducing what is owed.

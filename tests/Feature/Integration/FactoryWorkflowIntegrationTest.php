@@ -35,6 +35,8 @@ use App\Models\PurchaseOrderLine;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
 use App\Models\Supplier;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierPayment;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
@@ -1105,8 +1107,8 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
         foreach ([
             'journals', 'journal_lines', 'general_ledger', 'ledger_accounts',
-            'payables', 'receivables', 'payments', 'customer_payments', 'supplier_payments',
-            'production_costs', 'labour_costs', 'overheads',
+            'payables', 'receivables', 'payments', 'customer_payments',
+            'customer_invoices', 'sales_invoices', 'production_costs', 'labour_costs', 'overheads',
         ] as $table) {
             $this->assertFalse(
                 Schema::hasTable($table),
@@ -1114,9 +1116,12 @@ class FactoryWorkflowIntegrationTest extends TestCase
             );
         }
 
-        // The accounting foundation exists (Finance Phase 1), but operational documents do
-        // not generate journals yet — that integration is a later, deliberate phase.
+        // The accounting engine and accounts payable both exist, but this scenario runs with
+        // no accounting cutover set, so nothing operational reaches the books — and nothing
+        // operational ever creates a supplier invoice or payment on its own.
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
+        $this->assertSame(0, SupplierInvoice::count());
+        $this->assertSame(0, SupplierPayment::count());
     }
 }

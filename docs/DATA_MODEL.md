@@ -552,6 +552,58 @@ A single row of configuration.
 The only place a product meets the chart of accounts — see decision **A-6**. A product with
 no row here cannot move stock once the cutover is reached.
 
+### 1.26 `supplier_invoices` and `supplier_invoice_lines`
+
+`supplier_invoices`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `internal_invoice_number` | string(50), **unique** | `PINV-YYYYMMDD-000001` — ours |
+| `supplier_id` | FK → `suppliers.id` | |
+| `supplier_invoice_number` | string(100) | The supplier's own number, as typed |
+| `supplier_invoice_number_normalised` | string(100) | Trimmed, uppercased. **Unique per supplier** — see decision **P-11** |
+| `invoice_date` / `due_date` | date | |
+| `fiscal_period_id` | FK, nullable | Resolved at posting |
+| `status` | string(30) | DRAFT / POSTED / PARTIALLY_PAID / PAID / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+| audit columns | | created / posted / reversed, each with user and timestamp |
+
+**No outstanding-balance column.** What the invoice still owes is derived — decision **P-12**.
+
+`supplier_invoice_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `line_type` | string(30) | `GRNI_MATCH` or `DIRECT_EXPENSE` |
+| `goods_receipt_id` | FK, nullable | Set for a GRNI match |
+| `debit_account_id` | FK → `accounts.id`, nullable | Set for a direct expense |
+| `amount` | **`decimal(20,6)`** | |
+
+Exactly one of the two foreign keys is set, decided by `line_type`. There are **no tax
+lines**: VAT/SVAT is not modelled.
+
+### 1.27 `supplier_payments` and `supplier_payment_allocations`
+
+`supplier_payments`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `payment_number` | string(50), **unique** | `PAY-YYYYMMDD-000001` |
+| `supplier_id` | FK → `suppliers.id` | |
+| `payment_date` | date | |
+| `payment_account_id` | FK → `accounts.id` | The cash or bank account paid from |
+| `amount` | **`decimal(20,6)`** | |
+| `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+
+`supplier_payment_allocations` — `supplier_payment_id` + `supplier_invoice_id` (unique
+together) + `amount`. Many-to-many on purpose: one payment may settle several invoices, and
+one invoice may take several payments. Allocations of a REVERSED payment stay on the record
+and stop counting.
+
+`accounting_settings` also gained **`trade_payables_account_id`**, seeded to 2110, so no AP
+action contains an account code.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -849,6 +901,47 @@ and shows as such in Accounting Setup.
 
 The mapping is also what grants access to control accounts: the journal it produces names its
 source document, and a sourced journal may post where a manual one may not (decision **A-3**).
+
+### P-11 — a supplier's invoice number is unique per supplier, not globally
+
+Two suppliers both numbering their invoices "001" is ordinary; a global constraint would
+reject the second for no reason. The uniqueness is therefore `supplier_id` +
+`supplier_invoice_number_normalised`, where the normalised form ignores case and inner
+whitespace so "inv-001", "INV-001 " and "INV  001" are recognised as one invoice.
+
+`SupplierInvoice::normaliseNumber()` is the single implementation, used by the model's
+setter **and** by the validation rule — otherwise a value that passed validation could still
+violate the index, which is exactly what happened before they were unified.
+
+### P-12 — accounts payable balances are derived, never stored
+
+No supplier has a payable column and no invoice has an outstanding column. An invoice's
+outstanding is its total less the allocations of payments that are still POSTED, computed on
+request — the same rule as ledger-derived stock and journal-derived account balances.
+
+It is also what makes reversal clean. A reversed payment's allocations are **not deleted**:
+they stop counting because the payment is no longer posted, the invoice's balance returns on
+its own, and the whole history of what was paid and then unpaid remains visible.
+
+The invoice's PARTIALLY_PAID / PAID status is likewise derived — three names for one
+underlying fact, recalculated by `RefreshSupplierInvoiceStatus` whenever a payment posts or
+reverses, never typed.
+
+### P-13 — one goods receipt, several supplier invoices
+
+A receipt's landed cost commonly comes from three parties — the goods supplier, the
+transporter and the loading contractor — so a receipt accrues one GRNI figure and is cleared
+by several invoices, from several suppliers, in several amounts. Matching is therefore
+per-amount and partial, and **the invoice supplier is deliberately not required to match the
+receipt supplier**.
+
+The accrual itself is read from the receipt's own posted journal rather than recalculated, so
+the reconciliation always agrees with the books. Receipts are locked `FOR UPDATE` while a
+match is validated, so concurrent invoices cannot both consume the same remainder.
+
+The consequence is a pair of mutual blocks: an invoice cannot be reversed while a posted
+payment stands against it, and a receipt cannot be reversed once an invoice has matched it.
+Either alone would leave the ledger describing something that never happened.
 
 ## 3. Not yet designed — required future shape
 

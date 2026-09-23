@@ -306,14 +306,37 @@ The inventory engine exists and is tested. These rules are permanent:
   inventory` · production `Dr output inventory / Cr input inventory` · **warehouse transfer
   posts nothing** (same product, same value, same account).
 - **A delivery recognises NO revenue.** It is a physical issue; revenue and receivables
-  belong to the sales invoice, which is not built. GRNI and cost of sales will accumulate
-  without matching entries until then — that is expected.
+  belong to the sales invoice, which is not built — so cost of sales accumulates without
+  matching revenue, and that is expected. GRNI no longer accumulates unchecked: supplier
+  invoices clear it, and what remains is reported and reconciled.
 - **Account codes live only in `ChartOfAccountsSeeder` and `ProductAccountMappingSeeder`.**
   Everything resolves accounts through `product_account_mappings`. Never write an account
   number into a posting action.
 - **An unmapped product cannot move stock once accounting applies.** It is refused, not
   guessed at — the QA test product is deliberately left unmapped.
-- **Do not start Accounts Payable or Accounts Receivable** without instruction.
+- **Accounts payable is implemented.** Supplier invoice `Dr GRNI or expense / Cr Trade
+  Payables`; supplier payment `Dr Trade Payables / Cr Cash or Bank`. Trade Payables and GRNI
+  both come from `accounting_settings` — never write either account code into AP logic.
+- **Posting a supplier invoice changes NO inventory.** Not the quantity, the ledger, the
+  weighted average or a production cost. The goods receipt established the valuation; the
+  invoice records who is owed.
+- **One goods receipt may be cleared by several suppliers.** Goods, transport and loading are
+  commonly three different companies, so GRNI matching is per-amount and partial, capped at
+  the receipt's remaining accrual. The invoice supplier need not be the receipt supplier.
+- **A receipt's original accrual is read from its own posted journal**, never re-derived from
+  quantity × unit cost. Pre-cutover and reversed receipts raised no accrual and cannot be
+  matched.
+- **Two mutual blocks:** an invoice cannot be reversed while a posted payment is allocated to
+  it, and a goods receipt cannot be reversed once a posted invoice has matched against it.
+- **No purchase-price variance is posted.** An uncleared remainder stays visible on the GRNI
+  reconciliation rather than being written off somewhere nobody asked for.
+- **AP balances are derived, never stored.** A supplier has no payable column. An invoice's
+  outstanding is its total less the allocations of payments that are still posted, and its
+  PARTIALLY_PAID / PAID status follows from that rather than being typed.
+- **Two invariants must always hold:** GRNI balance == uninvoiced accrual, and Trade Payables
+  balance == total invoice outstanding. See `docs/ACCOUNTING_RULES.md` §16-§18.
+- **No VAT, no foreign currency.** Amounts are tax-unmodelled and LKR only.
+- **Do not start Accounts Receivable** without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
 
@@ -418,11 +441,12 @@ output lots, posting and reversal), and the **accounting foundation** (chart of 
 fiscal periods, manual journal entries with reversal, derived balances, general ledger and
 trial balance), and **inventory accounting integration** (goods receipts, deliveries and all
 three production types generating journals behind a configurable cutover date, with
-product-to-account mappings and a GRNI accrual).
+product-to-account mappings and a GRNI accrual), and **accounts payable** (supplier invoices
+clearing that accrual — partially, and from several suppliers per receipt — direct expense
+invoices, supplier payments allocated to invoices, AP aging and GRNI reconciliation).
 
-**Not yet started — do not begin without instruction:** Accounts Payable, Accounts
-Receivable, supplier payments, customer receipts, purchase and sales invoices, revenue
-recognition, production expenses, VAT/SVAT, payroll, bank
+**Not yet started — do not begin without instruction:** Accounts Receivable, customer
+receipts, sales invoices, revenue recognition, production expenses, VAT/SVAT, payroll, bank
 reconciliation, P&L and balance sheet, year-end closing, the permanent joint-product costing
 method, production planning, BOM editor, maintenance, role-based permissions, REST API.
 

@@ -272,16 +272,44 @@ receivables, payments, revenue recognition, tax, payroll, bank reconciliation, y
 **Expected for this phase:** GRNI accumulates the purchase accrual and cost of sales
 accumulates without revenue, because no invoice clears either yet.
 
-## Phase 11 — Finance 3: payables and receivables (not started)
+## Phase 11 — Finance 3: accounts payable ✅ COMPLETE
 
-Supplier invoices (`Dr GRNI / Cr Trade Payables`), sales invoices (`Dr Trade Receivables /
-Cr Revenue`), and payments. **Blocked on:** invoice document design, tax scope.
+Supplier invoices clearing the goods-received accrual, and the payments that settle them.
 
-## Phase 12 — Permissions (not started)
+- [x] `supplier_invoices`, `supplier_invoice_lines`, `supplier_payments`,
+      `supplier_payment_allocations`, plus `trade_payables_account_id` on the settings —
+      five forward-only migrations
+- [x] Two line types only: `GRNI_MATCH` (Dr GRNI) and `DIRECT_EXPENSE` (Dr expense), both
+      crediting Trade Payables from configuration
+- [x] **Partial, multi-supplier GRNI matching** — goods, transport and loading may each clear
+      part of one receipt, capped at the remainder and locked against concurrent overdraw
+- [x] The accrual read from the receipt's own posted journal, never recalculated; pre-cutover
+      and reversed receipts are unmatchable
+- [x] `GrniReconciliationService` and `AccountsPayableService` — every figure derived,
+      nothing stored
+- [x] Payments allocated to invoices (no prepayments), invoice status derived from what is
+      still owed, aging bucketed by how overdue
+- [x] Mutual reversal blocks: invoice blocked while paid, goods receipt blocked while invoiced
+- [x] Screens: supplier invoices, supplier payments, AP aging, GRNI reconciliation, and an AP
+      panel on Supplier Show
+- [x] 58 new tests asserting the two critical invariants throughout: GRNI balance ==
+      uninvoiced accrual, Trade Payables balance == total outstanding
+
+**Deliberately not implemented:** sales invoices, receivables, customer receipts, revenue
+recognition, VAT/SVAT, multi-currency, bank reconciliation, payroll, year-end closing.
+
+**Still open:** the permanent purchase-price variance policy (`ACCOUNTING_RULES.md` §16).
+
+## Phase 12 — Finance 4: accounts receivable (not started)
+
+Sales invoices (`Dr Trade Receivables / Cr Revenue`) and customer receipts.
+**Blocked on:** invoice document design, tax scope.
+
+## Phase 13 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 13 — REST API for Flutter (not started)
+## Phase 14 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 

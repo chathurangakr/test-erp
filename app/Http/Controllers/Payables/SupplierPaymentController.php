@@ -1,0 +1,220 @@
+<?php
+
+namespace App\Http\Controllers\Payables;
+
+use App\Actions\Payables\GeneratePayableReference;
+use App\Enums\AccountType;
+use App\Enums\SupplierPaymentStatus;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Payables\StoreSupplierPaymentRequest;
+use App\Models\Account;
+use App\Models\Supplier;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierPayment;
+use App\Services\Accounting\AccountsPayableService;
+use App\Support\DecimalMath;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * Supplier payments.
+ *
+ * A payment is always allocated to invoices — Version 1 has no payments on account — so the
+ * form shows what the supplier is owed and the allocations must add up to the payment.
+ */
+class SupplierPaymentController extends Controller
+{
+    private const PER_PAGE = 25;
+
+    public function __construct(
+        private readonly GeneratePayableReference $references,
+        private readonly AccountsPayableService $payables,
+    ) {}
+
+    public function index(Request $request): Response
+    {
+        $status = (string) $request->string('status');
+        $supplierId = $request->integer('supplier_id') ?: null;
+
+        $payments = SupplierPayment::query()
+            ->with(['supplier:id,code,name', 'paymentAccount:id,code,name', 'allocations'])
+            ->search((string) $request->string('search'))
+            ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
+            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
+            ->orderByDesc('payment_date')
+            ->orderByDesc('id')
+            ->paginate(self::PER_PAGE)
+            ->withQueryString()
+            ->through(fn (SupplierPayment $payment): array => $this->summarise($payment));
+
+        return Inertia::render('finance/supplier-payments/Index', [
+            'payments' => $payments,
+            'filters' => [
+                'search' => (string) $request->string('search'),
+                'status' => $status ?: '',
+                'supplier_id' => $supplierId,
+            ],
+            'statuses' => SupplierPaymentStatus::options(),
+            'suppliers' => Supplier::query()->orderBy('code')->get(['id', 'code', 'name']),
+            'currency' => config('accounting.base_currency'),
+        ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $supplier = $supplierId === null ? null : Supplier::find($supplierId);
+
+        return Inertia::render('finance/supplier-payments/Create', [
+            'suppliers' => Supplier::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            'paymentAccounts' => Account::query()
+                ->where('is_active', true)
+                ->where('account_type', AccountType::Asset)
+                ->where('allow_manual_posting', true)
+                ->where('is_control_account', false)
+                ->orderBy('code')
+                ->get(['id', 'code', 'name']),
+            'supplierId' => $supplierId,
+            'outstandingInvoices' => $supplier === null ? [] : $this->outstandingFor($supplier),
+            'currency' => config('accounting.base_currency'),
+        ]);
+    }
+
+    public function store(StoreSupplierPaymentRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $payment = DB::transaction(function () use ($data): SupplierPayment {
+            $payment = SupplierPayment::create([
+                'payment_number' => $this->references->forPayment(Carbon::parse($data['payment_date'])),
+                'supplier_id' => $data['supplier_id'],
+                'payment_date' => $data['payment_date'],
+                'payment_account_id' => $data['payment_account_id'],
+                'reference' => $data['reference'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'amount' => DecimalMath::cost(DecimalMath::of((string) $data['amount'])),
+                'status' => SupplierPaymentStatus::Draft,
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($data['allocations'] as $allocation) {
+                $payment->allocations()->create([
+                    'supplier_invoice_id' => $allocation['supplier_invoice_id'],
+                    'amount' => DecimalMath::cost(DecimalMath::of((string) $allocation['amount'])),
+                ]);
+            }
+
+            return $payment;
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Supplier payment saved as draft.')]);
+
+        return to_route('supplier-payments.show', $payment);
+    }
+
+    public function show(SupplierPayment $supplierPayment): Response
+    {
+        $supplierPayment->load([
+            'supplier:id,code,name',
+            'paymentAccount:id,code,name',
+            'allocations.invoice:id,internal_invoice_number,supplier_invoice_number,due_date,status',
+            'journalEntry.lines.account:id,code,name',
+            'reversalJournalEntry:id,journal_number',
+            'createdBy:id,name',
+            'postedBy:id,name',
+            'reversedBy:id,name',
+        ]);
+
+        return Inertia::render('finance/supplier-payments/Show', [
+            'payment' => $this->detail($supplierPayment),
+            'currency' => config('accounting.base_currency'),
+        ]);
+    }
+
+    /**
+     * What one supplier still owes, invoice by invoice.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function outstandingFor(Supplier $supplier): array
+    {
+        return $this->payables->outstandingInvoices($supplier)
+            ->map(fn (SupplierInvoice $invoice): array => [
+                'id' => $invoice->id,
+                'internal_invoice_number' => $invoice->internal_invoice_number,
+                'supplier_invoice_number' => $invoice->supplier_invoice_number,
+                'invoice_date' => $invoice->invoice_date?->toDateString(),
+                'due_date' => $invoice->due_date?->toDateString(),
+                'total' => $this->payables->invoiceTotal($invoice),
+                'paid' => $this->payables->paidAmount($invoice),
+                'outstanding' => $this->payables->outstanding($invoice),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function summarise(SupplierPayment $payment): array
+    {
+        return [
+            'id' => $payment->id,
+            'payment_number' => $payment->payment_number,
+            'supplier_code' => $payment->supplier?->code,
+            'supplier_name' => $payment->supplier?->name,
+            'payment_date' => $payment->payment_date?->toDateString(),
+            'payment_account' => $payment->paymentAccount === null
+                ? null
+                : $payment->paymentAccount->code.' — '.$payment->paymentAccount->name,
+            'reference' => $payment->reference,
+            'amount' => $payment->amount,
+            'allocated' => $payment->allocatedTotal(),
+            'status' => $payment->status->value,
+            'status_label' => $payment->status->label(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function detail(SupplierPayment $payment): array
+    {
+        return array_merge($this->summarise($payment), [
+            'notes' => $payment->notes,
+            'created_by' => $payment->createdBy?->name,
+            'posted_by' => $payment->postedBy?->name,
+            'posted_at' => $payment->posted_at?->toDateTimeString(),
+            'reversed_by' => $payment->reversedBy?->name,
+            'reversed_at' => $payment->reversed_at?->toDateTimeString(),
+            'can_post' => $payment->status->canPost(),
+            'can_cancel' => $payment->status->canCancel(),
+            'can_reverse' => $payment->status->canReverse() && $payment->reversal_journal_entry_id === null,
+            'journal' => $payment->journalEntry === null ? null : [
+                'id' => $payment->journalEntry->id,
+                'journal_number' => $payment->journalEntry->journal_number,
+                'lines' => $payment->journalEntry->lines->map(fn ($line): array => [
+                    'account_code' => $line->account?->code,
+                    'account_name' => $line->account?->name,
+                    'debit' => $line->debit,
+                    'credit' => $line->credit,
+                ])->values(),
+            ],
+            'reversal_journal_number' => $payment->reversalJournalEntry?->journal_number,
+            'allocations' => $payment->allocations->map(fn ($allocation): array => [
+                'id' => $allocation->id,
+                'invoice_id' => $allocation->invoice?->id,
+                'internal_invoice_number' => $allocation->invoice?->internal_invoice_number,
+                'supplier_invoice_number' => $allocation->invoice?->supplier_invoice_number,
+                'due_date' => $allocation->invoice?->due_date?->toDateString(),
+                'invoice_status' => $allocation->invoice?->status->label(),
+                'amount' => $allocation->amount,
+            ])->values(),
+        ]);
+    }
+}

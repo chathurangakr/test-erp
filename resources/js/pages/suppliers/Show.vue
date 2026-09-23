@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { index } from '@/routes/suppliers';
 import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
-import type { Supplier } from '@/types';
+import { index as invoicesIndex } from '@/routes/supplier-invoices';
+import { index as paymentsIndex } from '@/routes/supplier-payments';
+import type { Supplier, SupplierPayablesSummary } from '@/types';
 
 defineProps<{
     supplier: Supplier;
@@ -17,6 +19,7 @@ defineProps<{
         goods_receipts: { id: number; grn_number: string; receipt_date: string | null; status_label: string }[];
         total_received_value: string;
     };
+    payables: SupplierPayablesSummary;
 }>();
 
 defineOptions({
@@ -199,5 +202,69 @@ function formatDate(value: string | null): string {
                 yet built.
             </p>
         </div>
+
+        <!-- Accounts payable -->
+        <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="text-sm font-medium">Accounts payable</h3>
+                <Link :href="`${invoicesIndex().url}?supplier_id=${supplier.id}`" class="text-xs hover:underline">
+                    All invoices
+                </Link>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                    <p class="text-muted-foreground text-xs font-medium">
+                        Outstanding ({{ payables.currency }})
+                    </p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ payables.outstanding }}</p>
+                </div>
+                <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                    <p class="text-muted-foreground text-xs font-medium">Overdue</p>
+                    <p
+                        class="mt-1 font-mono text-lg font-medium"
+                        :class="Number(payables.overdue) > 0 ? 'text-destructive' : ''"
+                    >
+                        {{ payables.overdue }}
+                    </p>
+                </div>
+            </div>
+
+            <div v-if="payables.invoices.length" class="mt-4">
+                <p class="text-muted-foreground text-xs font-medium">Recent invoices</p>
+                <ul class="mt-2 space-y-1 text-sm">
+                    <li v-for="invoice in payables.invoices" :key="invoice.id" class="flex justify-between gap-3">
+                        <Link :href="`${invoicesIndex().url}/${invoice.id}`" class="font-mono text-xs hover:underline">
+                            {{ invoice.internal_invoice_number }}
+                        </Link>
+                        <span class="text-muted-foreground text-xs">
+                            {{ invoice.invoice_date }} · {{ invoice.status_label }}
+                        </span>
+                        <span class="font-mono text-xs">{{ invoice.outstanding }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div v-if="payables.payments.length" class="mt-4">
+                <p class="text-muted-foreground text-xs font-medium">Recent payments</p>
+                <ul class="mt-2 space-y-1 text-sm">
+                    <li v-for="payment in payables.payments" :key="payment.id" class="flex justify-between gap-3">
+                        <Link :href="`${paymentsIndex().url}/${payment.id}`" class="font-mono text-xs hover:underline">
+                            {{ payment.payment_number }}
+                        </Link>
+                        <span class="text-muted-foreground text-xs">
+                            {{ payment.payment_date }} · {{ payment.status_label }}
+                        </span>
+                        <span class="font-mono text-xs">{{ payment.amount }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <p class="text-muted-foreground mt-4 text-xs">
+                Derived from posted invoices less the payments still allocated to them. A supplier
+                holds no balance column — this is computed every time it is shown.
+            </p>
+        </div>
+
     </div>
 </template>
