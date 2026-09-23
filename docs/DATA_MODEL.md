@@ -604,6 +604,61 @@ and stop counting.
 `accounting_settings` also gained **`trade_payables_account_id`**, seeded to 2110, so no AP
 action contains an account code.
 
+### 1.28 `sales_invoices` and `sales_invoice_lines`
+
+`sales_invoices`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `invoice_number` | string(50), **unique** | `SINV-YYYYMMDD-000001` |
+| `customer_id` | FK → `customers.id` | |
+| `invoice_date` / `due_date` | date | The due date defaults from `customers.credit_days` and stays editable |
+| `fiscal_period_id` | FK, nullable | Resolved at posting |
+| `customer_reference` | string(100), nullable | The customer's own order or reference |
+| `status` | string(30) | DRAFT / POSTED / PARTIALLY_PAID / PAID / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+| audit columns | | created / posted / reversed, each with user and timestamp |
+
+**No outstanding-balance column** and **no total column.** Both are derived — decision **S-3**.
+
+`sales_invoice_lines`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `sales_invoice_id` | FK | |
+| `delivery_line_id` | FK → `delivery_lines.id` | **Always set** — a line always bills delivered goods |
+| `product_id` | FK | Copied from the delivery line; resolves the revenue account |
+| `description` | string, nullable | |
+| `amount` | **`decimal(20,6)`** | Never exceeds the delivery line's remaining value |
+
+Indexed `(delivery_line_id, sales_invoice_id)` as `sil_delivery_invoice_index` — named
+explicitly because the generated name would exceed MariaDB's 64-character limit. There are
+**no tax lines**: VAT/SVAT is not modelled.
+
+### 1.29 `customer_receipts` and `customer_receipt_allocations`
+
+`customer_receipts`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `receipt_number` | string(50), **unique** | `REC-YYYYMMDD-000001` |
+| `customer_id` | FK → `customers.id` | |
+| `receipt_date` | date | |
+| `receipt_account_id` | FK → `accounts.id` | The cash or bank account received into |
+| `reference` | string(100), nullable | Cheque or transfer number |
+| `amount` | **`decimal(20,6)`** | |
+| `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
+| `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
+
+`customer_receipt_allocations` — `customer_receipt_id` + `sales_invoice_id` (unique together as
+`cra_receipt_invoice_unique`) + `amount`. Many-to-many on purpose: one receipt may settle
+several invoices, and one invoice may take several receipts. Allocations of a REVERSED receipt
+stay on the record and stop counting. The allocations must total the receipt exactly — there is
+no unallocated remainder, because customer advances are not modelled.
+
+`accounting_settings` also gained **`trade_receivables_account_id`**, seeded to 1210, so no AR
+action contains an account code.
+
 ## 2. Resolved decisions
 
 ### D-1 — `QTY` unit of measure — ✅ **RESOLVED**
@@ -942,6 +997,46 @@ match is validated, so concurrent invoices cannot both consume the same remainde
 The consequence is a pair of mutual blocks: an invoice cannot be reversed while a posted
 payment stands against it, and a receipt cannot be reversed once an invoice has matched it.
 Either alone would leave the ledger describing something that never happened.
+
+### S-3 — receivable balances are derived, never stored
+
+**Decision:** neither `sales_invoices` nor `customers` carries a balance, a total or a paid
+amount. An invoice's total is the sum of its lines; its outstanding is that total less the
+allocations of receipts that are still posted; a customer's outstanding is the sum across its
+invoices.
+
+**Why:** the same reason stock has no `current_stock` column and an account has no balance
+column. A stored balance is a second version of the truth that drifts the moment anything is
+reversed, and the reversal of a receipt is precisely the case where a stored figure would be
+left stale. Deriving it makes the critical invariant — Trade Receivables GL balance == total
+invoice outstanding — a consequence of the design rather than something to maintain.
+
+The status (POSTED / PARTIALLY_PAID / PAID) *is* stored, because it is a document state a user
+acts on, but it is only ever written by `RefreshSalesInvoiceStatus` from the derived balance —
+never typed, and never trusted as arithmetic.
+
+### S-4 — a sales invoice bills a delivery line, and never recalculates its value
+
+**Decision:** `sales_invoice_lines.delivery_line_id` is mandatory, and the billable amount is
+bounded by `delivery_lines.sales_value` less what has already been invoiced against it. AR
+never recomputes `quantity × unit_price`.
+
+**Why:** two reasons, one structural and one arithmetic.
+
+Structurally, an invoice that could bill anything would be a way to recognise revenue for goods
+that never left the factory. Tying every line to a delivery line means revenue can only ever
+follow a physical issue, and the unbilled-deliveries report is then a complete statement of
+what is still to bill.
+
+Arithmetically, `sales_value` was computed once when the delivery posted, honouring
+`pricing_basis`. On a line priced per KG for a dual-unit product — raw shell — the priced
+quantity is the secondary one. Re-deriving the value in AR would require knowing how many KG a
+NOS represents, and **there is no such conversion, by deliberate design** (see **P-10**). The
+delivery already decided the number; the invoice bills it unchanged.
+
+This makes AR deliberately asymmetric with AP, where the accrual *is* read back from the goods
+receipt's journal. The reason is simply that a delivery's journal holds cost of sales only — it
+recognises no revenue — so the journal has no sales figure to read.
 
 ## 3. Not yet designed — required future shape
 

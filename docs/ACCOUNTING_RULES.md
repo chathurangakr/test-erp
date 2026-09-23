@@ -430,3 +430,142 @@ Trade Payables general-ledger balance  ==  total invoice outstanding
 The aging report buckets outstanding amounts by how overdue they are — Current, 1-30, 31-60,
 61-90, 90+ — as of any date. A reversed invoice appears nowhere in it; a reversed payment
 stops reducing what is owed.
+
+---
+
+## 19. Reversal is an audit correction, not a credit note
+
+This distinction matters commercially and is easy to get wrong, so it is stated once here and
+enforced everywhere.
+
+**Reversing a sales invoice says the invoice should never have existed.** It is an audit
+correction — a keying error, the wrong customer, the wrong delivery, the wrong amount. It
+mirrors the original journal exactly, at the original amounts, and leaves both entries on the
+record for ever.
+
+**A credit note says the invoice was correct but the commercial position has changed** — goods
+came back, a discount was agreed after the fact, a quality allowance was granted. It is a new
+commercial document with its own date, its own reason and its own journal, and the original
+invoice remains valid.
+
+Credit notes, sales returns and allowances are **not built**. Do not use a reversal to stand in
+for one: it would remove revenue from the period the sale actually happened in and destroy the
+audit trail of the concession. When the factory needs them they will be a separate feature with
+their own documents.
+
+Practical consequence: **an invoice cannot be reversed once a posted receipt is allocated to
+it.** If money has been taken against an invoice, the invoice was real. Reverse the receipt
+first, or — when the commercial position has genuinely changed — wait for credit notes.
+
+---
+
+## 20. Accounts receivable — invoicing a delivery
+
+```
+Delivery           Dr Cost of Sales          Cr Inventory        ← Phase 2, no revenue
+Sales invoice      Dr Trade Receivables      Cr Sales Revenue    ← this phase
+Customer receipt   Dr Cash / Bank            Cr Trade Receivables ← this phase
+```
+
+A sales invoice line **always points at a delivery line**. Version 1 invoices delivered goods
+and nothing else — no service lines, no ad-hoc charges, no arbitrary product lines. If it was
+not delivered, it cannot be invoiced.
+
+### The revenue account is resolved, never chosen
+
+The user states the amount being billed. Where the credit lands is resolved by the system:
+
+```
+delivery line → product → product_account_mappings.revenue_account_id
+```
+
+No screen offers a revenue selector, and no request field can carry one. An unmapped product
+cannot be invoiced, exactly as it cannot move stock. **Trade Receivables** comes from
+`accounting_settings.trade_receivables_account_id` (seeded to 1210) and never appears on a
+line — it is the system's account, a control account that refuses manual posting.
+
+### Which deliveries are billable
+
+A delivery line may be invoiced only when **all** of these hold:
+
+1. the delivery is **POSTED** (not draft, cancelled or reversed);
+2. it belongs to the customer being invoiced;
+3. it carries a **posted operational journal** from Phase 2, not itself reversed;
+4. it has a **remaining** uninvoiced amount.
+
+Condition 3 rules out a delivery from **before the accounting cutover**. Such a delivery moved
+real stock but raised no cost of sales in the general ledger, so invoicing it would recognise
+revenue with no matching cost — an incomplete picture of the period. Historic deliveries are
+**not backfilled**; they stay as operational history and are simply not billable.
+
+### The billable amount comes from the delivery line, not a recalculation
+
+This is the one place AR is deliberately **asymmetric with AP**. A goods receipt's accrual is
+read back from its own journal, because the journal holds it. A delivery's journal holds only
+cost of sales — it deliberately recognises no revenue — so the authoritative sales figure is
+`delivery_lines.sales_value`, computed once when the delivery was posted.
+
+Nothing in AR recomputes `quantity × unit_price`. For a line priced per KG on a dual-unit
+product (raw shell), re-deriving the value would need a NOS↔KG conversion, and **no such
+conversion exists or may ever be introduced**. The delivery already decided the number; the
+invoice bills it.
+
+### Partial billing
+
+One delivery line may be billed across several invoices, and one invoice may bill lines from
+several deliveries — all belonging to the same customer.
+
+```
+remaining  =  delivery_lines.sales_value  −  sum of posted, non-reversed invoice lines against it
+```
+
+A line may not exceed its remaining amount. The check runs under a row lock at posting, and
+several lines on one invoice pointing at the same delivery line are counted together, so two
+concurrent invoices cannot together over-bill a delivery.
+
+### A delivery cannot be reversed once invoiced
+
+The mirror of §17's goods-receipt rule. If revenue has been recognised against a delivery,
+reversing the delivery would leave the ledger describing a sale whose goods never left. The
+error names the invoices that must be reversed first.
+
+---
+
+## 21. Customer receipts and AR balances
+
+A receipt is **always allocated to invoices** — Version 1 has no customer advances, deposits or
+on-account credits — so the allocations must total the receipt exactly. One receipt may settle
+several invoices, and one invoice may be settled by several receipts.
+
+A receipt recognises **no revenue** (the invoice already did) and touches **no inventory or cost
+of sales**. Its account must be an ordinary asset account — cash or bank — not a control
+account.
+
+**AR balances are derived, never stored.** An invoice's outstanding balance is its total less
+the allocations of receipts that are still **posted**; a customer has no receivable column and
+must never grow one. `credit_limit` and `credit_days` are agreed terms, not balances — the
+credit days merely suggest a due date, which stays editable.
+
+That is also what makes reversal clean: a reversed receipt's allocations stay on the record and
+simply stop counting, and each affected invoice's status
+(POSTED / PARTIALLY_PAID / PAID) is recalculated from the restored balance.
+
+**The third critical invariant:**
+
+```
+Trade Receivables general-ledger balance  ==  total sales invoice outstanding
+```
+
+It is asserted after posting an invoice, after a partial receipt, after a final receipt, after
+reversing a receipt and after reversing an invoice.
+
+**Revenue reconciles per journal, not globally.** Each system-generated invoice journal's
+revenue credits equal that invoice's lines. The *global* revenue balance is not claimed to equal
+sales invoices alone — a manual journal may legitimately credit a revenue account for something
+that is not a sales invoice.
+
+The aging report buckets outstanding amounts by how overdue they are — Current, 1-30, 31-60,
+61-90, 90+ — as of any date. A reversed invoice appears nowhere in it; a reversed receipt stops
+reducing what is owed. A separate unbilled-deliveries report shows the other side: posted
+deliveries whose value has not yet been invoiced, each UNBILLED, PARTIALLY_BILLED or
+FULLY_BILLED.

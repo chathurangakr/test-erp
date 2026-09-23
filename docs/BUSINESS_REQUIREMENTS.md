@@ -97,23 +97,28 @@ inventory transactions cannot be edited or deleted at all.
 
 ### 4.2 Planned, not started
 
-Accounts Payable, Accounts Receivable, customer
-payments, purchase and sales invoices, automatic journals from operational documents,
-VAT/SVAT, payroll, bank reconciliation, P&L and balance sheet, year-end closing, production expenses (labour / electricity / machine / fuel / overhead), the
-permanent joint-product costing method, role-based permissions, REST API for the Flutter
-mobile application.
+Credit notes, sales returns and allowances, customer advances and deposits, VAT/SVAT,
+payroll, bank reconciliation, P&L and balance sheet, year-end closing, multi-currency,
+production expenses (labour / electricity / machine / fuel / overhead), the permanent
+joint-product costing method, role-based permissions, REST API for the Flutter mobile
+application.
 
-**Production creates no accounting entries and adds no expenses.** Total input inventory
-value equals total output inventory value exactly. A test asserts no ledger, costing or
-overhead tables exist.
+**Production adds no expenses.** Total input inventory value equals total output inventory
+value exactly, and no labour, electricity, machine, fuel or overhead cost enters a product.
+Production does journal — `Dr output inventory / Cr input inventory` — but the journal only
+moves value between inventory accounts; it never creates any.
 
-**Sales creates no accounting entries.** A delivery moves stock and records operational
-profitability; nothing is receivable, posted to a ledger account, or tracked as a customer
-balance. A test asserts no accounts, journals, receivable or payment tables exist.
+**A delivery journals cost of sales, not revenue.** Revenue and the receivable are recognised
+by the sales invoice, which is a separate document. A delivery that is never invoiced
+therefore shows cost with no matching revenue — that is correct, and the unbilled-deliveries
+report exists to surface it.
 
-**Purchasing creates no accounting entries.** A goods receipt moves stock and records its
-landed cost; nothing is owed, posted to a ledger account, or tracked as a payable. A test
-asserts no accounts, journals or payable tables exist.
+**A goods receipt journals an accrual, not a payable.** `Dr Inventory / Cr Goods Received Not
+Invoiced`. What is owed, and to whom, is established by the supplier invoice.
+
+**All operational journals are governed by the accounting cutover date.** While
+`accounting_settings.operational_accounting_start_date` is NULL, no operational document
+journals anything at all.
 
 Nothing seeds stock or purchases — real inventory is zero until a goods receipt is posted.
 

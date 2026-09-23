@@ -21,6 +21,10 @@ import {
     Banknote,
     CalendarClock,
     FileCheck2,
+    ReceiptText,
+    HandCoins,
+    Hourglass,
+    PackageSearch,
     Wallet,
     Receipt,
     ScrollText,
@@ -64,6 +68,10 @@ import { index as supplierInvoicesIndex } from '@/routes/supplier-invoices';
 import { index as supplierPaymentsIndex } from '@/routes/supplier-payments';
 import { index as apAgingIndex } from '@/routes/ap-aging';
 import { index as grniReconciliationIndex } from '@/routes/grni-reconciliation';
+import { index as salesInvoicesIndex } from '@/routes/sales-invoices';
+import { index as customerReceiptsIndex } from '@/routes/customer-receipts';
+import { index as arAgingIndex } from '@/routes/ar-aging';
+import { index as unbilledDeliveriesIndex } from '@/routes/unbilled-deliveries';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -218,6 +226,29 @@ const payablesNavItems: NavItem[] = [
     },
 ];
 
+const receivablesNavItems: NavItem[] = [
+    {
+        title: 'Sales Invoices',
+        href: salesInvoicesIndex(),
+        icon: ReceiptText,
+    },
+    {
+        title: 'Customer Receipts',
+        href: customerReceiptsIndex(),
+        icon: HandCoins,
+    },
+    {
+        title: 'AR Aging',
+        href: arAgingIndex(),
+        icon: Hourglass,
+    },
+    {
+        title: 'Unbilled Deliveries',
+        href: unbilledDeliveriesIndex(),
+        icon: PackageSearch,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -255,6 +286,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="productionNavItems" label="Production" />
             <NavMain :items="financeNavItems" label="Finance" />
             <NavMain :items="payablesNavItems" label="Accounts payable" />
+            <NavMain :items="receivablesNavItems" label="Accounts receivable" />
         </SidebarContent>
 
         <SidebarFooter>

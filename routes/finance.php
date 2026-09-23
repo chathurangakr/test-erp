@@ -13,6 +13,12 @@ use App\Http\Controllers\Payables\SupplierInvoiceActionController;
 use App\Http\Controllers\Payables\SupplierInvoiceController;
 use App\Http\Controllers\Payables\SupplierPaymentActionController;
 use App\Http\Controllers\Payables\SupplierPaymentController;
+use App\Http\Controllers\Receivables\ArAgingController;
+use App\Http\Controllers\Receivables\CustomerReceiptActionController;
+use App\Http\Controllers\Receivables\CustomerReceiptController;
+use App\Http\Controllers\Receivables\SalesInvoiceActionController;
+use App\Http\Controllers\Receivables\SalesInvoiceController;
+use App\Http\Controllers\Receivables\UnbilledDeliveryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,6 +83,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finance/ap-aging', [ApAgingController::class, 'index'])->name('ap-aging.index');
     Route::get('finance/grni-reconciliation', [GrniReconciliationController::class, 'index'])
         ->name('grni-reconciliation.index');
+
+    // ------------------------------------------------------- accounts receivable
+    Route::resource('finance/sales-invoices', SalesInvoiceController::class)
+        ->parameters(['sales-invoices' => 'sales_invoice'])
+        ->names('sales-invoices')
+        ->except(['destroy']);
+
+    Route::patch('finance/sales-invoices/{sales_invoice}/post', [SalesInvoiceActionController::class, 'post'])
+        ->name('sales-invoices.post');
+    Route::patch('finance/sales-invoices/{sales_invoice}/reverse', [SalesInvoiceActionController::class, 'reverse'])
+        ->name('sales-invoices.reverse');
+    Route::patch('finance/sales-invoices/{sales_invoice}/cancel', [SalesInvoiceActionController::class, 'cancel'])
+        ->name('sales-invoices.cancel');
+
+    Route::resource('finance/customer-receipts', CustomerReceiptController::class)
+        ->parameters(['customer-receipts' => 'customer_receipt'])
+        ->names('customer-receipts')
+        ->only(['index', 'create', 'store', 'show']);
+
+    Route::patch('finance/customer-receipts/{customer_receipt}/post', [CustomerReceiptActionController::class, 'post'])
+        ->name('customer-receipts.post');
+    Route::patch('finance/customer-receipts/{customer_receipt}/reverse', [CustomerReceiptActionController::class, 'reverse'])
+        ->name('customer-receipts.reverse');
+    Route::patch('finance/customer-receipts/{customer_receipt}/cancel', [CustomerReceiptActionController::class, 'cancel'])
+        ->name('customer-receipts.cancel');
+
+    Route::get('finance/ar-aging', [ArAgingController::class, 'index'])->name('ar-aging.index');
+    Route::get('finance/unbilled-deliveries', [UnbilledDeliveryController::class, 'index'])
+        ->name('unbilled-deliveries.index');
 
     Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
         ->name('accounting-setup.index');

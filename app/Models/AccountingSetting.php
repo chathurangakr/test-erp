@@ -21,6 +21,7 @@ class AccountingSetting extends Model
         'operational_accounting_start_date',
         'grni_account_id',
         'trade_payables_account_id',
+        'trade_receivables_account_id',
         'updated_by',
     ];
 
@@ -65,6 +66,14 @@ class AccountingSetting extends Model
     public function tradePayablesAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'trade_payables_account_id');
+    }
+
+    /**
+     * @return BelongsTo<Account, $this>
+     */
+    public function tradeReceivablesAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'trade_receivables_account_id');
     }
 
     public function isOperationalAccountingEnabled(): bool

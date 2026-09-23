@@ -20,7 +20,8 @@ use RuntimeException;
  * classified would put guessed figures permanently into the books. Such a product simply
  * cannot post once accounting is switched on, and shows as unmapped in Accounting Setup.
  *
- * It also points the settings at the GRNI and Trade Payables control accounts, and **never
+ * It also points the settings at the GRNI, Trade Payables and Trade Receivables control
+ * accounts, and **never
  * invents a cutover date** — switching accounting on is an accountant's decision, not a
  * seeder's.
  *
@@ -49,6 +50,8 @@ class ProductAccountMappingSeeder extends Seeder
     private const GRNI_CODE = '2120';
 
     private const TRADE_PAYABLES_CODE = '2110';
+
+    private const TRADE_RECEIVABLES_CODE = '1210';
 
     public function run(): void
     {
@@ -85,22 +88,27 @@ class ProductAccountMappingSeeder extends Seeder
         $this->configureControlAccounts(
             $accounts->get(self::GRNI_CODE),
             $accounts->get(self::TRADE_PAYABLES_CODE),
+            $accounts->get(self::TRADE_RECEIVABLES_CODE),
         );
     }
 
     /**
      * Point the settings row at the control accounts, leaving the cutover date alone.
      */
-    private function configureControlAccounts(?int $grniAccountId, ?int $tradePayablesAccountId): void
-    {
-        if ($grniAccountId === null && $tradePayablesAccountId === null) {
-            return;
-        }
-
+    private function configureControlAccounts(
+        ?int $grniAccountId,
+        ?int $tradePayablesAccountId,
+        ?int $tradeReceivablesAccountId,
+    ): void {
         $attributes = array_filter([
             'grni_account_id' => $grniAccountId,
             'trade_payables_account_id' => $tradePayablesAccountId,
+            'trade_receivables_account_id' => $tradeReceivablesAccountId,
         ], fn (?int $id): bool => $id !== null);
+
+        if ($attributes === []) {
+            return;
+        }
 
         $settings = AccountingSetting::current();
 

@@ -57,6 +57,15 @@ class UpdateAccountingSettings
                 );
             }
 
+            if (array_key_exists('trade_receivables_account_id', $attributes)) {
+                $settings->trade_receivables_account_id = $this->validAccountId(
+                    $attributes['trade_receivables_account_id'],
+                    'trade_receivables_account_id',
+                    __('Trade Receivables'),
+                    AccountType::Asset,
+                );
+            }
+
             $settings->updated_by = $userId ?? auth()->id();
             $settings->save();
 
@@ -93,9 +102,17 @@ class UpdateAccountingSettings
     }
 
     /**
-     * Both control accounts this module configures must be active liabilities.
+     * The payables-side control accounts must be active liabilities.
      */
     private function validLiabilityAccountId(?int $accountId, string $field, string $subject): ?int
+    {
+        return $this->validAccountId($accountId, $field, $subject, AccountType::Liability);
+    }
+
+    /**
+     * A configured control account must exist, be active, and be the right class.
+     */
+    private function validAccountId(?int $accountId, string $field, string $subject, AccountType $expected): ?int
     {
         if ($accountId === null) {
             return null;
@@ -115,10 +132,11 @@ class UpdateAccountingSettings
             ]);
         }
 
-        if ($account->account_type !== AccountType::Liability) {
+        if ($account->account_type !== $expected) {
             throw ValidationException::withMessages([
-                $field => __(':subject must be a liability account; :account is a :type account.', [
+                $field => __(':subject must be a :expected account; :account is a :type account.', [
                     'subject' => $subject,
+                    'expected' => $expected->label(),
                     'account' => $account->code,
                     'type' => $account->account_type->label(),
                 ]),

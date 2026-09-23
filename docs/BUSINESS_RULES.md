@@ -971,9 +971,9 @@ sets and a seeder never invents. While it is unset nothing changes; on or after 
   nothing — not the landed-cost allocation, not the 85/15, 30/30/40 or 75/25 production
   splits. It records what the ledger already holds, which is why debits and credits agree
   exactly and a control account reconciles to stock.
-- **A delivery recognises no revenue.** It is a physical issue. Revenue and receivables
-  belong to the sales invoice, which is not built — so GRNI and cost of sales accumulate
-  without matching entries for now.
+- **A delivery recognises no revenue.** It is a physical issue. Revenue and the receivable
+  belong to the sales invoice — see §24. Until a delivery is invoiced its cost of sales has
+  no matching revenue, which is why the unbilled-deliveries report exists.
 - **Accounting and stock commit together.** An unmapped product, a closed period or no open
   period fails the whole posting: no stock, no lot, no journal, document still a draft.
 - **A product with no account mapping cannot move stock.** It is refused, not guessed at.
@@ -1012,3 +1012,46 @@ Supplier payment   Dr Trade Payables         Cr Cash / Bank
 - **No VAT and no foreign currency.** Amounts are tax-unmodelled and in LKR.
 
 Full detail in `docs/ACCOUNTING_RULES.md` §16-§18.
+
+---
+
+## 24. Accounts receivable
+
+```
+Delivery           Dr Cost of Sales          Cr Inventory          (no revenue)
+Sales invoice      Dr Trade Receivables      Cr Sales Revenue
+Customer receipt   Dr Cash / Bank            Cr Trade Receivables
+```
+
+- **A delivery is a physical issue; the invoice is the sale.** Stock and cost leave when the
+  delivery posts. Revenue and the debt are recognised only when the invoice posts.
+- **A sales invoice bills delivered goods only.** Every line points at a delivery line. There
+  are no service lines, ad-hoc charges or arbitrary product lines in Version 1.
+- **The billed amount comes from the delivery line's `sales_value`**, never recalculated from
+  quantity × price. For raw shell sold by weight this matters: re-deriving the figure would
+  need a NOS↔KG conversion, and **no such conversion exists or may ever be added**.
+- **The revenue account is resolved from the product's mapping, never chosen by the user.** No
+  screen offers a revenue selector. An unmapped product cannot be invoiced.
+- **A delivery from before the accounting cutover cannot be invoiced.** It raised no cost of
+  sales in the ledger, so billing it would show revenue with no matching cost. Historic
+  deliveries are not backfilled.
+- **Partial billing works both ways.** One delivery line may be billed across several invoices;
+  one invoice may bill several deliveries — all for the same customer. A line can never exceed
+  what the delivery has left uninvoiced.
+- **An invoice cannot be reversed while a posted receipt is allocated to it**, and **a delivery
+  cannot be reversed once a posted invoice has billed it**. Each error names what has to be
+  reversed first.
+- **Receipts are always allocated to invoices** — no customer advances or deposits in Version 1
+  — and the allocations must total the receipt exactly. One receipt may settle several
+  invoices; one invoice may take several receipts.
+- **Balances are derived, never stored.** A customer has no receivable column; an invoice's
+  outstanding and its PARTIALLY_PAID / PAID status follow from the receipts allocated to it.
+  `credit_limit` and `credit_days` are agreed terms — the credit days suggest a due date, which
+  the user may change.
+- **Reversal is an audit correction, not a credit note.** Reversing says the invoice should
+  never have existed. Returns, discounts agreed after the fact and quality allowances are
+  commercial events needing credit notes, which are **not built** — do not use a reversal in
+  their place.
+- **No VAT and no foreign currency.** Amounts are tax-unmodelled and in LKR.
+
+Full detail in `docs/ACCOUNTING_RULES.md` §19-§21.

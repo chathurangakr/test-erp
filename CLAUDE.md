@@ -188,8 +188,9 @@ The inventory engine exists and is tested. These rules are permanent:
   one. See `docs/DATA_MODEL.md` S-2.
 - **Gross profit and margin are computed, never stored**, so they cannot drift. Zero sales
   value yields a zero margin, never a division error.
-- **Sales creates no accounting entries** — no receivables, no customer balances, no
-  payments, no journals. A test asserts those tables do not exist.
+- **A delivery journals cost of sales only, never revenue.** Revenue and the receivable
+  belong to the sales invoice — see the Accounting rules section. A sales order still
+  journals nothing at all.
 - **Document numbers:** `SO-YYYYMMDD-000001`, `DN-YYYYMMDD-000001`.
 
 ---
@@ -268,7 +269,7 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Accounting rules (Finance Phase 1 — the foundation is implemented)
+## Accounting rules (Finance Phases 1-4 — foundation, inventory, AP and AR implemented)
 
 - Use **double-entry accounting**. Every posted journal satisfies **Total Debit = Total
   Credit**, exactly, enforced by `App\Actions\Accounting\PostJournalEntry` inside one
@@ -305,10 +306,10 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Event → journal:** GRN `Dr inventory / Cr GRNI` · delivery `Dr cost of sales / Cr
   inventory` · production `Dr output inventory / Cr input inventory` · **warehouse transfer
   posts nothing** (same product, same value, same account).
-- **A delivery recognises NO revenue.** It is a physical issue; revenue and receivables
-  belong to the sales invoice, which is not built — so cost of sales accumulates without
-  matching revenue, and that is expected. GRNI no longer accumulates unchecked: supplier
-  invoices clear it, and what remains is reported and reconciled.
+- **A delivery recognises NO revenue.** It is a physical issue; revenue and the debt belong
+  to the sales invoice. Neither accrual accumulates unchecked any more: supplier invoices
+  clear GRNI, sales invoices bill deliveries, and what remains of each is reported and
+  reconciled.
 - **Account codes live only in `ChartOfAccountsSeeder` and `ProductAccountMappingSeeder`.**
   Everything resolves accounts through `product_account_mappings`. Never write an account
   number into a posting action.
@@ -336,7 +337,41 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Two invariants must always hold:** GRNI balance == uninvoiced accrual, and Trade Payables
   balance == total invoice outstanding. See `docs/ACCOUNTING_RULES.md` §16-§18.
 - **No VAT, no foreign currency.** Amounts are tax-unmodelled and LKR only.
-- **Do not start Accounts Receivable** without instruction.
+- **Accounts receivable is implemented.** Sales invoice `Dr Trade Receivables / Cr Sales
+  Revenue`; customer receipt `Dr Cash or Bank / Cr Trade Receivables`. Trade Receivables
+  comes from `accounting_settings` — never write 1210 into AR logic.
+- **Every invoice line bills a DELIVERY LINE.** Version 1 invoices delivered goods and
+  nothing else — no service lines, no ad-hoc charges. If it was not delivered, it cannot be
+  invoiced.
+- **The revenue account is resolved from the product's mapping, never chosen.** No screen
+  offers a revenue selector and no request field carries one. An unmapped product cannot be
+  invoiced, exactly as it cannot move stock.
+- **The billed amount is the delivery line's `sales_value`** — never recalculated from
+  quantity × price. Re-deriving it for a dual-unit product priced per KG would need a
+  NOS↔KG conversion, and **no such conversion exists or may ever be added**. See
+  `docs/DATA_MODEL.md` S-4.
+- **A pre-cutover or reversed delivery cannot be invoiced.** It raised no cost of sales in
+  the ledger, so billing it would show revenue with no matching cost. Do not backfill
+  historic deliveries.
+- **Partial billing works both ways** — one delivery line across several invoices, one
+  invoice across several deliveries of the same customer — capped at the remaining amount
+  under a row lock.
+- **Two more mutual blocks:** an invoice cannot be reversed while a posted receipt is
+  allocated to it, and a delivery cannot be reversed once a posted invoice has billed it.
+- **Reversal is an audit correction, NOT a credit note.** Reversing says the invoice should
+  never have existed. Returns, post-hoc discounts and quality allowances are commercial
+  events needing credit notes, which are **not built** — never use a reversal in their
+  place. See `docs/ACCOUNTING_RULES.md` §19.
+- **Receipts are always allocated to invoices** — no customer advances, deposits or
+  on-account credits — and the allocations must total the receipt exactly.
+- **AR balances are derived, never stored.** A customer has no receivable column.
+  `credit_limit` and `credit_days` are agreed terms; the credit days only suggest a due
+  date, which stays editable.
+- **The third invariant:** Trade Receivables balance == total sales invoice outstanding.
+  Revenue reconciles **per invoice journal**, not globally — a manual journal may legitimately
+  credit revenue. See `docs/ACCOUNTING_RULES.md` §20-§21.
+- **Do not start credit notes, sales returns, VAT/SVAT or bank reconciliation** without
+  instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
 
@@ -443,10 +478,14 @@ trial balance), and **inventory accounting integration** (goods receipts, delive
 three production types generating journals behind a configurable cutover date, with
 product-to-account mappings and a GRNI accrual), and **accounts payable** (supplier invoices
 clearing that accrual — partially, and from several suppliers per receipt — direct expense
-invoices, supplier payments allocated to invoices, AP aging and GRNI reconciliation).
+invoices, supplier payments allocated to invoices, AP aging and GRNI reconciliation), and
+**accounts receivable** (sales invoices billing delivered goods at the delivery's own
+authoritative value, revenue resolved through product mappings, partial billing in both
+directions, customer receipts allocated to invoices, AR aging and an unbilled-deliveries
+report).
 
-**Not yet started — do not begin without instruction:** Accounts Receivable, customer
-receipts, sales invoices, revenue recognition, production expenses, VAT/SVAT, payroll, bank
+**Not yet started — do not begin without instruction:** credit notes, sales returns and
+allowances, customer advances and deposits, production expenses, VAT/SVAT, payroll, bank
 reconciliation, P&L and balance sheet, year-end closing, the permanent joint-product costing
 method, production planning, BOM editor, maintenance, role-based permissions, REST API.
 

@@ -7,8 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\StoreCustomerRequest;
 use App\Http\Requests\Customers\UpdateCustomerRequest;
 use App\Models\Customer;
+use App\Models\CustomerReceipt;
 use App\Models\Delivery;
+use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
+use App\Services\Accounting\AccountsReceivableService;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,11 +21,13 @@ use Inertia\Response;
 /**
  * Customer master.
  *
- * One customer covers every product the factory sells. Balances and receivables are
- * deliberately not implemented here — they belong to the finance module.
+ * One customer covers every product the factory sells. What a customer owes is shown
+ * here but never stored here — it is derived from posted invoices and receipts.
  */
 class CustomerController extends Controller
 {
+    public function __construct(private readonly AccountsReceivableService $receivables) {}
+
     private const PER_PAGE = 15;
 
     public function index(Request $request): Response
@@ -66,14 +71,75 @@ class CustomerController extends Controller
         return Inertia::render('customers/Show', [
             'customer' => $customer,
             'salesHistory' => $this->salesHistory($customer),
+            'receivables' => $this->receivablesSummary($customer),
         ]);
+    }
+
+    /**
+     * What this customer owes, derived from posted invoices and receipts.
+     *
+     * Deliberately NOT stored on the customer: a master record holds no balance, and this
+     * figure is computed from the documents every time it is asked for. `credit_limit` is
+     * an agreed term, not a balance.
+     *
+     * @return array<string, mixed>
+     */
+    private function receivablesSummary(Customer $customer): array
+    {
+        $invoices = SalesInvoice::query()
+            ->where('customer_id', $customer->id)
+            ->with('lines')
+            ->orderByDesc('invoice_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (SalesInvoice $invoice): array => [
+                'id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'invoice_date' => $invoice->invoice_date?->toDateString(),
+                'due_date' => $invoice->due_date?->toDateString(),
+                'status_label' => $invoice->status->label(),
+                'total' => $this->receivables->invoiceTotal($invoice),
+                'outstanding' => $this->receivables->outstanding($invoice),
+            ]);
+
+        $receipts = CustomerReceipt::query()
+            ->where('customer_id', $customer->id)
+            ->orderByDesc('receipt_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (CustomerReceipt $receipt): array => [
+                'id' => $receipt->id,
+                'receipt_number' => $receipt->receipt_number,
+                'receipt_date' => $receipt->receipt_date?->toDateString(),
+                'status_label' => $receipt->status->label(),
+                'amount' => $receipt->amount,
+            ]);
+
+        // Overdue is what is outstanding on invoices already past their due date.
+        $overdue = DecimalMath::zero();
+
+        foreach ($this->receivables->outstandingInvoices($customer) as $invoice) {
+            if ($invoice->due_date?->isBefore(now()->startOfDay()) === true) {
+                $overdue = DecimalMath::add($overdue, $this->receivables->outstanding($invoice));
+            }
+        }
+
+        return [
+            'outstanding' => $this->receivables->customerOutstanding($customer),
+            'overdue' => DecimalMath::cost($overdue),
+            'currency' => config('accounting.base_currency'),
+            'invoices' => $invoices,
+            'receipts' => $receipts,
+        ];
     }
 
     /**
      * Recent selling activity for this customer.
      *
-     * Deliberately NOT a receivable balance: amounts owed belong to the finance module and
-     * must be derived from posted transactions there, never stored on the customer.
+     * Physical selling activity only. What the customer owes is a separate, derived
+     * figure — see receivablesSummary().
      *
      * @return array<string, mixed>
      */

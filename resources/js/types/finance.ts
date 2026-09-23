@@ -380,3 +380,189 @@ export type SupplierPayablesSummary = {
         amount: string;
     }[];
 };
+
+/* ------------------------------------------------------- accounts receivable */
+
+export type SalesInvoiceRow = {
+    id: number;
+    invoice_number: string;
+    customer_code: string | null;
+    customer_name: string | null;
+    invoice_date: string | null;
+    due_date: string | null;
+    customer_reference: string | null;
+    status: string;
+    status_label: string;
+    total: string;
+    received: string;
+    outstanding: string;
+    is_overdue: boolean;
+};
+
+export type SalesInvoiceLineRow = {
+    id: number;
+    delivery_line_id: number;
+    delivery_id: number | null;
+    delivery_number: string | null;
+    delivery_date: string | null;
+    product_code: string | null;
+    product_name: string | null;
+    delivered_value: string | null;
+    description: string | null;
+    amount: string;
+};
+
+export type SalesInvoiceDetail = SalesInvoiceRow & {
+    description: string | null;
+    created_by: string | null;
+    posted_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_post: boolean;
+    can_edit: boolean;
+    can_cancel: boolean;
+    can_reverse: boolean;
+    journal: JournalPreview;
+    reversal_journal_number: string | null;
+    lines: SalesInvoiceLineRow[];
+    receipts: {
+        id: number;
+        receipt_id: number | null;
+        receipt_number: string | null;
+        receipt_date: string | null;
+        status: string | null;
+        status_label: string | null;
+        amount: string;
+    }[];
+};
+
+export type BillableDeliveryLine = {
+    delivery_line_id: number;
+    delivery_id: number;
+    delivery_number: string;
+    delivery_date: string | null;
+    product_id: number;
+    product_code: string | null;
+    product_name: string | null;
+    original_value: string;
+    billed_amount: string;
+    remaining_amount: string;
+};
+
+export type SalesInvoiceFormValues = {
+    id?: number;
+    invoice_number?: string;
+    customer_id: number | null;
+    invoice_date: string | null;
+    due_date: string | null;
+    customer_reference: string | null;
+    description: string | null;
+    lines: {
+        delivery_line_id: number;
+        description: string | null;
+        amount: string;
+    }[];
+};
+
+export type CustomerReceiptRow = {
+    id: number;
+    receipt_number: string;
+    customer_code: string | null;
+    customer_name: string | null;
+    receipt_date: string | null;
+    receipt_account: string | null;
+    reference: string | null;
+    amount: string;
+    allocated: string;
+    status: string;
+    status_label: string;
+};
+
+export type CustomerReceiptDetail = CustomerReceiptRow & {
+    notes: string | null;
+    created_by: string | null;
+    posted_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_post: boolean;
+    can_cancel: boolean;
+    can_reverse: boolean;
+    journal: JournalPreview;
+    reversal_journal_number: string | null;
+    allocations: {
+        id: number;
+        invoice_id: number | null;
+        invoice_number: string | null;
+        due_date: string | null;
+        invoice_status: string | null;
+        amount: string;
+    }[];
+};
+
+export type OutstandingSalesInvoice = {
+    id: number;
+    invoice_number: string;
+    customer_reference: string | null;
+    invoice_date: string | null;
+    due_date: string | null;
+    total: string;
+    received: string;
+    outstanding: string;
+};
+
+export type ArAgingReport = {
+    rows: {
+        customer_id: number;
+        customer_code: string | null;
+        customer_name: string | null;
+        current: string;
+        days_1_30: string;
+        days_31_60: string;
+        days_61_90: string;
+        days_90_plus: string;
+        total: string;
+    }[];
+    totals: Record<string, string>;
+    as_of: string;
+};
+
+export type UnbilledDeliveryReport = {
+    rows: {
+        delivery_id: number;
+        delivery_number: string;
+        delivery_date: string | null;
+        customer_code: string | null;
+        customer_name: string | null;
+        sales_value: string;
+        billed_amount: string;
+        remaining_amount: string;
+        status: string;
+    }[];
+    value_total: string;
+    billed_total: string;
+    remaining_total: string;
+};
+
+export type CustomerReceivablesSummary = {
+    outstanding: string;
+    overdue: string;
+    currency: string;
+    invoices: {
+        id: number;
+        invoice_number: string;
+        invoice_date: string | null;
+        due_date: string | null;
+        status_label: string;
+        total: string;
+        outstanding: string;
+    }[];
+    receipts: {
+        id: number;
+        receipt_number: string;
+        receipt_date: string | null;
+        status_label: string;
+        amount: string;
+    }[];
+};

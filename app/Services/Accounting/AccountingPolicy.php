@@ -127,6 +127,58 @@ class AccountingPolicy
     }
 
     /**
+     * Trade Receivables — what customers owe once their invoices are recognised.
+     *
+     * A control account, so only a sourced (system) journal may reach it.
+     */
+    public function tradeReceivablesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->tradeReceivablesAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'trade_receivables_account_id' => __('No Trade Receivables account is configured. Set one in Accounting Setup before invoicing customers.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Asset, __('Trade Receivables'));
+
+        return $account;
+    }
+
+    /**
+     * The revenue account a product's sales are recognised in.
+     */
+    public function revenueAccountFor(Product $product): Account
+    {
+        return $this->mappedAccount($product, 'revenue', AccountType::Revenue);
+    }
+
+    /**
+     * A cash or bank account a customer receipt may be banked into.
+     */
+    public function assertReceiptAccount(Account $account): void
+    {
+        $this->assertUsable($account, AccountType::Asset, __('a customer receipt'));
+
+        if ($account->is_control_account) {
+            throw ValidationException::withMessages([
+                'receipt_account_id' => __('Account :account is a control account and cannot receive a customer payment directly.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+
+        if (! $account->allow_manual_posting) {
+            throw ValidationException::withMessages([
+                'receipt_account_id' => __('Account :account is not a cash or bank account.', [
+                    'account' => $account->code,
+                ]),
+            ]);
+        }
+    }
+
+    /**
      * An account a supplier invoice may charge a direct expense to.
      *
      * Restricted to ordinary expense accounts: a direct-expense line must never be a way to
@@ -190,7 +242,11 @@ class AccountingPolicy
             ]);
         }
 
-        $account = $kind === 'inventory' ? $mapping->inventoryAccount : $mapping->cogsAccount;
+        $account = match ($kind) {
+            'inventory' => $mapping->inventoryAccount,
+            'revenue' => $mapping->revenueAccount,
+            default => $mapping->cogsAccount,
+        };
 
         if ($account === null) {
             throw ValidationException::withMessages([

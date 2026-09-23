@@ -17,6 +17,7 @@ use App\Enums\PricingBasis;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Models\Customer;
+use App\Models\CustomerReceipt;
 use App\Models\Delivery;
 use App\Models\DeliveryLine;
 use App\Models\GoodsReceipt;
@@ -32,6 +33,7 @@ use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
+use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
 use App\Models\Supplier;
@@ -1108,7 +1110,8 @@ class FactoryWorkflowIntegrationTest extends TestCase
         foreach ([
             'journals', 'journal_lines', 'general_ledger', 'ledger_accounts',
             'payables', 'receivables', 'payments', 'customer_payments',
-            'customer_invoices', 'sales_invoices', 'production_costs', 'labour_costs', 'overheads',
+            'credit_notes', 'sales_returns', 'tax_rates', 'vat_returns',
+            'production_costs', 'labour_costs', 'overheads',
         ] as $table) {
             $this->assertFalse(
                 Schema::hasTable($table),
@@ -1116,12 +1119,14 @@ class FactoryWorkflowIntegrationTest extends TestCase
             );
         }
 
-        // The accounting engine and accounts payable both exist, but this scenario runs with
-        // no accounting cutover set, so nothing operational reaches the books — and nothing
-        // operational ever creates a supplier invoice or payment on its own.
+        // The accounting engine, payables and receivables all exist, but this scenario runs
+        // with no accounting cutover set, so nothing operational reaches the books — and no
+        // operational document ever raises an invoice, payment or receipt on its own.
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
         $this->assertSame(0, SupplierInvoice::count());
         $this->assertSame(0, SupplierPayment::count());
+        $this->assertSame(0, SalesInvoice::count());
+        $this->assertSame(0, CustomerReceipt::count());
     }
 }

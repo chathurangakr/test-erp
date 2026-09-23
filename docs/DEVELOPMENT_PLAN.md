@@ -295,15 +295,41 @@ Supplier invoices clearing the goods-received accrual, and the payments that set
 - [x] 58 new tests asserting the two critical invariants throughout: GRNI balance ==
       uninvoiced accrual, Trade Payables balance == total outstanding
 
-**Deliberately not implemented:** sales invoices, receivables, customer receipts, revenue
-recognition, VAT/SVAT, multi-currency, bank reconciliation, payroll, year-end closing.
+**Deliberately not implemented:** VAT/SVAT, multi-currency, bank reconciliation, payroll,
+year-end closing.
 
 **Still open:** the permanent purchase-price variance policy (`ACCOUNTING_RULES.md` §16).
 
-## Phase 12 — Finance 4: accounts receivable (not started)
+## Phase 12 — Finance 4: accounts receivable ✅ COMPLETE
 
-Sales invoices (`Dr Trade Receivables / Cr Revenue`) and customer receipts.
-**Blocked on:** invoice document design, tax scope.
+Sales invoices recognising revenue against delivered goods, and the receipts that settle them.
+
+- [x] `sales_invoices`, `sales_invoice_lines`, `customer_receipts`,
+      `customer_receipt_allocations`, plus `trade_receivables_account_id` on the settings —
+      five forward-only migrations
+- [x] Every invoice line bills a **delivery line**; the revenue account is resolved through the
+      product's mapping and never offered as a choice
+- [x] The billable amount is the delivery line's `sales_value`, never recalculated — so dual-unit
+      raw shell needs no NOS↔KG conversion
+- [x] **Partial billing both ways** — one delivery across many invoices, one invoice across many
+      deliveries, capped at the remainder and locked against concurrent over-billing
+- [x] Pre-cutover and reversed deliveries are unbillable; no historic data is backfilled
+- [x] `SalesBillingReconciliationService` and `AccountsReceivableService` — every figure derived,
+      nothing stored
+- [x] Receipts allocated to invoices (no advances), invoice status derived from what is still
+      owed, aging bucketed by how overdue
+- [x] Mutual reversal blocks: invoice blocked while receipted, delivery blocked while invoiced
+- [x] Screens: sales invoices, customer receipts, AR aging, unbilled deliveries, and an AR panel
+      on Customer Show
+- [x] 57 new tests asserting the critical invariant throughout: Trade Receivables balance ==
+      total invoice outstanding, and revenue reconciled per invoice journal
+
+**Deliberately not implemented:** credit notes, sales returns, allowances, customer advances and
+deposits, VAT/SVAT, multi-currency, bank reconciliation, payroll, production overhead
+accounting, year-end closing.
+
+**Still open:** credit notes are a separate commercial feature — reversal is an audit correction
+and must not be used in their place (`ACCOUNTING_RULES.md` §19).
 
 ## Phase 13 — Permissions (not started)
 

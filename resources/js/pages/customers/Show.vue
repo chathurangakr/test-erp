@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { index } from '@/routes/customers';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
-import type { Customer } from '@/types';
+import { index as invoicesIndex } from '@/routes/sales-invoices';
+import { index as receiptsIndex } from '@/routes/customer-receipts';
+import type { Customer, CustomerReceivablesSummary } from '@/types';
 
 defineProps<{
     customer: Customer;
@@ -17,6 +19,7 @@ defineProps<{
         deliveries: { id: number; delivery_number: string; delivery_date: string | null; status_label: string }[];
         delivered_value: string;
     };
+    receivables: CustomerReceivablesSummary;
 }>();
 
 defineOptions({
@@ -188,16 +191,73 @@ function formatDate(value: string | null): string {
             </div>
 
             <p class="text-muted-foreground mt-4 text-xs">
-                Delivered value counts posted deliveries only. Amounts owed by this customer
-                are not shown — receivables belong to the finance module, which is not yet
-                built.
+                Delivered value counts posted deliveries only. A delivery is a physical
+                issue — what the customer owes appears below, once the delivery is invoiced.
             </p>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
-            Credit limit and credit days are agreed terms. Outstanding balances are not
-            shown here — receivables are derived from posted transactions in the finance
-            module, which is not yet built.
-        </p>
+        <!-- Accounts receivable -->
+        <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="text-sm font-medium">Accounts receivable</h3>
+                <Link :href="`${invoicesIndex().url}?customer_id=${customer.id}`" class="text-xs hover:underline">
+                    All invoices
+                </Link>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                    <p class="text-muted-foreground text-xs font-medium">
+                        Outstanding ({{ receivables.currency }})
+                    </p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ receivables.outstanding }}</p>
+                </div>
+                <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                    <p class="text-muted-foreground text-xs font-medium">Overdue</p>
+                    <p
+                        class="mt-1 font-mono text-lg font-medium"
+                        :class="Number(receivables.overdue) > 0 ? 'text-destructive' : ''"
+                    >
+                        {{ receivables.overdue }}
+                    </p>
+                </div>
+            </div>
+
+            <div v-if="receivables.invoices.length" class="mt-4">
+                <p class="text-muted-foreground text-xs font-medium">Recent invoices</p>
+                <ul class="mt-2 space-y-1 text-sm">
+                    <li v-for="invoice in receivables.invoices" :key="invoice.id" class="flex justify-between gap-3">
+                        <Link :href="`${invoicesIndex().url}/${invoice.id}`" class="font-mono text-xs hover:underline">
+                            {{ invoice.invoice_number }}
+                        </Link>
+                        <span class="text-muted-foreground text-xs">
+                            {{ invoice.invoice_date }} · {{ invoice.status_label }}
+                        </span>
+                        <span class="font-mono text-xs">{{ invoice.outstanding }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div v-if="receivables.receipts.length" class="mt-4">
+                <p class="text-muted-foreground text-xs font-medium">Recent receipts</p>
+                <ul class="mt-2 space-y-1 text-sm">
+                    <li v-for="receipt in receivables.receipts" :key="receipt.id" class="flex justify-between gap-3">
+                        <Link :href="`${receiptsIndex().url}/${receipt.id}`" class="font-mono text-xs hover:underline">
+                            {{ receipt.receipt_number }}
+                        </Link>
+                        <span class="text-muted-foreground text-xs">
+                            {{ receipt.receipt_date }} · {{ receipt.status_label }}
+                        </span>
+                        <span class="font-mono text-xs">{{ receipt.amount }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <p class="text-muted-foreground mt-4 text-xs">
+                Derived from posted invoices less the receipts still allocated to them. A
+                customer holds no balance column — this is computed every time it is shown.
+                Credit limit and credit days are agreed terms, not balances.
+            </p>
+        </div>
     </div>
 </template>

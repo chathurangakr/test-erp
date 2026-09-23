@@ -6,7 +6,9 @@ use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\DeliveryStatus;
 use App\Models\Delivery;
+use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Services\Sales\SalesOrderStatusUpdater;
+use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -30,6 +32,7 @@ class ReverseDelivery
     public function __construct(
         private readonly ReverseInventoryTransaction $reverseInventory,
         private readonly RecordOperationalJournal $accounting,
+        private readonly SalesBillingReconciliationService $billing,
         private readonly SalesOrderStatusUpdater $statusUpdater,
     ) {}
 
@@ -57,6 +60,8 @@ class ReverseDelivery
                     ]),
                 ]);
             }
+
+            $this->assertNotInvoiced($locked);
 
             $transaction = $locked->inventoryTransaction()->first();
 
@@ -87,5 +92,37 @@ class ReverseDelivery
 
             return $locked->refresh()->load(['lines', 'reversalInventoryTransaction']);
         });
+    }
+
+    /**
+     * A delivery whose revenue has been invoiced cannot be reversed.
+     *
+     * Reversing it removes the cost of sales and puts the stock back, but the sales invoice
+     * has already recognised the revenue — the income statement would show a sale with
+     * nothing sold against it. The invoice has to be reversed first, which releases the
+     * billing.
+     */
+    private function assertNotInvoiced(Delivery $delivery): void
+    {
+        $delivery->loadMissing('lines');
+        $billed = $this->billing->deliveryBilled($delivery);
+
+        if (! DecimalMath::isPositive($billed)) {
+            return;
+        }
+
+        $invoices = $this->billing->billingLines($delivery)
+            ->map(fn ($line): ?string => $line->invoice?->invoice_number)
+            ->filter()
+            ->unique()
+            ->implode(', ');
+
+        throw ValidationException::withMessages([
+            'status' => __('Delivery :reference has :billed of revenue invoiced by :invoices. Reverse the associated sales invoice(s) first.', [
+                'reference' => $delivery->delivery_number,
+                'billed' => $billed,
+                'invoices' => $invoices,
+            ]),
+        ]);
     }
 }
