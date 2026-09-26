@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Permission;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\AccountingSetupController;
 use App\Http\Controllers\Accounting\FiscalPeriodController;
@@ -42,89 +43,124 @@ use Illuminate\Support\Facades\Route;
  * is closed, never dropped. Accounting history is permanent.
  *
  * Posting, reversing and cancelling are separate PATCH actions rather than form saves,
- * because they are business events with their own rules.
+ * because they are business events with their own rules — and each has its own permission,
+ * so the person who drafts a document need not be the one who posts or reverses it.
+ * See docs/AUTHORIZATION_RULES.md.
  */
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('finance/accounts', AccountController::class)
         ->parameters(['accounts' => 'account'])
         ->names('accounts')
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::FinanceView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::FinanceAccountsManage->middleware());
 
     Route::resource('finance/journals', JournalEntryController::class)
         ->parameters(['journals' => 'journal'])
         ->names('journals')
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::FinanceView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::FinanceJournalCreate->middleware());
 
     Route::patch('finance/journals/{journal}/post', [JournalEntryActionController::class, 'post'])
-        ->name('journals.post');
+        ->name('journals.post')
+        ->can(Permission::FinanceJournalPost);
     Route::patch('finance/journals/{journal}/reverse', [JournalEntryActionController::class, 'reverse'])
-        ->name('journals.reverse');
+        ->name('journals.reverse')
+        ->can(Permission::FinanceJournalReverse);
     Route::patch('finance/journals/{journal}/cancel', [JournalEntryActionController::class, 'cancel'])
-        ->name('journals.cancel');
+        ->name('journals.cancel')
+        ->can(Permission::FinanceJournalCancel);
 
     Route::get('finance/general-ledger', [GeneralLedgerController::class, 'index'])
-        ->name('general-ledger.index');
+        ->name('general-ledger.index')
+        ->can(Permission::FinanceView);
 
     Route::get('finance/trial-balance', [TrialBalanceController::class, 'index'])
-        ->name('trial-balance.index');
+        ->name('trial-balance.index')
+        ->can(Permission::FinanceView);
 
     // ---------------------------------------------------------- accounts payable
     Route::resource('finance/supplier-invoices', SupplierInvoiceController::class)
         ->parameters(['supplier-invoices' => 'supplier_invoice'])
         ->names('supplier-invoices')
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::ApView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ApInvoiceCreate->middleware());
 
     Route::patch('finance/supplier-invoices/{supplier_invoice}/post', [SupplierInvoiceActionController::class, 'post'])
-        ->name('supplier-invoices.post');
+        ->name('supplier-invoices.post')
+        ->can(Permission::ApInvoicePost);
     Route::patch('finance/supplier-invoices/{supplier_invoice}/reverse', [SupplierInvoiceActionController::class, 'reverse'])
-        ->name('supplier-invoices.reverse');
+        ->name('supplier-invoices.reverse')
+        ->can(Permission::ApInvoiceReverse);
     Route::patch('finance/supplier-invoices/{supplier_invoice}/cancel', [SupplierInvoiceActionController::class, 'cancel'])
-        ->name('supplier-invoices.cancel');
+        ->name('supplier-invoices.cancel')
+        ->can(Permission::ApInvoiceCancel);
 
     Route::resource('finance/supplier-payments', SupplierPaymentController::class)
         ->parameters(['supplier-payments' => 'supplier_payment'])
         ->names('supplier-payments')
-        ->only(['index', 'create', 'store', 'show']);
+        ->only(['index', 'create', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], Permission::ApView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ApPaymentCreate->middleware());
 
     Route::patch('finance/supplier-payments/{supplier_payment}/post', [SupplierPaymentActionController::class, 'post'])
-        ->name('supplier-payments.post');
+        ->name('supplier-payments.post')
+        ->can(Permission::ApPaymentPost);
     Route::patch('finance/supplier-payments/{supplier_payment}/reverse', [SupplierPaymentActionController::class, 'reverse'])
-        ->name('supplier-payments.reverse');
+        ->name('supplier-payments.reverse')
+        ->can(Permission::ApPaymentReverse);
     Route::patch('finance/supplier-payments/{supplier_payment}/cancel', [SupplierPaymentActionController::class, 'cancel'])
-        ->name('supplier-payments.cancel');
+        ->name('supplier-payments.cancel')
+        ->can(Permission::ApPaymentCancel);
 
-    Route::get('finance/ap-aging', [ApAgingController::class, 'index'])->name('ap-aging.index');
+    Route::get('finance/ap-aging', [ApAgingController::class, 'index'])->name('ap-aging.index')
+        ->can(Permission::ApView);
     Route::get('finance/grni-reconciliation', [GrniReconciliationController::class, 'index'])
-        ->name('grni-reconciliation.index');
+        ->name('grni-reconciliation.index')
+        ->can(Permission::ApView);
 
     // ------------------------------------------------------- accounts receivable
     Route::resource('finance/sales-invoices', SalesInvoiceController::class)
         ->parameters(['sales-invoices' => 'sales_invoice'])
         ->names('sales-invoices')
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::ArView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ArInvoiceCreate->middleware());
 
     Route::patch('finance/sales-invoices/{sales_invoice}/post', [SalesInvoiceActionController::class, 'post'])
-        ->name('sales-invoices.post');
+        ->name('sales-invoices.post')
+        ->can(Permission::ArInvoicePost);
     Route::patch('finance/sales-invoices/{sales_invoice}/reverse', [SalesInvoiceActionController::class, 'reverse'])
-        ->name('sales-invoices.reverse');
+        ->name('sales-invoices.reverse')
+        ->can(Permission::ArInvoiceReverse);
     Route::patch('finance/sales-invoices/{sales_invoice}/cancel', [SalesInvoiceActionController::class, 'cancel'])
-        ->name('sales-invoices.cancel');
+        ->name('sales-invoices.cancel')
+        ->can(Permission::ArInvoiceCancel);
 
     Route::resource('finance/customer-receipts', CustomerReceiptController::class)
         ->parameters(['customer-receipts' => 'customer_receipt'])
         ->names('customer-receipts')
-        ->only(['index', 'create', 'store', 'show']);
+        ->only(['index', 'create', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], Permission::ArView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ArReceiptCreate->middleware());
 
     Route::patch('finance/customer-receipts/{customer_receipt}/post', [CustomerReceiptActionController::class, 'post'])
-        ->name('customer-receipts.post');
+        ->name('customer-receipts.post')
+        ->can(Permission::ArReceiptPost);
     Route::patch('finance/customer-receipts/{customer_receipt}/reverse', [CustomerReceiptActionController::class, 'reverse'])
-        ->name('customer-receipts.reverse');
+        ->name('customer-receipts.reverse')
+        ->can(Permission::ArReceiptReverse);
     Route::patch('finance/customer-receipts/{customer_receipt}/cancel', [CustomerReceiptActionController::class, 'cancel'])
-        ->name('customer-receipts.cancel');
+        ->name('customer-receipts.cancel')
+        ->can(Permission::ArReceiptCancel);
 
-    Route::get('finance/ar-aging', [ArAgingController::class, 'index'])->name('ar-aging.index');
+    Route::get('finance/ar-aging', [ArAgingController::class, 'index'])->name('ar-aging.index')
+        ->can(Permission::ArView);
     Route::get('finance/unbilled-deliveries', [UnbilledDeliveryController::class, 'index'])
-        ->name('unbilled-deliveries.index');
+        ->name('unbilled-deliveries.index')
+        ->can(Permission::ArView);
 
     // ------------------------------------------------------------ cash and bank
     // No destroy route: a configuration money has moved through is deactivated, and a
@@ -132,64 +168,90 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('finance/cash-bank-accounts', CashBankAccountController::class)
         ->parameters(['cash-bank-accounts' => 'cashBankAccount'])
         ->names('cash-bank-accounts')
-        ->except(['destroy', 'show']);
+        ->except(['destroy', 'show'])
+        ->middlewareFor(['index'], Permission::CashView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::CashAccountsManage->middleware());
 
     Route::get('finance/cash-bank-book', [CashBankBookController::class, 'index'])
-        ->name('cash-bank-book.index');
+        ->name('cash-bank-book.index')
+        ->can(Permission::CashView);
 
     Route::resource('finance/expense-vouchers', ExpenseVoucherController::class)
         ->parameters(['expense-vouchers' => 'expenseVoucher'])
         ->names('expense-vouchers')
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::CashView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::CashExpenseCreate->middleware());
 
     Route::patch('finance/expense-vouchers/{expenseVoucher}/post', [ExpenseVoucherActionController::class, 'post'])
-        ->name('expense-vouchers.post');
+        ->name('expense-vouchers.post')
+        ->can(Permission::CashExpensePost);
     Route::patch('finance/expense-vouchers/{expenseVoucher}/reverse', [ExpenseVoucherActionController::class, 'reverse'])
-        ->name('expense-vouchers.reverse');
+        ->name('expense-vouchers.reverse')
+        ->can(Permission::CashExpenseReverse);
     Route::patch('finance/expense-vouchers/{expenseVoucher}/cancel', [ExpenseVoucherActionController::class, 'cancel'])
-        ->name('expense-vouchers.cancel');
+        ->name('expense-vouchers.cancel')
+        ->can(Permission::CashExpenseCancel);
 
     Route::resource('finance/fund-transfers', FundTransferController::class)
         ->parameters(['fund-transfers' => 'fundTransfer'])
         ->names('fund-transfers')
-        ->only(['index', 'create', 'store', 'show']);
+        ->only(['index', 'create', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], Permission::CashView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::CashTransferCreate->middleware());
 
     Route::patch('finance/fund-transfers/{fundTransfer}/post', [FundTransferActionController::class, 'post'])
-        ->name('fund-transfers.post');
+        ->name('fund-transfers.post')
+        ->can(Permission::CashTransferPost);
     Route::patch('finance/fund-transfers/{fundTransfer}/reverse', [FundTransferActionController::class, 'reverse'])
-        ->name('fund-transfers.reverse');
+        ->name('fund-transfers.reverse')
+        ->can(Permission::CashTransferReverse);
     Route::patch('finance/fund-transfers/{fundTransfer}/cancel', [FundTransferActionController::class, 'cancel'])
-        ->name('fund-transfers.cancel');
+        ->name('fund-transfers.cancel')
+        ->can(Permission::CashTransferCancel);
 
     // ---------------------------------------- financial statements and reports
     // All read-only. Every figure derives from a posted ledger; nothing here writes.
     Route::get('finance/dashboard', [FinanceDashboardController::class, 'index'])
-        ->name('finance-dashboard.index');
+        ->name('finance-dashboard.index')
+        ->can(Permission::ReportsManagement);
 
     Route::get('finance/reports/profit-loss', [ProfitLossController::class, 'index'])
-        ->name('reports.profit-loss');
+        ->name('reports.profit-loss')
+        ->can(Permission::ReportsFinance);
     Route::get('finance/reports/balance-sheet', [BalanceSheetController::class, 'index'])
-        ->name('reports.balance-sheet');
+        ->name('reports.balance-sheet')
+        ->can(Permission::ReportsFinance);
     Route::get('finance/reports/inventory-valuation', [InventoryValuationController::class, 'index'])
-        ->name('reports.inventory-valuation');
+        ->name('reports.inventory-valuation')
+        ->can(Permission::ReportsInventory);
     Route::get('finance/reports/inventory-gl-reconciliation', [InventoryGlReconciliationController::class, 'index'])
-        ->name('reports.inventory-gl-reconciliation');
+        ->name('reports.inventory-gl-reconciliation')
+        ->can(Permission::ReportsInventory);
     Route::get('finance/reports/cash-bank-position', [CashBankPositionController::class, 'index'])
-        ->name('reports.cash-bank-position');
+        ->name('reports.cash-bank-position')
+        ->can(Permission::ReportsFinance);
     Route::get('finance/reports/product-profitability', [ProductProfitabilityController::class, 'index'])
-        ->name('reports.product-profitability');
+        ->name('reports.product-profitability')
+        ->can(Permission::ReportsManagement);
 
     Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
-        ->name('accounting-setup.index');
+        ->name('accounting-setup.index')
+        ->can(Permission::FinanceView);
     Route::patch('finance/accounting-setup/settings', [AccountingSetupController::class, 'updateSettings'])
-        ->name('accounting-setup.settings');
+        ->name('accounting-setup.settings')
+        ->can(Permission::FinanceSetupManage);
     Route::patch('finance/accounting-setup/products/{product}', [AccountingSetupController::class, 'updateMapping'])
-        ->name('accounting-setup.mapping');
+        ->name('accounting-setup.mapping')
+        ->can(Permission::FinanceSetupManage);
 
     Route::get('finance/fiscal-periods', [FiscalPeriodController::class, 'index'])
-        ->name('fiscal-periods.index');
+        ->name('fiscal-periods.index')
+        ->can(Permission::FinanceView);
     Route::post('finance/fiscal-periods', [FiscalPeriodController::class, 'store'])
-        ->name('fiscal-periods.store');
+        ->name('fiscal-periods.store')
+        ->can(Permission::FinancePeriodManage);
     Route::patch('finance/fiscal-periods/{fiscalPeriod}/close', [FiscalPeriodController::class, 'close'])
-        ->name('fiscal-periods.close');
+        ->name('fiscal-periods.close')
+        ->can(Permission::FinancePeriodManage);
 });

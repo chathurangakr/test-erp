@@ -69,7 +69,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_view_the_stock_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seedMovement();
 
         $response = $this->actingAs($user)->get(route('inventory.stock.index'));
@@ -82,7 +82,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_view_the_ledger(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $transaction = $this->seedMovement();
 
         $response = $this->actingAs($user)->get(route('inventory.ledger.index'));
@@ -94,7 +94,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_view_the_lots_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $lot = InventoryLot::factory()->create(['product_id' => $this->product->id]);
 
         $response = $this->actingAs($user)->get(route('inventory.lots.index'));
@@ -106,7 +106,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function the_stock_screen_hides_inactive_products_by_default(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seedMovement();
 
         $this->product->update(['is_active' => false]);
@@ -133,7 +133,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function the_ledger_can_be_filtered_by_product(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seedMovement();
 
         $other = Product::factory()->create([
@@ -163,7 +163,7 @@ class InventoryScreensTest extends TestCase
     #[Test]
     public function inventory_transactions_cannot_be_changed_through_any_route(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $transaction = $this->seedMovement();
 
         // The inventory module exposes read-only GET routes only. Nothing that could

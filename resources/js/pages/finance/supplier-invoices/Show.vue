@@ -5,6 +5,7 @@ import SupplierInvoiceActionController from '@/actions/App/Http/Controllers/Paya
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index as journalsIndex } from '@/routes/journals';
 import { index } from '@/routes/supplier-invoices';
 import { index as paymentsIndex } from '@/routes/supplier-payments';
@@ -13,6 +14,8 @@ import type { SupplierInvoiceDetail } from '@/types';
 defineProps<{ invoice: SupplierInvoiceDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier invoices', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -39,7 +42,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="invoice.can_edit" variant="outline" as-child>
+                <Button v-if="invoice.can_edit && can('finance.ap.invoice_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${invoice.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -47,7 +50,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="invoice.can_post"
+                    v-if="invoice.can_post && can('finance.ap.invoice_post')"
                     v-bind="SupplierInvoiceActionController.post.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -55,7 +58,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="invoice.can_reverse"
+                    v-if="invoice.can_reverse && can('finance.ap.invoice_reverse')"
                     v-bind="SupplierInvoiceActionController.reverse.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -63,7 +66,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="invoice.can_cancel"
+                    v-if="invoice.can_cancel && can('finance.ap.invoice_cancel')"
                     v-bind="SupplierInvoiceActionController.cancel.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -134,11 +137,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${invoice.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ invoice.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ invoice.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

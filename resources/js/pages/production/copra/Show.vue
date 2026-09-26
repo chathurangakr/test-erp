@@ -5,6 +5,7 @@ import CopraActionController from '@/actions/App/Http/Controllers/Production/Cop
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/copra';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -13,6 +14,8 @@ import type { CopraDetail } from '@/types';
 const props = defineProps<{ order: CopraDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Copra production', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -40,7 +43,7 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="order.can_edit" variant="outline" as-child>
+                <Button v-if="order.can_edit && can('production.create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -48,7 +51,7 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 </Button>
 
                 <Form
-                    v-if="order.can_post"
+                    v-if="order.can_post && can('production.post')"
                     v-bind="CopraActionController.post.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -56,7 +59,7 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 </Form>
 
                 <Form
-                    v-if="order.can_reverse"
+                    v-if="order.can_reverse && can('production.reverse')"
                     v-bind="CopraActionController.reverse.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -66,7 +69,7 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 </Form>
 
                 <Form
-                    v-if="order.can_cancel"
+                    v-if="order.can_cancel && can('production.cancel')"
                     v-bind="CopraActionController.cancel.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -120,9 +123,10 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">Lot consumed</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="lotsIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                             {{ order.input.lot_number ?? '—' }}
                         </Link>
+                        <template v-else>{{ order.input.lot_number ?? '—' }}</template>
                     </dd>
                 </div>
                 <div>
@@ -160,9 +164,10 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">Lot produced</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link v-if="output.lot_number" :href="lotsIndex().url" class="hover:underline">
+                        <Link v-if="output.lot_number && can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                             {{ output.lot_number }}
                         </Link>
+                        <template v-else-if="output.lot_number">{{ output.lot_number }}</template>
                         <span v-else>—</span>
                     </dd>
                 </div>
@@ -236,17 +241,19 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 <div v-if="order.consumption_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Consumption transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.consumption_reference }}
                         </Link>
+                        <template v-else>{{ order.consumption_reference }}</template>
                     </dd>
                 </div>
                 <div v-if="order.output_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Output transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.output_reference }}
                         </Link>
+                        <template v-else>{{ order.output_reference }}</template>
                     </dd>
                 </div>
                 <div>

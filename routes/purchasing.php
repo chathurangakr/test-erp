@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Permission;
 use App\Http\Controllers\Purchasing\GoodsReceiptActionController;
 use App\Http\Controllers\Purchasing\GoodsReceiptController;
 use App\Http\Controllers\Purchasing\PurchaseOrderApprovalController;
@@ -12,27 +13,36 @@ use Illuminate\Support\Facades\Route;
  * There are deliberately NO destroy routes. A draft may be edited; an approved order and a
  * posted receipt are controlled documents, corrected by cancellation or reversal.
  *
- * Any authenticated user may use purchasing for now; role-based permissions arrive in
- * Phase 8.
+ * Drafting, approving, posting, reversing and cancelling are separate permissions, so a
+ * clerk may raise an order that only a manager can approve. See docs/AUTHORIZATION_RULES.md.
  */
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('purchase-orders', PurchaseOrderController::class)
         ->parameters(['purchase-orders' => 'order'])
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::PurchasingView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::PurchasingOrderCreate->middleware());
 
     Route::patch('purchase-orders/{order}/approve', [PurchaseOrderApprovalController::class, 'approve'])
-        ->name('purchase-orders.approve');
+        ->name('purchase-orders.approve')
+        ->can(Permission::PurchasingOrderApprove);
     Route::patch('purchase-orders/{order}/cancel', [PurchaseOrderApprovalController::class, 'cancel'])
-        ->name('purchase-orders.cancel');
+        ->name('purchase-orders.cancel')
+        ->can(Permission::PurchasingOrderCancel);
 
     Route::resource('goods-receipts', GoodsReceiptController::class)
         ->parameters(['goods-receipts' => 'goodsReceipt'])
-        ->except(['destroy']);
+        ->except(['destroy'])
+        ->middlewareFor(['index', 'show'], Permission::PurchasingView->middleware())
+        ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::PurchasingGrnCreate->middleware());
 
     Route::patch('goods-receipts/{goodsReceipt}/post', [GoodsReceiptActionController::class, 'post'])
-        ->name('goods-receipts.post');
+        ->name('goods-receipts.post')
+        ->can(Permission::PurchasingGrnPost);
     Route::patch('goods-receipts/{goodsReceipt}/reverse', [GoodsReceiptActionController::class, 'reverse'])
-        ->name('goods-receipts.reverse');
+        ->name('goods-receipts.reverse')
+        ->can(Permission::PurchasingGrnReverse);
     Route::patch('goods-receipts/{goodsReceipt}/cancel', [GoodsReceiptActionController::class, 'cancel'])
-        ->name('goods-receipts.cancel');
+        ->name('goods-receipts.cancel')
+        ->can(Permission::PurchasingGrnCancel);
 });

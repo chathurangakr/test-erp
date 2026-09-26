@@ -4,6 +4,7 @@ import { Plus } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { create, edit, index } from '@/routes/cash-bank-accounts';
 import type { CashBankSummary } from '@/types';
 
@@ -14,6 +15,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Cash / bank accounts', href: index() }] } });
+
+const { can } = usePermissions();
 
 function toggleInactive(): void {
     router.get(index().url, { show_inactive: props.filters.show_inactive ? undefined : 1 }, {
@@ -36,7 +39,7 @@ function toggleInactive(): void {
                 <Button variant="outline" @click="toggleInactive">
                     {{ filters.show_inactive ? 'Hide inactive' : 'Show inactive' }}
                 </Button>
-                <Button as-child>
+                <Button v-if="can('finance.cash.accounts_manage')" as-child>
                     <Link :href="create()">
                         <Plus class="size-4" />
                         Configure account
@@ -106,7 +109,7 @@ function toggleInactive(): void {
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ row.balance }}</td>
                         <td class="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" as-child>
+                            <Button v-if="can('finance.cash.accounts_manage')" variant="ghost" size="sm" as-child>
                                 <Link :href="edit(row.id)">Edit</Link>
                             </Button>
                         </td>

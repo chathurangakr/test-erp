@@ -5,6 +5,7 @@ import DeliveryActionController from '@/actions/App/Http/Controllers/Sales/Deliv
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/deliveries';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { DeliveryDetail } from '@/types';
@@ -12,6 +13,8 @@ import type { DeliveryDetail } from '@/types';
 defineProps<{ delivery: DeliveryDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Deliveries', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -36,7 +39,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="delivery.can_edit" variant="outline" as-child>
+                <Button v-if="delivery.can_edit && can('sales.delivery_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${delivery.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -44,7 +47,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="delivery.can_post"
+                    v-if="delivery.can_post && can('sales.delivery_post')"
                     v-bind="DeliveryActionController.post.form(delivery.id)"
                     v-slot="{ processing }"
                 >
@@ -54,7 +57,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="delivery.can_reverse"
+                    v-if="delivery.can_reverse && can('sales.delivery_reverse')"
                     v-bind="DeliveryActionController.reverse.form(delivery.id)"
                     v-slot="{ processing }"
                 >
@@ -64,7 +67,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="delivery.can_cancel"
+                    v-if="delivery.can_cancel && can('sales.delivery_cancel')"
                     v-bind="DeliveryActionController.cancel.form(delivery.id)"
                     v-slot="{ processing }"
                 >
@@ -142,9 +145,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <div v-if="delivery.inventory_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Inventory transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ delivery.inventory_reference }}
                         </Link>
+                        <template v-else>{{ delivery.inventory_reference }}</template>
                     </dd>
                 </div>
                 <div v-if="delivery.reversal_reference">

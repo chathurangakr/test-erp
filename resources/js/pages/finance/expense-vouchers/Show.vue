@@ -5,6 +5,7 @@ import ExpenseVoucherActionController from '@/actions/App/Http/Controllers/Cash/
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { edit, index } from '@/routes/expense-vouchers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { ExpenseVoucherDetail } from '@/types';
@@ -12,6 +13,8 @@ import type { ExpenseVoucherDetail } from '@/types';
 const props = defineProps<{ voucher: ExpenseVoucherDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Expense vouchers', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -36,7 +39,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="props.voucher.can_edit" variant="outline" as-child>
+                <Button v-if="props.voucher.can_edit && can('finance.cash.expense_create')" variant="outline" as-child>
                     <Link :href="edit(props.voucher.id)">
                         <Pencil class="size-4" />
                         Edit
@@ -44,7 +47,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="props.voucher.can_post"
+                    v-if="props.voucher.can_post && can('finance.cash.expense_post')"
                     v-bind="ExpenseVoucherActionController.post.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
@@ -52,7 +55,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="props.voucher.can_reverse"
+                    v-if="props.voucher.can_reverse && can('finance.cash.expense_reverse')"
                     v-bind="ExpenseVoucherActionController.reverse.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
@@ -60,7 +63,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="props.voucher.can_cancel"
+                    v-if="props.voucher.can_cancel && can('finance.cash.expense_cancel')"
                     v-bind="ExpenseVoucherActionController.cancel.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
@@ -129,11 +132,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${props.voucher.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ props.voucher.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ props.voucher.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

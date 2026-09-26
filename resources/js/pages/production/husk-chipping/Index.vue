@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/husk-chipping';
 import type { HuskChippingRow, OptionRef, Paginated, StatusOption } from '@/types';
 
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Husk chipping', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
@@ -56,7 +59,7 @@ const controlClass =
                 title="Husk chipping"
                 description="Raw husk is chipped into 7C, 9C and 10C. The operator enters the weights actually measured."
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('production.create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New husk chipping</Link>
             </Button>
         </div>

@@ -134,7 +134,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_access_the_copra_screens(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('copra.index'))->assertOk();
         $this->actingAs($user)->get(route('copra.create'))->assertOk();
@@ -143,7 +143,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_create_screen_describes_which_outputs_are_measured_and_which_derived(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)
@@ -176,7 +176,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_draft_created_through_the_screen_moves_no_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)
@@ -208,7 +208,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_typed_shell_count(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
@@ -224,7 +224,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_requires_the_copra_weight(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         // Missing.
@@ -249,7 +249,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_requires_the_measured_shell_weight(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         // Missing.
@@ -274,7 +274,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_weight_cannot_be_recorded_against_an_output_that_has_no_secondary_unit(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
@@ -290,7 +290,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function every_output_must_be_accounted_for(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
@@ -305,7 +305,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_product_outside_the_recipe_is_refused_by_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
@@ -322,7 +322,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_requires_a_lot_and_a_positive_quantity(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: ['lot_id' => null]))
@@ -340,7 +340,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_an_inactive_warehouse(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
 
         $inactive = Warehouse::factory()->inactive()->create(['code' => 'WH-OFF']);
@@ -355,7 +355,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_screen_never_accepts_a_cost(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
@@ -388,7 +388,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_converts_stock_and_conserves_value(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -415,7 +415,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_show_screen_hides_costs_until_the_run_is_posted(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -465,7 +465,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_index_lists_both_output_quantities_and_the_measured_weight(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -492,7 +492,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_index_can_be_filtered_by_status_warehouse_and_date(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -519,7 +519,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_draft_can_be_remeasured_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -549,7 +549,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_posted_run_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -563,7 +563,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function reversing_through_the_screen_restores_the_coconut(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));
@@ -586,7 +586,7 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function a_draft_can_be_cancelled_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 
         $this->actingAs($user)->post(route('copra.store'), $this->payload('200.000', '420.000'));

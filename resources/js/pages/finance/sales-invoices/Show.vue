@@ -5,6 +5,7 @@ import SalesInvoiceActionController from '@/actions/App/Http/Controllers/Receiva
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index as receiptsIndex } from '@/routes/customer-receipts';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as journalsIndex } from '@/routes/journals';
@@ -14,6 +15,8 @@ import type { SalesInvoiceDetail } from '@/types';
 defineProps<{ invoice: SalesInvoiceDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Sales invoices', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -40,7 +43,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="invoice.can_edit" variant="outline" as-child>
+                <Button v-if="invoice.can_edit && can('finance.ar.invoice_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${invoice.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -48,7 +51,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="invoice.can_post"
+                    v-if="invoice.can_post && can('finance.ar.invoice_post')"
                     v-bind="SalesInvoiceActionController.post.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -56,7 +59,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="invoice.can_reverse"
+                    v-if="invoice.can_reverse && can('finance.ar.invoice_reverse')"
                     v-bind="SalesInvoiceActionController.reverse.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -64,7 +67,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="invoice.can_cancel"
+                    v-if="invoice.can_cancel && can('finance.ar.invoice_cancel')"
                     v-bind="SalesInvoiceActionController.cancel.form(invoice.id)"
                     v-slot="{ processing }"
                 >
@@ -122,12 +125,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     >
                         <td class="px-4 py-3 font-mono text-xs">
                             <Link
-                                v-if="line.delivery_id"
+                                v-if="line.delivery_id && can('sales.view')"
                                 :href="`${deliveriesIndex().url}/${line.delivery_id}`"
                                 class="hover:underline"
                             >
                                 {{ line.delivery_number }}
                             </Link>
+                            <template v-else-if="line.delivery_id">{{ line.delivery_number }}</template>
                         </td>
                         <td class="px-4 py-3">
                             <span class="font-mono text-xs">{{ line.product_code }}</span>
@@ -149,11 +153,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${invoice.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ invoice.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ invoice.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

@@ -163,7 +163,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_reach_every_receivables_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('sales-invoices.index'))->assertOk();
         $this->actingAs($user)->get(route('sales-invoices.create'))->assertOk();
@@ -184,7 +184,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_create_screen_offers_the_customers_unbilled_delivered_lines(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)
@@ -207,7 +207,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_create_screen_never_offers_a_revenue_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->postDelivery();
 
         $response = $this->actingAs($user)->get(route('sales-invoices.create', ['customer_id' => $this->customer->id]));
@@ -221,7 +221,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function a_fully_billed_delivery_drops_off_the_create_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $invoice = SalesInvoice::factory()->create([
@@ -242,7 +242,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function an_invoice_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)
@@ -266,7 +266,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_due_date_before_the_invoice_date(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)
@@ -277,7 +277,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_an_invoice_with_no_lines(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)
@@ -290,7 +290,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_invoice_show_screen_reports_its_journal_and_balances(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)->post(route('sales-invoices.store'), $this->invoicePayload($delivery));
@@ -316,7 +316,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_receipt_screen_lists_what_a_customer_owes(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)->post(route('sales-invoices.store'), $this->invoicePayload($delivery));
@@ -339,7 +339,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function a_receipt_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)->post(route('sales-invoices.store'), $this->invoicePayload($delivery));
@@ -375,7 +375,7 @@ class AccountsReceivableScreensTest extends TestCase
         // the real clock.
         $this->travelTo('2026-09-20');
 
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         $this->actingAs($user)->post(route('sales-invoices.store'), $this->invoicePayload($delivery));
@@ -402,7 +402,7 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_aging_and_unbilled_screens_report_and_reconcile(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->postDelivery();
 
         // Bill only part of it, so both reports have something to show.

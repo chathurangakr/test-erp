@@ -29,7 +29,7 @@ class ProductTest extends TestCase
     #[Test]
     public function authenticated_user_can_view_the_product_list(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $product = Product::factory()->create([
             'code' => 'COCONUT',
             'primary_uom_id' => $this->nos()->id,
@@ -59,7 +59,7 @@ class ProductTest extends TestCase
     #[Test]
     public function a_product_can_be_created(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $nos = $this->nos();
 
         $response = $this->actingAs($user)->post(route('products.store'), [
@@ -85,7 +85,7 @@ class ProductTest extends TestCase
     #[Test]
     public function a_duplicate_product_code_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $nos = $this->nos();
 
         Product::factory()->create(['code' => 'COCONUT', 'primary_uom_id' => $nos->id]);
@@ -104,7 +104,7 @@ class ProductTest extends TestCase
     #[Test]
     public function the_primary_unit_of_measure_is_required(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(route('products.store'), [
             'code' => 'NO-UOM',
@@ -118,7 +118,7 @@ class ProductTest extends TestCase
     #[Test]
     public function the_secondary_unit_of_measure_may_be_null(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $nos = $this->nos();
 
         $response = $this->actingAs($user)->post(route('products.store'), [
@@ -138,7 +138,7 @@ class ProductTest extends TestCase
     #[Test]
     public function the_primary_and_secondary_units_of_measure_cannot_be_identical(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $nos = $this->nos();
 
         $response = $this->actingAs($user)->post(route('products.store'), [
@@ -155,7 +155,7 @@ class ProductTest extends TestCase
     #[Test]
     public function a_product_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $nos = $this->nos();
         $kg = $this->kg();
 
@@ -184,7 +184,7 @@ class ProductTest extends TestCase
     #[Test]
     public function a_product_can_be_deactivated_and_reactivated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $product = Product::factory()->create([
             'primary_uom_id' => $this->nos()->id,
             'is_active' => true,

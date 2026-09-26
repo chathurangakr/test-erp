@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/fiscal-periods';
 import type { FiscalPeriodRow } from '@/types';
 
@@ -18,6 +19,8 @@ defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Fiscal periods', href: index() }] } });
+
+const { can } = usePermissions();
 
 const showForm = ref(false);
 </script>
@@ -31,14 +34,14 @@ const showForm = ref(false);
                 title="Fiscal periods"
                 description="Journals may only be posted into an open period that contains their date."
             />
-            <Button class="w-full sm:w-auto" @click="showForm = !showForm">
+            <Button v-if="can('finance.period_manage')" class="w-full sm:w-auto" @click="showForm = !showForm">
                 <Plus class="size-4" />
                 {{ showForm ? 'Close' : 'Open a period' }}
             </Button>
         </div>
 
         <div
-            v-if="showForm"
+            v-if="showForm && can('finance.period_manage')"
             class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6"
         >
             <Form v-bind="FiscalPeriodController.store.form()" v-slot="{ errors, processing }" class="space-y-4">
@@ -118,7 +121,7 @@ const showForm = ref(false);
                         </td>
                         <td class="px-4 py-3 text-right">
                             <Form
-                                v-if="period.status === 'OPEN'"
+                                v-if="period.status === 'OPEN' && can('finance.period_manage')"
                                 v-bind="FiscalPeriodController.close.form(period.id)"
                                 v-slot="{ processing }"
                             >

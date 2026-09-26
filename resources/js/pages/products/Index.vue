@@ -7,6 +7,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/products';
 import type { Paginated, Product, ProductFilters } from '@/types';
 
@@ -20,6 +21,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Products', href: index() }],
     },
 });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const status = ref<ProductFilters['status']>(props.filters.status ?? 'all');
@@ -71,7 +74,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 title="Product master"
                 description="Products used across purchasing, production, inventory and sales."
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('products.manage')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`">
                     <Plus class="size-4" />
                     New product
@@ -197,6 +200,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             </td>
                             <td class="px-4 py-3">
                                 <div
+                                    v-if="can('products.manage')"
                                     class="flex items-center justify-end gap-2"
                                 >
                                     <Button
@@ -280,7 +284,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                         </div>
                     </dl>
 
-                    <div class="mt-4 flex gap-2">
+                    <div v-if="can('products.manage')" class="mt-4 flex gap-2">
                         <Button
                             variant="outline"
                             size="sm"

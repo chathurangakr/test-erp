@@ -99,7 +99,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_access_the_production_screens(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('dehusking.index'))->assertOk();
         $this->actingAs($user)->get(route('dehusking.create'))->assertOk();
@@ -108,7 +108,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function the_create_screen_exposes_the_recipe_so_outputs_can_be_previewed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $this->actingAs($user)
@@ -130,7 +130,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function a_draft_created_through_the_screen_moves_no_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $this->actingAs($user)->post(route('dehusking.store'), [
@@ -156,7 +156,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function the_screen_never_accepts_output_quantities_or_costs(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         // Attempt to smuggle in output quantities and costs — all must be ignored.
@@ -191,7 +191,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_converts_stock_and_conserves_value(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
@@ -222,7 +222,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function the_show_screen_hides_costs_until_the_run_is_posted(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
@@ -264,7 +264,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function a_posted_run_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);

@@ -121,7 +121,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_reach_every_cash_and_bank_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('cash-bank-accounts.index'))->assertOk();
         $this->actingAs($user)->get(route('cash-bank-accounts.create'))->assertOk();
@@ -144,7 +144,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_accounts_screen_reports_derived_balances_and_totals(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->cash, '120000.000000');
         $this->fund($this->bank, '880000.000000');
 
@@ -165,7 +165,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_configuration_screen_offers_only_eligible_unconfigured_accounts(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->get(route('cash-bank-accounts.create'));
         $codes = collect($response->viewData('page')['props']['availableAccounts'])->pluck('code')->all();
@@ -184,7 +184,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function an_account_can_be_configured_and_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('cash-bank-accounts.store'), [
             'account_id' => $this->account('1400')->id,
@@ -215,7 +215,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function a_control_account_is_refused_by_the_configuration_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('cash-bank-accounts.store'), [
             'account_id' => $this->account('1210')->id,
@@ -229,7 +229,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function one_account_cannot_be_configured_twice_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('cash-bank-accounts.store'), [
             'account_id' => $this->bank->account_id,
@@ -241,7 +241,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function a_voucher_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000');
 
         $this->actingAs($user)
@@ -264,7 +264,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_voucher_screen_refuses_an_account_that_cannot_be_charged(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         // Inventory, cost of sales and revenue are all refused before anything is written.
         foreach (['1310', '5110', '4110'] as $code) {
@@ -281,7 +281,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_voucher_screen_refuses_a_zero_line_and_an_empty_voucher(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('expense-vouchers.store'), $this->voucherPayload([
@@ -299,7 +299,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function a_draft_voucher_can_be_edited_but_a_posted_one_cannot(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000');
 
         $this->actingAs($user)->post(route('expense-vouchers.store'), $this->voucherPayload());
@@ -327,7 +327,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_voucher_show_screen_reports_its_journal(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000');
 
         $this->actingAs($user)->post(route('expense-vouchers.store'), $this->voucherPayload());
@@ -351,7 +351,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function a_voucher_can_be_reversed_and_a_draft_cancelled_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000');
 
         $this->actingAs($user)->post(route('expense-vouchers.store'), $this->voucherPayload());
@@ -369,7 +369,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function a_transfer_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->cash, '300000.000000');
 
         $this->actingAs($user)->post(route('fund-transfers.store'), [
@@ -400,7 +400,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_transfer_screen_refuses_the_same_account_and_a_zero_amount(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('fund-transfers.store'), [
             'transfer_date' => '2026-09-12',
@@ -422,7 +422,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_book_screen_reports_movements_and_confirms_it_reconciles(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000', '2026-09-02');
 
         $this->actingAs($user)->post(route('expense-vouchers.store'), $this->voucherPayload());
@@ -450,7 +450,7 @@ class CashBankScreensTest extends TestCase
     #[Test]
     public function the_book_screen_honours_its_date_filters(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->fund($this->bank, '500000.000000', '2026-09-02');
 
         $this->actingAs($user)->post(route('expense-vouchers.store'), $this->voucherPayload(['voucher_date' => '2026-09-20']));

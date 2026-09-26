@@ -24,6 +24,8 @@ import {
     Calculator,
     CalendarRange,
     Scale,
+    ShieldCheck,
+    UserCog,
     SlidersHorizontal,
     FileText,
     Banknote,
@@ -94,7 +96,9 @@ import {
     profitLoss as profitLossReport,
 } from '@/routes/reports';
 import { index as productsIndex } from '@/routes/products';
+import { index as rolesIndex } from '@/routes/roles';
 import { index as suppliersIndex } from '@/routes/suppliers';
+import { index as usersIndex } from '@/routes/users';
 import { index as warehousesIndex } from '@/routes/warehouses';
 import type { NavItem } from '@/types';
 
@@ -110,21 +114,25 @@ const masterNavItems: NavItem[] = [
     {
         title: 'Products',
         href: productsIndex(),
+        permission: 'products.view',
         icon: Package,
     },
     {
         title: 'Suppliers',
         href: suppliersIndex(),
+        permission: 'suppliers.view',
         icon: Truck,
     },
     {
         title: 'Customers',
         href: customersIndex(),
+        permission: 'customers.view',
         icon: Users,
     },
     {
         title: 'Warehouses',
         href: warehousesIndex(),
+        permission: 'warehouses.view',
         icon: Building2,
     },
 ];
@@ -133,16 +141,19 @@ const inventoryNavItems: NavItem[] = [
     {
         title: 'Stock on Hand',
         href: stockIndex(),
+        permission: 'inventory.view',
         icon: Boxes,
     },
     {
         title: 'Stock Ledger',
         href: ledgerIndex(),
+        permission: 'inventory.view',
         icon: ScrollText,
     },
     {
         title: 'Lots',
         href: lotsIndex(),
+        permission: 'inventory.view',
         icon: Layers,
     },
 ];
@@ -151,11 +162,13 @@ const purchasingNavItems: NavItem[] = [
     {
         title: 'Purchase Orders',
         href: purchaseOrdersIndex(),
+        permission: 'purchasing.view',
         icon: ClipboardList,
     },
     {
         title: 'Goods Receipts',
         href: goodsReceiptsIndex(),
+        permission: 'purchasing.view',
         icon: ShoppingCart,
     },
 ];
@@ -164,11 +177,13 @@ const salesNavItems: NavItem[] = [
     {
         title: 'Sales Orders',
         href: salesOrdersIndex(),
+        permission: 'sales.view',
         icon: Receipt,
     },
     {
         title: 'Deliveries',
         href: deliveriesIndex(),
+        permission: 'sales.view',
         icon: TruckIcon,
     },
 ];
@@ -177,16 +192,19 @@ const productionNavItems: NavItem[] = [
     {
         title: 'Dehusking',
         href: dehuskingIndex(),
+        permission: 'production.view',
         icon: Factory,
     },
     {
         title: 'Husk Chipping',
         href: huskChippingIndex(),
+        permission: 'production.view',
         icon: Grid2x2,
     },
     {
         title: 'Copra Production',
         href: copraIndex(),
+        permission: 'production.view',
         icon: Sun,
     },
 ];
@@ -195,31 +213,37 @@ const financeNavItems: NavItem[] = [
     {
         title: 'Chart of Accounts',
         href: accountsIndex(),
+        permission: 'finance.view',
         icon: BookMarked,
     },
     {
         title: 'Journal Entries',
         href: journalsIndex(),
+        permission: 'finance.view',
         icon: Calculator,
     },
     {
         title: 'General Ledger',
         href: generalLedgerIndex(),
+        permission: 'finance.view',
         icon: Wallet,
     },
     {
         title: 'Trial Balance',
         href: trialBalanceIndex(),
+        permission: 'finance.view',
         icon: Scale,
     },
     {
         title: 'Fiscal Periods',
         href: fiscalPeriodsIndex(),
+        permission: 'finance.view',
         icon: CalendarRange,
     },
     {
         title: 'Accounting Setup',
         href: accountingSetupIndex(),
+        permission: 'finance.view',
         icon: SlidersHorizontal,
     },
 ];
@@ -228,21 +252,25 @@ const payablesNavItems: NavItem[] = [
     {
         title: 'Supplier Invoices',
         href: supplierInvoicesIndex(),
+        permission: 'finance.ap.view',
         icon: FileText,
     },
     {
         title: 'Supplier Payments',
         href: supplierPaymentsIndex(),
+        permission: 'finance.ap.view',
         icon: Banknote,
     },
     {
         title: 'AP Aging',
         href: apAgingIndex(),
+        permission: 'finance.ap.view',
         icon: CalendarClock,
     },
     {
         title: 'GRNI Reconciliation',
         href: grniReconciliationIndex(),
+        permission: 'finance.ap.view',
         icon: FileCheck2,
     },
 ];
@@ -251,21 +279,25 @@ const receivablesNavItems: NavItem[] = [
     {
         title: 'Sales Invoices',
         href: salesInvoicesIndex(),
+        permission: 'finance.ar.view',
         icon: ReceiptText,
     },
     {
         title: 'Customer Receipts',
         href: customerReceiptsIndex(),
+        permission: 'finance.ar.view',
         icon: HandCoins,
     },
     {
         title: 'AR Aging',
         href: arAgingIndex(),
+        permission: 'finance.ar.view',
         icon: Hourglass,
     },
     {
         title: 'Unbilled Deliveries',
         href: unbilledDeliveriesIndex(),
+        permission: 'finance.ar.view',
         icon: PackageSearch,
     },
 ];
@@ -274,36 +306,43 @@ const reportsNavItems: NavItem[] = [
     {
         title: 'Finance Dashboard',
         href: financeDashboardIndex(),
+        permission: 'reports.management',
         icon: Gauge,
     },
     {
         title: 'Profit & Loss',
         href: profitLossReport(),
+        permission: 'reports.finance',
         icon: TrendingUp,
     },
     {
         title: 'Balance Sheet',
         href: balanceSheetReport(),
+        permission: 'reports.finance',
         icon: Scale,
     },
     {
         title: 'Inventory Valuation',
         href: inventoryValuationReport(),
+        permission: 'reports.inventory',
         icon: Boxes,
     },
     {
         title: 'Inventory vs GL',
         href: inventoryGlReconciliationReport(),
+        permission: 'reports.inventory',
         icon: GitCompareArrows,
     },
     {
         title: 'Cash / Bank Position',
         href: cashBankPositionReport(),
+        permission: 'reports.finance',
         icon: Coins,
     },
     {
         title: 'Product Profitability',
         href: productProfitabilityReport(),
+        permission: 'reports.management',
         icon: ChartColumn,
     },
 ];
@@ -312,22 +351,41 @@ const cashNavItems: NavItem[] = [
     {
         title: 'Cash / Bank Accounts',
         href: cashBankAccountsIndex(),
+        permission: 'finance.cash.view',
         icon: Landmark,
     },
     {
         title: 'Cash / Bank Book',
         href: cashBankBookIndex(),
+        permission: 'finance.cash.view',
         icon: BookOpenCheck,
     },
     {
         title: 'Expense Vouchers',
         href: expenseVouchersIndex(),
+        permission: 'finance.cash.view',
         icon: Receipt,
     },
     {
         title: 'Fund Transfers',
         href: fundTransfersIndex(),
+        permission: 'finance.cash.view',
         icon: ArrowLeftRight,
+    },
+];
+
+const administrationNavItems: NavItem[] = [
+    {
+        title: 'Users',
+        href: usersIndex(),
+        permission: 'users.view',
+        icon: UserCog,
+    },
+    {
+        title: 'Roles & Permissions',
+        href: rolesIndex(),
+        permission: 'roles.view',
+        icon: ShieldCheck,
     },
 ];
 
@@ -371,6 +429,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="payablesNavItems" label="Accounts payable" />
             <NavMain :items="receivablesNavItems" label="Accounts receivable" />
             <NavMain :items="cashNavItems" label="Cash &amp; bank" />
+            <NavMain :items="administrationNavItems" label="Administration" />
         </SidebarContent>
 
         <SidebarFooter>

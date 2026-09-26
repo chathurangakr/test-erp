@@ -377,7 +377,7 @@ class AccountsReceivableTest extends TestCase
     #[Test]
     public function an_invoice_debits_receivables_and_credits_the_products_revenue_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->coconutDelivery();
 
         $invoice = $this->postInvoice(
@@ -794,7 +794,7 @@ class AccountsReceivableTest extends TestCase
     #[Test]
     public function a_receipt_debits_the_bank_and_credits_receivables(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $delivery = $this->coconutDelivery();
         $invoice = $this->postInvoice($this->draftInvoice([['line' => $delivery->lines->first(), 'amount' => '260000.000000']]));
 

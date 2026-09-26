@@ -5,6 +5,7 @@ import HuskChippingActionController from '@/actions/App/Http/Controllers/Product
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/husk-chipping';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -13,6 +14,8 @@ import type { HuskChippingDetail } from '@/types';
 const props = defineProps<{ order: HuskChippingDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Husk chipping', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -42,7 +45,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="order.can_edit" variant="outline" as-child>
+                <Button v-if="order.can_edit && can('production.create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -50,7 +53,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 </Button>
 
                 <Form
-                    v-if="order.can_post"
+                    v-if="order.can_post && can('production.post')"
                     v-bind="HuskChippingActionController.post.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -58,7 +61,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 </Form>
 
                 <Form
-                    v-if="order.can_reverse"
+                    v-if="order.can_reverse && can('production.reverse')"
                     v-bind="HuskChippingActionController.reverse.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -68,7 +71,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 </Form>
 
                 <Form
-                    v-if="order.can_cancel"
+                    v-if="order.can_cancel && can('production.cancel')"
                     v-bind="HuskChippingActionController.cancel.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -129,9 +132,10 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">Lot consumed</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="lotsIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                             {{ order.input.lot_number ?? '—' }}
                         </Link>
+                        <template v-else>{{ order.input.lot_number ?? '—' }}</template>
                     </dd>
                 </div>
                 <div>
@@ -178,9 +182,10 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                             <span class="text-muted-foreground block text-xs">{{ output.product_name }}</span>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs">
-                            <Link v-if="output.lot_number" :href="lotsIndex().url" class="hover:underline">
+                            <Link v-if="output.lot_number && can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                                 {{ output.lot_number }}
                             </Link>
+                            <template v-else-if="output.lot_number">{{ output.lot_number }}</template>
                             <span v-else>—</span>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ output.quantity }}</td>
@@ -246,17 +251,19 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 <div v-if="order.consumption_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Consumption transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.consumption_reference }}
                         </Link>
+                        <template v-else>{{ order.consumption_reference }}</template>
                     </dd>
                 </div>
                 <div v-if="order.output_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Output transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.output_reference }}
                         </Link>
+                        <template v-else>{{ order.output_reference }}</template>
                     </dd>
                 </div>
                 <div>

@@ -118,7 +118,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_access_the_husk_chipping_screens(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('husk-chipping.index'))->assertOk();
         $this->actingAs($user)->get(route('husk-chipping.create'))->assertOk();
@@ -127,7 +127,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function the_create_screen_offers_the_grades_to_weigh_and_no_conversion(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)
@@ -156,7 +156,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_draft_created_through_the_screen_moves_no_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)
@@ -185,7 +185,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function the_screen_never_accepts_a_cost(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
@@ -219,7 +219,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_grade_may_be_zero_but_not_every_grade(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)
@@ -236,7 +236,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_negative_weight_is_refused_by_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)
@@ -249,7 +249,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function every_grade_must_be_accounted_for(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
@@ -265,7 +265,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_product_outside_the_recipe_is_refused_by_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
@@ -282,7 +282,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function waste_is_optional_but_needs_a_unit_when_given(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '19.500000');
 
         // Without a unit.
@@ -308,7 +308,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_converts_stock_and_conserves_value(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
@@ -335,7 +335,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function the_show_screen_hides_costs_until_the_run_is_posted(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
@@ -376,7 +376,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_draft_can_be_reweighed_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
@@ -406,7 +406,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function a_posted_run_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
@@ -428,7 +428,7 @@ class HuskChippingScreensTest extends TestCase
     #[Test]
     public function the_index_screen_lists_only_husk_chipping_runs(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('6000.000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());

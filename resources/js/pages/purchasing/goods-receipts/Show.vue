@@ -5,6 +5,7 @@ import GoodsReceiptActionController from '@/actions/App/Http/Controllers/Purchas
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/goods-receipts';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { GoodsReceiptDetail } from '@/types';
@@ -12,6 +13,8 @@ import type { GoodsReceiptDetail } from '@/types';
 const props = defineProps<{ receipt: GoodsReceiptDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Goods receipts', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -36,7 +39,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="receipt.can_edit" variant="outline" as-child>
+                <Button v-if="receipt.can_edit && can('purchasing.grn_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${receipt.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -44,7 +47,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="receipt.can_post"
+                    v-if="receipt.can_post && can('purchasing.grn_post')"
                     v-bind="GoodsReceiptActionController.post.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -54,7 +57,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="receipt.can_reverse"
+                    v-if="receipt.can_reverse && can('purchasing.grn_reverse')"
                     v-bind="GoodsReceiptActionController.reverse.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -64,7 +67,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="receipt.can_cancel"
+                    v-if="receipt.can_cancel && can('purchasing.grn_cancel')"
                     v-bind="GoodsReceiptActionController.cancel.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -137,9 +140,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <div v-if="receipt.inventory_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Inventory transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ receipt.inventory_reference }}
                         </Link>
+                        <template v-else>{{ receipt.inventory_reference }}</template>
                     </dd>
                 </div>
                 <div v-if="receipt.reversal_reference">

@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, ExpenseVoucherRow, Paginated } from '@/types';
 
@@ -18,6 +19,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Expense vouchers', href: index() }] } });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search);
 const status = ref(props.filters.status);
@@ -46,7 +49,7 @@ const selectClass =
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <Heading title="Expense vouchers" description="Expenses paid immediately from cash or the bank." />
-            <Button as-child>
+            <Button v-if="can('finance.cash.expense_create')" as-child>
                 <Link :href="create()">
                     <Plus class="size-4" />
                     New voucher

@@ -5,12 +5,15 @@ import JournalEntryActionController from '@/actions/App/Http/Controllers/Account
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalDetail } from '@/types';
 
 const props = defineProps<{ entry: JournalDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Journal entries', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -33,7 +36,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="entry.can_edit" variant="outline" as-child>
+                <Button v-if="entry.can_edit && can('finance.journal_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${entry.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -41,7 +44,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="entry.can_post"
+                    v-if="entry.can_post && can('finance.journal_post')"
                     v-bind="JournalEntryActionController.post.form(entry.id)"
                     v-slot="{ processing }"
                 >
@@ -51,7 +54,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="entry.can_reverse"
+                    v-if="entry.can_reverse && can('finance.journal_reverse')"
                     v-bind="JournalEntryActionController.reverse.form(entry.id)"
                     v-slot="{ processing }"
                 >
@@ -61,7 +64,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="entry.can_cancel"
+                    v-if="entry.can_cancel && can('finance.journal_cancel')"
                     v-bind="JournalEntryActionController.cancel.form(entry.id)"
                     v-slot="{ processing }"
                 >

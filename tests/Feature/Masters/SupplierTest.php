@@ -43,7 +43,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function authenticated_user_can_view_the_supplier_list(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $supplier = Supplier::factory()->create(['code' => 'SUP-VISIBLE']);
 
         $response = $this->actingAs($user)->get(route('suppliers.index'));
@@ -55,7 +55,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function a_supplier_can_be_created(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(route('suppliers.store'), $this->validPayload([
             'contact_person' => 'A. Perera',
@@ -77,7 +77,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function a_duplicate_supplier_code_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         Supplier::factory()->create(['code' => 'SUP-001']);
 
         $response = $this->actingAs($user)->post(
@@ -92,7 +92,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function the_supplier_code_is_normalised_to_uppercase(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('suppliers.store'), $this->validPayload(['code' => '  sup-lower  ']))
@@ -105,7 +105,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function a_supplier_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $supplier = Supplier::factory()->create([
             'code' => 'SUP-001',
             'name' => 'Old Name',
@@ -127,7 +127,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function a_supplier_can_be_deactivated_and_reactivated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $supplier = Supplier::factory()->create(['is_active' => true]);
 
         $this->actingAs($user)
@@ -147,7 +147,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function payment_terms_cannot_be_negative(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(
             route('suppliers.store'),
@@ -161,7 +161,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function the_supplier_name_is_required(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('suppliers.store'), $this->validPayload(['name' => '']))
@@ -171,7 +171,7 @@ class SupplierTest extends TestCase
     #[Test]
     public function suppliers_can_be_searched(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         Supplier::factory()->create(['code' => 'SUP-AAA', 'name' => 'Findable Traders']);
         Supplier::factory()->create(['code' => 'SUP-BBB', 'name' => 'Hidden Traders']);
 

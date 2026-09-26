@@ -92,7 +92,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_reach_every_finance_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('accounts.index'))->assertOk();
         $this->actingAs($user)->get(route('accounts.create'))->assertOk();
@@ -116,7 +116,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_chart_of_accounts_screen_lists_accounts(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('accounts.index'))
@@ -131,7 +131,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function an_account_can_be_created_and_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('accounts.store'), [
             'code' => '6500',
@@ -158,7 +158,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_duplicate_account_code_is_refused_by_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('accounts.store'), [
             'code' => '6400',
@@ -171,7 +171,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_account_show_screen_reports_a_derived_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->postEntryThroughScreen($user);
 
         $this->actingAs($user)
@@ -190,7 +190,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_draft_journal_created_through_the_screen_affects_no_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('journals.store'), $this->payload())
@@ -209,7 +209,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_create_screen_offers_only_accounts_that_accept_manual_posting(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('journals.create'))
@@ -225,7 +225,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_manual_line_against_a_control_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
             'lines' => [
@@ -247,7 +247,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_line_that_is_both_a_debit_and_a_credit(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
             'lines' => [
@@ -262,7 +262,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_line_with_no_amount(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
             'lines' => [
@@ -275,7 +275,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_negative_amount(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
             'lines' => [
@@ -288,7 +288,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_fewer_than_two_lines(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
             'lines' => [['account_id' => $this->electricity->id, 'debit' => '10000.000000', 'credit' => '0']],
@@ -298,7 +298,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_date_with_no_open_period(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('journals.store'), $this->payload(['journal_date' => '2027-01-15']))
@@ -310,7 +310,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function an_unbalanced_draft_saves_but_will_not_post(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         // A half-written entry is a legitimate draft.
         $this->actingAs($user)->post(route('journals.store'), $this->payload([
@@ -333,7 +333,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_records_who_and_when(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $entry = $this->postEntryThroughScreen($user);
 
         $this->assertSame(JournalEntryStatus::Posted, $entry->status);
@@ -348,7 +348,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_draft_can_be_edited_but_a_posted_entry_cannot(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload());
         $entry = JournalEntry::firstOrFail();
@@ -375,7 +375,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_show_screen_reports_the_entry_and_its_totals(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $entry = $this->postEntryThroughScreen($user);
 
         $this->actingAs($user)
@@ -397,7 +397,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function reversing_through_the_screen_creates_and_links_a_new_entry(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $original = $this->postEntryThroughScreen($user);
 
         $this->actingAs($user)
@@ -417,7 +417,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_draft_can_be_cancelled_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload());
         $entry = JournalEntry::firstOrFail();
@@ -434,7 +434,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_general_ledger_screen_shows_an_account_with_a_running_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->postEntryThroughScreen($user);
 
         $this->actingAs($user)
@@ -452,7 +452,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_general_ledger_screen_asks_for_an_account_first(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('general-ledger.index'))
@@ -465,7 +465,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_trial_balance_screen_balances(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->postEntryThroughScreen($user);
 
         $this->actingAs($user)
@@ -482,7 +482,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_trial_balance_screen_is_empty_and_balanced_before_anything_is_posted(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('trial-balance.index'))
@@ -499,7 +499,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_fiscal_period_can_be_opened_and_closed_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('fiscal-periods.store'), [
             'name' => 'October 2026',
@@ -521,7 +521,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function overlapping_fiscal_periods_are_refused(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('fiscal-periods.store'), [
             'name' => 'Mid September 2026',
@@ -535,7 +535,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function a_period_holding_a_draft_cannot_be_closed_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('journals.store'), $this->payload());
 
@@ -549,7 +549,7 @@ class FinanceScreensTest extends TestCase
     #[Test]
     public function the_fiscal_period_screen_reports_draft_counts(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->actingAs($user)->post(route('journals.store'), $this->payload());
 
         $this->actingAs($user)

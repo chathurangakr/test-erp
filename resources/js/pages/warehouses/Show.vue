@@ -6,6 +6,7 @@ import WarehouseStatusController from '@/actions/App/Http/Controllers/Warehouses
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/warehouses';
 import type { Warehouse } from '@/types';
 
@@ -18,6 +19,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Warehouses', href: index() }],
     },
 });
+
+const { can } = usePermissions();
 
 function formatDate(value: string | null): string {
     if (!value) {
@@ -43,7 +46,7 @@ function formatDate(value: string | null): string {
                 </div>
             </div>
 
-            <div class="flex flex-col gap-2 sm:flex-row">
+            <div v-if="can('warehouses.manage')" class="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" as-child>
                     <Link :href="`${index().url}/${warehouse.id}/edit`">
                         <Pencil class="size-4" />

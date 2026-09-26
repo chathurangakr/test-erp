@@ -394,9 +394,35 @@ multi-currency, credit notes, advances, production overhead, permanent joint-pro
 accumulates from inception); inventory opening balances at cutover. See
 `ACCOUNTING_RULES.md` §28.
 
-## Phase 15 — Permissions (not started)
+## Phase 15 — Roles, permissions and access control ✅ COMPLETE
 
-Role-based permissions. Currently **any authenticated user** may access Product Master.
+Who may do what — enforced by the server on every route.
+
+- [x] `roles`, `permissions`, `permission_role`, `role_user`, and `users.is_active` — forward
+      migrations; plus a constraint-only migration making every audit foreign key to `users`
+      RESTRICT, so a user with history can never be deleted
+- [x] `App\Enums\Permission` — 73 permissions, `module.document_action`, with CREATE / APPROVE /
+      POST / REVERSE / CANCEL separate wherever a module has them
+- [x] Every permission a Gate ability; every signed-in route declares exactly one (dashboard and
+      own settings excepted); 403 renders an in-app access-denied page
+- [x] Seven starting roles (ADMIN, MANAGER, STOREKEEPER, PURCHASING, SALES, PRODUCTION,
+      ACCOUNTANT) — editable data, applied only when a role is first created
+- [x] Multiple roles per user; effective permissions are the union of active roles
+- [x] Inactive users refused at sign-in and signed out mid-session; their names stay on records
+- [x] Last-administrator protection (`AdministratorGuard`); ADMIN always holds everything
+- [x] Self-deletion kept but refused for users with history or the last administrator
+- [x] One-time bootstrap made the existing user ADMIN; new users never become ADMIN;
+      `authorization:grant-admin` for fresh installs
+- [x] Administration screens: Users (roles + active status) and Roles & Permissions (grouped
+      permission matrix); sidebar sections and action buttons hide by permission
+- [x] 47 new tests, including a sweep calling every protected route with and without its
+      permission
+
+**Decided with the owner:** public registration stays open (new accounts get no access); the
+"delete my account" option stays but is refused when unsafe.
+
+**Deliberately not implemented:** warehouse-scoped access, approval limits, field-level
+security, invitations, API tokens. See `AUTHORIZATION_RULES.md` §11.
 
 ## Phase 16 — REST API for Flutter (not started)
 
@@ -416,6 +442,7 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 | Landed cost allocated by material value, never quantity | `BUSINESS_RULES.md` §13 |
 | Calculated costs are never accepted from a request | `BUSINESS_RULES.md` §13 |
 | Debits = Credits on every journal | `ACCOUNTING_RULES.md` §2 |
+| Every route enforces a permission server-side; roles are data | `AUTHORIZATION_RULES.md` §1-§3 |
 | Reports derive from ledgers; no stored statement balances | `ACCOUNTING_RULES.md` §24 |
 | `decimal` for money/quantities, never float | `CLAUDE.md` |
 | Transactions for inventory/production/accounting | `CLAUDE.md` |

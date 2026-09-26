@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/accounting-setup';
 import { index as accountsIndex } from '@/routes/accounts';
 import type { AccountingSettingsView, AccountOption, AccountRef, ProductMappingRow } from '@/types';
@@ -26,6 +27,8 @@ defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Accounting setup', href: index() }] } });
+
+const { can } = usePermissions();
 
 const editing = ref<number | null>(null);
 
@@ -96,7 +99,7 @@ const selectClass =
                             name="operational_accounting_start_date"
                             type="date"
                             :default-value="settings.operational_accounting_start_date ?? ''"
-                            :disabled="settings.cutover_locked"
+                            :disabled="settings.cutover_locked || !can('finance.setup_manage')"
                         />
                         <p v-if="settings.cutover_locked" class="text-muted-foreground text-xs">
                             Frozen: {{ settings.operational_journal_count }} operational journal(s)
@@ -112,7 +115,12 @@ const selectClass =
 
                     <div class="grid gap-2">
                         <Label for="grni">Goods Received Not Invoiced</Label>
-                        <select id="grni" name="grni_account_id" :class="selectClass">
+                        <select
+                            id="grni"
+                            name="grni_account_id"
+                            :class="selectClass"
+                            :disabled="!can('finance.setup_manage')"
+                        >
                             <option value="">Not configured</option>
                             <option
                                 v-for="account in accountOptions.liability"
@@ -127,7 +135,9 @@ const selectClass =
                     </div>
                 </div>
 
-                <Button type="submit" :disabled="processing">Save configuration</Button>
+                <Button v-if="can('finance.setup_manage')" type="submit" :disabled="processing">
+                    Save configuration
+                </Button>
             </Form>
 
             <dl class="border-sidebar-border/70 dark:border-sidebar-border mt-6 grid gap-6 border-t pt-6 sm:grid-cols-3">
@@ -204,6 +214,7 @@ const selectClass =
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <Button
+                                    v-if="can('finance.setup_manage')"
                                     variant="outline"
                                     size="sm"
                                     @click="editing = editing === product.id ? null : product.id"
@@ -213,7 +224,7 @@ const selectClass =
                             </td>
                         </tr>
 
-                        <tr v-if="editing === product.id" class="bg-muted/20">
+                        <tr v-if="editing === product.id && can('finance.setup_manage')" class="bg-muted/20">
                             <td colspan="6" class="px-4 py-4">
                                 <Form
                                     v-bind="AccountingSetupController.updateMapping.form(product.id)"

@@ -4,6 +4,7 @@ import CustomerReceiptActionController from '@/actions/App/Http/Controllers/Rece
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index as journalsIndex } from '@/routes/journals';
 import { index as invoicesIndex } from '@/routes/sales-invoices';
 import { index } from '@/routes/customer-receipts';
@@ -12,6 +13,8 @@ import type { CustomerReceiptDetail } from '@/types';
 defineProps<{ receipt: CustomerReceiptDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Customer receipts', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -35,7 +38,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
             <div class="flex flex-col gap-2 sm:flex-row">
                 <Form
-                    v-if="receipt.can_post"
+                    v-if="receipt.can_post && can('finance.ar.receipt_post')"
                     v-bind="CustomerReceiptActionController.post.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -43,7 +46,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="receipt.can_reverse"
+                    v-if="receipt.can_reverse && can('finance.ar.receipt_reverse')"
                     v-bind="CustomerReceiptActionController.reverse.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -51,7 +54,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="receipt.can_cancel"
+                    v-if="receipt.can_cancel && can('finance.ar.receipt_cancel')"
                     v-bind="CustomerReceiptActionController.cancel.form(receipt.id)"
                     v-slot="{ processing }"
                 >
@@ -127,11 +130,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${receipt.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ receipt.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ receipt.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

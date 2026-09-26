@@ -5,6 +5,7 @@ import FundTransferActionController from '@/actions/App/Http/Controllers/Cash/Fu
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/fund-transfers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { FundTransferDetail } from '@/types';
@@ -12,6 +13,8 @@ import type { FundTransferDetail } from '@/types';
 const props = defineProps<{ transfer: FundTransferDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Fund transfers', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -34,7 +37,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
             <div class="flex flex-col gap-2 sm:flex-row">
                 <Form
-                    v-if="props.transfer.can_post"
+                    v-if="props.transfer.can_post && can('finance.cash.transfer_post')"
                     v-bind="FundTransferActionController.post.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="props.transfer.can_reverse"
+                    v-if="props.transfer.can_reverse && can('finance.cash.transfer_reverse')"
                     v-bind="FundTransferActionController.reverse.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
@@ -50,7 +53,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="props.transfer.can_cancel"
+                    v-if="props.transfer.can_cancel && can('finance.cash.transfer_cancel')"
                     v-bind="FundTransferActionController.cancel.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
@@ -98,11 +101,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${props.transfer.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ props.transfer.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ props.transfer.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

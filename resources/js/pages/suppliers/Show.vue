@@ -5,6 +5,7 @@ import SupplierStatusController from '@/actions/App/Http/Controllers/Suppliers/S
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/suppliers';
 import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
@@ -27,6 +28,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Suppliers', href: index() }],
     },
 });
+
+const { can } = usePermissions();
 
 function formatDate(value: string | null): string {
     if (!value) {
@@ -51,7 +54,7 @@ function formatDate(value: string | null): string {
                 </div>
             </div>
 
-            <div class="flex flex-col gap-2 sm:flex-row">
+            <div v-if="can('suppliers.manage')" class="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" as-child>
                     <Link :href="`${index().url}/${supplier.id}/edit`">
                         <Pencil class="size-4" />
@@ -162,11 +165,13 @@ function formatDate(value: string | null): string {
                             class="flex flex-wrap items-center justify-between gap-2 text-xs"
                         >
                             <Link
+                                v-if="can('purchasing.view')"
                                 :href="`${purchaseOrdersIndex().url}/${po.id}`"
                                 class="font-mono hover:underline"
                             >
                                 {{ po.po_number }}
                             </Link>
+                            <span v-else class="font-mono">{{ po.po_number }}</span>
                             <span class="text-muted-foreground">{{ po.order_date }}</span>
                             <Badge variant="secondary">{{ po.status_label }}</Badge>
                         </li>
@@ -183,11 +188,13 @@ function formatDate(value: string | null): string {
                             class="flex flex-wrap items-center justify-between gap-2 text-xs"
                         >
                             <Link
+                                v-if="can('purchasing.view')"
                                 :href="`${goodsReceiptsIndex().url}/${grn.id}`"
                                 class="font-mono hover:underline"
                             >
                                 {{ grn.grn_number }}
                             </Link>
+                            <span v-else class="font-mono">{{ grn.grn_number }}</span>
                             <span class="text-muted-foreground">{{ grn.receipt_date }}</span>
                             <Badge variant="secondary">{{ grn.status_label }}</Badge>
                         </li>
@@ -207,7 +214,11 @@ function formatDate(value: string | null): string {
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class="text-sm font-medium">Accounts payable</h3>
-                <Link :href="`${invoicesIndex().url}?supplier_id=${supplier.id}`" class="text-xs hover:underline">
+                <Link
+                    v-if="can('finance.ap.view')"
+                    :href="`${invoicesIndex().url}?supplier_id=${supplier.id}`"
+                    class="text-xs hover:underline"
+                >
                     All invoices
                 </Link>
             </div>
@@ -234,9 +245,14 @@ function formatDate(value: string | null): string {
                 <p class="text-muted-foreground text-xs font-medium">Recent invoices</p>
                 <ul class="mt-2 space-y-1 text-sm">
                     <li v-for="invoice in payables.invoices" :key="invoice.id" class="flex justify-between gap-3">
-                        <Link :href="`${invoicesIndex().url}/${invoice.id}`" class="font-mono text-xs hover:underline">
+                        <Link
+                            v-if="can('finance.ap.view')"
+                            :href="`${invoicesIndex().url}/${invoice.id}`"
+                            class="font-mono text-xs hover:underline"
+                        >
                             {{ invoice.internal_invoice_number }}
                         </Link>
+                        <span v-else class="font-mono text-xs">{{ invoice.internal_invoice_number }}</span>
                         <span class="text-muted-foreground text-xs">
                             {{ invoice.invoice_date }} · {{ invoice.status_label }}
                         </span>
@@ -249,9 +265,14 @@ function formatDate(value: string | null): string {
                 <p class="text-muted-foreground text-xs font-medium">Recent payments</p>
                 <ul class="mt-2 space-y-1 text-sm">
                     <li v-for="payment in payables.payments" :key="payment.id" class="flex justify-between gap-3">
-                        <Link :href="`${paymentsIndex().url}/${payment.id}`" class="font-mono text-xs hover:underline">
+                        <Link
+                            v-if="can('finance.ap.view')"
+                            :href="`${paymentsIndex().url}/${payment.id}`"
+                            class="font-mono text-xs hover:underline"
+                        >
                             {{ payment.payment_number }}
                         </Link>
+                        <span v-else class="font-mono text-xs">{{ payment.payment_number }}</span>
                         <span class="text-muted-foreground text-xs">
                             {{ payment.payment_date }} · {{ payment.status_label }}
                         </span>

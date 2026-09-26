@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/customer-receipts';
 import type { OptionRef, Paginated, StatusOption, CustomerReceiptRow } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Customer receipts', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
@@ -50,7 +53,7 @@ const controlClass =
                 title="Customer receipts"
                 :description="`Money received from customers, in ${currency}. Every receipt is allocated to invoices.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.ar.receipt_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New receipt</Link>
             </Button>
         </div>

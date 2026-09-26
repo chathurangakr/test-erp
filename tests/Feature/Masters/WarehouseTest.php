@@ -45,7 +45,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function authenticated_user_can_view_the_warehouse_list(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $warehouse = Warehouse::factory()->create(['code' => 'WH-VISIBLE']);
 
         $response = $this->actingAs($user)->get(route('warehouses.index'));
@@ -57,7 +57,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function a_warehouse_can_be_created(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(route('warehouses.store'), $this->validPayload([
             'description' => 'Overflow storage',
@@ -76,7 +76,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function a_duplicate_warehouse_code_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         Warehouse::factory()->create(['code' => 'WH-001']);
 
         $response = $this->actingAs($user)->post(
@@ -91,7 +91,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function the_warehouse_code_is_normalised_to_uppercase(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('warehouses.store'), $this->validPayload(['code' => '  wh-lower  ']))
@@ -104,7 +104,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function a_warehouse_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $warehouse = Warehouse::factory()->create(['code' => 'WH-001', 'name' => 'Old Name']);
 
         $response = $this->actingAs($user)->put(
@@ -119,7 +119,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function a_non_default_warehouse_can_be_deactivated_and_reactivated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $warehouse = Warehouse::factory()->create(['is_active' => true, 'is_default' => false]);
 
         $this->actingAs($user)
@@ -188,7 +188,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function setting_the_default_through_the_route_clears_the_previous_default(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seed(WarehouseSeeder::class);
 
         $main = Warehouse::where('code', 'MAIN')->firstOrFail();
@@ -216,7 +216,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function the_default_warehouse_cannot_be_deactivated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seed(WarehouseSeeder::class);
 
         $main = Warehouse::where('code', 'MAIN')->firstOrFail();
@@ -234,7 +234,7 @@ class WarehouseTest extends TestCase
     #[Test]
     public function creating_a_warehouse_as_default_clears_the_previous_default(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->seed(WarehouseSeeder::class);
 
         $main = Warehouse::where('code', 'MAIN')->firstOrFail();

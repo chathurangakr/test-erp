@@ -11,4 +11,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Shown only to users holding this permission. The route checks it again server-side. */
+    permission?: string;
 };

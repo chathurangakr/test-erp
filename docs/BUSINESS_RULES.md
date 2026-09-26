@@ -1144,3 +1144,26 @@ Balance sheet     Assets = Liabilities + Equity + Current Earnings
 
 Full detail in `docs/ACCOUNTING_RULES.md` §24-§28.
 
+## 27. Who may do what — roles and permissions
+
+- **Every action is checked by the server.** If someone lacks the permission, the system refuses
+  — even if they type the address directly. Hidden buttons are only a convenience.
+- **A role is a named set of permissions**, and a person may hold several roles. What they can
+  do is everything their active roles allow, combined.
+- **Preparing, approving, posting, reversing and cancelling are separate permissions.** A
+  purchasing clerk can raise an order that only a manager can approve; a storekeeper posts the
+  goods receipt; an accountant reverses financial postings. Nobody automatically holds every step.
+- **The seven starting roles are starting points.** An administrator can change what each role
+  allows, create new roles, and deactivate a role (which withdraws its permissions at once).
+- **Permissions never override the document rules.** Even an administrator cannot edit a posted
+  goods receipt, delivery, production run or journal.
+- **People who leave are deactivated, not deleted.** They can no longer sign in, and every
+  document they recorded still shows their name.
+- **There is always at least one administrator.** The system refuses any change — including an
+  administrator's change to themselves — that would leave nobody able to manage access.
+- **Anyone may register, but a new account can do nothing** until an administrator gives it a role.
+- **Not yet:** limiting a storekeeper to one warehouse, approval money limits, or hiding
+  particular figures such as cost from particular people.
+
+Full detail in `docs/AUTHORIZATION_RULES.md`.
+

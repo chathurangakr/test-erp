@@ -32,11 +32,8 @@ class DatabaseSeeder extends Seeder
             CashBankAccountSeeder::class,
         ]);
 
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Roles and permissions. Seeds no user and no password; on first introduction it
+        // makes the users who already exist administrators so nobody is locked out.
+        $this->call(RolesAndPermissionsSeeder::class);
     }
 }

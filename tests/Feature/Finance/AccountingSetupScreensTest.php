@@ -83,7 +83,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function the_setup_screen_shows_the_configuration_and_the_mappings(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('accounting-setup.index'))
@@ -105,7 +105,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function the_qa_product_appears_as_unmapped_rather_than_being_assigned(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->get(route('accounting-setup.index'));
 
@@ -124,7 +124,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function the_cutover_date_can_be_set_and_is_then_reported(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->patch(route('accounting-setup.settings'), [
             'operational_accounting_start_date' => '2026-09-01',
@@ -146,7 +146,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function the_screen_reports_the_cutover_as_locked_once_operational_journals_exist(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         app(UpdateAccountingSettings::class)->handle(['operational_accounting_start_date' => '2026-09-01']);
 
         $period = FiscalPeriod::factory()->create([
@@ -172,7 +172,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function a_product_can_be_mapped_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->patch(route('accounting-setup.mapping', $this->qa), [
             'inventory_account_id' => $this->account('1310')->id,
@@ -189,7 +189,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function a_mapping_cannot_point_at_an_inactive_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->account('1310')->update(['is_active' => false]);
 
         $this->actingAs($user)->patch(route('accounting-setup.mapping', $this->qa), [
@@ -201,7 +201,7 @@ class AccountingSetupScreensTest extends TestCase
     #[Test]
     public function the_screen_offers_only_accounts_of_the_right_class(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->get(route('accounting-setup.index'));
         $options = $response->viewData('page')['props']['accountOptions'];

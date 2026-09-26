@@ -2,7 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Enums\Permission as PermissionCode;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
+use App\Services\Authorization\PermissionCatalogue;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -56,5 +60,62 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
         ]);
+    }
+
+    /**
+     * A deactivated user: cannot sign in and holds no permissions.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    /**
+     * Holds the ADMIN role, and so every permission.
+     *
+     * Business-feature tests use this so they test the feature, not the access rules; the
+     * access rules have their own tests. A plain factory user holds no role at all.
+     */
+    public function admin(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $user->roles()->syncWithoutDetaching([app(PermissionCatalogue::class)->sync()->id]);
+            $user->forgetPermissions();
+        });
+    }
+
+    /**
+     * Holds exactly these permissions, through a role made just for them.
+     */
+    public function withPermissions(PermissionCode ...$permissions): static
+    {
+        return $this->afterCreating(function (User $user) use ($permissions): void {
+            app(PermissionCatalogue::class)->sync();
+
+            $role = Role::query()->create([
+                'code' => 'TEST_'.strtoupper(Str::random(8)),
+                'name' => 'Test role',
+                'is_active' => true,
+            ]);
+
+            $codes = array_map(fn (PermissionCode $permission): string => $permission->value, $permissions);
+            $role->permissions()->sync(Permission::query()->whereIn('code', $codes)->pluck('id'));
+
+            $user->roles()->syncWithoutDetaching([$role->id]);
+            $user->forgetPermissions();
+        });
+    }
+
+    /**
+     * Holds these seeded roles by code. Seed RolesAndPermissionsSeeder first.
+     */
+    public function withRoles(string ...$codes): static
+    {
+        return $this->afterCreating(function (User $user) use ($codes): void {
+            $user->roles()->syncWithoutDetaching(Role::query()->whereIn('code', $codes)->pluck('id'));
+            $user->forgetPermissions();
+        });
     }
 }

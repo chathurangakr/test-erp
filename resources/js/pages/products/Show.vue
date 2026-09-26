@@ -5,12 +5,15 @@ import ProductStatusController from '@/actions/App/Http/Controllers/Products/Pro
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/products';
 import type { Product } from '@/types';
 
 const props = defineProps<{
     product: Product;
 }>();
+
+const { can } = usePermissions();
 
 defineOptions({
     layout: {
@@ -44,7 +47,7 @@ function formatDate(value: string | null): string {
                 </Badge>
             </div>
 
-            <div class="flex flex-col gap-2 sm:flex-row">
+            <div v-if="can('products.manage')" class="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" as-child>
                     <Link :href="`${index().url}/${product.id}/edit`">
                         <Pencil class="size-4" />

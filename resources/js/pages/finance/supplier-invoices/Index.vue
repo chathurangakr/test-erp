@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-invoices';
 import type { OptionRef, Paginated, StatusOption, SupplierInvoiceRow } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier invoices', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const supplierId = ref(props.filters.supplier_id ? String(props.filters.supplier_id) : '');
@@ -60,7 +63,7 @@ const controlClass =
                 title="Supplier invoices"
                 :description="`What suppliers have billed, in ${currency}. A draft owes nothing until it is posted.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.ap.invoice_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New supplier invoice</Link>
             </Button>
         </div>

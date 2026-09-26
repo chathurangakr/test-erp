@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Administration\DeleteOwnAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
@@ -46,13 +47,14 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, DeleteOwnAccount $deleteAccount): RedirectResponse
     {
         $user = $request->user();
 
-        Auth::logout();
-
-        $user->delete();
+        // Refused, with nothing changed, if the account has business history or is the last
+        // administrator. Signing out happens only once the checks pass, and before the row is
+        // deleted, because signing out saves the user.
+        $deleteAccount->handle($user, fn () => Auth::logout());
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

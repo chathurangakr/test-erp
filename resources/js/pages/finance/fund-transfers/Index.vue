@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/fund-transfers';
 import type { FundTransferRow, Paginated } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Fund transfers', href: index() }] } });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search);
 const status = ref(props.filters.status);
@@ -48,7 +51,7 @@ const selectClass =
                 title="Fund transfers"
                 description="Money moved between the factory's own cash and bank accounts."
             />
-            <Button as-child>
+            <Button v-if="can('finance.cash.transfer_create')" as-child>
                 <Link :href="create()">
                     <Plus class="size-4" />
                     New transfer

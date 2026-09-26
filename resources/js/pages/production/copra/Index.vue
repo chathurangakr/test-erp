@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/copra';
 import type { CopraOutputColumn, CopraRow, OptionRef, Paginated, StatusOption } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Copra production', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
@@ -66,7 +69,7 @@ const controlClass =
                 title="Copra production"
                 description="Dehusked coconut is dried into copra and leaves raw shell behind. The operator enters the weights actually measured."
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('production.create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New copra production</Link>
             </Button>
         </div>

@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/goods-receipts';
 import type { GoodsReceiptRow, OptionRef, Paginated, StatusOption } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Goods receipts', href: index() }] } });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? '');
@@ -55,7 +58,7 @@ const controlClass =
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Goods receipts" description="Stock enters inventory only when a receipt is posted." />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('purchasing.grn_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New goods receipt</Link>
             </Button>
         </div>

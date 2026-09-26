@@ -44,7 +44,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function authenticated_user_can_view_the_customer_list(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $customer = Customer::factory()->create(['code' => 'CUS-VISIBLE']);
 
         $response = $this->actingAs($user)->get(route('customers.index'));
@@ -56,7 +56,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function a_customer_can_be_created(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(route('customers.store'), $this->validPayload([
             'contact_person' => 'S. Fernando',
@@ -77,7 +77,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function a_duplicate_customer_code_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         Customer::factory()->create(['code' => 'CUS-001']);
 
         $response = $this->actingAs($user)->post(
@@ -92,7 +92,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function the_customer_code_is_normalised_to_uppercase(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('customers.store'), $this->validPayload(['code' => '  cus-lower  ']))
@@ -105,7 +105,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function a_customer_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $customer = Customer::factory()->create([
             'code' => 'CUS-001',
             'name' => 'Old Name',
@@ -127,7 +127,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function a_customer_can_be_deactivated_and_reactivated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $customer = Customer::factory()->create(['is_active' => true]);
 
         $this->actingAs($user)
@@ -146,7 +146,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function a_negative_credit_limit_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(
             route('customers.store'),
@@ -160,7 +160,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function negative_credit_days_are_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(
             route('customers.store'),
@@ -174,7 +174,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function the_customer_name_is_required(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('customers.store'), $this->validPayload(['name' => '']))
@@ -184,7 +184,7 @@ class CustomerTest extends TestCase
     #[Test]
     public function the_credit_limit_keeps_two_decimal_places(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('customers.store'), $this->validPayload(['credit_limit' => '1234.5']))

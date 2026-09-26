@@ -522,6 +522,44 @@ quantity and actual weight where available.
 
 ---
 
+## Authorization rules (Phase 15 — implemented)
+
+Full detail lives in `docs/AUTHORIZATION_RULES.md`.
+
+- **Authorization is enforced SERVER-SIDE, on every route.** Each signed-in route declares
+  exactly one permission with `->can(Permission::X)` (or `middlewareFor(..., Permission::X->middleware())`
+  on resources). Hiding a button in Vue is a courtesy, never the protection.
+  `RouteAuthorizationTest` fails if a new route has no permission — add one, never an exemption.
+  The only open routes are the dashboard and the user's own settings.
+- **Permissions are defined in code only** — the enum `App\Enums\Permission`, mirrored into the
+  `permissions` table by `RolesAndPermissionsSeeder`. Adding a capability means adding an enum
+  case, using it on a route, and re-running the seeder. No screen creates permissions.
+- **Never check a role name to authorize anything.** Roles are data: bundles of permissions,
+  edited on the Roles screen. Ask `$user->hasPermission()` / the Gate — never
+  `if ($user->role === ...)`. `Role::ADMINISTRATOR` exists only for the lockout safety rules.
+- **CREATE, APPROVE, POST, REVERSE and CANCEL are separate permissions** wherever a module has
+  them. Follow `module.document_action` naming for new ones.
+- **A user may hold several roles**; effective permissions are the union of their ACTIVE roles.
+  An inactive role grants nothing; an inactive user holds nothing and cannot sign in.
+- **Permissions never override document state.** Both must pass. Even ADMIN cannot edit a posted
+  document. Do not put permission checks inside inventory, production or accounting arithmetic.
+- **Domain actions assume their caller is authorized.** Every entry point — web routes now, API
+  routes and jobs later — checks the permission before calling an action.
+- **Never delete a user who has business history** — deactivate them. The database refuses it
+  (audit foreign keys are RESTRICT) and `DeleteOwnAccount` refuses it first, using `UserHistory`.
+- **The system can never lose its last active administrator.** Wrap any change to roles, activity
+  or accounts in `AdministratorGuard::protect()`. The ADMIN role always holds every permission
+  and cannot be deactivated or deleted.
+- **New users never become administrators automatically.** Registration is open but grants no
+  role. The seeder's one-time bootstrap (no assignments exist → existing users become ADMIN) never
+  fires again; a fresh install uses `php artisan authorization:grant-admin {email}`.
+- **Business-feature tests use `User::factory()->admin()`**; access tests use `withPermissions()`
+  / `withRoles()`. A plain factory user holds no role.
+- **Not built:** warehouse-scoped access, monetary approval limits, field-level security,
+  invitations, API tokens.
+
+---
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,
@@ -569,19 +607,20 @@ balances, expense vouchers for immediately-paid expenses, cash and bank fund tra
 cash/bank book that reconciles exactly to the general ledger), and **financial statements and
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
-profitability and a finance dashboard — all derived, none stored).
+profitability and a finance dashboard — all derived, none stored), and **role-based access
+control** (73 permissions, seven editable starting roles, multiple roles per user, every route
+enforced server-side, user deactivation and last-administrator protection).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense
 accounting, VAT/SVAT, payroll, loans, fixed assets, depreciation, cash flow statement, report
 export, year-end closing, the permanent joint-product costing method, production planning,
-BOM editor, maintenance, role-based permissions, REST API.
+BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
-Authenticated users may currently access all master data, view inventory, and use
-purchasing, sales, production and finance, including cash and bank and the financial reports.
-Role-based permissions come later.
+Access is governed by roles and permissions (see Authorization rules). A signed-in user with
+no role sees only the dashboard and their own settings.
 
 ---
 

@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/accounts';
 import type { AccountRow, Paginated, StatusOption } from '@/types';
 
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Chart of accounts', href: index() }] } });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const type = ref(props.filters.type ?? '');
@@ -48,7 +51,7 @@ const controlClass =
                 title="Chart of accounts"
                 :description="`The accounts the books are kept in. Base currency ${currency}.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.accounts_manage')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New account</Link>
             </Button>
         </div>

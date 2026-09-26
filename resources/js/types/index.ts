@@ -1,3 +1,4 @@
+export * from './administration';
 export * from './auth';
 export * from './finance';
 export * from './inventory';

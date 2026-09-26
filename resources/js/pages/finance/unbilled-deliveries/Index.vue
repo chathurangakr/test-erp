@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
+import { usePermissions } from '@/composables/usePermissions';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index } from '@/routes/unbilled-deliveries';
 import type { UnbilledDeliveryReport } from '@/types';
@@ -12,6 +13,8 @@ defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Unbilled deliveries', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (status === 'FULLY_BILLED') return 'secondary';
@@ -79,9 +82,10 @@ function label(status: string): string {
                         class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t"
                     >
                         <td class="px-4 py-3 font-mono text-xs font-medium">
-                            <Link :href="`${deliveriesIndex().url}/${row.delivery_id}`" class="hover:underline">
+                            <Link v-if="can('sales.view')" :href="`${deliveriesIndex().url}/${row.delivery_id}`" class="hover:underline">
                                 {{ row.delivery_number }}
                             </Link>
+                            <template v-else>{{ row.delivery_number }}</template>
                         </td>
                         <td class="px-4 py-3">
                             <span class="font-mono text-xs">{{ row.customer_code }}</span>

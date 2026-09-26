@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/sales-orders';
 import type { OptionRef, Paginated, SalesOrderRow, StatusOption } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Sales orders', href: index() }] } });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? '');
@@ -60,7 +63,7 @@ const controlClass =
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Sales orders" description="Intentions to sell. Stock leaves only when a delivery is posted." />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('sales.order_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New sales order</Link>
             </Button>
         </div>

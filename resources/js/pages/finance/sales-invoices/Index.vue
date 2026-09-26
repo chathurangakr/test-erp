@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/sales-invoices';
 import type { OptionRef, Paginated, SalesInvoiceRow, StatusOption } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Sales invoices', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
@@ -60,7 +63,7 @@ const controlClass =
                 title="Sales invoices"
                 :description="`What customers have been billed, in ${currency}. Revenue is recognised when an invoice is posted.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.ar.invoice_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New sales invoice</Link>
             </Button>
         </div>

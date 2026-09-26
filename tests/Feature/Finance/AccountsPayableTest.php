@@ -369,7 +369,7 @@ class AccountsPayableTest extends TestCase
     #[Test]
     public function a_grni_invoice_debits_grni_and_credits_trade_payables(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $invoice = $this->postInvoice(
@@ -732,7 +732,7 @@ class AccountsPayableTest extends TestCase
     #[Test]
     public function a_payment_debits_payables_and_credits_the_bank(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
         $invoice = $this->postInvoice($this->draftInvoice([['grn' => $receipt, 'amount' => '1000000.000000']]));
 

@@ -152,7 +152,7 @@ class JournalEntryTest extends TestCase
     #[Test]
     public function a_balanced_entry_posts_and_affects_balances(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $posted = $this->postEntry($this->draft(), $user->id);
 
@@ -471,7 +471,7 @@ class JournalEntryTest extends TestCase
     #[Test]
     public function reversing_creates_a_new_entry_with_the_sides_swapped(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $original = $this->postEntry($this->draft(), $user->id);
 
         $reversal = app(ReverseJournalEntry::class)->handle($original, $user->id);
@@ -507,7 +507,7 @@ class JournalEntryTest extends TestCase
     #[Test]
     public function the_original_remains_intact_and_readable_after_reversal(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $original = $this->postEntry($this->draft(), $user->id);
 
         $reversal = app(ReverseJournalEntry::class)->handle($original, $user->id);
@@ -633,7 +633,7 @@ class JournalEntryTest extends TestCase
     #[Test]
     public function a_period_closes_once_its_drafts_are_resolved(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $draft = $this->draft();
 
         app(CancelJournalEntry::class)->handle($draft);

@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-payments';
 import type { OptionRef, Paginated, StatusOption, SupplierPaymentRow } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier payments', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const supplierId = ref(props.filters.supplier_id ? String(props.filters.supplier_id) : '');
@@ -50,7 +53,7 @@ const controlClass =
                 title="Supplier payments"
                 :description="`Money paid to suppliers, in ${currency}. Every payment is allocated to invoices.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.ap.payment_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New payment</Link>
             </Button>
         </div>

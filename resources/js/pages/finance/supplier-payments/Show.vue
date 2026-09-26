@@ -4,6 +4,7 @@ import SupplierPaymentActionController from '@/actions/App/Http/Controllers/Paya
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index as journalsIndex } from '@/routes/journals';
 import { index as invoicesIndex } from '@/routes/supplier-invoices';
 import { index } from '@/routes/supplier-payments';
@@ -12,6 +13,8 @@ import type { SupplierPaymentDetail } from '@/types';
 defineProps<{ payment: SupplierPaymentDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier payments', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -35,7 +38,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
             <div class="flex flex-col gap-2 sm:flex-row">
                 <Form
-                    v-if="payment.can_post"
+                    v-if="payment.can_post && can('finance.ap.payment_post')"
                     v-bind="SupplierPaymentActionController.post.form(payment.id)"
                     v-slot="{ processing }"
                 >
@@ -43,7 +46,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="payment.can_reverse"
+                    v-if="payment.can_reverse && can('finance.ap.payment_reverse')"
                     v-bind="SupplierPaymentActionController.reverse.form(payment.id)"
                     v-slot="{ processing }"
                 >
@@ -51,7 +54,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="payment.can_cancel"
+                    v-if="payment.can_cancel && can('finance.ap.payment_cancel')"
                     v-bind="SupplierPaymentActionController.cancel.form(payment.id)"
                     v-slot="{ processing }"
                 >
@@ -128,11 +131,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <h3 class="text-sm font-medium">
                     Journal
                     <Link
+                        v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${payment.journal.id}`"
                         class="font-mono text-xs hover:underline"
                     >
                         {{ payment.journal.journal_number }}
                     </Link>
+                    <span v-else class="font-mono text-xs">{{ payment.journal.journal_number }}</span>
                 </h3>
             </div>
             <table class="w-full text-sm">

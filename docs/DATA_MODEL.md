@@ -1176,6 +1176,29 @@ with that account's general-ledger balance.
 Husk Chips Inventory — and the general ledger only knows the account. Comparing per product
 would need the ledger to be split in a way it never was.
 
+### U-1 — roles and permissions are normalised, and permissions are code
+
+**Decision:** four tables. `roles` (unique uppercase `code`, `name`, `description`,
+`is_active`), `permissions` (unique `code`, `name`, `module`), `permission_role` and `role_user`,
+each pivot with a composite primary key so a pairing cannot be stored twice. `role_user.role_id`
+restricts deletion, so a role still held by someone cannot vanish. There is no role column on
+`users`: a user may hold several roles.
+
+**Why:** authorization must depend on permissions, not role names, and permissions must be ones
+the code actually checks. The catalogue therefore lives in `App\Enums\Permission`; the table is
+its mirror, written only by `RolesAndPermissionsSeeder`, so roles can use foreign keys.
+
+### U-2 — users are deactivated, and the database refuses to delete one with history
+
+**Decision:** `users.is_active` (default true). Every audit foreign key to `users` — `created_by`,
+`approved_by`, `posted_by`, `reversed_by`, `closed_by`, `updated_by` — is `ON DELETE RESTRICT`.
+The finance tables were created with `SET NULL` and were changed by a forward migration that
+touched only the constraints.
+
+**Why:** `SET NULL` meant deleting a user would silently blank "who posted this" on every journal,
+invoice, payment, voucher and transfer — audit history lost with no trace. Deactivation keeps the
+name on every record and withdraws all access at once.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that
@@ -1183,7 +1206,8 @@ the future schema must satisfy.
 
 | Entity | Confirmed requirement |
 | --- | --- |
-| `roles`, `permissions` | Deferred by instruction |
+| Warehouse-scoped access | A future `role_warehouse` or `user_warehouse` scope; permissions are company-wide today |
+| Approval limits | A future monetary limit per role or permission; not modelled |
 
 ## 4. Conventions
 

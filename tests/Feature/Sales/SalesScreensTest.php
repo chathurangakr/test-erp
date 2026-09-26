@@ -95,7 +95,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_access_the_sales_screens(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('sales-orders.index'))->assertOk();
         $this->actingAs($user)->get(route('sales-orders.create'))->assertOk();
@@ -106,7 +106,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function a_sales_order_can_be_created_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('sales-orders.store'), [
             'customer_id' => $this->customer->id,
@@ -132,7 +132,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function an_approved_sales_order_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $order = SalesOrder::factory()->approved()->create([
             'customer_id' => $this->customer->id,
@@ -169,7 +169,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function a_draft_delivery_created_through_the_screen_moves_no_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('1000.000', '102.500000');
 
         $this->actingAs($user)->post(route('deliveries.store'), [
@@ -200,7 +200,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_issues_stock_and_records_profit(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
         $delivery = Delivery::factory()->create([
@@ -234,7 +234,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function the_delivery_screen_hides_cost_until_the_delivery_is_posted(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('1000.000', '102.500000');
 
         $delivery = Delivery::factory()->create([
@@ -275,7 +275,7 @@ class SalesScreensTest extends TestCase
     #[Test]
     public function the_customer_page_shows_sales_history_without_a_receivable_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->receive('1000.000', '100.000000');
 
         $delivery = Delivery::factory()->create([

@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalRow, Paginated, StatusOption } from '@/types';
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Journal entries', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
@@ -57,7 +60,7 @@ const controlClass =
                 title="Journal entries"
                 :description="`Double-entry journals in ${currency}. A draft affects nothing until it is posted.`"
             />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('finance.journal_create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New journal entry</Link>
             </Button>
         </div>

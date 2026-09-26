@@ -313,7 +313,7 @@ class InventoryAccountingTest extends TestCase
     #[Test]
     public function a_mapping_must_point_at_the_right_class_of_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $coconut = $this->product('COCONUT');
 
         // Inventory must be an ASSET.

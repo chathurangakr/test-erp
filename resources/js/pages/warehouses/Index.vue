@@ -7,6 +7,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/warehouses';
 import type { Paginated, Warehouse, ProductFilters } from '@/types';
 
@@ -20,6 +21,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Warehouses', href: index() }],
     },
 });
+
+const { can } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const status = ref<ProductFilters['status']>(props.filters.status ?? 'all');
@@ -68,7 +71,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Warehouses" description="Stock locations. Inventory movements will require a warehouse." />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('warehouses.manage')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`">
                     <Plus class="size-4" />
                     New warehouse
@@ -160,7 +163,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                 </Badge>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="flex items-center justify-end gap-2">
+                                <div v-if="can('warehouses.manage')" class="flex items-center justify-end gap-2">
                                     <Button variant="ghost" size="sm" as-child>
                                         <Link :href="`${index().url}/${warehouse.id}/edit`">
                                             <Pencil class="size-3.5" />
@@ -210,7 +213,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                         </div>
                     </dl>
 
-                    <div class="mt-4 flex gap-2">
+                    <div v-if="can('warehouses.manage')" class="mt-4 flex gap-2">
                         <Button variant="outline" size="sm" class="flex-1" as-child>
                             <Link :href="`${index().url}/${warehouse.id}/edit`">Edit</Link>
                         </Button>

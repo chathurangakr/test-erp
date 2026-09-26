@@ -4,6 +4,7 @@ import { Pencil } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/accounts';
 import { index as ledgerIndex } from '@/routes/general-ledger';
 import type { AccountDetail } from '@/types';
@@ -11,6 +12,8 @@ import type { AccountDetail } from '@/types';
 const props = defineProps<{ account: AccountDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Chart of accounts', href: index() }] } });
+
+const { can } = usePermissions();
 </script>
 
 <template>
@@ -33,7 +36,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Chart of accounts', href: inde
                 <Button variant="outline" as-child>
                     <Link :href="`${ledgerIndex().url}?account_id=${account.id}`">View ledger</Link>
                 </Button>
-                <Button variant="outline" as-child>
+                <Button v-if="can('finance.accounts_manage')" variant="outline" as-child>
                     <Link :href="`${index().url}/${account.id}/edit`">
                         <Pencil class="size-4" />
                         Edit

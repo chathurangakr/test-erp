@@ -12,6 +12,8 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Effective permission codes. For hiding UI only; the server enforces every one. */
+    permissions: string[];
 };
 
 export type Passkey = {

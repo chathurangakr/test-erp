@@ -83,7 +83,7 @@ class ReportScreensTest extends TestCase
     #[Test]
     public function every_report_screen_renders_its_page_with_empty_books(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         foreach (self::REPORT_ROUTES as $name => $component) {
             $this->actingAs($user)
@@ -111,7 +111,7 @@ class ReportScreensTest extends TestCase
     {
         $this->electricityPaid('2026-09-10');
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->admin()->create())
             ->get(route('reports.profit-loss', ['fiscal_period_id' => $this->september->id]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -127,7 +127,7 @@ class ReportScreensTest extends TestCase
     {
         $this->electricityPaid();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->admin()->create())
             ->get(route('reports.balance-sheet', ['as_of' => '2026-09-30']))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -143,7 +143,7 @@ class ReportScreensTest extends TestCase
     public function the_dashboard_uses_a_chosen_period_and_the_cash_position_follows_its_date(): void
     {
         $this->electricityPaid('2026-09-10');
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('finance-dashboard.index', ['fiscal_period_id' => $this->september->id]))

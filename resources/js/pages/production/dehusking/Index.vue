@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/dehusking';
 import type { DehuskingRow, OptionRef, Paginated, StatusOption } from '@/types';
 
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Dehusking', href: index() }] } });
+
+const { can } = usePermissions();
 
 const status = ref(props.filters.status ?? '');
 const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
@@ -53,7 +56,7 @@ const controlClass =
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Dehusking" description="One whole coconut yields one dehusked coconut and one raw husk." />
-            <Button as-child class="w-full sm:w-auto">
+            <Button v-if="can('production.create')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`"><Plus class="size-4" />New dehusking</Link>
             </Button>
         </div>

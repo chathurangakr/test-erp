@@ -77,7 +77,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_access_the_purchasing_screens(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('purchase-orders.index'))->assertOk();
         $this->actingAs($user)->get(route('purchase-orders.create'))->assertOk();
@@ -88,7 +88,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function a_purchase_order_can_be_created_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->post(route('purchase-orders.store'), [
             'supplier_id' => $this->supplier->id,
@@ -110,7 +110,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function an_approved_purchase_order_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $order = PurchaseOrder::factory()->approved()->create([
             'supplier_id' => $this->supplier->id,
@@ -141,7 +141,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function a_draft_goods_receipt_created_through_the_screen_moves_no_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('goods-receipts.store'), [
             'supplier_id' => $this->supplier->id,
@@ -167,7 +167,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function posting_through_the_screen_moves_stock_and_matches_the_receipt_values(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $receipt = GoodsReceipt::factory()->create([
             'supplier_id' => $this->supplier->id,
@@ -201,7 +201,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function the_goods_receipt_screen_shows_a_cost_preview_for_a_draft(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $receipt = GoodsReceipt::factory()->create([
             'supplier_id' => $this->supplier->id,
@@ -231,7 +231,7 @@ class PurchasingScreensTest extends TestCase
     #[Test]
     public function the_supplier_page_shows_purchase_history_without_a_payable_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $receipt = GoodsReceipt::factory()->create([
             'supplier_id' => $this->supplier->id,

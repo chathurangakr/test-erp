@@ -5,6 +5,7 @@ import PurchaseOrderApprovalController from '@/actions/App/Http/Controllers/Purc
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/purchase-orders';
 import { index as grnIndex } from '@/routes/goods-receipts';
 import type { PurchaseOrderDetail } from '@/types';
@@ -12,6 +13,8 @@ import type { PurchaseOrderDetail } from '@/types';
 const props = defineProps<{ order: PurchaseOrderDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Purchase orders', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED') return 'destructive';
@@ -34,7 +37,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="order.can_edit" variant="outline" as-child>
+                <Button v-if="order.can_edit && can('purchasing.order_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="order.can_approve"
+                    v-if="order.can_approve && can('purchasing.order_approve')"
                     v-bind="PurchaseOrderApprovalController.approve.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -50,7 +53,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="order.can_cancel"
+                    v-if="order.can_cancel && can('purchasing.order_cancel')"
                     v-bind="PurchaseOrderApprovalController.cancel.form(order.id)"
                     v-slot="{ processing }"
                 >

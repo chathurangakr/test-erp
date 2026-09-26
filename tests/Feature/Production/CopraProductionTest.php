@@ -302,7 +302,7 @@ class CopraProductionTest extends TestCase
     #[Test]
     public function posting_records_who_posted_it_and_when(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
         $lot = $this->lotFor($this->dehusked);

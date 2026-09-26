@@ -150,7 +150,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function an_authenticated_user_can_reach_every_payables_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->get(route('supplier-invoices.index'))->assertOk();
         $this->actingAs($user)->get(route('supplier-invoices.create'))->assertOk();
@@ -171,7 +171,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_create_screen_offers_only_receipts_with_accrual_left(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)
@@ -189,7 +189,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function a_fully_invoiced_receipt_drops_off_the_create_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $invoice = SupplierInvoice::factory()->create([
@@ -210,7 +210,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_create_screen_offers_only_ordinary_expense_accounts(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $response = $this->actingAs($user)->get(route('supplier-invoices.create'));
         $codes = collect($response->viewData('page')['props']['expenseAccounts'])->pluck('code');
@@ -226,7 +226,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function an_invoice_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)
@@ -248,7 +248,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_duplicate_invoice_number_for_one_supplier(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));
@@ -265,7 +265,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_grni_line_with_no_receipt_and_an_expense_line_with_no_account(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt, [
@@ -282,7 +282,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_screen_refuses_a_due_date_before_the_invoice_date(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)
@@ -293,7 +293,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_invoice_show_screen_reports_its_journal_and_balances(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));
@@ -318,7 +318,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_payment_screen_lists_what_a_supplier_owes(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));
@@ -341,7 +341,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function a_payment_can_be_created_and_posted_through_the_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));
@@ -373,7 +373,7 @@ class AccountsPayableScreensTest extends TestCase
     #[Test]
     public function the_aging_and_reconciliation_screens_report_and_reconcile(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $receipt = $this->postReceipt();
 
         $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));

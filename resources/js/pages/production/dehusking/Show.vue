@@ -5,6 +5,7 @@ import DehuskingActionController from '@/actions/App/Http/Controllers/Production
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/dehusking';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -13,6 +14,8 @@ import type { DehuskingDetail } from '@/types';
 defineProps<{ order: DehuskingDetail }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Dehusking', href: index() }] } });
+
+const { can } = usePermissions();
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -37,7 +40,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
-                <Button v-if="order.can_edit" variant="outline" as-child>
+                <Button v-if="order.can_edit && can('production.create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
                         Edit
@@ -45,7 +48,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Button>
 
                 <Form
-                    v-if="order.can_post"
+                    v-if="order.can_post && can('production.post')"
                     v-bind="DehuskingActionController.post.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -55,7 +58,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="order.can_reverse"
+                    v-if="order.can_reverse && can('production.reverse')"
                     v-bind="DehuskingActionController.reverse.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -65,7 +68,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Form>
 
                 <Form
-                    v-if="order.can_cancel"
+                    v-if="order.can_cancel && can('production.cancel')"
                     v-bind="DehuskingActionController.cancel.form(order.id)"
                     v-slot="{ processing }"
                 >
@@ -118,9 +121,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">Lot consumed</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="lotsIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                             {{ order.input.lot_number ?? '—' }}
                         </Link>
+                        <template v-else>{{ order.input.lot_number ?? '—' }}</template>
                     </dd>
                 </div>
                 <div>
@@ -168,9 +172,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             <span class="text-muted-foreground block text-xs">{{ output.product_name }}</span>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs">
-                            <Link :href="lotsIndex().url" class="hover:underline">
+                            <Link v-if="can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                                 {{ output.lot_number ?? '—' }}
                             </Link>
+                            <template v-else>{{ output.lot_number ?? '—' }}</template>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ output.quantity }}</td>
                         <td class="text-muted-foreground px-4 py-3">{{ output.uom }}</td>
@@ -212,17 +217,19 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <div v-if="order.consumption_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Consumption transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.consumption_reference }}
                         </Link>
+                        <template v-else>{{ order.consumption_reference }}</template>
                     </dd>
                 </div>
                 <div v-if="order.output_reference">
                     <dt class="text-muted-foreground text-sm font-medium">Output transaction</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        <Link :href="ledgerIndex().url" class="hover:underline">
+                        <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.output_reference }}
                         </Link>
+                        <template v-else>{{ order.output_reference }}</template>
                     </dd>
                 </div>
                 <div>
