@@ -99,6 +99,19 @@ class Account extends Model
     }
 
     /**
+     * The product mappings that name this account as their inventory account.
+     *
+     * Several products share one account — all three husk-chip grades post to Husk Chips
+     * Inventory — which is why inventory reconciliation groups by account, never by product.
+     *
+     * @return HasMany<ProductAccountMapping, $this>
+     */
+    public function mappedProducts(): HasMany
+    {
+        return $this->hasMany(ProductAccountMapping::class, 'inventory_account_id');
+    }
+
+    /**
      * Whether a person may put this account on a manual journal.
      *
      * Control accounts are excluded by default: they are reconciled from a subsidiary

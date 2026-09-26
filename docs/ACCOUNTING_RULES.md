@@ -1,13 +1,14 @@
 # Accounting Rules — Coconut Factory ERP
 
-> **Status:** ✅ **IMPLEMENTED** through Finance Phase 3. Phase 1 built the engine — chart of
+> **Status:** ✅ **IMPLEMENTED** through Finance Phase 6. Phase 1 built the engine — chart of
 > accounts, fiscal periods, manual journals, reversal, balances, general ledger, trial
 > balance. Phase 2 connected it to inventory behind a cutover date. Phase 3 added accounts
-> payable: supplier invoices clearing the goods-received accrual, supplier payments, AP aging
-> and GRNI reconciliation. See §13-§18.
+> payable, Phase 4 accounts receivable, Phase 5 cash and bank management. Phase 6 added the
+> financial statements (profit and loss, balance sheet) and the management reports — every
+> one derived from posted ledgers, none stored. See §13-§28.
 >
-> **Not built:** sales invoices and receivables, customer receipts, revenue recognition, tax,
-> payroll, bank reconciliation, year-end closing. See §10.
+> **Not built:** tax, payroll, bank reconciliation, year-end closing, cash flow statement,
+> report export. See §10.
 
 ---
 
@@ -176,7 +177,8 @@ through the codebase.
 
 Credit notes · sales returns and allowances · customer advances and deposits · supplier
 advances · production expense accounting · VAT/SVAT · payroll · bank reconciliation ·
-financial dashboards · P&L · balance sheet · year-end closing · loans · fixed assets.
+cash flow statement · report export (PDF/Excel) · year-end closing · loans · fixed assets ·
+depreciation.
 
 **A delivery still recognises no revenue.** It records cost of goods sold and nothing else;
 revenue and the receivable belong to the sales invoice (§20). A delivery that is never
@@ -705,3 +707,202 @@ a policy later is a visible, intentional change rather than a silent one.
 Bank reconciliation is **not built**: no statement import, no matching, no reconciled flags, no
 uncleared cheques, no statement-derived charges. This phase is general-ledger cash control only.
 Amounts remain tax-unmodelled and in the base currency.
+
+---
+
+## 24. Financial statements
+
+Both statements are **read models over posted journal lines**. They use the same inclusion
+rule as every other balance — `AccountingBalanceService::postedLines()`: POSTED and REVERSED
+entries both count, so a reversed journal and its reversal both appear and net to nothing.
+Nothing is excluded to make a reversal "disappear", and no statement figure is ever stored.
+There is no profit, asset, liability, equity, cash, AR or AP balance column anywhere.
+
+### Profit and loss
+
+```
+Revenue        − Cost of Sales      = Gross Profit
+Gross Profit   − Operating Expenses = Net Profit
+```
+
+| Section | Account type |
+| --- | --- |
+| Revenue | `REVENUE` |
+| Cost of sales | `COST_OF_SALES` |
+| Operating expenses | `EXPENSE` |
+
+- **Accounts are classified by `AccountType` alone — never by a code prefix.** No `4xxx`,
+  `5xxx` or `6xxx` appears in any report. A renumbered chart keeps working.
+- The window is a date range (`from` / `to`) or a fiscal period; a chosen period states its
+  own window and overrides the dates. `totalsByAccount()` takes the optional `from` date so
+  the range is applied inside the one query that defines a posted line.
+- **The P&L shows recognised revenue.** Revenue reaches the ledger through sales invoices
+  (§20), so a delivered-but-unbilled sale appears as cost with no revenue beside it. That is
+  correct, and is what the unbilled-deliveries report exists to surface. Gross profit on the
+  P&L is never derived from deliveries.
+- No tax, depreciation or finance-cost lines are invented. If such accounts are created later
+  as `EXPENSE`, they fall into operating expenses automatically.
+- Zero revenue yields a zero margin, never a division error.
+
+### Presentation sign
+
+The ledger stores one number per account: debits minus credits. A statement is read by
+people, so `AccountingBalanceService::presentationAmount()` flips the sign for the
+credit-natured types (revenue, liability, equity) and leaves the debit-natured ones (asset,
+cost of sales, expense) alone. Revenue of 260,000 therefore prints as `260,000`, not
+`-260,000`.
+
+The sign follows the account **type**, not each account's stored `normal_balance`, so one
+mis-configured account cannot make a section total incoherent. An account carrying a
+genuinely **abnormal** balance — revenue in debit, an asset in credit, an overdrawn bank —
+still prints negative, which is the signal a reader needs. This is presentation only; no
+result of it ever feeds back into ledger arithmetic.
+
+### Balance sheet
+
+As at a date. Assets (`ASSET`), liabilities (`LIABILITY`) and equity (`EQUITY`). P&L accounts
+never appear as balance-sheet rows — their net effect appears as **Current Earnings**.
+
+```
+Assets  =  Liabilities  +  Equity  +  Current Earnings
+```
+
+This holds **exactly, by construction**: every posted journal balances, so the net balances
+of all six account types sum to zero, and rearranging that sum is the equation above. The
+report still computes and shows the difference, because a non-zero one would mean the trial
+balance itself is broken — an invariant nobody checks is only a belief.
+
+### Current Earnings is computed, never posted
+
+- **Retained Earnings (`3200`) is an ordinary ledger account.** The balance sheet shows its
+  actual general-ledger balance. Nothing writes profit into it — no closing journal is ever
+  posted automatically. Its code comes from `config('accounting.retained_earnings_code')`.
+- **Current Earnings** is a computed line under equity: unclosed profit, never written to any
+  account.
+- **Its accumulation boundary is the beginning of recorded history.** Fiscal periods are
+  individual months with no year grouping, and nothing records where a financial year starts,
+  so the system has no basis to assume January — or any date. While no closing entry has ever
+  been posted, "since inception" is not an approximation: every rupee ever earned is still
+  unclosed, so it is the correct figure.
+- **Limitation, stated plainly:** once year-end closing exists, Current Earnings must start
+  from the last close, or profit already moved into retained earnings would be counted twice.
+  Year-end closing is **not implemented** and must not be started without instruction.
+
+### Chart hierarchy and subtotals
+
+`AccountTreeService` nests accounts by `parent_id`, the way the chart organises them, and is
+shared by both statements. **A parent is counted exactly once:** its subtotal is its own
+direct postings plus its children's subtotals. Group headers refuse posting and so hold
+nothing of their own, but the arithmetic does not rely on that — if a parent ever becomes
+postable, its own balance is added beside its children, never lost and never double-counted.
+Branches with no balance anywhere beneath them are omitted.
+
+### Drill-down
+
+Every non-group account on either statement links to the General Ledger for that account,
+carrying the statement's date window, so each figure can be traced to the journals behind it.
+
+## 25. Financial P&L vs operational product profitability
+
+Two different questions, two different sources, deliberately never merged:
+
+| | Financial P&L | Operational product profitability |
+| --- | --- | --- |
+| Question | What revenue has been **recognised**? | Was this physical sale **profitable**? |
+| Source | General ledger (posted journals) | Posted delivery lines |
+| Revenue | Sales invoices | `DeliveryLine.sales_value` |
+| Cost | Cost-of-sales journals | `DeliveryLine.cost_of_goods_sold` |
+
+```
+Gross Profit   = sales_value − cost_of_goods_sold
+Gross Margin % = Gross Profit ÷ sales_value × 100      (0 when sales_value is 0)
+```
+
+- The report is labelled **Operational Product Profitability** everywhere — never "Financial
+  P&L by product".
+- **Both figures are read exactly as the delivery stored them, never recomputed.**
+  `sales_value` already honours the line's `pricing_basis`, so raw shell priced per KG is
+  right with no knowledge of kilograms here — and no NOS↔KG conversion is introduced.
+- Only **POSTED** deliveries count. A reversed delivery is excluded outright rather than
+  netted, because its reversal restored the stock entirely.
+- The two reports can legitimately disagree while deliveries are unbilled or partly billed.
+  Both are correct.
+- Drill-down: choosing a product lists the posted deliveries behind its figures.
+
+## 26. Inventory valuation and Inventory-to-GL reconciliation
+
+### Inventory valuation comes from the inventory ledger
+
+`InventoryValuationReportService` reads `StockQueryService` — **not the general ledger** — and
+shows, per product and warehouse: quantity, secondary quantity where the product has one,
+weighted average cost, value, and the mapped inventory GL account. Value always follows the
+primary quantity; the secondary quantity is displayed as measured and never derived.
+
+**Current valuation only.** `StockQueryService` has no date filter, so there is no safe way
+to value stock as at a past date. Filtering the ledger separately here would create a second
+definition of stock that could disagree with every other stock screen. Historical as-of
+valuation is **future work**, not faked.
+
+### Reconciliation by GL account
+
+`InventoryGlReconciliationService` groups inventory-ledger value by each product's mapped
+inventory account and compares it to that account's general-ledger balance:
+
+```
+Difference = Inventory ledger value − GL balance        (shown to six decimals)
+Status     = MATCHED if the difference is exactly 0.000000, otherwise DIFFERENCE
+```
+
+Several products may share one account — all three husk-chip grades post to Husk Chips
+Inventory — which is why the comparison is per **account**, not per product. Stock held by an
+unmapped product is reported separately: real value with no ledger account at all.
+
+### A difference is displayed, never hidden or fixed
+
+After accounting-integrated operations the two must agree to the last decimal, because each
+stock movement writes its journal inside the same database transaction. But a difference is
+**legitimate** when:
+
+- `operational_accounting_start_date` is NULL, so nothing journals at all;
+- stock moved **before the cutover date** and raised no journal;
+- opening balances have not been established.
+
+The screen states the cutover context so a reader can judge whether a difference is a defect.
+**Pre-cutover inventory requires an accounting opening-balance / cutover process later.**
+That process is not built. **Journals are never backfilled automatically** — inventing history
+to make a report tidy destroys the audit trail.
+
+## 27. Management dashboard and position reports
+
+- **Every dashboard figure is fetched from the service that owns it** — P&L, balance sheet,
+  AR and AP aging, cash/bank book, inventory valuation, product profitability. Nothing is
+  recalculated, so the dashboard cannot disagree with the detail behind it.
+- **The period is always explicit.** The service takes a fiscal period or explicit dates and
+  never assumes "this month". The screen *opens* on the open fiscal period containing today,
+  falling back to the current calendar month purely as a UI convenience with no accounting
+  meaning.
+- Performance (revenue, cost of sales, gross profit, expenses, net profit) is for the window;
+  position (cash, bank, AR, AP, current earnings) is as at the window's end. Inventory value
+  is always current (§26).
+- **Cash / bank position** uses `CashBankBookService::summary()` over configured
+  `cash_bank_accounts`, so it always agrees with the cash/bank book and the general ledger.
+- **AR / AP summaries** condense the existing aging services into Current / 1-30 / 31-60 /
+  61-90 / 90+ and an overdue total, plus the top five customers or suppliers. The aging logic
+  is not duplicated; the dashboard links to the aging screens for detail.
+- Drill-downs: P&L → profit & loss; position → balance sheet; cash → cash/bank position → book;
+  AR/AP → aging; inventory → valuation; products → product profitability.
+- **All report routes are GET-only.** Nothing in the reporting area writes, and a test asserts
+  it.
+
+## 28. Reporting — future work and `TBD`
+
+| # | Item | Why it is not built |
+| --- | --- | --- |
+| 1 | Year-end closing | Not instructed. When built, Current Earnings (§24) must start from the last close. |
+| 2 | Financial-year definition | Fiscal periods have no year grouping; needed by year-end closing. |
+| 3 | Historical (as-of) inventory valuation | `StockQueryService` has no date filter; not faked (§26). |
+| 4 | Inventory opening balances at cutover | Needed to reconcile pre-cutover stock (§26). |
+| 5 | Cash flow statement | Out of scope for this phase. |
+| 6 | PDF / Excel export | No established export mechanism exists; screens came first. |
+| 7 | Comparative periods (this period vs last) | Not requested. |
+

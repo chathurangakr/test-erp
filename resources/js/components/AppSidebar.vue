@@ -3,6 +3,11 @@ import { Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     BookOpen,
+    ChartColumn,
+    Coins,
+    Gauge,
+    GitCompareArrows,
+    TrendingUp,
     BookOpenCheck,
     Boxes,
     Landmark,
@@ -79,6 +84,15 @@ import { index as cashBankAccountsIndex } from '@/routes/cash-bank-accounts';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { index as expenseVouchersIndex } from '@/routes/expense-vouchers';
 import { index as fundTransfersIndex } from '@/routes/fund-transfers';
+import { index as financeDashboardIndex } from '@/routes/finance-dashboard';
+import {
+    balanceSheet as balanceSheetReport,
+    cashBankPosition as cashBankPositionReport,
+    inventoryGlReconciliation as inventoryGlReconciliationReport,
+    inventoryValuation as inventoryValuationReport,
+    productProfitability as productProfitabilityReport,
+    profitLoss as profitLossReport,
+} from '@/routes/reports';
 import { index as productsIndex } from '@/routes/products';
 import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as warehousesIndex } from '@/routes/warehouses';
@@ -256,6 +270,44 @@ const receivablesNavItems: NavItem[] = [
     },
 ];
 
+const reportsNavItems: NavItem[] = [
+    {
+        title: 'Finance Dashboard',
+        href: financeDashboardIndex(),
+        icon: Gauge,
+    },
+    {
+        title: 'Profit & Loss',
+        href: profitLossReport(),
+        icon: TrendingUp,
+    },
+    {
+        title: 'Balance Sheet',
+        href: balanceSheetReport(),
+        icon: Scale,
+    },
+    {
+        title: 'Inventory Valuation',
+        href: inventoryValuationReport(),
+        icon: Boxes,
+    },
+    {
+        title: 'Inventory vs GL',
+        href: inventoryGlReconciliationReport(),
+        icon: GitCompareArrows,
+    },
+    {
+        title: 'Cash / Bank Position',
+        href: cashBankPositionReport(),
+        icon: Coins,
+    },
+    {
+        title: 'Product Profitability',
+        href: productProfitabilityReport(),
+        icon: ChartColumn,
+    },
+];
+
 const cashNavItems: NavItem[] = [
     {
         title: 'Cash / Bank Accounts',
@@ -314,6 +366,7 @@ const footerNavItems: NavItem[] = [
             <NavMain :items="purchasingNavItems" label="Purchasing" />
             <NavMain :items="salesNavItems" label="Sales" />
             <NavMain :items="productionNavItems" label="Production" />
+            <NavMain :items="reportsNavItems" label="Reports" />
             <NavMain :items="financeNavItems" label="Finance" />
             <NavMain :items="payablesNavItems" label="Accounts payable" />
             <NavMain :items="receivablesNavItems" label="Accounts receivable" />

@@ -71,6 +71,28 @@ class AccountingBalanceService
     }
 
     /**
+     * A net balance as a financial statement should print it.
+     *
+     * The ledger stores one thing — debits minus credits — and that never changes. A
+     * statement, though, is read by people: revenue of 260,000 belongs on the page as
+     * 260,000, not as the -260,000 its credit balance arithmetically is. This flips the sign
+     * for the credit-natured classes and leaves the debit-natured ones alone.
+     *
+     * The sign comes from the account **type**, not from each account's stored
+     * `normal_balance`, so one oddly configured account cannot make a section total
+     * incoherent. An account carrying a genuinely abnormal balance — a revenue account in
+     * debit — still prints negative, which is exactly the signal a reader needs.
+     *
+     * Presentation only. No caller of this may feed the result back into the ledger.
+     */
+    public function presentationAmount(AccountType $type, string $netBalance): string
+    {
+        return $type->defaultNormalBalance()->isDebit()
+            ? DecimalMath::cost($netBalance)
+            : DecimalMath::cost(DecimalMath::mul($netBalance, '-1'));
+    }
+
+    /**
      * Debits, credits and net for one account within one fiscal period.
      *
      * @return array{debit: string, credit: string, net: string}
@@ -111,11 +133,15 @@ class AccountingBalanceService
      * One grouped query rather than one per account, because a trial balance over a full
      * chart would otherwise be dozens of round trips.
      *
+     * `$from` narrows the window at the near end, which a profit and loss statement needs
+     * and a balance sheet never does: a balance is everything up to a date, but performance
+     * is what happened between two.
+     *
      * @return Collection<int, array{debit: string, credit: string, net: string}>
      */
-    public function totalsByAccount(?Carbon $asOf = null, ?FiscalPeriod $period = null): Collection
+    public function totalsByAccount(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null): Collection
     {
-        $rows = $this->postedLines($asOf, $period)
+        $rows = $this->postedLines($asOf, $period, $from)
             ->selectRaw('account_id, SUM(debit) as debit_total, SUM(credit) as credit_total')
             ->groupBy('account_id')
             ->get();
@@ -276,10 +302,10 @@ class AccountingBalanceService
      *
      * @return Builder<JournalEntryLine>
      */
-    private function postedLines(?Carbon $asOf = null, ?FiscalPeriod $period = null): Builder
+    private function postedLines(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null): Builder
     {
         return JournalEntryLine::query()
-            ->whereHas('entry', function (Builder $entry) use ($asOf, $period): void {
+            ->whereHas('entry', function (Builder $entry) use ($asOf, $period, $from): void {
                 $entry->whereIn('status', [
                     JournalEntryStatus::Posted->value,
                     JournalEntryStatus::Reversed->value,
@@ -287,6 +313,10 @@ class AccountingBalanceService
 
                 if ($asOf !== null) {
                     $entry->whereDate('journal_date', '<=', $asOf->toDateString());
+                }
+
+                if ($from !== null) {
+                    $entry->whereDate('journal_date', '>=', $from->toDateString());
                 }
 
                 if ($period !== null) {

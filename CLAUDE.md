@@ -269,7 +269,7 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
-## Accounting rules (Finance Phases 1-5 — foundation, inventory, AP, AR and cash implemented)
+## Accounting rules (Finance Phases 1-6 — foundation, inventory, AP, AR, cash and reporting implemented)
 
 - Use **double-entry accounting**. Every posted journal satisfies **Total Debit = Total
   Credit**, exactly, enforced by `App\Actions\Accounting\PostJournalEntry` inside one
@@ -417,6 +417,48 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ---
 
+## Financial reporting rules (Finance Phase 6 — implemented)
+
+- **Reports derive from their source ledgers and store nothing.** Statements read posted
+  journal lines through `AccountingBalanceService`; inventory valuation reads
+  `StockQueryService`; product profitability reads posted delivery lines. Never add a profit,
+  asset, liability, cash, AR or AP column, and never a summary table for convenience. Phase 6
+  added no migration.
+- **Use the central posted-line rule.** POSTED and REVERSED entries both count, so a reversal
+  nets against its original. Never exclude reversed journals to make them "disappear".
+- **P&L:** `Revenue − Cost of Sales = Gross Profit`; `Gross Profit − Operating Expenses = Net
+  Profit`. Classify by `AccountType` (`REVENUE`, `COST_OF_SALES`, `EXPENSE`) — **never by an
+  account-code prefix**. Group by the chart's `parent_id` hierarchy through
+  `AccountTreeService`, which counts each parent exactly once.
+- **Sign presentation is a reporting concern only.** `presentationAmount()` flips
+  credit-natured types so revenue prints positive; an abnormal balance prints negative. Its
+  result must never feed back into ledger arithmetic.
+- **Balance sheet:** `Assets = Liabilities + Equity + Current Earnings` until year-end closing
+  exists. It holds by construction; the report still computes the difference.
+- **Current Earnings is computed, never posted.** Never write profit into Retained Earnings
+  automatically and never generate a closing journal. Retained Earnings shows its real GL
+  balance, located through `config('accounting.retained_earnings_code')`. Current Earnings
+  accumulates from the start of recorded history, because no financial-year boundary exists;
+  once year-end closing is built it must start from the last close. See
+  `docs/ACCOUNTING_RULES.md` §24.
+- **Operational product profitability is NOT the financial P&L.** It uses stored
+  `DeliveryLine.sales_value` and `cost_of_goods_sold` from POSTED deliveries, never
+  recomputed (so no NOS↔KG conversion), and must be labelled "Operational". The P&L shows
+  recognised (invoiced) revenue. See `docs/ACCOUNTING_RULES.md` §25.
+- **Inventory valuation is current only.** `StockQueryService` has no date filter; do not
+  fake a historical as-of valuation.
+- **Inventory-vs-GL differences are displayed, never hidden or auto-fixed.** Pre-cutover stock
+  legitimately has no journal; it needs an opening-balance process later. Never backfill
+  journals. Reconcile per inventory GL **account**, because products share accounts. See
+  `docs/ACCOUNTING_RULES.md` §26.
+- **The dashboard fetches every figure from the owning service** and takes an explicit fiscal
+  period or date range — never an assumed "current month" in the service.
+- **Report routes are GET-only.** A test asserts nothing in the reporting area writes.
+- **Not built:** cash flow statement, year-end closing, PDF/Excel export, comparative periods,
+  historical inventory valuation.
+
+---
+
 ## Confirmed business rules
 
 Full detail lives in `docs/BUSINESS_RULES.md`. Summary:
@@ -524,18 +566,22 @@ authoritative value, revenue resolved through product mappings, partial billing 
 directions, customer receipts allocated to invoices, AR aging and an unbilled-deliveries
 report), and **cash and bank management** (configured cash/bank accounts with derived
 balances, expense vouchers for immediately-paid expenses, cash and bank fund transfers, and a
-cash/bank book that reconciles exactly to the general ledger).
+cash/bank book that reconciles exactly to the general ledger), and **financial statements and
+management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
+valuation, inventory-to-GL reconciliation, cash/bank position, operational product
+profitability and a finance dashboard — all derived, none stored).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense
-accounting, VAT/SVAT, payroll, loans, fixed assets, P&L and balance sheet, year-end closing,
-the permanent joint-product costing method, production planning, BOM editor, maintenance,
-role-based permissions, REST API.
+accounting, VAT/SVAT, payroll, loans, fixed assets, depreciation, cash flow statement, report
+export, year-end closing, the permanent joint-product costing method, production planning,
+BOM editor, maintenance, role-based permissions, REST API.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 
 Authenticated users may currently access all master data, view inventory, and use
-purchasing, sales, production and finance, including cash and bank. Role-based permissions come later.
+purchasing, sales, production and finance, including cash and bank and the financial reports.
+Role-based permissions come later.
 
 ---
 

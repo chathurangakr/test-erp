@@ -25,6 +25,13 @@ use App\Http\Controllers\Receivables\CustomerReceiptController;
 use App\Http\Controllers\Receivables\SalesInvoiceActionController;
 use App\Http\Controllers\Receivables\SalesInvoiceController;
 use App\Http\Controllers\Receivables\UnbilledDeliveryController;
+use App\Http\Controllers\Reports\BalanceSheetController;
+use App\Http\Controllers\Reports\CashBankPositionController;
+use App\Http\Controllers\Reports\FinanceDashboardController;
+use App\Http\Controllers\Reports\InventoryGlReconciliationController;
+use App\Http\Controllers\Reports\InventoryValuationController;
+use App\Http\Controllers\Reports\ProductProfitabilityController;
+use App\Http\Controllers\Reports\ProfitLossController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -153,6 +160,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('fund-transfers.reverse');
     Route::patch('finance/fund-transfers/{fundTransfer}/cancel', [FundTransferActionController::class, 'cancel'])
         ->name('fund-transfers.cancel');
+
+    // ---------------------------------------- financial statements and reports
+    // All read-only. Every figure derives from a posted ledger; nothing here writes.
+    Route::get('finance/dashboard', [FinanceDashboardController::class, 'index'])
+        ->name('finance-dashboard.index');
+
+    Route::get('finance/reports/profit-loss', [ProfitLossController::class, 'index'])
+        ->name('reports.profit-loss');
+    Route::get('finance/reports/balance-sheet', [BalanceSheetController::class, 'index'])
+        ->name('reports.balance-sheet');
+    Route::get('finance/reports/inventory-valuation', [InventoryValuationController::class, 'index'])
+        ->name('reports.inventory-valuation');
+    Route::get('finance/reports/inventory-gl-reconciliation', [InventoryGlReconciliationController::class, 'index'])
+        ->name('reports.inventory-gl-reconciliation');
+    Route::get('finance/reports/cash-bank-position', [CashBankPositionController::class, 'index'])
+        ->name('reports.cash-bank-position');
+    Route::get('finance/reports/product-profitability', [ProductProfitabilityController::class, 'index'])
+        ->name('reports.product-profitability');
 
     Route::get('finance/accounting-setup', [AccountingSetupController::class, 'index'])
         ->name('accounting-setup.index');

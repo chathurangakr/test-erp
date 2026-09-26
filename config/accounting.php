@@ -38,4 +38,21 @@ return [
 
     'journal_prefix' => 'JV',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Retained earnings account
+    |--------------------------------------------------------------------------
+    |
+    | The balance sheet shows this account's ACTUAL ledger balance beside the
+    | computed Current Earnings line, so the two are never confused. Nothing
+    | posts to it automatically: profit is moved into retained earnings by a
+    | year-end closing entry, which is not implemented.
+    |
+    | Configuration rather than a literal, because a factory may renumber its
+    | chart. See docs/ACCOUNTING_RULES.md §24.
+    |
+    */
+
+    'retained_earnings_code' => env('ACCOUNTING_RETAINED_EARNINGS_CODE', '3200'),
+
 ];

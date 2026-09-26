@@ -371,6 +371,10 @@ class AccountsReceivableScreensTest extends TestCase
     #[Test]
     public function the_customer_screen_reports_what_that_customer_owes(): void
     {
+        // Before the fixture's 2026-09-25 due date, so "nothing overdue" does not depend on
+        // the real clock.
+        $this->travelTo('2026-09-20');
+
         $user = User::factory()->create();
         $delivery = $this->postDelivery();
 

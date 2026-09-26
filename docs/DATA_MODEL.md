@@ -1140,6 +1140,42 @@ It also means the book needs no knowledge of what posted each line. A supplier p
 customer receipt, an expense voucher, a fund transfer and a manual journal all appear because
 each wrote a line; a future module that moves money will appear with no change to the report.
 
+### R-1 — reports add no tables and store no balances
+
+**Decision:** Finance Phase 6 added **no migration**. The profit and loss statement, balance
+sheet, inventory valuation, inventory-to-GL reconciliation, cash/bank position, product
+profitability and dashboard are all read models computed per request from existing tables.
+No summary, snapshot or cached-balance table was created for convenience.
+
+**Why:** the same reason there is no `current_stock` and no account balance column. A stored
+statement figure is a second version of the truth that drifts the moment anything is posted
+late or reversed. Computing it means the balance sheet equation and the four reconciliation
+invariants are consequences of the design, not things to maintain. If performance ever
+requires a cache, it must be documented as non-authoritative and rebuildable.
+
+### R-2 — Current Earnings has no column and no account
+
+**Decision:** unclosed profit is shown on the balance sheet as a computed **Current Earnings**
+line. It is not posted to `3200 Retained Earnings` or any other account, and no closing entry
+is generated. The retained-earnings account is located through
+`config('accounting.retained_earnings_code')`, never a literal in a report.
+
+**Why:** year-end closing is not implemented, and `fiscal_periods` has no year grouping, so
+there is no recorded financial-year boundary to close at. Current Earnings therefore
+accumulates from the beginning of recorded history — exactly right while nothing has ever been
+closed. When year-end closing is designed it must add the year boundary, and Current Earnings
+must then start from the last close.
+
+### R-3 — inventory reconciliation groups by GL account, not by product
+
+**Decision:** inventory-ledger value is grouped by each product's mapped
+`product_account_mappings.inventory_account_id` (`Account::mappedProducts()`), then compared
+with that account's general-ledger balance.
+
+**Why:** several products share one inventory account — the three husk-chip grades all post to
+Husk Chips Inventory — and the general ledger only knows the account. Comparing per product
+would need the ledger to be split in a way it never was.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that

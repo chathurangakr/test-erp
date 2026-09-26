@@ -694,3 +694,160 @@ export type FundTransferDetail = FundTransferRow & {
     } | null;
     reversal_journal_number: string | null;
 };
+
+// ------------------------------------------- financial statements and reports
+
+/** One account (and everything beneath it) on a financial statement. */
+export type StatementRow = {
+    account_id: number;
+    code: string;
+    name: string;
+    type: string;
+    depth: number;
+    is_group: boolean;
+    /** What this account itself holds, before its children. */
+    own_amount: string;
+    /** This account and everything beneath it. */
+    amount: string;
+    children: StatementRow[];
+};
+
+export type StatementSection = {
+    rows: StatementRow[];
+    total: string;
+};
+
+export type ProfitLossStatement = {
+    revenue: StatementSection;
+    cost_of_sales: StatementSection;
+    gross_profit: string;
+    gross_margin_percent: string;
+    operating_expenses: StatementSection;
+    net_profit: string;
+    from: string | null;
+    to: string | null;
+    period: string | null;
+};
+
+export type BalanceSheetStatement = {
+    assets: StatementSection;
+    liabilities: StatementSection;
+    equity: StatementSection;
+    /** Computed unclosed profit. Never posted to any account. */
+    current_earnings: string;
+    total_equity: string;
+    liabilities_and_equity: string;
+    difference: string;
+    balanced: boolean;
+    as_of: string;
+};
+
+export type InventoryValuationRow = {
+    product_id: number;
+    product_code: string;
+    product_name: string;
+    warehouse_id: number;
+    warehouse_code: string | null;
+    primary_uom: string | null;
+    quantity: string;
+    secondary_uom: string | null;
+    secondary_quantity: string | null;
+    weighted_average_cost: string;
+    value: string;
+    inventory_account_id: number | null;
+    inventory_account_code: string | null;
+    inventory_account_name: string | null;
+};
+
+export type InventoryValuationReport = {
+    rows: InventoryValuationRow[];
+    quantity_total: string;
+    value_total: string;
+    unmapped_count: number;
+    as_of: string;
+};
+
+export type InventoryGlReconciliationReport = {
+    rows: {
+        account_id: number;
+        account_code: string;
+        account_name: string;
+        products: string[];
+        inventory_value: string;
+        gl_balance: string;
+        difference: string;
+        status: 'MATCHED' | 'DIFFERENCE';
+    }[];
+    inventory_total: string;
+    gl_total: string;
+    difference_total: string;
+    reconciled: boolean;
+    unmapped_value: string;
+    unmapped_products: string[];
+    cutover_date: string | null;
+    accounting_enabled: boolean;
+};
+
+export type ProductProfitabilityRow = {
+    product_id: number;
+    product_code: string;
+    product_name: string;
+    primary_uom: string | null;
+    secondary_uom: string | null;
+    quantity: string;
+    secondary_quantity: string | null;
+    sales_value: string;
+    cost_of_goods_sold: string;
+    gross_profit: string;
+    gross_margin_percent: string;
+    delivery_count: number;
+};
+
+export type ProductProfitabilityReport = {
+    rows: ProductProfitabilityRow[];
+    sales_total: string;
+    cogs_total: string;
+    gross_profit_total: string;
+    gross_margin_percent: string;
+    delivery_count: number;
+    from: string | null;
+    to: string | null;
+};
+
+export type AgingSummary = {
+    kind: string;
+    total: string;
+    current: string;
+    days_1_30: string;
+    days_31_60: string;
+    days_61_90: string;
+    days_90_plus: string;
+    overdue: string;
+    as_of: string;
+};
+
+export type FinanceDashboardSummary = {
+    period: { from: string | null; to: string | null; name: string | null };
+    performance: {
+        revenue: string;
+        cost_of_sales: string;
+        gross_profit: string;
+        gross_margin_percent: string;
+        operating_expenses: string;
+        net_profit: string;
+    };
+    position: {
+        cash_total: string;
+        bank_total: string;
+        cash_and_bank: string;
+        receivables: string;
+        payables: string;
+        inventory_value: string;
+        current_earnings: string;
+    };
+    receivables: AgingSummary;
+    payables: AgingSummary;
+    top_products: ProductProfitabilityRow[];
+    top_customers: { id: number; code: string | null; name: string | null; outstanding: string }[];
+    top_suppliers: { id: number; code: string | null; name: string | null; outstanding: string }[];
+};

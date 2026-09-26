@@ -1101,3 +1101,46 @@ Fund transfer       Dr Destination Cash/Bank  Cr Source Cash/Bank
 - **No bank reconciliation, no cheque lifecycle, no VAT, no foreign currency.**
 
 Full detail in `docs/ACCOUNTING_RULES.md` §22-§23.
+
+## 26. Financial statements and management reports
+
+```
+Profit and loss   Revenue − Cost of Sales = Gross Profit
+                  Gross Profit − Operating Expenses = Net Profit
+Balance sheet     Assets = Liabilities + Equity + Current Earnings
+```
+
+- **Every report derives from its source ledger.** Financial statements read posted journal
+  lines; inventory valuation reads the inventory ledger; product profitability reads posted
+  deliveries. **No statement balance is ever stored** — no profit, asset, liability, cash, AR
+  or AP column exists anywhere.
+- **Accounts are classified by account type, never by account number.** Revenue, cost of
+  sales and expenses come from the account's type; the chart's parent/child structure decides
+  how they are grouped on the page.
+- **Figures print the way people read them.** Revenue, liabilities and equity show as positive
+  numbers; an account with a genuinely abnormal balance (an overdrawn bank, revenue in debit)
+  prints negative.
+- **Reversals net.** A reversed journal and its reversal both count, so together they show
+  nothing.
+- **The P&L shows recognised revenue** — invoiced sales. A delivery that has not been invoiced
+  shows its cost with no revenue until the invoice posts.
+- **Current Earnings is computed, not posted.** Until year-end closing exists, unclosed profit
+  appears as a computed line under equity. Retained Earnings shows only what the ledger
+  actually holds; nothing writes profit into it automatically. Because nothing records when a
+  financial year begins, Current Earnings accumulates from the start of recorded history.
+- **Operational product profitability is not the P&L.** It answers "was this physical sale
+  profitable?" from each delivery's own sales value and cost of goods sold, and is labelled
+  accordingly. The P&L answers "what revenue has been recognised?". They may differ while
+  deliveries are unbilled, and both are correct. Raw shell sold by the KG uses the delivery's
+  stored value — no count-to-weight conversion.
+- **Inventory valuation is the current position**, from the inventory ledger. Valuing stock
+  as at a past date is not supported yet.
+- **Inventory vs GL differences are shown honestly.** Stock that existed before the
+  accounting cutover has no journal, so it legitimately differs from the general ledger until
+  an opening-balance process is built. Nothing is hidden and no journal is backfilled.
+- **The dashboard never assumes "this month" as an accounting rule.** It takes a chosen fiscal
+  period or explicit dates, and every figure comes from the report that owns it.
+- **Not built:** cash flow statement, year-end closing, PDF/Excel export, comparative periods.
+
+Full detail in `docs/ACCOUNTING_RULES.md` §24-§28.
+

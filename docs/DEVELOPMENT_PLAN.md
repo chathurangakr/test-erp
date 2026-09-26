@@ -359,11 +359,46 @@ closing, production overhead allocation.
 **Still open:** the negative-cash and overdraft policy (`ACCOUNTING_RULES.md` §23) — three
 business questions, deliberately unanswered rather than guessed at.
 
-## Phase 14 — Permissions (not started)
+## Phase 14 — Finance 6: financial statements and management reports ✅ COMPLETE
+
+Reports over what the ledgers already hold. **No migration, no stored balance.**
+
+- [x] `ProfitLossService` — revenue, cost of sales, gross profit, operating expenses, net
+      profit, by date range or fiscal period; classified by `AccountType`, never code prefix
+- [x] `BalanceSheetService` — assets, liabilities, equity and a **computed** Current Earnings
+      line; the equation `Assets = Liabilities + Equity + Current Earnings` checked on every
+      request. Retained Earnings shows its real balance and is never written to
+- [x] `AccountTreeService` — chart hierarchy with parent subtotals, each parent counted once
+- [x] `AccountingBalanceService` gains a `from` date on `totalsByAccount()` and a
+      presentation-only sign method; ledger arithmetic unchanged
+- [x] `InventoryValuationReportService` — current valuation from the inventory ledger, with
+      secondary quantity and mapped GL account; no as-of date (not faked)
+- [x] `InventoryGlReconciliationService` — inventory ledger vs GL per inventory account, to six
+      decimals; differences shown with cutover context, never hidden or backfilled
+- [x] `ProductProfitabilityService` — **operational** profitability from posted deliveries'
+      stored sales value and COGS; kept separate from the financial P&L by name and source
+- [x] `FinanceDashboardService` — every figure fetched from the service that owns it; period
+      always explicit
+- [x] Screens: finance dashboard, profit & loss, balance sheet, inventory valuation, inventory
+      vs GL, cash/bank position, product profitability — all GET-only, with drill-downs to the
+      general ledger, aging, cash/bank book and deliveries
+- [x] 56 new tests, including an integrated scenario (capital → purchase → supplier invoice →
+      payment → delivery → sales invoice → receipt → expense) asserting the P&L, balance sheet
+      equation, AR, AP, cash, inventory and trial balance together
+
+**Deliberately not implemented:** cash flow statement, year-end closing, PDF/Excel export,
+historical inventory valuation, VAT, payroll, depreciation, bank reconciliation, loans,
+multi-currency, credit notes, advances, production overhead, permanent joint-product costing.
+
+**Still open:** financial-year definition and year-end closing (Current Earnings currently
+accumulates from inception); inventory opening balances at cutover. See
+`ACCOUNTING_RULES.md` §28.
+
+## Phase 15 — Permissions (not started)
 
 Role-based permissions. Currently **any authenticated user** may access Product Master.
 
-## Phase 15 — REST API for Flutter (not started)
+## Phase 16 — REST API for Flutter (not started)
 
 Versioned REST API reusing the same action classes as the Inertia controllers.
 
@@ -381,6 +416,7 @@ Versioned REST API reusing the same action classes as the Inertia controllers.
 | Landed cost allocated by material value, never quantity | `BUSINESS_RULES.md` §13 |
 | Calculated costs are never accepted from a request | `BUSINESS_RULES.md` §13 |
 | Debits = Credits on every journal | `ACCOUNTING_RULES.md` §2 |
+| Reports derive from ledgers; no stored statement balances | `ACCOUNTING_RULES.md` §24 |
 | `decimal` for money/quantities, never float | `CLAUDE.md` |
 | Transactions for inventory/production/accounting | `CLAUDE.md` |
 | Posted transactions reversed, never edited | `CLAUDE.md` |
