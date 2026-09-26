@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Payables;
 
-use App\Actions\Payables\GeneratePayableReference;
+use App\Actions\Payables\SaveSupplierInvoice;
 use App\Enums\AccountType;
 use App\Enums\SupplierInvoiceLineType;
 use App\Enums\SupplierInvoiceStatus;
@@ -20,9 +20,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,7 +36,7 @@ class SupplierInvoiceController extends Controller
     private const PER_PAGE = 25;
 
     public function __construct(
-        private readonly GeneratePayableReference $references,
+        private readonly SaveSupplierInvoice $saveInvoice,
         private readonly AccountsPayableService $payables,
         private readonly GrniReconciliationService $grni,
     ) {}
@@ -91,24 +88,7 @@ class SupplierInvoiceController extends Controller
 
     public function store(StoreSupplierInvoiceRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $invoice = DB::transaction(function () use ($data): SupplierInvoice {
-            $invoice = SupplierInvoice::create([
-                'internal_invoice_number' => $this->references->forInvoice(Carbon::parse($data['invoice_date'])),
-                'supplier_id' => $data['supplier_id'],
-                'supplier_invoice_number' => $data['supplier_invoice_number'],
-                'invoice_date' => $data['invoice_date'],
-                'due_date' => $data['due_date'],
-                'description' => $data['description'] ?? null,
-                'status' => SupplierInvoiceStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->writeLines($invoice, $data['lines']);
-
-            return $invoice;
-        });
+        $invoice = $this->saveInvoice->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Supplier invoice saved as draft.')]);
 
@@ -137,7 +117,7 @@ class SupplierInvoiceController extends Controller
 
     public function edit(SupplierInvoice $supplierInvoice): Response
     {
-        $this->assertEditable($supplierInvoice);
+        $this->saveInvoice->assertEditable($supplierInvoice);
 
         $supplierInvoice->load('lines');
 
@@ -163,58 +143,11 @@ class SupplierInvoiceController extends Controller
 
     public function update(UpdateSupplierInvoiceRequest $request, SupplierInvoice $supplierInvoice): RedirectResponse
     {
-        $this->assertEditable($supplierInvoice);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($supplierInvoice, $data): void {
-            $supplierInvoice->update([
-                'supplier_id' => $data['supplier_id'],
-                'supplier_invoice_number' => $data['supplier_invoice_number'],
-                'invoice_date' => $data['invoice_date'],
-                'due_date' => $data['due_date'],
-                'description' => $data['description'] ?? null,
-            ]);
-
-            // Safe only because the invoice is still a draft — nothing has reached the books.
-            $supplierInvoice->lines()->delete();
-
-            $this->writeLines($supplierInvoice, $data['lines']);
-        });
+        $this->saveInvoice->handle($supplierInvoice, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Supplier invoice updated.')]);
 
         return to_route('supplier-invoices.show', $supplierInvoice);
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $lines
-     */
-    private function writeLines(SupplierInvoice $invoice, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $type = SupplierInvoiceLineType::from($line['line_type']);
-
-            $invoice->lines()->create([
-                'line_type' => $type,
-                'goods_receipt_id' => $type->isGrniMatch() ? $line['goods_receipt_id'] : null,
-                'debit_account_id' => $type->isGrniMatch() ? null : $line['debit_account_id'],
-                'description' => $line['description'] ?? null,
-                'amount' => DecimalMath::cost(DecimalMath::of((string) $line['amount'])),
-            ]);
-        }
-    }
-
-    private function assertEditable(SupplierInvoice $invoice): void
-    {
-        if (! $invoice->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft supplier invoice can be edited. :reference is :status.', [
-                    'reference' => $invoice->internal_invoice_number,
-                    'status' => $invoice->status->label(),
-                ]),
-            ]);
-        }
     }
 
     /**

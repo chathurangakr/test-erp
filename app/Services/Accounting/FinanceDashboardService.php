@@ -131,6 +131,30 @@ class FinanceDashboardService
     }
 
     /**
+     * The reporting window a request asked for, with the screen's convenient default.
+     *
+     * A chosen fiscal period states its own window. Explicit dates are used as given. Only
+     * when neither is supplied does the default window apply — a UI convenience, not an
+     * accounting rule. Shared by the web dashboard and the API so both open on the same period.
+     *
+     * @return array{period: FiscalPeriod|null, from: Carbon|null, to: Carbon|null}
+     */
+    public function resolveWindow(?int $periodId, ?CarbonInterface $from, ?CarbonInterface $to): array
+    {
+        $period = $periodId === null ? null : FiscalPeriod::find($periodId);
+        $default = $this->defaultWindow();
+
+        $from ??= $period === null ? Carbon::parse($default['from']) : null;
+        $to ??= $period === null ? Carbon::parse($default['to']) : null;
+
+        return [
+            'period' => $period,
+            'from' => $from === null ? null : Carbon::parse($from),
+            'to' => $to === null ? null : Carbon::parse($to),
+        ];
+    }
+
+    /**
      * A sensible window for the screen to open on, with no business meaning attached.
      *
      * Prefers the open fiscal period containing today, because that is a real accounting

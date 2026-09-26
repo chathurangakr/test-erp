@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Receivables;
 
 use App\Http\Controllers\Controller;
-use App\Models\AccountingSetting;
-use App\Services\Accounting\AccountingBalanceService;
 use App\Services\Accounting\AccountsReceivableService;
-use App\Support\DecimalMath;
+use App\Services\Accounting\ControlAccountReconciliation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -23,7 +21,7 @@ class ArAgingController extends Controller
 {
     public function __construct(
         private readonly AccountsReceivableService $receivables,
-        private readonly AccountingBalanceService $balances,
+        private readonly ControlAccountReconciliation $control,
     ) {}
 
     public function index(Request $request): Response
@@ -31,20 +29,9 @@ class ArAgingController extends Controller
         $asOf = $request->date('as_of');
         $report = $this->receivables->aging($asOf === null ? null : Carbon::parse($asOf));
 
-        $control = AccountingSetting::current()?->tradeReceivablesAccount;
-        $controlBalance = $control === null
-            ? null
-            : $this->balances->balance($control, $asOf === null ? null : Carbon::parse($asOf));
-
         return Inertia::render('finance/ar-aging/Index', [
             'report' => $report,
-            'control' => $control === null ? null : [
-                'code' => $control->code,
-                'name' => $control->name,
-                'balance' => $controlBalance,
-                'reconciles' => $controlBalance !== null
-                    && DecimalMath::compare($controlBalance, $report['totals']['total']) === 0,
-            ],
+            'control' => $this->control->tradeReceivables($report['totals']['total'], $asOf === null ? null : Carbon::parse($asOf)),
             'filters' => ['as_of' => $asOf?->toDateString()],
             'currency' => config('accounting.base_currency'),
         ]);

@@ -29,6 +29,11 @@ class UpdateUserAccess
             $user->roles()->sync($roleIds);
             $user->forgetPermissions();
 
+            // A deactivated user loses every mobile session at once, not at token expiry.
+            if (! $isActive) {
+                $user->tokens()->delete();
+            }
+
             return $user->refresh();
         }, $isActive ? 'roles' : 'is_active');
     }

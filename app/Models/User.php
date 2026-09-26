@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * @property int $id
@@ -35,7 +36,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * A new user is active — but holds no role, and so no permission, until an administrator
@@ -46,6 +47,22 @@ class User extends Authenticatable implements PasskeyUser
     protected $attributes = [
         'is_active' => true,
     ];
+
+    /**
+     * A changed password ends every mobile session.
+     *
+     * Enforced here, on the model, so it holds for every way a password changes — the
+     * settings screen, a password-reset link, or anything added later. Deactivation revokes
+     * tokens too (UpdateUserAccess). See docs/API_V1.md §3.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (User $user): void {
+            if ($user->wasChanged('password')) {
+                $user->tokens()->delete();
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Production;
 
-use App\Actions\Production\GenerateProductionReference;
+use App\Actions\Production\SaveHuskChippingOrder;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Http\Controllers\Controller;
@@ -10,7 +10,6 @@ use App\Http\Requests\Production\StoreHuskChippingRequest;
 use App\Http\Requests\Production\UpdateHuskChippingRequest;
 use App\Models\InventoryLot;
 use App\Models\ProductionOrder;
-use App\Models\ProductionRecipe;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
@@ -18,8 +17,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,7 +38,7 @@ class HuskChippingController extends Controller
     private const PER_PAGE = 20;
 
     public function __construct(
-        private readonly GenerateProductionReference $references,
+        private readonly SaveHuskChippingOrder $saveOrder,
         private readonly StockQueryService $stock,
     ) {}
 
@@ -86,26 +83,7 @@ class HuskChippingController extends Controller
 
     public function store(StoreHuskChippingRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $recipe = $this->recipe();
-
-        $order = DB::transaction(function () use ($data, $recipe): ProductionOrder {
-            $order = ProductionOrder::create([
-                'production_number' => $this->references->forProductionOrder(),
-                'production_type' => ProductionType::HuskChipping,
-                'production_date' => $data['production_date'],
-                'warehouse_id' => $data['warehouse_id'],
-                'status' => ProductionStatus::Draft,
-                'notes' => $data['notes'] ?? null,
-                'waste_quantity' => $this->wasteQuantity($data),
-                'waste_uom_id' => $this->wasteQuantity($data) === null ? null : $data['waste_uom_id'],
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->writeLines($order, $data, $recipe);
-
-            return $order;
-        });
+        $order = $this->saveOrder->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Husk chipping order saved as draft.')]);
 
@@ -136,7 +114,7 @@ class HuskChippingController extends Controller
 
     public function edit(ProductionOrder $huskChipping): Response
     {
-        $this->assertEditable($huskChipping);
+        $this->saveOrder->assertEditable($huskChipping);
 
         $huskChipping->load(['inputs', 'outputs']);
         $input = $huskChipping->inputs->first();
@@ -163,104 +141,11 @@ class HuskChippingController extends Controller
 
     public function update(UpdateHuskChippingRequest $request, ProductionOrder $huskChipping): RedirectResponse
     {
-        $this->assertEditable($huskChipping);
-
-        $data = $request->validated();
-        $recipe = $this->recipe();
-
-        DB::transaction(function () use ($huskChipping, $data, $recipe): void {
-            $huskChipping->update([
-                'production_date' => $data['production_date'],
-                'warehouse_id' => $data['warehouse_id'],
-                'notes' => $data['notes'] ?? null,
-                'waste_quantity' => $this->wasteQuantity($data),
-                'waste_uom_id' => $this->wasteQuantity($data) === null ? null : $data['waste_uom_id'],
-            ]);
-
-            // Safe only because the order is still a draft — nothing has been consumed and
-            // no output lot exists.
-            $huskChipping->inputs()->delete();
-            $huskChipping->outputs()->delete();
-
-            $this->writeLines($huskChipping, $data, $recipe);
-        });
+        $this->saveOrder->handle($huskChipping, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Husk chipping order updated.')]);
 
         return to_route('husk-chipping.show', $huskChipping);
-    }
-
-    /**
-     * Writes the draft's input and its operator-entered outputs.
-     *
-     * The input product comes from the recipe, never from the request. Output quantities are
-     * stored exactly as measured; their costs stay null until the ledger prices the batch.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function writeLines(ProductionOrder $order, array $data, ProductionRecipe $recipe): void
-    {
-        $order->inputs()->create([
-            'product_id' => $recipe->input_product_id,
-            'lot_id' => $data['lot_id'],
-            'quantity' => DecimalMath::quantity(DecimalMath::of($data['quantity'])),
-            'unit_cost' => null,
-            'total_cost' => null,
-        ]);
-
-        $percentages = $recipe->outputs->pluck('allocation_percent', 'product_id');
-
-        foreach ($data['outputs'] as $output) {
-            $order->outputs()->create([
-                'product_id' => $output['product_id'],
-                'lot_id' => null,
-                'quantity' => DecimalMath::quantity(DecimalMath::of((string) $output['quantity'])),
-                // The configured share, recorded for reference. Posting replaces it with the
-                // share actually used, which differs when a grade produced nothing.
-                'allocation_percent' => $percentages->get((int) $output['product_id']),
-                'allocated_cost' => null,
-                'unit_cost' => null,
-            ]);
-        }
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function wasteQuantity(array $data): ?string
-    {
-        $waste = $data['waste_quantity'] ?? null;
-
-        if ($waste === null || $waste === '') {
-            return null;
-        }
-
-        return DecimalMath::quantity(DecimalMath::of((string) $waste));
-    }
-
-    private function assertEditable(ProductionOrder $order): void
-    {
-        if (! $order->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft production order can be edited. :reference is :status.', [
-                    'reference' => $order->production_number,
-                    'status' => $order->status->label(),
-                ]),
-            ]);
-        }
-    }
-
-    private function recipe(): ProductionRecipe
-    {
-        $recipe = ProductionRecipe::forType(ProductionType::HuskChipping);
-
-        if ($recipe === null) {
-            throw ValidationException::withMessages([
-                'recipe' => __('No active husk chipping recipe is configured.'),
-            ]);
-        }
-
-        return $recipe;
     }
 
     /**
@@ -271,7 +156,7 @@ class HuskChippingController extends Controller
      */
     private function formOptions(): array
     {
-        $recipe = $this->recipe();
+        $recipe = $this->saveOrder->recipe();
         $inputProduct = $recipe->inputProduct;
 
         $balances = $this->stock->balancesByLot()

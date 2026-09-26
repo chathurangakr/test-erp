@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Sales;
 
-use App\Actions\Sales\GenerateSalesReference;
+use App\Actions\Sales\SaveDelivery;
 use App\Enums\DeliveryStatus;
 use App\Enums\PricingBasis;
 use App\Enums\SalesOrderStatus;
@@ -20,8 +20,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,7 +37,7 @@ class DeliveryController extends Controller
     private const PER_PAGE = 20;
 
     public function __construct(
-        private readonly GenerateSalesReference $references,
+        private readonly SaveDelivery $saveDelivery,
         private readonly StockQueryService $stock,
     ) {}
 
@@ -78,27 +76,7 @@ class DeliveryController extends Controller
 
     public function store(StoreDeliveryRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $delivery = DB::transaction(function () use ($data): Delivery {
-            $delivery = Delivery::create([
-                'delivery_number' => $this->references->forDelivery(),
-                'customer_id' => $data['customer_id'],
-                'sales_order_id' => $data['sales_order_id'] ?? null,
-                'warehouse_id' => $data['warehouse_id'],
-                'delivery_date' => $data['delivery_date'],
-                'customer_reference' => $data['customer_reference'] ?? null,
-                'vehicle_number' => $data['vehicle_number'] ?? null,
-                'driver_name' => $data['driver_name'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'status' => DeliveryStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->syncLines($delivery, $data['lines']);
-
-            return $delivery;
-        });
+        $delivery = $this->saveDelivery->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Delivery saved as draft.')]);
 
@@ -128,7 +106,7 @@ class DeliveryController extends Controller
 
     public function edit(Delivery $delivery): Response
     {
-        $this->assertEditable($delivery);
+        $this->saveDelivery->assertEditable($delivery);
 
         $delivery->load('lines');
 
@@ -159,74 +137,11 @@ class DeliveryController extends Controller
 
     public function update(UpdateDeliveryRequest $request, Delivery $delivery): RedirectResponse
     {
-        $this->assertEditable($delivery);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($delivery, $data): void {
-            $delivery->update([
-                'customer_id' => $data['customer_id'],
-                'sales_order_id' => $data['sales_order_id'] ?? null,
-                'warehouse_id' => $data['warehouse_id'],
-                'delivery_date' => $data['delivery_date'],
-                'customer_reference' => $data['customer_reference'] ?? null,
-                'vehicle_number' => $data['vehicle_number'] ?? null,
-                'driver_name' => $data['driver_name'] ?? null,
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            // Safe only because the delivery is still a draft — no stock has moved.
-            $delivery->lines()->delete();
-            $this->syncLines($delivery, $data['lines']);
-        });
+        $this->saveDelivery->handle($delivery, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Delivery updated.')]);
 
         return to_route('deliveries.show', $delivery);
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $lines
-     */
-    private function syncLines(Delivery $delivery, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $basis = PricingBasis::from($line['pricing_basis']);
-            $quantity = DecimalMath::quantity(DecimalMath::of($line['quantity']));
-            $secondary = ($line['secondary_quantity'] ?? null) === null
-                ? null
-                : DecimalMath::quantity(DecimalMath::of($line['secondary_quantity']));
-            $price = DecimalMath::cost(DecimalMath::of($line['unit_price']));
-
-            $sellingQuantity = $basis->isSecondary() ? ($secondary ?? '0') : $quantity;
-
-            $delivery->lines()->create([
-                'product_id' => $line['product_id'],
-                'sales_order_line_id' => $line['sales_order_line_id'] ?? null,
-                'lot_id' => $line['lot_id'] ?? null,
-                'quantity' => $quantity,
-                'secondary_quantity' => $secondary,
-                'pricing_basis' => $basis,
-                'unit_price' => $price,
-                // Provisional until posting recalculates it authoritatively.
-                'sales_value' => DecimalMath::cost(DecimalMath::mul($sellingQuantity, $price)),
-                // Cost is unknown until stock actually moves.
-                'inventory_unit_cost' => null,
-                'cost_of_goods_sold' => null,
-            ]);
-        }
-    }
-
-    private function assertEditable(Delivery $delivery): void
-    {
-        if (! $delivery->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft delivery can be edited. :reference is :status.', [
-                    'reference' => $delivery->delivery_number,
-                    'status' => $delivery->status->label(),
-                ]),
-            ]);
-        }
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Production;
 
-use App\Actions\Production\GenerateProductionReference;
+use App\Actions\Production\SaveCopraOrder;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Http\Controllers\Controller;
@@ -11,7 +11,6 @@ use App\Http\Requests\Production\UpdateCopraRequest;
 use App\Models\InventoryLot;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
-use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
@@ -19,8 +18,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,7 +40,7 @@ class CopraController extends Controller
     private const PER_PAGE = 20;
 
     public function __construct(
-        private readonly GenerateProductionReference $references,
+        private readonly SaveCopraOrder $saveOrder,
         private readonly StockQueryService $stock,
     ) {}
 
@@ -97,24 +94,7 @@ class CopraController extends Controller
 
     public function store(StoreCopraRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $recipe = $this->recipe();
-
-        $order = DB::transaction(function () use ($data, $recipe): ProductionOrder {
-            $order = ProductionOrder::create([
-                'production_number' => $this->references->forProductionOrder(),
-                'production_type' => ProductionType::Copra,
-                'production_date' => $data['production_date'],
-                'warehouse_id' => $data['warehouse_id'],
-                'status' => ProductionStatus::Draft,
-                'notes' => $data['notes'] ?? null,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->writeLines($order, $data, $recipe);
-
-            return $order;
-        });
+        $order = $this->saveOrder->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Copra production order saved as draft.')]);
 
@@ -145,7 +125,7 @@ class CopraController extends Controller
 
     public function edit(ProductionOrder $copra): Response
     {
-        $this->assertEditable($copra);
+        $this->saveOrder->assertEditable($copra);
 
         $copra->load(['inputs', 'outputs']);
         $input = $copra->inputs->first();
@@ -171,25 +151,7 @@ class CopraController extends Controller
 
     public function update(UpdateCopraRequest $request, ProductionOrder $copra): RedirectResponse
     {
-        $this->assertEditable($copra);
-
-        $data = $request->validated();
-        $recipe = $this->recipe();
-
-        DB::transaction(function () use ($copra, $data, $recipe): void {
-            $copra->update([
-                'production_date' => $data['production_date'],
-                'warehouse_id' => $data['warehouse_id'],
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            // Safe only because the order is still a draft — nothing has been consumed and
-            // no output lot exists.
-            $copra->inputs()->delete();
-            $copra->outputs()->delete();
-
-            $this->writeLines($copra, $data, $recipe);
-        });
+        $this->saveOrder->handle($copra, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Copra production order updated.')]);
 
@@ -197,86 +159,11 @@ class CopraController extends Controller
     }
 
     /**
-     * Writes the draft's input and its outputs.
-     *
-     * The input product comes from the recipe, never from the request. A DERIVED output's
-     * quantity is calculated here from the quantity processed and the recipe ratio — the
-     * submitted value is refused by the form request, so there is nothing to fall back to.
-     * A MEASURED quantity is stored exactly as entered. Costs stay null until the ledger
-     * prices the batch.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function writeLines(ProductionOrder $order, array $data, ProductionRecipe $recipe): void
-    {
-        $processed = DecimalMath::quantity(DecimalMath::of($data['quantity']));
-
-        $order->inputs()->create([
-            'product_id' => $recipe->input_product_id,
-            'lot_id' => $data['lot_id'],
-            'quantity' => $processed,
-            'unit_cost' => null,
-            'total_cost' => null,
-        ]);
-
-        $configured = $recipe->outputs->keyBy(fn (ProductionRecipeOutput $output): int => (int) $output->product_id);
-
-        foreach ($data['outputs'] as $output) {
-            $config = $configured->get((int) $output['product_id']);
-
-            if ($config === null) {
-                continue;
-            }
-
-            $order->outputs()->create([
-                'product_id' => $config->product_id,
-                'lot_id' => null,
-                'quantity' => $config->derivesQuantity()
-                    ? DecimalMath::quantity(DecimalMath::mul($processed, DecimalMath::of($config->output_ratio)))
-                    : DecimalMath::quantity(DecimalMath::of((string) $output['quantity'])),
-                'secondary_quantity' => $config->requires_secondary_quantity
-                    ? DecimalMath::quantity(DecimalMath::of((string) $output['secondary_quantity']))
-                    : null,
-                // The configured share, recorded for reference. Posting stores the share
-                // actually used.
-                'allocation_percent' => $config->allocation_percent,
-                'allocated_cost' => null,
-                'unit_cost' => null,
-            ]);
-        }
-    }
-
-    private function assertEditable(ProductionOrder $order): void
-    {
-        if (! $order->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft production order can be edited. :reference is :status.', [
-                    'reference' => $order->production_number,
-                    'status' => $order->status->label(),
-                ]),
-            ]);
-        }
-    }
-
-    private function recipe(): ProductionRecipe
-    {
-        $recipe = ProductionRecipe::forType(ProductionType::Copra);
-
-        if ($recipe === null) {
-            throw ValidationException::withMessages([
-                'recipe' => __('No active copra production recipe is configured.'),
-            ]);
-        }
-
-        return $recipe;
-    }
-
-    /**
      * @return list<array<string, mixed>>
      */
     private function outputColumns(): array
     {
-        return $this->recipe()->outputs->map(fn (ProductionRecipeOutput $output): array => [
+        return $this->saveOrder->recipe()->outputs->map(fn (ProductionRecipeOutput $output): array => [
             'product_id' => (int) $output->product_id,
             'code' => $output->product?->code,
             'name' => $output->product?->name,
@@ -298,7 +185,7 @@ class CopraController extends Controller
      */
     private function formOptions(): array
     {
-        $recipe = $this->recipe();
+        $recipe = $this->saveOrder->recipe();
         $inputProduct = $recipe->inputProduct;
 
         $balances = $this->stock->balancesByLot()
@@ -405,31 +292,8 @@ class CopraController extends Controller
                 'unit_cost' => $output->unit_cost,
                 // Informational only: what the allocated cost works out at per unit of the
                 // measured weight. Never stored, never used as a weighted average.
-                'informational_secondary_unit_cost' => $this->informationalSecondaryUnitCost($output),
+                'informational_secondary_unit_cost' => $output->informationalSecondaryUnitCost(),
             ])->values(),
         ]);
-    }
-
-    /**
-     * Allocated cost divided by the measured weight, for display.
-     *
-     * Raw shell is valued in NOS because that is its primary unit, so this figure is NOT a
-     * cost the inventory engine uses. It is shown because the factory thinks about shell in
-     * kilograms, and it is labelled informational wherever it appears.
-     */
-    private function informationalSecondaryUnitCost(ProductionOutput $output): ?string
-    {
-        $secondary = $output->secondary_quantity;
-        $allocated = $output->allocated_cost;
-
-        if ($secondary === null || $allocated === null) {
-            return null;
-        }
-
-        if (! DecimalMath::isPositive(DecimalMath::of($secondary))) {
-            return null;
-        }
-
-        return DecimalMath::cost(DecimalMath::div(DecimalMath::of($allocated), DecimalMath::of($secondary)));
     }
 }

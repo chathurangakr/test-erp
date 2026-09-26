@@ -424,9 +424,30 @@ Who may do what — enforced by the server on every route.
 **Deliberately not implemented:** warehouse-scoped access, approval limits, field-level
 security, invitations, API tokens. See `AUTHORIZATION_RULES.md` §11.
 
-## Phase 16 — REST API for Flutter (not started)
+## Phase 16 — Versioned mobile REST API ✅ COMPLETE
 
-Versioned REST API reusing the same action classes as the Inertia controllers.
+The backend connection for the future Flutter app. The app itself is not built.
+
+- [x] Laravel Sanctum installed; one forward migration (`personal_access_tokens`) — tokens hashed,
+      one per device, `mobile-api` ability only, 90-day expiry (owner's choice), deleted on
+      deactivation or password change; API login honours two-factor authentication
+- [x] `/api/v1` only — 130 endpoints: session & meta 6, master data 21, inventory 3, purchasing
+      13, sales 13, production 21, AP 13, AR 13, cash & bank 15, finance reports 12
+- [x] **One domain layer:** draft logic extracted from the web controllers into shared `Save*`
+      actions (purchasing 2, sales 2, production 3, AP/AR 4, cash 2, warehouses 1) and report
+      helpers moved into their services; web and API both call them, with the web behaviour proven
+      unchanged by the existing suite
+- [x] Same RBAC: every API route declares the same single permission as its web twin
+- [x] JSON errors — 401/403/404/422, **409 for business-state conflicts**, generic 500
+- [x] Decimals as strings, ISO 8601 UTC timestamps, API Resources, pagination capped at 100
+- [x] Rate limits, closed-by-default CORS, HTTPS required in production, all in `config/api.php`
+- [x] Permission-filtered mobile dashboard; meta endpoint
+- [x] `ApiRouteAuthorizationTest` audits every API route; 119 new tests in total
+
+**Decided with the owner:** 90-day tokens; finance write endpoints included now.
+
+**Not implemented:** idempotency keys, attachments, offline sync, user/role administration API,
+API registration, OpenAPI file, push notifications. See `API_V1.md` §14.
 
 ---
 

@@ -98,6 +98,14 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    /**
      * Total ordered value, summed decimal-safely.
      */
     public function materialTotal(): string

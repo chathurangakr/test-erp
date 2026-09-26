@@ -94,6 +94,14 @@ class SalesOrder extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     /** Total order value, summed decimal-safely. */
     public function salesTotal(): string
     {

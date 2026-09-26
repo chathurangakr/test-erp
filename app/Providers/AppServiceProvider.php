@@ -5,9 +5,12 @@ namespace App\Providers;
 use App\Enums\Permission;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
@@ -30,6 +33,22 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthorization();
+        $this->configureApiRateLimiting();
+    }
+
+    /**
+     * API throttles, sized in config/api.php.
+     *
+     * Sign-in is limited per email and IP together, so one attacker cannot lock out a user
+     * from every device; everything else is limited per signed-in user.
+     */
+    protected function configureApiRateLimiting(): void
+    {
+        RateLimiter::for('api-login', fn (Request $request): Limit => Limit::perMinute(config('api.rate_limits.login_per_minute'))
+            ->by(mb_strtolower((string) $request->input('email')).'|'.$request->ip()));
+
+        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(config('api.rate_limits.requests_per_minute'))
+            ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 
     /**
@@ -48,7 +67,7 @@ class AppServiceProvider extends ServiceProvider
         // A refused request gets a proper page inside the app, not a bare error screen or a
         // redirect loop. JSON callers still receive a plain 403.
         Inertia::handleExceptionsUsing(function (ExceptionResponse $response): ?ExceptionResponse {
-            if ($response->statusCode() !== 403 || $response->request->expectsJson()) {
+            if ($response->statusCode() !== 403 || $response->request->expectsJson() || $response->request->is('api/*')) {
                 return null;
             }
 

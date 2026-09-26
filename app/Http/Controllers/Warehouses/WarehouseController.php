@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Warehouses;
 
-use App\Actions\Warehouses\SetDefaultWarehouse;
+use App\Actions\Warehouses\SaveWarehouse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Warehouses\StoreWarehouseRequest;
 use App\Http\Requests\Warehouses\UpdateWarehouseRequest;
 use App\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -52,23 +51,9 @@ class WarehouseController extends Controller
         return Inertia::render('warehouses/Create');
     }
 
-    public function store(StoreWarehouseRequest $request, SetDefaultWarehouse $setDefault): RedirectResponse
+    public function store(StoreWarehouseRequest $request, SaveWarehouse $saveWarehouse): RedirectResponse
     {
-        $data = $request->validated();
-        $shouldBeDefault = (bool) ($data['is_default'] ?? false);
-        unset($data['is_default']);
-
-        $warehouse = DB::transaction(function () use ($data, $shouldBeDefault, $setDefault): Warehouse {
-            $warehouse = Warehouse::create($data);
-
-            if ($shouldBeDefault) {
-                // Reload so database-level defaults (is_active) are present before the
-                // action checks them.
-                $setDefault->handle($warehouse->refresh());
-            }
-
-            return $warehouse;
-        });
+        $warehouse = $saveWarehouse->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Warehouse created.')]);
 
@@ -92,21 +77,9 @@ class WarehouseController extends Controller
     public function update(
         UpdateWarehouseRequest $request,
         Warehouse $warehouse,
-        SetDefaultWarehouse $setDefault,
+        SaveWarehouse $saveWarehouse,
     ): RedirectResponse {
-        $data = $request->validated();
-        $shouldBeDefault = (bool) ($data['is_default'] ?? false);
-
-        // is_default is never written directly — the action owns that invariant.
-        unset($data['is_default']);
-
-        DB::transaction(function () use ($warehouse, $data, $shouldBeDefault, $setDefault): void {
-            $warehouse->update($data);
-
-            if ($shouldBeDefault && ! $warehouse->is_default) {
-                $setDefault->handle($warehouse);
-            }
-        });
+        $saveWarehouse->handle($warehouse, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Warehouse updated.')]);
 

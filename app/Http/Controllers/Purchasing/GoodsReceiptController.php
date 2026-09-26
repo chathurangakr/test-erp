@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Purchasing;
 
-use App\Actions\Purchasing\GeneratePurchasingReference;
+use App\Actions\Purchasing\SaveGoodsReceipt;
 use App\Enums\GoodsReceiptStatus;
 use App\Enums\PurchaseOrderStatus;
 use App\Http\Controllers\Controller;
@@ -18,7 +18,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,7 +36,7 @@ class GoodsReceiptController extends Controller
     private const PER_PAGE = 20;
 
     public function __construct(
-        private readonly GeneratePurchasingReference $references,
+        private readonly SaveGoodsReceipt $saveReceipt,
         private readonly LandedCostAllocator $allocator,
     ) {}
 
@@ -76,28 +75,7 @@ class GoodsReceiptController extends Controller
 
     public function store(StoreGoodsReceiptRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $receipt = DB::transaction(function () use ($data): GoodsReceipt {
-            $receipt = GoodsReceipt::create([
-                'grn_number' => $this->references->forGoodsReceipt(),
-                'supplier_id' => $data['supplier_id'],
-                'purchase_order_id' => $data['purchase_order_id'] ?? null,
-                'warehouse_id' => $data['warehouse_id'],
-                'receipt_date' => $data['receipt_date'],
-                'supplier_delivery_reference' => $data['supplier_delivery_reference'] ?? null,
-                'transport_cost' => DecimalMath::cost(DecimalMath::of($data['transport_cost'])),
-                'loading_cost' => DecimalMath::cost(DecimalMath::of($data['loading_cost'])),
-                'other_cost' => DecimalMath::cost(DecimalMath::of($data['other_cost'])),
-                'notes' => $data['notes'] ?? null,
-                'status' => GoodsReceiptStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->syncLines($receipt, $data['lines']);
-
-            return $receipt;
-        });
+        $receipt = $this->saveReceipt->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Goods receipt saved as draft.')]);
 
@@ -127,7 +105,7 @@ class GoodsReceiptController extends Controller
 
     public function edit(GoodsReceipt $goodsReceipt): Response
     {
-        $this->assertEditable($goodsReceipt);
+        $this->saveReceipt->assertEditable($goodsReceipt);
 
         $goodsReceipt->load('lines');
 
@@ -158,66 +136,11 @@ class GoodsReceiptController extends Controller
 
     public function update(UpdateGoodsReceiptRequest $request, GoodsReceipt $goodsReceipt): RedirectResponse
     {
-        $this->assertEditable($goodsReceipt);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($goodsReceipt, $data): void {
-            $goodsReceipt->update([
-                'supplier_id' => $data['supplier_id'],
-                'purchase_order_id' => $data['purchase_order_id'] ?? null,
-                'warehouse_id' => $data['warehouse_id'],
-                'receipt_date' => $data['receipt_date'],
-                'supplier_delivery_reference' => $data['supplier_delivery_reference'] ?? null,
-                'transport_cost' => DecimalMath::cost(DecimalMath::of($data['transport_cost'])),
-                'loading_cost' => DecimalMath::cost(DecimalMath::of($data['loading_cost'])),
-                'other_cost' => DecimalMath::cost(DecimalMath::of($data['other_cost'])),
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            // Safe only because the receipt is still a draft — no inventory exists yet.
-            $goodsReceipt->lines()->delete();
-            $this->syncLines($goodsReceipt, $data['lines']);
-        });
+        $this->saveReceipt->handle($goodsReceipt, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Goods receipt updated.')]);
 
         return to_route('goods-receipts.show', $goodsReceipt);
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $lines
-     */
-    private function syncLines(GoodsReceipt $receipt, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $receipt->lines()->create([
-                'product_id' => $line['product_id'],
-                'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
-                'quantity' => DecimalMath::quantity(DecimalMath::of($line['quantity'])),
-                'secondary_quantity' => ($line['secondary_quantity'] ?? null) === null
-                    ? null
-                    : DecimalMath::quantity(DecimalMath::of($line['secondary_quantity'])),
-                'unit_price' => DecimalMath::cost(DecimalMath::of($line['unit_price'])),
-                'supplier_lot_number' => $line['supplier_lot_number'] ?? null,
-                // Cost columns stay zero until posting calculates them.
-                'material_cost' => '0.000000',
-                'allocated_landed_cost' => '0.000000',
-                'final_unit_cost' => '0.000000',
-            ]);
-        }
-    }
-
-    private function assertEditable(GoodsReceipt $receipt): void
-    {
-        if (! $receipt->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft goods receipt can be edited. :reference is :status.', [
-                    'reference' => $receipt->grn_number,
-                    'status' => $receipt->status->label(),
-                ]),
-            ]);
-        }
     }
 
     /**

@@ -1167,3 +1167,19 @@ Full detail in `docs/ACCOUNTING_RULES.md` §24-§28.
 
 Full detail in `docs/AUTHORIZATION_RULES.md`.
 
+## 28. The mobile app
+
+- **The phone talks to the ERP, never to the database.** It uses the same rules, the same
+  permissions and the same posting logic as the website — posting a goods receipt from a phone
+  is exactly the same event as posting it at a desk.
+- **Each phone signs in separately** and stays signed in for 90 days. Signing out on one phone
+  leaves the others signed in; "sign out everywhere" ends them all.
+- **Deactivating a person, or changing their password, signs them out of every phone at once.**
+- **A person can do on the phone exactly what their roles allow on the website** — no more.
+- **The same document cannot be posted twice**, even if two phones press "post" at the same
+  moment: the second is told it is already posted.
+- **Accounts with two-factor authentication need their code on the phone too.**
+- **Not yet:** photos and attachments, working offline, or creating users from the phone.
+
+Full detail in `docs/API_V1.md`.
+

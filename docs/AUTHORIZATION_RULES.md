@@ -4,8 +4,8 @@
 > multiple roles per user, server-side enforcement on every route, user activation, and
 > lockout protection.
 >
-> **Not built:** warehouse-scoped access, monetary approval limits, field-level security,
-> invitations, and API tokens for the future mobile app. See §11.
+> **Not built:** warehouse-scoped access, monetary approval limits, field-level security and
+> invitations. See §11. The mobile API (Phase 16) uses this same system — see §13.
 
 ---
 
@@ -164,7 +164,7 @@ access rules. A plain factory user holds no role.
 | 2 | **Monetary approval limits** — e.g. a manager approving up to Rs. 500,000. |
 | 3 | **Field-level security** — e.g. seeing quantities but not cost or selling price. |
 | 4 | **Invitations / admin-created accounts** instead of open registration. Registration was deliberately kept on. |
-| 5 | **API authentication and token abilities** for the Flutter app. When built, API routes must use the same `Permission` abilities; actions assume their caller is already authorized. |
+| 5 | ~~API authentication~~ — **done in Phase 16**, see §13. |
 | 6 | **An audit log of access changes** (who granted which role, when). Not requested. |
 
 ## 12. The authorization boundary for future callers
@@ -174,3 +174,17 @@ not check permissions themselves, so posting logic, costing and accounting stay 
 concerns. Every entry point — web routes today, API routes and queued jobs later — must perform
 the permission check before calling an action. A console command or job acting on its own
 authority must say so in its docblock.
+
+## 13. The mobile API uses exactly this system
+
+- API routes (`/api/v1`) declare the **same** `Permission` abilities as their web twins, one per
+  route; `ApiRouteAuthorizationTest` proves each API route and its web twin agree.
+- A Sanctum token carries a single `mobile-api` ability that proves the token was issued for the
+  API. **The 73 permissions are never copied into token abilities** — what the user may do is
+  read from their roles on every request, so changing a role takes effect on the phone at once.
+- No mobile-only roles or permissions exist, and none may be added.
+- Deactivating a user or changing their password deletes all their API tokens; the `api.active`
+  middleware refuses any token whose user is inactive.
+- User and role administration remain **web-only**. `GET /api/v1/auth/me` returns the user's
+  effective permissions for the app's UI; the server still enforces every one.
+

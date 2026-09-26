@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Purchasing;
 
-use App\Actions\Purchasing\GeneratePurchasingReference;
+use App\Actions\Purchasing\SavePurchaseOrder;
 use App\Enums\PurchaseOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StorePurchaseOrderRequest;
@@ -15,8 +15,6 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,7 +28,7 @@ class PurchaseOrderController extends Controller
 {
     private const PER_PAGE = 20;
 
-    public function __construct(private readonly GeneratePurchasingReference $references) {}
+    public function __construct(private readonly SavePurchaseOrder $saveOrder) {}
 
     public function index(Request $request): Response
     {
@@ -67,25 +65,7 @@ class PurchaseOrderController extends Controller
 
     public function store(StorePurchaseOrderRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $order = DB::transaction(function () use ($data): PurchaseOrder {
-            $order = PurchaseOrder::create([
-                'po_number' => $this->references->forPurchaseOrder(),
-                'supplier_id' => $data['supplier_id'],
-                'warehouse_id' => $data['warehouse_id'],
-                'order_date' => $data['order_date'],
-                'expected_date' => $data['expected_date'] ?? null,
-                'status' => PurchaseOrderStatus::Draft,
-                'supplier_reference' => $data['supplier_reference'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->syncLines($order, $data['lines']);
-
-            return $order;
-        });
+        $order = $this->saveOrder->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Purchase order created.')]);
 
@@ -111,7 +91,7 @@ class PurchaseOrderController extends Controller
 
     public function edit(PurchaseOrder $order): Response
     {
-        $this->assertEditable($order);
+        $this->saveOrder->assertEditable($order);
 
         $order->load(['lines']);
 
@@ -136,60 +116,11 @@ class PurchaseOrderController extends Controller
 
     public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $order): RedirectResponse
     {
-        $this->assertEditable($order);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($order, $data): void {
-            $order->update([
-                'supplier_id' => $data['supplier_id'],
-                'warehouse_id' => $data['warehouse_id'],
-                'order_date' => $data['order_date'],
-                'expected_date' => $data['expected_date'] ?? null,
-                'supplier_reference' => $data['supplier_reference'] ?? null,
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            // Safe only because the order is still a draft: nothing has been received, so
-            // no received_quantity can be lost.
-            $order->lines()->delete();
-            $this->syncLines($order, $data['lines']);
-        });
+        $this->saveOrder->handle($order, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Purchase order updated.')]);
 
         return to_route('purchase-orders.show', $order);
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $lines
-     */
-    private function syncLines(PurchaseOrder $order, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $quantity = DecimalMath::quantity(DecimalMath::of($line['quantity']));
-            $price = DecimalMath::cost(DecimalMath::of($line['unit_price']));
-
-            $order->lines()->create([
-                'product_id' => $line['product_id'],
-                'quantity' => $quantity,
-                'unit_price' => $price,
-                'line_total' => DecimalMath::cost(DecimalMath::mul($quantity, $price)),
-                'received_quantity' => '0.000',
-            ]);
-        }
-    }
-
-    private function assertEditable(PurchaseOrder $order): void
-    {
-        if (! $order->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft purchase order can be edited. :reference is :status.', [
-                    'reference' => $order->po_number,
-                    'status' => $order->status->label(),
-                ]),
-            ]);
-        }
     }
 
     /**

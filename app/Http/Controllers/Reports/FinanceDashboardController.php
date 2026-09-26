@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\FiscalPeriod;
 use App\Services\Accounting\FinanceDashboardService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,25 +21,16 @@ class FinanceDashboardController extends Controller
 
     public function index(Request $request): Response
     {
-        $default = $this->dashboard->defaultWindow();
-
         $periodId = $request->integer('fiscal_period_id') ?: null;
-        $period = $periodId === null ? null : FiscalPeriod::find($periodId);
-
-        $from = $request->date('from') ?? ($period === null ? Carbon::parse($default['from']) : null);
-        $to = $request->date('to') ?? ($period === null ? Carbon::parse($default['to']) : null);
+        $window = $this->dashboard->resolveWindow($periodId, $request->date('from'), $request->date('to'));
 
         return Inertia::render('finance/Dashboard', [
-            'summary' => $this->dashboard->summary(
-                $from === null ? null : Carbon::parse($from),
-                $to === null ? null : Carbon::parse($to),
-                $period,
-            ),
+            'summary' => $this->dashboard->summary($window['from'], $window['to'], $window['period']),
             'periods' => FiscalPeriod::query()->orderByDesc('start_date')->get(['id', 'name']),
             'filters' => [
                 'fiscal_period_id' => $periodId,
-                'from' => $from === null ? null : Carbon::parse($from)->toDateString(),
-                'to' => $to === null ? null : Carbon::parse($to)->toDateString(),
+                'from' => $window['from']?->toDateString(),
+                'to' => $window['to']?->toDateString(),
             ],
             'currency' => config('accounting.base_currency'),
         ]);

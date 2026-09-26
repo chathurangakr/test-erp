@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Receivables;
 
-use App\Actions\Receivables\GenerateReceivableReference;
+use App\Actions\Receivables\SaveCustomerReceipt;
 use App\Enums\CustomerReceiptStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreCustomerReceiptRequest;
@@ -11,12 +11,9 @@ use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
-use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +28,7 @@ class CustomerReceiptController extends Controller
     private const PER_PAGE = 25;
 
     public function __construct(
-        private readonly GenerateReceivableReference $references,
+        private readonly SaveCustomerReceipt $saveReceipt,
         private readonly AccountsReceivableService $receivables,
     ) {}
 
@@ -82,30 +79,7 @@ class CustomerReceiptController extends Controller
 
     public function store(StoreCustomerReceiptRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $receipt = DB::transaction(function () use ($data): CustomerReceipt {
-            $receipt = CustomerReceipt::create([
-                'receipt_number' => $this->references->forReceipt(Carbon::parse($data['receipt_date'])),
-                'customer_id' => $data['customer_id'],
-                'receipt_date' => $data['receipt_date'],
-                'receipt_account_id' => $data['receipt_account_id'],
-                'reference' => $data['reference'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'amount' => DecimalMath::cost(DecimalMath::of((string) $data['amount'])),
-                'status' => CustomerReceiptStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            foreach ($data['allocations'] as $allocation) {
-                $receipt->allocations()->create([
-                    'sales_invoice_id' => $allocation['sales_invoice_id'],
-                    'amount' => DecimalMath::cost(DecimalMath::of((string) $allocation['amount'])),
-                ]);
-            }
-
-            return $receipt;
-        });
+        $receipt = $this->saveReceipt->handle($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Customer receipt saved as draft.')]);
 

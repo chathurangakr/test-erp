@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers\Receivables;
 
-use App\Actions\Receivables\GenerateReceivableReference;
+use App\Actions\Receivables\SaveSalesInvoice;
 use App\Enums\SalesInvoiceStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreSalesInvoiceRequest;
 use App\Http\Requests\Receivables\UpdateSalesInvoiceRequest;
 use App\Models\Customer;
-use App\Models\DeliveryLine;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\SalesBillingReconciliationService;
-use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,7 +31,7 @@ class SalesInvoiceController extends Controller
     private const PER_PAGE = 25;
 
     public function __construct(
-        private readonly GenerateReceivableReference $references,
+        private readonly SaveSalesInvoice $saveInvoice,
         private readonly AccountsReceivableService $receivables,
         private readonly SalesBillingReconciliationService $billing,
     ) {}
@@ -96,24 +91,7 @@ class SalesInvoiceController extends Controller
 
     public function store(StoreSalesInvoiceRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $invoice = DB::transaction(function () use ($data): SalesInvoice {
-            $invoice = SalesInvoice::create([
-                'invoice_number' => $this->references->forInvoice(Carbon::parse($data['invoice_date'])),
-                'customer_id' => $data['customer_id'],
-                'invoice_date' => $data['invoice_date'],
-                'due_date' => $data['due_date'],
-                'customer_reference' => $data['customer_reference'] ?? null,
-                'description' => $data['description'] ?? null,
-                'status' => SalesInvoiceStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->writeLines($invoice, $data['lines']);
-
-            return $invoice;
-        });
+        $invoice = $this->saveInvoice->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sales invoice saved as draft.')]);
 
@@ -142,7 +120,7 @@ class SalesInvoiceController extends Controller
 
     public function edit(SalesInvoice $salesInvoice): Response
     {
-        $this->assertEditable($salesInvoice);
+        $this->saveInvoice->assertEditable($salesInvoice);
 
         $salesInvoice->load('lines');
 
@@ -169,65 +147,11 @@ class SalesInvoiceController extends Controller
 
     public function update(UpdateSalesInvoiceRequest $request, SalesInvoice $salesInvoice): RedirectResponse
     {
-        $this->assertEditable($salesInvoice);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($salesInvoice, $data): void {
-            $salesInvoice->update([
-                'customer_id' => $data['customer_id'],
-                'invoice_date' => $data['invoice_date'],
-                'due_date' => $data['due_date'],
-                'customer_reference' => $data['customer_reference'] ?? null,
-                'description' => $data['description'] ?? null,
-            ]);
-
-            // Safe only because the invoice is still a draft — nothing has reached the books.
-            $salesInvoice->lines()->delete();
-
-            $this->writeLines($salesInvoice, $data['lines']);
-        });
+        $this->saveInvoice->handle($salesInvoice, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sales invoice updated.')]);
 
         return to_route('sales-invoices.show', $salesInvoice);
-    }
-
-    /**
-     * Write the lines, copying each delivered line's product for reporting.
-     *
-     * @param  list<array<string, mixed>>  $lines
-     */
-    private function writeLines(SalesInvoice $invoice, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $deliveryLine = DeliveryLine::find($line['delivery_line_id']);
-
-            if ($deliveryLine === null) {
-                throw ValidationException::withMessages([
-                    'lines' => __('One of the selected delivery lines no longer exists.'),
-                ]);
-            }
-
-            $invoice->lines()->create([
-                'delivery_line_id' => $deliveryLine->id,
-                'product_id' => $deliveryLine->product_id,
-                'description' => $line['description'] ?? null,
-                'amount' => DecimalMath::cost(DecimalMath::of((string) $line['amount'])),
-            ]);
-        }
-    }
-
-    private function assertEditable(SalesInvoice $invoice): void
-    {
-        if (! $invoice->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft sales invoice can be edited. :reference is :status.', [
-                    'reference' => $invoice->invoice_number,
-                    'status' => $invoice->status->label(),
-                ]),
-            ]);
-        }
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Services\Accounting;
 
 use App\Enums\AccountType;
+use App\Models\Account;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -87,6 +88,31 @@ class BalanceSheetService
             'difference' => $difference,
             'balanced' => DecimalMath::isZero($difference),
             'as_of' => ($asOfDate ?? now())->toDateString(),
+        ];
+    }
+
+    /**
+     * The retained earnings account's ACTUAL ledger balance, shown beside the computed
+     * Current Earnings so the two are never confused. Nothing posts to it automatically.
+     * Located through config('accounting.retained_earnings_code'), never a literal.
+     *
+     * @return array{account_id: int, code: string, name: string, balance: string}|null
+     */
+    public function retainedEarnings(?CarbonInterface $asOf = null): ?array
+    {
+        $account = Account::query()
+            ->where('code', (string) config('accounting.retained_earnings_code', '3200'))
+            ->first();
+
+        if ($account === null) {
+            return null;
+        }
+
+        return [
+            'account_id' => $account->id,
+            'code' => $account->code,
+            'name' => $account->name,
+            'balance' => $this->balances->balance($account, $asOf === null ? null : Carbon::instance($asOf)),
         ];
     }
 }

@@ -158,6 +158,14 @@ class Delivery extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function reversedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by');
+    }
+
     public function salesTotal(): string
     {
         return DecimalMath::cost($this->lines->reduce(

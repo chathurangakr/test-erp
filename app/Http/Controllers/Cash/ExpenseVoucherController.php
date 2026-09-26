@@ -2,23 +2,17 @@
 
 namespace App\Http\Controllers\Cash;
 
-use App\Actions\Cash\GenerateCashReference;
-use App\Enums\AccountType;
+use App\Actions\Cash\SaveExpenseVoucher;
 use App\Enums\ExpenseVoucherStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cash\StoreExpenseVoucherRequest;
 use App\Http\Requests\Cash\UpdateExpenseVoucherRequest;
-use App\Models\Account;
-use App\Models\CashBankAccount;
 use App\Models\ExpenseVoucher;
 use App\Models\Supplier;
-use App\Support\DecimalMath;
+use App\Services\Accounting\CashDocumentOptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,7 +26,10 @@ class ExpenseVoucherController extends Controller
 {
     private const PER_PAGE = 25;
 
-    public function __construct(private readonly GenerateCashReference $references) {}
+    public function __construct(
+        private readonly SaveExpenseVoucher $saveVoucher,
+        private readonly CashDocumentOptions $options,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -58,7 +55,7 @@ class ExpenseVoucherController extends Controller
                 'cash_bank_account_id' => $accountId,
             ],
             'statuses' => ExpenseVoucherStatus::options(),
-            'accounts' => $this->cashBankOptions(),
+            'accounts' => $this->options->cashBankAccounts(),
             'currency' => config('accounting.base_currency'),
         ]);
     }
@@ -66,8 +63,8 @@ class ExpenseVoucherController extends Controller
     public function create(): Response
     {
         return Inertia::render('finance/expense-vouchers/Create', [
-            'accounts' => $this->cashBankOptions(),
-            'expenseAccounts' => $this->expenseAccounts(),
+            'accounts' => $this->options->cashBankAccounts(),
+            'expenseAccounts' => $this->options->expenseAccounts(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);
@@ -75,25 +72,7 @@ class ExpenseVoucherController extends Controller
 
     public function store(StoreExpenseVoucherRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $voucher = DB::transaction(function () use ($data): ExpenseVoucher {
-            $voucher = ExpenseVoucher::create([
-                'voucher_number' => $this->references->forExpenseVoucher(Carbon::parse($data['voucher_date'])),
-                'voucher_date' => $data['voucher_date'],
-                'cash_bank_account_id' => $data['cash_bank_account_id'],
-                'supplier_id' => $data['supplier_id'] ?? null,
-                'payee_name' => $data['payee_name'] ?? null,
-                'reference' => $data['reference'] ?? null,
-                'description' => $data['description'] ?? null,
-                'status' => ExpenseVoucherStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            $this->writeLines($voucher, $data['lines']);
-
-            return $voucher;
-        });
+        $voucher = $this->saveVoucher->handle(null, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Expense voucher saved as draft.')]);
 
@@ -121,7 +100,7 @@ class ExpenseVoucherController extends Controller
 
     public function edit(ExpenseVoucher $expenseVoucher): Response
     {
-        $this->assertEditable($expenseVoucher);
+        $this->saveVoucher->assertEditable($expenseVoucher);
 
         $expenseVoucher->load('lines');
 
@@ -141,8 +120,8 @@ class ExpenseVoucherController extends Controller
                     'amount' => $line->amount,
                 ])->values(),
             ],
-            'accounts' => $this->cashBankOptions(),
-            'expenseAccounts' => $this->expenseAccounts(),
+            'accounts' => $this->options->cashBankAccounts(),
+            'expenseAccounts' => $this->options->expenseAccounts(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);
@@ -150,100 +129,11 @@ class ExpenseVoucherController extends Controller
 
     public function update(UpdateExpenseVoucherRequest $request, ExpenseVoucher $expenseVoucher): RedirectResponse
     {
-        $this->assertEditable($expenseVoucher);
-
-        $data = $request->validated();
-
-        DB::transaction(function () use ($expenseVoucher, $data): void {
-            $expenseVoucher->update([
-                'voucher_date' => $data['voucher_date'],
-                'cash_bank_account_id' => $data['cash_bank_account_id'],
-                'supplier_id' => $data['supplier_id'] ?? null,
-                'payee_name' => $data['payee_name'] ?? null,
-                'reference' => $data['reference'] ?? null,
-                'description' => $data['description'] ?? null,
-            ]);
-
-            // A draft's lines are replaced wholesale; nothing has been posted from them.
-            $expenseVoucher->lines()->delete();
-            $this->writeLines($expenseVoucher, $data['lines']);
-        });
+        $this->saveVoucher->handle($expenseVoucher, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Expense voucher updated.')]);
 
         return to_route('expense-vouchers.show', $expenseVoucher);
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $lines
-     */
-    private function writeLines(ExpenseVoucher $voucher, array $lines): void
-    {
-        foreach ($lines as $line) {
-            $voucher->lines()->create([
-                'expense_account_id' => $line['expense_account_id'],
-                'description' => $line['description'] ?? null,
-                'amount' => DecimalMath::cost(DecimalMath::of((string) $line['amount'])),
-            ]);
-        }
-    }
-
-    private function assertEditable(ExpenseVoucher $voucher): void
-    {
-        if (! $voucher->status->isEditable()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a draft expense voucher can be edited. :reference is :status — reverse it instead.', [
-                    'reference' => $voucher->voucher_number,
-                    'status' => $voucher->status->label(),
-                ]),
-            ]);
-        }
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function cashBankOptions(): array
-    {
-        return CashBankAccount::query()
-            ->with('account:id,code,name,is_active')
-            ->where('is_active', true)
-            ->get()
-            ->filter(fn (CashBankAccount $configuration): bool => $configuration->account?->is_active === true)
-            ->sortBy(fn (CashBankAccount $configuration): string => (string) $configuration->account?->code)
-            ->map(fn (CashBankAccount $configuration): array => [
-                'id' => $configuration->id,
-                'code' => $configuration->account?->code,
-                'name' => $configuration->display_name,
-                'kind' => $configuration->account_kind->label(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Ordinary operating expense accounts only.
-     *
-     * Cost of sales is absent on purpose: it is derived from stock movements, and charging it
-     * by hand would put it out of step with the inventory ledger.
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function expenseAccounts(): array
-    {
-        return Account::query()
-            ->where('is_active', true)
-            ->where('account_type', AccountType::Expense)
-            ->where('is_control_account', false)
-            ->where('allow_manual_posting', true)
-            ->orderBy('code')
-            ->get(['id', 'code', 'name'])
-            ->map(fn (Account $account): array => [
-                'id' => $account->id,
-                'code' => $account->code,
-                'name' => $account->name,
-            ])
-            ->all();
     }
 
     /**

@@ -543,8 +543,8 @@ Full detail lives in `docs/AUTHORIZATION_RULES.md`.
   An inactive role grants nothing; an inactive user holds nothing and cannot sign in.
 - **Permissions never override document state.** Both must pass. Even ADMIN cannot edit a posted
   document. Do not put permission checks inside inventory, production or accounting arithmetic.
-- **Domain actions assume their caller is authorized.** Every entry point — web routes now, API
-  routes and jobs later — checks the permission before calling an action.
+- **Domain actions assume their caller is authorized.** Every entry point — web routes, API
+  routes, and jobs later — checks the permission before calling an action.
 - **Never delete a user who has business history** — deactivate them. The database refuses it
   (audit foreign keys are RESTRICT) and `DeleteOwnAccount` refuses it first, using `UserHistory`.
 - **The system can never lose its last active administrator.** Wrap any change to roles, activity
@@ -556,7 +556,39 @@ Full detail lives in `docs/AUTHORIZATION_RULES.md`.
 - **Business-feature tests use `User::factory()->admin()`**; access tests use `withPermissions()`
   / `withRoles()`. A plain factory user holds no role.
 - **Not built:** warehouse-scoped access, monetary approval limits, field-level security,
-  invitations, API tokens.
+  invitations.
+
+---
+
+## Mobile API rules (Phase 16 — implemented)
+
+Full detail lives in `docs/API_V1.md`.
+
+- **The mobile app never touches the database.** It calls `/api/v1` over HTTPS; Laravel calls the
+  same domain actions as the website. Never give a client database access.
+- **Every endpoint is versioned** under `/api/v1` (`routes/api.php` → `routes/api/v1/*.php`). A
+  breaking change becomes `/api/v2` beside v1, never an edit in place.
+- **One domain layer, two front doors.** Draft create/edit lives in shared `Save*` actions
+  (`app/Actions/**/Save*.php`) called by both web and API controllers; posting, approving,
+  reversing and cancelling reuse the existing actions. **API controllers only validate (with the
+  web FormRequests), call an action and return a Resource** — never copy costing, allocation,
+  journal or AP/AR logic into them. New document types need a `Save*` action from the start.
+- **Same RBAC.** Every API route declares exactly one `->can(Permission::X)`, the same permission
+  as its web twin; API route names are `api.v1.` + the web route name, with the same parameter
+  names. `ApiRouteAuthorizationTest` enforces all of it. No mobile-only roles or permissions.
+- **Bearer tokens (Sanctum) authenticate devices; roles authorize actions.** Tokens are hashed,
+  carry only the `mobile-api` ability, expire after `config('api.token_lifetime_days')` (90), and
+  are deleted on deactivation or password change. The API honours two-factor authentication. A
+  browser session never authenticates the API.
+- **Inactive users are refused** (`api.active` middleware), even with an old token.
+- **Decimals are transmitted as strings** (quantities 3 dp, money 6 dp) through `ApiResource`
+  helpers; dates `YYYY-MM-DD`, timestamps ISO 8601 UTC. Never return a raw model or a float.
+- **Business-state conflicts are 409** — every action reports them under the `status` error key.
+  Keep using that key for "wrong state" errors so the API mapping stays true.
+- **Tunables live in `config/api.php`** (token life, rate limits, page sizes, HTTPS). Lists
+  paginate with a hard maximum of 100.
+- **No public API registration, no user/role administration API, no attachments, no offline
+  sync, no idempotency keys yet.**
 
 ---
 
@@ -609,13 +641,16 @@ management reports** (profit and loss, balance sheet with computed Current Earni
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
 control** (73 permissions, seven editable starting roles, multiple roles per user, every route
-enforced server-side, user deactivation and last-administrator protection).
+enforced server-side, user deactivation and last-administrator protection), and a **versioned
+mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
+as the website, decimals as strings, JSON errors with 409 for state conflicts).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense
 accounting, VAT/SVAT, payroll, loans, fixed assets, depreciation, cash flow statement, report
 export, year-end closing, the permanent joint-product costing method, production planning,
-BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, REST API.
+BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, the
+Flutter app itself, API attachments, offline sync.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 

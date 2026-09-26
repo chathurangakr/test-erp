@@ -1199,6 +1199,18 @@ touched only the constraints.
 invoice, payment, voucher and transfer — audit history lost with no trace. Deactivation keeps the
 name on every record and withdraws all access at once.
 
+### API-1 — Sanctum personal access tokens, hashed, one per device
+
+**Decision:** `personal_access_tokens` (Sanctum's own migration). Each sign-in creates one row
+named after the device, with a SHA-256 hash of the token (the plain value is shown once), the
+single ability `mobile-api`, and `expires_at` = issue time + `config('api.token_lifetime_days')`
+(90 days). No other table changed for the API, and no table was migrated to UUIDs: v1 exposes
+the existing numeric IDs.
+
+**Why:** the official, hashed token store rather than an invented one. Per-device rows let a
+user sign out one phone without the others. Permissions are deliberately not stored on the
+token — roles are read on every request, so a role change or deactivation takes effect at once.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that

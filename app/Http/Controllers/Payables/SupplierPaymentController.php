@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Payables;
 
-use App\Actions\Payables\GeneratePayableReference;
+use App\Actions\Payables\SaveSupplierPayment;
 use App\Enums\SupplierPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payables\StoreSupplierPaymentRequest;
@@ -11,12 +11,9 @@ use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Services\Accounting\AccountsPayableService;
-use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +28,7 @@ class SupplierPaymentController extends Controller
     private const PER_PAGE = 25;
 
     public function __construct(
-        private readonly GeneratePayableReference $references,
+        private readonly SaveSupplierPayment $savePayment,
         private readonly AccountsPayableService $payables,
     ) {}
 
@@ -82,30 +79,7 @@ class SupplierPaymentController extends Controller
 
     public function store(StoreSupplierPaymentRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $payment = DB::transaction(function () use ($data): SupplierPayment {
-            $payment = SupplierPayment::create([
-                'payment_number' => $this->references->forPayment(Carbon::parse($data['payment_date'])),
-                'supplier_id' => $data['supplier_id'],
-                'payment_date' => $data['payment_date'],
-                'payment_account_id' => $data['payment_account_id'],
-                'reference' => $data['reference'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'amount' => DecimalMath::cost(DecimalMath::of((string) $data['amount'])),
-                'status' => SupplierPaymentStatus::Draft,
-                'created_by' => auth()->id(),
-            ]);
-
-            foreach ($data['allocations'] as $allocation) {
-                $payment->allocations()->create([
-                    'supplier_invoice_id' => $allocation['supplier_invoice_id'],
-                    'amount' => DecimalMath::cost(DecimalMath::of((string) $allocation['amount'])),
-                ]);
-            }
-
-            return $payment;
-        });
+        $payment = $this->savePayment->handle($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Supplier payment saved as draft.')]);
 
