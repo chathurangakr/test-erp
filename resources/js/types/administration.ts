@@ -7,6 +7,8 @@ export type AdminUser = {
     name: string;
     email: string;
     is_active: boolean;
+    /** Lands on the simple-mode (kiosk) screens after signing in. */
+    start_in_simple_mode: boolean;
     created_at: string | null;
     roles: RoleRef[];
 };

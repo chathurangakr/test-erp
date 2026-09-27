@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\BusinessClock;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                 // server, which is the real authority.
                 'permissions' => $request->user()?->permissionCodes() ?? [],
             ],
+            // Today's date in the factory's timezone, so forms default to the Sri Lankan date
+            // even between midnight and 05:30, when the UTC date is still yesterday.
+            'businessToday' => BusinessClock::todayString(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

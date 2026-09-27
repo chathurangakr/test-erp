@@ -8,6 +8,7 @@ use App\Enums\JournalEntryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\StoreFiscalPeriodRequest;
 use App\Models\FiscalPeriod;
+use App\Support\BusinessClock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,7 +40,7 @@ class FiscalPeriodController extends Controller
                 'end_date' => $period->end_date->toDateString(),
                 'status' => $period->status->value,
                 'status_label' => $period->status->label(),
-                'closed_at' => $period->closed_at?->toDateTimeString(),
+                'closed_at' => BusinessClock::display($period->closed_at),
                 'closed_by' => $period->closedBy?->name,
                 'entries_count' => $period->journal_entries_count,
                 'draft_entries_count' => $period->draft_entries_count,

@@ -5,6 +5,7 @@ namespace App\Services\Accounting;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Support\Collection;
 
@@ -101,7 +102,7 @@ class InventoryValuationReportService
             'quantity_total' => DecimalMath::quantity($quantityTotal),
             'value_total' => DecimalMath::cost($valueTotal),
             'unmapped_count' => $unmapped,
-            'as_of' => now()->toDateString(),
+            'as_of' => BusinessClock::todayString(),
         ];
     }
 

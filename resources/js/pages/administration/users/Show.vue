@@ -27,7 +27,7 @@ const { can } = usePermissions();
             </Button>
         </div>
 
-        <div class="border-sidebar-border/70 dark:border-sidebar-border grid gap-4 rounded-xl border p-4 sm:grid-cols-3">
+        <div class="border-sidebar-border/70 dark:border-sidebar-border grid gap-4 rounded-xl border p-4 sm:grid-cols-4">
             <div>
                 <p class="text-muted-foreground text-xs font-medium">Status</p>
                 <Badge class="mt-1" :variant="user.is_active ? 'default' : 'outline'">
@@ -49,6 +49,10 @@ const { can } = usePermissions();
                     </component>
                     <span v-if="user.roles.length === 0" class="text-muted-foreground text-sm">None — no access</span>
                 </div>
+            </div>
+            <div>
+                <p class="text-muted-foreground text-xs font-medium">Start page</p>
+                <p class="mt-1 text-sm">{{ user.start_in_simple_mode ? 'Simple mode' : 'Full ERP' }}</p>
             </div>
             <div>
                 <p class="text-muted-foreground text-xs font-medium">Registered</p>

@@ -1183,3 +1183,29 @@ Full detail in `docs/AUTHORIZATION_RULES.md`.
 
 Full detail in `docs/API_V1.md`.
 
+## 29. The factory's clock — Sri Lanka time
+
+- **The factory runs on Sri Lanka time (Asia/Colombo, UTC+05:30).** "Today", the date inside
+  every document number, overdue invoices, aging and every date a form suggests all follow the
+  Sri Lankan calendar — so work done between midnight and 05:30 is dated today, not yesterday.
+- **Times shown on screens are Sri Lankan times.** A receipt posted at 2:00 PM shows 14:00.
+- **Stored moments stay in UTC** (the international standard). Nothing already recorded changed.
+  The mobile API sends UTC with a `Z`, and the app shows local time.
+- **Dates people type are kept exactly as typed.**
+- The timezone is configuration (`APP_BUSINESS_TIMEZONE`), used only through
+  `App\Support\BusinessClock`.
+
+## 30. Simple mode for factory staff
+
+- **Big-button screens** for receiving, dispatch, dehusking, husk chipping, copra and checking
+  stock, in **Sinhala and English**.
+- **"Done" posts immediately** — stock moves at once. So a job is offered only to people whose
+  role may post it; anyone else does not see the tile.
+- **Staff type the prices** when receiving and dispatching; the cost of goods leaving is always
+  calculated by the system.
+- **The batch must be chosen** whenever stock is held in batches.
+- **Everything is dated today.** Back-dated work is done in the full ERP.
+- **If something is wrong (not enough stock, wrong batch) nothing is saved at all.**
+
+Full detail in `docs/KIOSK.md`.
+

@@ -18,6 +18,7 @@ class UpdateUserAccessRequest extends FormRequest
     {
         return [
             'is_active' => ['required', 'boolean'],
+            'start_in_simple_mode' => ['sometimes', 'boolean'],
             'role_ids' => ['present', 'array'],
             'role_ids.*' => ['integer', 'distinct', 'exists:roles,id'],
         ];

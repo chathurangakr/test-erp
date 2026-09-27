@@ -10,6 +10,7 @@ use App\Models\InventoryTransactionLine;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -74,7 +75,8 @@ class PostInventoryTransaction
             $transaction = InventoryTransaction::create([
                 'reference' => $attributes['reference'] ?? $this->references->forTransaction(),
                 'transaction_type' => $type,
-                'transaction_date' => $attributes['transaction_date'] ?? now(),
+                // A calendar date in the factory's timezone, like every document's own date.
+                'transaction_date' => $attributes['transaction_date'] ?? BusinessClock::todayString(),
                 'source_type' => $attributes['source_type'] ?? null,
                 'source_id' => $attributes['source_id'] ?? null,
                 'reversal_of_id' => $attributes['reversal_of_id'] ?? null,

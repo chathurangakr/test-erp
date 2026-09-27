@@ -19,6 +19,10 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            /** Today (YYYY-MM-DD) in the factory timezone. */
+            businessToday: string;
+            /** Present on simple-mode (kiosk) pages only. */
+            kiosk?: { locale: 'si' | 'en'; locales: string[]; idle_minutes: number };
             [key: string]: unknown;
         };
     }

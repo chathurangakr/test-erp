@@ -22,6 +22,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $name
  * @property string $email
  * @property bool $is_active
+ * @property bool $start_in_simple_mode
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -46,6 +47,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     protected $attributes = [
         'is_active' => true,
+        'start_in_simple_mode' => false,
     ];
 
     /**
@@ -76,6 +78,7 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_active' => 'boolean',
+            'start_in_simple_mode' => 'boolean',
         ];
     }
 

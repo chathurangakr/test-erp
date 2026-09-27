@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Warehouse;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -189,7 +190,7 @@ class PurchaseOrderController extends Controller
             'supplier_reference' => $order->supplier_reference,
             'notes' => $order->notes,
             'approved_by' => $order->approvedBy?->name,
-            'approved_at' => $order->approved_at?->toDateTimeString(),
+            'approved_at' => BusinessClock::display($order->approved_at),
             'created_by' => $order->createdBy?->name,
             'can_approve' => $order->status->canApprove(),
             'can_cancel' => $order->status->canCancel(),

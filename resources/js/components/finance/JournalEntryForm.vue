@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { AccountOption, JournalFormValues } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -19,7 +20,7 @@ const props = defineProps<{
     initial?: JournalFormValues | null;
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 type Line = { account_id: number | null; description: string; debit: string; credit: string };
 

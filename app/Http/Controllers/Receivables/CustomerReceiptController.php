@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
+use App\Support\BusinessClock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -181,9 +182,9 @@ class CustomerReceiptController extends Controller
             'notes' => $receipt->notes,
             'created_by' => $receipt->createdBy?->name,
             'posted_by' => $receipt->postedBy?->name,
-            'posted_at' => $receipt->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($receipt->posted_at),
             'reversed_by' => $receipt->reversedBy?->name,
-            'reversed_at' => $receipt->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($receipt->reversed_at),
             'can_post' => $receipt->status->canPost(),
             'can_cancel' => $receipt->status->canCancel(),
             'can_reverse' => $receipt->status->canReverse() && $receipt->reversal_journal_entry_id === null,

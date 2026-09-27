@@ -13,6 +13,7 @@ import type {
     StatusOption,
     SupplierInvoiceFormValues,
 } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -27,7 +28,7 @@ const props = defineProps<{
     initial?: SupplierInvoiceFormValues | null;
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 type Line = {
     line_type: string;

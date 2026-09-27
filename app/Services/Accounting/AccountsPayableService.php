@@ -7,6 +7,7 @@ use App\Enums\SupplierPaymentStatus;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPaymentAllocation;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -124,7 +125,7 @@ class AccountsPayableService
      */
     public function aging(?CarbonInterface $asOf = null): array
     {
-        $asOf ??= now();
+        $asOf ??= BusinessClock::today();
         $buckets = ['current', 'days_1_30', 'days_31_60', 'days_61_90', 'days_90_plus'];
 
         $bySupplier = [];

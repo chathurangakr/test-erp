@@ -1211,6 +1211,26 @@ the existing numeric IDs.
 user sign out one phone without the others. Permissions are deliberately not stored on the
 token — roles are read on every request, so a role change or deactivation takes effect at once.
 
+### T-1 — stored moments are UTC; the business calendar is Asia/Colombo
+
+**Decision:** `config('app.timezone')` stays `UTC`, so every stored timestamp keeps its meaning.
+A separate `config('app.business_timezone')` (`Asia/Colombo`) decides calendar questions — today's
+date, document-number date stamps, overdue and aging, the default date forms suggest — and how
+stored moments are displayed, all through `App\Support\BusinessClock`. Stock-ledger
+`transaction_date` is a calendar date: documents pass their own date, and reversals / transfers
+now default to the business date instead of the UTC moment.
+
+**Why:** switching the application timezone would have reinterpreted every existing UTC row as
+Sri Lankan wall-clock time, silently shifting posted history by 5½ hours. Separating "when did it
+happen" (UTC) from "which business day is it" (Colombo) fixes the midnight-to-05:30 misdating with
+no data change. `BusinessClock` must never be used to write a timestamp column.
+
+### U-3 — `users.start_in_simple_mode` is a start-page preference, not a permission
+
+**Decision:** a boolean, default false, set by an administrator. After signing in, the user is
+sent to `/kiosk` instead of the dashboard (`App\Http\Responses\LoginResponse`). It grants no
+access; every simple-mode job is still authorized by permissions.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that

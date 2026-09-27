@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -25,7 +26,7 @@ const props = defineProps<{
     } | null;
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 const form = useForm({
     production_date: props.initial?.production_date ?? today,

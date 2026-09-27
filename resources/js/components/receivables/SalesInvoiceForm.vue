@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { BillableDeliveryLine, OptionRef, SalesInvoiceFormValues } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -21,7 +22,7 @@ const props = defineProps<{
     initial?: SalesInvoiceFormValues | null;
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 const customerId = ref(props.customerId ? String(props.customerId) : '');
 
 /** Choosing a customer reloads the page so its unbilled delivered lines can be listed. */

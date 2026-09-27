@@ -16,6 +16,7 @@ use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceLine;
 use App\Services\Accounting\AccountsPayableService;
 use App\Services\Accounting\GrniReconciliationService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -57,7 +58,7 @@ class SupplierInvoiceController extends Controller
             ->when($from, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '>=', $d))
             ->when($to, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '<=', $d))
             ->when($overdueOnly, fn (Builder $q) => $q
-                ->whereDate('due_date', '<', now()->toDateString())
+                ->whereDate('due_date', '<', BusinessClock::todayString())
                 ->whereIn('status', [SupplierInvoiceStatus::Posted->value, SupplierInvoiceStatus::PartiallyPaid->value]))
             ->orderByDesc('invoice_date')
             ->orderByDesc('id')
@@ -228,7 +229,7 @@ class SupplierInvoiceController extends Controller
             'paid' => $paid,
             'outstanding' => $this->payables->outstanding($invoice),
             'is_overdue' => $invoice->status->isOutstanding()
-                && $invoice->due_date?->isBefore(now()->startOfDay()) === true,
+                && BusinessClock::isPastDue($invoice->due_date),
         ];
     }
 
@@ -241,9 +242,9 @@ class SupplierInvoiceController extends Controller
             'description' => $invoice->description,
             'created_by' => $invoice->createdBy?->name,
             'posted_by' => $invoice->postedBy?->name,
-            'posted_at' => $invoice->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($invoice->posted_at),
             'reversed_by' => $invoice->reversedBy?->name,
-            'reversed_at' => $invoice->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($invoice->reversed_at),
             'can_post' => $invoice->status->canPost(),
             'can_edit' => $invoice->status->isEditable(),
             'can_cancel' => $invoice->status->canCancel(),

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/fund-transfers';
 import type { CashBankAccountOption } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     accounts: CashBankAccountOption[];
@@ -23,7 +24,7 @@ defineOptions({
     },
 });
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 const form = useForm({
     transfer_date: today,

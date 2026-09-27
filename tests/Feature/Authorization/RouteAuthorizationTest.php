@@ -56,6 +56,10 @@ class RouteAuthorizationTest extends TestCase
         'security.edit',
         'user-password.update',
         'appearance.edit',
+        // Simple mode's home draws only the tiles the user's roles allow, and the language
+        // switch only sets a cookie. Every job route behind them requires a permission.
+        'kiosk.home',
+        'kiosk.language',
     ];
 
     /**

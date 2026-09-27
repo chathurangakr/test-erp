@@ -12,6 +12,7 @@ use App\Models\Account;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -274,9 +275,9 @@ class JournalEntryController extends Controller
         return array_merge($this->summarise($entry), [
             'created_by' => $entry->createdBy?->name,
             'posted_by' => $entry->postedBy?->name,
-            'posted_at' => $entry->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($entry->posted_at),
             'reversed_by_user' => $entry->reversedByUser?->name,
-            'reversed_at' => $entry->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($entry->reversed_at),
             'reversal_of' => $entry->reversalOf === null ? null : [
                 'id' => $entry->reversalOf->id,
                 'journal_number' => $entry->reversalOf->journal_number,

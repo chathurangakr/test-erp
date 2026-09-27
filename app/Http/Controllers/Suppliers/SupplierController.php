@@ -12,6 +12,7 @@ use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Services\Accounting\AccountsPayableService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,7 +124,7 @@ class SupplierController extends Controller
         $overdue = DecimalMath::zero();
 
         foreach ($this->payables->outstandingInvoices($supplier) as $invoice) {
-            if ($invoice->due_date?->isBefore(now()->startOfDay()) === true) {
+            if (BusinessClock::isPastDue($invoice->due_date)) {
                 $overdue = DecimalMath::add($overdue, $this->payables->outstanding($invoice));
             }
         }

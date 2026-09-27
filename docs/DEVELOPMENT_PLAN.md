@@ -451,6 +451,28 @@ API registration, OpenAPI file, push notifications. See `API_V1.md` §14.
 
 ---
 
+## Phase 17 — Simple mode for factory staff + Sri Lanka time ✅ COMPLETE
+
+- [x] **Business timezone** (`Asia/Colombo`) through `BusinessClock`: today, document numbers,
+      overdue, aging, form defaults and on-screen times follow Sri Lanka; storage stays UTC and
+      no existing row changed
+- [x] **Simple mode at `/kiosk`**: big tiles, one question per screen, number keypad, batch cards,
+      green result screen; phones, tablets and PCs; idle sign-out for shared devices
+- [x] Six jobs: receive, dispatch, dehusking, husk chipping, copra, check stock
+- [x] **Done saves and posts in one transaction** (`RecordKioskEntry`) through the existing
+      actions; shown only to users with both create and post permission
+- [x] **Sinhala + English**, per-device; server error messages translated on kiosk routes
+- [x] "Start in simple mode" per user (one forward migration); "Simple mode" sidebar link
+- [x] 19 new tests (kiosk flows, permissions, rollback, date, language, start page, clock)
+
+**Decided with the owner:** simple mode inside the ERP (not a separate app); staff type prices;
+Done always posts; Sinhala + English; phones, tablets and PCs.
+
+**Not implemented:** scanning, printing, photos, offline, kiosk waste entry, Sinhala in the full
+ERP. See `KIOSK.md` §5.
+
+---
+
 ## Cross-cutting standing rules
 
 | Rule | Source |

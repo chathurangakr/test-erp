@@ -12,6 +12,7 @@ use App\Models\Delivery;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Services\Accounting\AccountsReceivableService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -121,7 +122,7 @@ class CustomerController extends Controller
         $overdue = DecimalMath::zero();
 
         foreach ($this->receivables->outstandingInvoices($customer) as $invoice) {
-            if ($invoice->due_date?->isBefore(now()->startOfDay()) === true) {
+            if (BusinessClock::isPastDue($invoice->due_date)) {
                 $overdue = DecimalMath::add($overdue, $this->receivables->outstanding($invoice));
             }
         }

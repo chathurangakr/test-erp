@@ -11,6 +11,7 @@ use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Services\Accounting\AccountsPayableService;
+use App\Support\BusinessClock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -181,9 +182,9 @@ class SupplierPaymentController extends Controller
             'notes' => $payment->notes,
             'created_by' => $payment->createdBy?->name,
             'posted_by' => $payment->postedBy?->name,
-            'posted_at' => $payment->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($payment->posted_at),
             'reversed_by' => $payment->reversedBy?->name,
-            'reversed_at' => $payment->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($payment->reversed_at),
             'can_post' => $payment->status->canPost(),
             'can_cancel' => $payment->status->canCancel(),
             'can_reverse' => $payment->status->canReverse() && $payment->reversal_journal_entry_id === null,

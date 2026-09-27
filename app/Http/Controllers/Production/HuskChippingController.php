@@ -13,6 +13,7 @@ use App\Models\ProductionOrder;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -237,9 +238,9 @@ class HuskChippingController extends Controller
             'notes' => $order->notes,
             'waste_uom' => $order->wasteUom?->code,
             'posted_by' => $order->postedBy?->name,
-            'posted_at' => $order->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($order->posted_at),
             'created_by' => $order->createdBy?->name,
-            'reversed_at' => $order->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($order->reversed_at),
             'consumption_reference' => $order->consumptionTransaction?->reference,
             'output_reference' => $order->outputTransaction?->reference,
             'can_post' => $order->status->canPost(),

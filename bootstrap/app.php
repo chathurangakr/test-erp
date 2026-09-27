@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireHttpsForApi;
+use App\Http\Middleware\SetKioskLocale;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'kiosk_locale']);
 
         $middleware->web(append: [
             EnsureUserIsActive::class,
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'api.active' => EnsureApiUserIsActive::class,
             'api.https' => RequireHttpsForApi::class,
+            'kiosk.locale' => SetKioskLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

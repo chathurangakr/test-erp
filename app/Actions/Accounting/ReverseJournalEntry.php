@@ -5,6 +5,7 @@ namespace App\Actions\Accounting;
 use App\Enums\JournalEntryStatus;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -48,7 +49,7 @@ class ReverseJournalEntry
 
             $date = isset($attributes['journal_date'])
                 ? Carbon::parse($attributes['journal_date'])
-                : now();
+                : Carbon::parse(BusinessClock::todayString());
 
             $period = FiscalPeriod::openFor($date);
 

@@ -20,6 +20,7 @@ import {
     Factory,
     Grid2x2,
     Sun,
+    Tablet,
     BookMarked,
     Calculator,
     CalendarRange,
@@ -95,6 +96,7 @@ import {
     productProfitability as productProfitabilityReport,
     profitLoss as profitLossReport,
 } from '@/routes/reports';
+import { home as kioskHome } from '@/routes/kiosk';
 import { index as productsIndex } from '@/routes/products';
 import { index as rolesIndex } from '@/routes/roles';
 import { index as suppliersIndex } from '@/routes/suppliers';
@@ -107,6 +109,12 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        // Open to everyone signed in; it shows only the jobs their roles allow.
+        title: 'Simple mode',
+        href: kioskHome(),
+        icon: Tablet,
     },
 ];
 

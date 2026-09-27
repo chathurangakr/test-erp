@@ -11,6 +11,7 @@ import type {
     OptionRef,
     ProductionLotOption,
 } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -25,7 +26,7 @@ const props = defineProps<{
     initial?: HuskChippingFormValues | null;
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 /** One row per grade, pre-filled from the draft being edited. */
 function initialOutputs(): { product_id: number; quantity: string }[] {

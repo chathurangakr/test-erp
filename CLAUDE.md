@@ -592,6 +592,28 @@ Full detail lives in `docs/API_V1.md`.
 
 ---
 
+## Simple mode and time rules (Phase 17 — implemented)
+
+Full detail lives in `docs/KIOSK.md` and `docs/DATA_MODEL.md` T-1.
+
+- **Stored moments are UTC; the business calendar is Asia/Colombo.** Never change
+  `config('app.timezone')`. Use `App\Support\BusinessClock` for "today", document-number dates,
+  overdue checks, form defaults (`businessToday` shared prop / `@/lib/businessDate`) and for
+  displaying times (`BusinessClock::display()`). Never write `BusinessClock::now()` into a
+  timestamp column, and never use `new Date().toISOString()` for a default date.
+- **Simple mode (`/kiosk`) is a second front door, not a second system.** Done composes the
+  existing `Save*` and `Post*` actions in ONE transaction (`RecordKioskEntry`) — a failed post
+  leaves nothing behind. Kiosk FormRequests extend the web ones and only force today's date.
+- **A kiosk job requires both the create and the post permission** (`KioskTasks`); its routes
+  declare the post permission and the store actions also check create.
+- **What a worker types comes from the recipe** (`derived`, `requires_secondary_quantity`),
+  never from a product code; derived quantities are never sent.
+- **Every kiosk word lives in `resources/js/kiosk/text.ts`** in English and Sinhala; a test fails
+  if a key is missing in either. Server messages come from `lang/si.json` on kiosk routes.
+  **Never translate text that is saved** (journal / ledger descriptions).
+
+---
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,
@@ -643,7 +665,9 @@ profitability and a finance dashboard — all derived, none stored), and **role-
 control** (73 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
-as the website, decimals as strings, JSON errors with 409 for state conflicts).
+as the website, decimals as strings, JSON errors with 409 for state conflicts), and **simple mode** (big-button Sinhala/English
+screens at `/kiosk` for receiving, dispatch, the three production jobs and stock, where Done saves
+and posts in one transaction) with **Sri Lanka business time** throughout.
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense

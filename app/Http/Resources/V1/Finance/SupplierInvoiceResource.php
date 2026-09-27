@@ -7,6 +7,7 @@ use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceLine;
 use App\Models\SupplierPaymentAllocation;
 use App\Services\Accounting\AccountsPayableService;
+use App\Support\BusinessClock;
 use Illuminate\Http\Request;
 
 /**
@@ -37,7 +38,7 @@ class SupplierInvoiceResource extends ApiResource
             'paid' => $payables->paidAmount($this->resource),
             'outstanding' => $payables->outstanding($this->resource),
             'is_overdue' => $this->status->isOutstanding()
-                && $this->due_date?->isBefore(now()->startOfDay()) === true,
+                && BusinessClock::isPastDue($this->due_date),
             'actions' => [
                 'can_edit' => $this->status->isEditable(),
                 'can_post' => $this->status->canPost(),

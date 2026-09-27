@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Enums\AccountType;
 use App\Models\Account;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -87,7 +88,7 @@ class BalanceSheetService
             'liabilities_and_equity' => $liabilitiesAndEquity,
             'difference' => $difference,
             'balanced' => DecimalMath::isZero($difference),
-            'as_of' => ($asOfDate ?? now())->toDateString(),
+            'as_of' => $asOfDate?->toDateString() ?? BusinessClock::todayString(),
         ];
     }
 

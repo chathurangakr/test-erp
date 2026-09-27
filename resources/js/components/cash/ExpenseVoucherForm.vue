@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CashBankAccountOption, OptionRef } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 type VoucherLine = {
     expense_account_id: number | string;
@@ -34,7 +35,7 @@ const props = defineProps<{
     };
 }>();
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 
 const form = useForm({
     voucher_date: props.initial?.voucher_date ?? today,

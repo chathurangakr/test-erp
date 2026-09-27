@@ -23,7 +23,8 @@ final class DailyDocumentSequence
      */
     public function next(string $prefix, string $model, string $column, ?Carbon $date = null): string
     {
-        $stamp = ($date ?? now())->format('Ymd');
+        // The factory's calendar, so work done after midnight in Sri Lanka is stamped today.
+        $stamp = ($date ?? BusinessClock::now())->format('Ymd');
         $pattern = "{$prefix}-{$stamp}-";
 
         // Read the current maximum inside whatever transaction the caller already holds,

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/customer-receipts';
 import type { AccountOption, OptionRef, OutstandingSalesInvoice } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     customers: OptionRef[];
@@ -21,7 +22,7 @@ defineOptions({
     layout: { breadcrumbs: [{ title: 'Customer receipts', href: index() }, { title: 'New', href: index() }] },
 });
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 const customerId = ref(props.customerId ? String(props.customerId) : '');
 
 /** Choosing a customer reloads the page so its outstanding invoices can be listed. */

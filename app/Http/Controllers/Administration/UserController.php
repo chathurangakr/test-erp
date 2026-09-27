@@ -70,6 +70,7 @@ class UserController extends Controller
             $user,
             array_map('intval', $request->validated('role_ids')),
             $request->boolean('is_active'),
+            $request->has('start_in_simple_mode') ? $request->boolean('start_in_simple_mode') : null,
         );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User access updated.')]);
@@ -87,6 +88,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'is_active' => $user->is_active,
+            'start_in_simple_mode' => $user->start_in_simple_mode,
             'created_at' => $user->created_at?->toDateString(),
             'roles' => $user->roles->map(fn (Role $role): array => [
                 'id' => $role->id,

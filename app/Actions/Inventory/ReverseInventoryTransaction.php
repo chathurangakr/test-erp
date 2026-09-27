@@ -5,6 +5,7 @@ namespace App\Actions\Inventory;
 use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\InventoryTransactionType;
 use App\Models\InventoryTransaction;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -92,7 +93,8 @@ class ReverseInventoryTransaction
                 InventoryTransactionType::Reversal,
                 $lines,
                 [
-                    'transaction_date' => $attributes['transaction_date'] ?? now(),
+                    // A calendar date in the factory's timezone, like every document's own date.
+                    'transaction_date' => $attributes['transaction_date'] ?? BusinessClock::todayString(),
                     'source_type' => $original->source_type,
                     'source_id' => $original->source_id,
                     'reversal_of_id' => $original->getKey(),

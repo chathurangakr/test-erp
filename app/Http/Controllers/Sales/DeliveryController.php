@@ -16,6 +16,7 @@ use App\Models\Product;
 use App\Models\SalesOrder;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -256,9 +257,9 @@ class DeliveryController extends Controller
             'driver_name' => $delivery->driver_name,
             'notes' => $delivery->notes,
             'posted_by' => $delivery->postedBy?->name,
-            'posted_at' => $delivery->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($delivery->posted_at),
             'created_by' => $delivery->createdBy?->name,
-            'reversed_at' => $delivery->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($delivery->reversed_at),
             'inventory_reference' => $delivery->inventoryTransaction?->reference,
             'reversal_reference' => $delivery->reversalInventoryTransaction?->reference,
             'can_post' => $delivery->status->canPost(),

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Cash\StoreFundTransferRequest;
 use App\Models\FundTransfer;
 use App\Services\Accounting\CashDocumentOptions;
+use App\Support\BusinessClock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -119,9 +120,9 @@ class FundTransferController extends Controller
             'to_code' => $transfer->toAccount?->account?->code,
             'created_by' => $transfer->createdBy?->name,
             'posted_by' => $transfer->postedBy?->name,
-            'posted_at' => $transfer->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($transfer->posted_at),
             'reversed_by' => $transfer->reversedBy?->name,
-            'reversed_at' => $transfer->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($transfer->reversed_at),
             'can_post' => $transfer->status->canPost(),
             'can_cancel' => $transfer->status->canCancel(),
             'can_reverse' => $transfer->status->canReverse() && $transfer->reversal_journal_entry_id === null,

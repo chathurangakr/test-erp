@@ -12,6 +12,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Users', href: index() }] } });
 
 const form = useForm({
     is_active: props.user.is_active,
+    start_in_simple_mode: props.user.start_in_simple_mode,
     role_ids: props.user.roles.map((role) => role.id),
 });
 
@@ -41,6 +42,18 @@ function submit(): void {
                 </span>
             </label>
             <InputError :message="form.errors.is_active" />
+
+            <label class="flex items-start gap-3">
+                <input v-model="form.start_in_simple_mode" type="checkbox" class="mt-1 size-4" />
+                <span>
+                    <span class="block text-sm font-medium">Start in simple mode</span>
+                    <span class="text-muted-foreground block text-xs">
+                        After signing in, open the big-button screens for factory work instead of the
+                        full ERP. It only changes the start page — what they may do still comes from
+                        their roles.
+                    </span>
+                </span>
+            </label>
 
             <fieldset class="space-y-3">
                 <legend class="text-sm font-medium">Roles</legend>

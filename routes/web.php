@@ -16,4 +16,5 @@ require __DIR__.'/sales.php';
 require __DIR__.'/production.php';
 require __DIR__.'/finance.php';
 require __DIR__.'/administration.php';
+require __DIR__.'/kiosk.php';
 require __DIR__.'/settings.php';

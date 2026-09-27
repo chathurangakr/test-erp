@@ -65,7 +65,23 @@ return [
     |
     */
 
+    // Stored moments (created_at, posted_at, transaction times) are always UTC. Never change
+    // this: existing rows were written in UTC and would silently shift.
     'timezone' => 'UTC',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Business Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Where the factory actually is. Decides what "today" means (document
+    | numbers, default dates, overdue checks, aging) and how times are shown on
+    | screens. Used only through App\Support\BusinessClock — never to write a
+    | stored timestamp. See docs/BUSINESS_RULES.md §29.
+    |
+    */
+
+    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'Asia/Colombo'),
 
     /*
     |--------------------------------------------------------------------------

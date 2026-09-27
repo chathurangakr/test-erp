@@ -14,6 +14,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\Purchasing\LandedCostAllocator;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -260,9 +261,9 @@ class GoodsReceiptController extends Controller
             'other_cost' => $receipt->other_cost,
             'notes' => $receipt->notes,
             'posted_by' => $receipt->postedBy?->name,
-            'posted_at' => $receipt->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($receipt->posted_at),
             'created_by' => $receipt->createdBy?->name,
-            'reversed_at' => $receipt->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($receipt->reversed_at),
             'inventory_reference' => $receipt->inventoryTransaction?->reference,
             'reversal_reference' => $receipt->reversalInventoryTransaction?->reference,
             'can_post' => $receipt->status->canPost(),

@@ -10,6 +10,7 @@ use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +117,8 @@ class TransferStock
                 InventoryTransactionType::Transfer,
                 [$out, $in],
                 [
-                    'transaction_date' => $attributes['transaction_date'] ?? now(),
+                    // A calendar date in the factory's timezone, like every document's own date.
+                    'transaction_date' => $attributes['transaction_date'] ?? BusinessClock::todayString(),
                     'notes' => $attributes['notes'] ?? null,
                     'posted_by' => $attributes['posted_by'] ?? null,
                 ],

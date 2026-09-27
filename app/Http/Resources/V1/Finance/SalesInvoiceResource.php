@@ -7,6 +7,7 @@ use App\Models\CustomerReceiptAllocation;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Services\Accounting\AccountsReceivableService;
+use App\Support\BusinessClock;
 use Illuminate\Http\Request;
 
 /**
@@ -39,7 +40,7 @@ class SalesInvoiceResource extends ApiResource
             'received' => $receivables->receivedAmount($this->resource),
             'outstanding' => $receivables->outstanding($this->resource),
             'is_overdue' => $this->status->isOutstanding()
-                && $this->due_date?->isBefore(now()->startOfDay()) === true,
+                && BusinessClock::isPastDue($this->due_date),
             'actions' => [
                 'can_edit' => $this->status->isEditable(),
                 'can_post' => $this->status->canPost(),

@@ -22,10 +22,14 @@ class UpdateUserAccess
     /**
      * @param  list<int>  $roleIds
      */
-    public function handle(User $user, array $roleIds, bool $isActive): User
+    public function handle(User $user, array $roleIds, bool $isActive, ?bool $startInSimpleMode = null): User
     {
-        return $this->guard->protect(function () use ($user, $roleIds, $isActive): User {
-            $user->forceFill(['is_active' => $isActive])->save();
+        return $this->guard->protect(function () use ($user, $roleIds, $isActive, $startInSimpleMode): User {
+            $user->forceFill(array_filter([
+                'is_active' => $isActive,
+                // A landing-page preference only; it grants nothing.
+                'start_in_simple_mode' => $startInSimpleMode,
+            ], fn ($value): bool => $value !== null))->save();
             $user->roles()->sync($roleIds);
             $user->forgetPermissions();
 

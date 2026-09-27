@@ -10,6 +10,7 @@ use App\Http\Requests\Cash\UpdateExpenseVoucherRequest;
 use App\Models\ExpenseVoucher;
 use App\Models\Supplier;
 use App\Services\Accounting\CashDocumentOptions;
+use App\Support\BusinessClock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -165,9 +166,9 @@ class ExpenseVoucherController extends Controller
             'payment_account_code' => $voucher->cashBankAccount?->account?->code,
             'created_by' => $voucher->createdBy?->name,
             'posted_by' => $voucher->postedBy?->name,
-            'posted_at' => $voucher->posted_at?->toDateTimeString(),
+            'posted_at' => BusinessClock::display($voucher->posted_at),
             'reversed_by' => $voucher->reversedBy?->name,
-            'reversed_at' => $voucher->reversed_at?->toDateTimeString(),
+            'reversed_at' => BusinessClock::display($voucher->reversed_at),
             'can_edit' => $voucher->status->isEditable(),
             'can_post' => $voucher->status->canPost(),
             'can_cancel' => $voucher->status->canCancel(),

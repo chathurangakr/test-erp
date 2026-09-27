@@ -3,6 +3,7 @@
 namespace App\Services\Accounting;
 
 use App\Models\FiscalPeriod;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -165,7 +166,7 @@ class FinanceDashboardService
      */
     public function defaultWindow(): array
     {
-        $today = Carbon::today();
+        $today = BusinessClock::today();
         $period = FiscalPeriod::openFor($today);
 
         if ($period !== null) {

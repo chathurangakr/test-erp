@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/supplier-payments';
 import type { AccountOption, OptionRef, OutstandingInvoice } from '@/types';
+import { businessToday } from '@/lib/businessDate';
 
 const props = defineProps<{
     suppliers: OptionRef[];
@@ -21,7 +22,7 @@ defineOptions({
     layout: { breadcrumbs: [{ title: 'Supplier payments', href: index() }, { title: 'New', href: index() }] },
 });
 
-const today = new Date().toISOString().slice(0, 10);
+const today = businessToday();
 const supplierId = ref(props.supplierId ? String(props.supplierId) : '');
 
 /** Choosing a supplier reloads the page so its outstanding invoices can be listed. */

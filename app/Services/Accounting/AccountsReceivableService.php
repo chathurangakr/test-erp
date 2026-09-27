@@ -7,6 +7,7 @@ use App\Enums\SalesInvoiceStatus;
 use App\Models\Customer;
 use App\Models\CustomerReceiptAllocation;
 use App\Models\SalesInvoice;
+use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -114,7 +115,7 @@ class AccountsReceivableService
      */
     public function aging(?CarbonInterface $asOf = null): array
     {
-        $asOf ??= now();
+        $asOf ??= BusinessClock::today();
         $buckets = ['current', 'days_1_30', 'days_31_60', 'days_61_90', 'days_90_plus'];
 
         $byCustomer = [];
