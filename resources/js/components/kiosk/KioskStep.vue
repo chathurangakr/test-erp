@@ -48,7 +48,7 @@ const { t } = useKioskText();
             <button
                 type="button"
                 class="flex min-h-16 items-center justify-center gap-2 rounded-2xl text-xl font-semibold text-white disabled:opacity-40"
-                :class="final ? 'bg-green-600' : 'bg-foreground text-background'"
+                :class="final ? 'bg-green-600' : 'bg-blue-700'"
                 :disabled="!canNext || busy"
                 @click="$emit('next')"
             >
