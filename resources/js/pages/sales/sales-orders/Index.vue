@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/sales-orders';
 import type { OptionRef, Paginated, SalesOrderRow, StatusOption } from '@/types';
+
+const { t } = useT();
 
 const props = defineProps<{
     orders: Paginated<SalesOrderRow>;
@@ -58,37 +61,37 @@ const controlClass =
 </script>
 
 <template>
-    <Head title="Sales orders" />
+    <Head :title="t('Sales orders')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Sales orders" description="Intentions to sell. Stock leaves only when a delivery is posted." />
             <Button v-if="can('sales.order_create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New sales order</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New sales order') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div class="relative">
                 <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input v-model="search" type="search" placeholder="Search SO number or customer…" class="pl-9" aria-label="Search orders" />
-                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" aria-label="Clear search" @click="search = ''; applyFilters(true)">
+                <Input v-model="search" type="search" :placeholder="t('Search SO number or customer…')" class="pl-9" :aria-label="t('Search orders')" />
+                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" :aria-label="t('Clear search')" @click="search = ''; applyFilters(true)">
                     <X class="size-4" />
                 </button>
             </div>
-            <select v-model="status" :class="controlClass" aria-label="Filter by status">
-                <option value="">All statuses</option>
+            <select v-model="status" :class="controlClass" :aria-label="t('Filter by status')">
+                <option value="">{{ t('All statuses') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
-            <select v-model="customerId" :class="controlClass" aria-label="Filter by customer">
-                <option value="">All customers</option>
+            <select v-model="customerId" :class="controlClass" :aria-label="t('Filter by customer')">
+                <option value="">{{ t('All customers') }}</option>
                 <option v-for="c in customers" :key="c.id" :value="String(c.id)">{{ c.code }} — {{ c.name }}</option>
             </select>
         </div>
 
         <div v-if="orders.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">
-            <p class="font-medium">No orders found</p>
-            <p class="text-muted-foreground text-sm">Create one to start selling to a customer.</p>
+            <p class="font-medium">{{ t('No orders found') }}</p>
+            <p class="text-muted-foreground text-sm">{{ t('Create one to start selling to a customer.') }}</p>
         </div>
 
         <template v-else>
@@ -96,13 +99,13 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">SO No</th>
-                            <th class="px-4 py-3 font-medium">Customer</th>
-                            <th class="px-4 py-3 font-medium">Whs</th>
-                            <th class="px-4 py-3 font-medium">Date</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 text-right font-medium">Total</th>
-                            <th class="px-4 py-3 text-right font-medium">Delivered</th>
+                            <th class="px-4 py-3 font-medium">{{ t('SO No') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Whs') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Total') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Delivered') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,16 +134,16 @@ const controlClass =
                         <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt class="font-medium">Date</dt><dd>{{ row.order_date }}</dd></div>
-                        <div><dt class="font-medium">Total</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
-                        <div><dt class="font-medium">Delivered</dt><dd class="font-mono">{{ row.delivered_quantity }} / {{ row.ordered_quantity }}</dd></div>
-                        <div><dt class="font-medium">Remaining</dt><dd class="font-mono">{{ row.remaining_quantity }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ row.order_date }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Total') }}</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Delivered') }}</dt><dd class="font-mono">{{ row.delivered_quantity }} / {{ row.ordered_quantity }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Remaining') }}</dt><dd class="font-mono">{{ row.remaining_quantity }}</dd></div>
                     </dl>
                 </Link>
             </div>
 
             <div v-if="orders.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">Showing {{ orders.from }}–{{ orders.to }} of {{ orders.total }}</p>
+                <p class="text-muted-foreground text-sm">{{ t('Showing :from–:to of :total', { from: orders.from ?? 0, to: orders.to ?? 0, total: orders.total }) }}</p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button v-for="link in orders.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })" v-html="link.label" />
                 </div>

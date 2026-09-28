@@ -14,6 +14,7 @@ use App\Models\SalesInvoiceLine;
 use App\Services\Accounting\AccountingPolicy;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -73,7 +74,7 @@ class PostSalesInvoice
                 // control account, and what makes it traceable to the invoice.
                 'source_type' => SalesInvoice::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Sales invoice :reference to :customer', [
+                'description' => RecordText::of('Sales invoice :reference to :customer', [
                     'reference' => $locked->invoice_number,
                     'customer' => $locked->customer?->code,
                 ]),
@@ -193,7 +194,7 @@ class PostSalesInvoice
 
             $journalLines[] = [
                 'account_id' => $this->policy->revenueAccountFor($deliveryLine->product)->id,
-                'description' => $line->description ?? __('Invoiced :product on :reference', [
+                'description' => $line->description ?? RecordText::of('Invoiced :product on :reference', [
                     'product' => $deliveryLine->product?->code,
                     'reference' => $deliveryLine->delivery?->delivery_number,
                 ]),
@@ -205,7 +206,7 @@ class PostSalesInvoice
         // One receivable line for the whole invoice.
         array_unshift($journalLines, [
             'account_id' => $this->policy->tradeReceivablesAccount()->id,
-            'description' => __('Receivable from :customer', ['customer' => $invoice->customer?->code ?? __('customer')]),
+            'description' => RecordText::of('Receivable from :customer', ['customer' => $invoice->customer?->code ?? RecordText::of('customer')]),
             'debit' => DecimalMath::cost($total),
             'credit' => DecimalMath::cost('0'),
         ]);

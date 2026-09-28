@@ -4,6 +4,7 @@ import WarehouseController from '@/actions/App/Http/Controllers/Warehouses/Wareh
 import Heading from '@/components/Heading.vue';
 import WarehouseForm from '@/components/masters/WarehouseForm.vue';
 import { index } from '@/routes/warehouses';
+import { useT } from '@/lib/i18n';
 
 defineOptions({
     layout: {
@@ -13,10 +14,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New warehouse" />
+    <Head :title="t('New warehouse')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="New warehouse" description="Add a stock location." />

@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { index, show, update } from '@/routes/users';
 import type { AdminUser, RoleOption } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ user: AdminUser; roles: RoleOption[] }>();
 
@@ -19,14 +20,16 @@ const form = useForm({
 function submit(): void {
     form.submit(update(props.user.id));
 }
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit access — ${user.name}`" />
+    <Head :title="t('Edit access — :name', { name: user.name })" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit access — ${user.name}`"
+            :title="t('Edit access — :name', { name: user.name })"
             description="Roles and sign-in status only. Name, email and password belong to the user's own settings."
         />
 
@@ -34,10 +37,9 @@ function submit(): void {
             <label class="flex items-start gap-3">
                 <input v-model="form.is_active" type="checkbox" class="mt-1 size-4" />
                 <span>
-                    <span class="block text-sm font-medium">Active</span>
+                    <span class="block text-sm font-medium">{{ t('Active') }}</span>
                     <span class="text-muted-foreground block text-xs">
-                        An inactive user cannot sign in and holds no permissions. Everything they
-                        recorded keeps their name.
+                        {{ t('An inactive user cannot sign in and holds no permissions. Everything they recorded keeps their name.') }}
                     </span>
                 </span>
             </label>
@@ -46,18 +48,16 @@ function submit(): void {
             <label class="flex items-start gap-3">
                 <input v-model="form.start_in_simple_mode" type="checkbox" class="mt-1 size-4" />
                 <span>
-                    <span class="block text-sm font-medium">Start in simple mode</span>
+                    <span class="block text-sm font-medium">{{ t('Start in simple mode') }}</span>
                     <span class="text-muted-foreground block text-xs">
-                        After signing in, open the big-button screens for factory work instead of the
-                        full ERP. It only changes the start page — what they may do still comes from
-                        their roles.
+                        {{ t('After signing in, open the big-button screens for factory work instead of the full ERP. It only changes the start page — what they may do still comes from their roles.') }}
                     </span>
                 </span>
             </label>
 
             <fieldset class="space-y-3">
-                <legend class="text-sm font-medium">Roles</legend>
-                <p class="text-muted-foreground text-xs">A user's permissions are everything their active roles grant, combined.</p>
+                <legend class="text-sm font-medium">{{ t('Roles') }}</legend>
+                <p class="text-muted-foreground text-xs">{{ t("A user's permissions are everything their active roles grant, combined.") }}</p>
                 <label
                     v-for="role in roles"
                     :key="role.id"
@@ -66,19 +66,19 @@ function submit(): void {
                     <input v-model="form.role_ids" type="checkbox" :value="role.id" class="mt-1 size-4" />
                     <span>
                         <span class="block text-sm font-medium">
-                            {{ role.name }}
+                            {{ t(role.name) }}
                             <span class="text-muted-foreground font-mono text-xs">{{ role.code }}</span>
-                            <span v-if="!role.is_active" class="text-muted-foreground text-xs"> — inactive, grants nothing</span>
+                            <span v-if="!role.is_active" class="text-muted-foreground text-xs"> — {{ t('inactive, grants nothing') }}</span>
                         </span>
-                        <span v-if="role.description" class="text-muted-foreground block text-xs">{{ role.description }}</span>
+                        <span v-if="role.description" class="text-muted-foreground block text-xs">{{ t(role.description) }}</span>
                     </span>
                 </label>
                 <InputError :message="(form.errors as Record<string, string | undefined>).roles ?? form.errors.role_ids" />
             </fieldset>
 
             <div class="flex gap-2">
-                <Button type="submit" :disabled="form.processing">Save access</Button>
-                <Button variant="outline" as-child><Link :href="show(user.id)">Cancel</Link></Button>
+                <Button type="submit" :disabled="form.processing">{{ t('Save access') }}</Button>
+                <Button variant="outline" as-child><Link :href="show(user.id)">{{ t('Cancel') }}</Link></Button>
             </div>
         </form>
     </div>

@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import ProductForm from '@/components/products/ProductForm.vue';
 import { index } from '@/routes/products';
 import type { Product, UnitOfMeasure } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     product: Product;
@@ -16,14 +17,16 @@ defineOptions({
         breadcrumbs: [{ title: 'Products', href: index() }],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit ${product.code}`" />
+    <Head :title="t('Edit :code', { code: product.code })" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit ${product.code}`"
+            :title="t('Edit :code', { code: product.code })"
             description="Update the product master record."
         />
 

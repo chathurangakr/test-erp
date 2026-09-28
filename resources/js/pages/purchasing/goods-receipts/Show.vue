@@ -9,8 +9,11 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/goods-receipts';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { GoodsReceiptDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ receipt: GoodsReceiptDetail }>();
+
+const { t } = useT();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Goods receipts', href: index() }] } });
 
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="receipt.can_edit && can('purchasing.grn_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${receipt.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -52,7 +55,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" class="w-full" :disabled="processing">
-                        Post to inventory
+                        {{ t('Post to inventory') }}
                     </Button>
                 </Form>
 
@@ -62,7 +65,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Reverse
+                        {{ t('Reverse') }}
                     </Button>
                 </Form>
 
@@ -72,7 +75,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Cancel draft
+                        {{ t('Cancel draft') }}
                     </Button>
                 </Form>
             </div>
@@ -82,26 +85,25 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="receipt.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This receipt is a <strong>draft</strong> — it has not changed stock. The costs
-            below are a preview of what posting would record.
+            {{ t('This receipt is a draft — it has not changed stock. The costs below are a preview of what posting would record.') }}
         </div>
 
         <!-- Totals -->
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total quantity</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total quantity') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ receipt.total_quantity }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Material value</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Material value') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ receipt.material_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Landed costs</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Landed costs') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ receipt.landed_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total purchase cost</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total purchase cost') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ receipt.grand_total }}</p>
             </div>
         </div>
@@ -110,35 +112,35 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Warehouse</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Warehouse') }}</dt>
                     <dd class="mt-1 text-sm">{{ receipt.warehouse_code }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Receipt date</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Receipt date') }}</dt>
                     <dd class="mt-1 text-sm">{{ receipt.receipt_date }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Purchase order</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ receipt.po_number ?? 'Direct purchase' }}</dd>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Purchase order') }}</dt>
+                    <dd class="mt-1 font-mono text-sm">{{ receipt.po_number ?? t('Direct purchase') }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Delivery reference</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Delivery reference') }}</dt>
                     <dd class="mt-1 text-sm">{{ receipt.supplier_delivery_reference ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Transport / Loading / Other</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Transport / Loading / Other') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         {{ receipt.transport_cost }} / {{ receipt.loading_cost }} / {{ receipt.other_cost }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
-                        {{ receipt.posted_at ? `${receipt.posted_at} by ${receipt.posted_by ?? '—'}` : '—' }}
+                        {{ receipt.posted_at ? t(':date by :user', { date: receipt.posted_at, user: receipt.posted_by ?? '—' }) : '—' }}
                     </dd>
                 </div>
                 <div v-if="receipt.inventory_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Inventory transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Inventory transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ receipt.inventory_reference }}
@@ -147,11 +149,11 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div v-if="receipt.reversal_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Reversal transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversal transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ receipt.reversal_reference }}</dd>
                 </div>
                 <div v-if="receipt.notes" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">{{ receipt.notes }}</dd>
                 </div>
             </dl>
@@ -162,15 +164,15 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-3 py-3 font-medium">Product</th>
-                        <th class="px-3 py-3 font-medium">UOM</th>
-                        <th class="px-3 py-3 text-right font-medium">Quantity</th>
-                        <th class="px-3 py-3 text-right font-medium">Secondary</th>
-                        <th class="px-3 py-3 text-right font-medium">Unit price</th>
-                        <th class="px-3 py-3 text-right font-medium">Material</th>
-                        <th class="px-3 py-3 text-right font-medium">Landed share</th>
-                        <th class="px-3 py-3 text-right font-medium">Final unit cost</th>
-                        <th class="px-3 py-3 font-medium">Lot</th>
+                        <th class="px-3 py-3 font-medium">{{ t('Product') }}</th>
+                        <th class="px-3 py-3 font-medium">{{ t('UOM') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Secondary') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Unit price') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Material') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Landed share') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Final unit cost') }}</th>
+                        <th class="px-3 py-3 font-medium">{{ t('Lot') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -195,7 +197,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-3 py-3">
                             <span class="font-mono text-xs">{{ line.lot_number ?? '—' }}</span>
                             <span v-if="line.supplier_lot_number" class="text-muted-foreground block text-xs">
-                                supplier: {{ line.supplier_lot_number }}
+                                {{ t('supplier: :lot', { lot: line.supplier_lot_number }) }}
                             </span>
                         </td>
                     </tr>
@@ -204,10 +206,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Landed costs are allocated across lines in proportion to material value. The
-            final unit cost is what was posted to inventory — it is calculated by the
-            system and can never be typed in. A posted receipt is corrected by reversal,
-            never by editing.
+            {{ t('Landed costs are allocated across lines in proportion to material value. The final unit cost is what was posted to inventory — it is calculated by the system and can never be typed in. A posted receipt is corrected by reversal, never by editing.') }}
         </p>
     </div>
 </template>

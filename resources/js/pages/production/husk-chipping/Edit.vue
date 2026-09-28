@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import HuskChippingForm from '@/components/production/HuskChippingForm.vue';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/husk-chipping';
 import type {
     HuskChippingFormValues,
@@ -9,6 +10,8 @@ import type {
     OptionRef,
     ProductionLotOption,
 } from '@/types';
+
+const { t } = useT();
 
 const props = defineProps<{
     order: HuskChippingFormValues & { id: number; production_number: string };
@@ -23,17 +26,17 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Husk chipping', href: index() 
 </script>
 
 <template>
-    <Head :title="`Edit ${props.order.production_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.order.production_number })" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit ${props.order.production_number}`"
+            :title="t('Edit :reference', { reference: props.order.production_number })"
             description="Only a draft production order can be edited."
         />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-5xl rounded-xl border p-4 sm:p-6">
             <HuskChippingForm
                 method="put"
                 :action="`${index().url}/${props.order.id}`"
-                submit-label="Save changes"
+                :submit-label="t('Save changes')"
                 :cancel-href="`${index().url}/${props.order.id}`"
                 :warehouses="warehouses"
                 :lots="lots"

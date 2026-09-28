@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PermissionGroup, RoleDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     action: { url: string; method: 'post' | 'put' | 'patch' | 'get' | 'delete' };
@@ -54,37 +55,39 @@ function toggleGroup(group: PermissionGroup): void {
 function submit(): void {
     form.submit(props.action);
 }
+
+const { t } = useT();
 </script>
 
 <template>
     <form class="space-y-6" @submit.prevent="submit">
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-                <Label for="code">Code <span v-if="creating" class="text-destructive">*</span></Label>
+                <Label for="code">{{ t('Code') }} <span v-if="creating" class="text-destructive">*</span></Label>
                 <Input
                     v-if="creating"
                     id="code"
                     v-model="form.code"
                     required
                     autocomplete="off"
-                    placeholder="e.g. QUALITY_CONTROL"
+                    :placeholder="t('e.g. QUALITY_CONTROL')"
                     class="uppercase"
                 />
                 <p v-else class="font-mono text-sm">{{ role?.code }}</p>
                 <p class="text-muted-foreground text-xs">
-                    {{ creating ? 'Capital letters, digits and underscores. Cannot be changed later.' : 'Fixed once created.' }}
+                    {{ creating ? t('Capital letters, digits and underscores. Cannot be changed later.') : t('Fixed once created.') }}
                 </p>
                 <InputError :message="form.errors.code" />
             </div>
             <div class="grid gap-2">
-                <Label for="name">Name <span class="text-destructive">*</span></Label>
+                <Label for="name">{{ t('Name') }} <span class="text-destructive">*</span></Label>
                 <Input id="name" v-model="form.name" required autocomplete="off" />
                 <InputError :message="form.errors.name" />
             </div>
         </div>
 
         <div class="grid gap-2">
-            <Label for="description">Description</Label>
+            <Label for="description">{{ t('Description') }}</Label>
             <Input id="description" v-model="form.description" autocomplete="off" />
             <InputError :message="form.errors.description" />
         </div>
@@ -92,9 +95,9 @@ function submit(): void {
         <label class="flex items-start gap-3">
             <input v-model="form.is_active" type="checkbox" class="mt-1 size-4" :disabled="locked" />
             <span>
-                <span class="block text-sm font-medium">Active</span>
+                <span class="block text-sm font-medium">{{ t('Active') }}</span>
                 <span class="text-muted-foreground block text-xs">
-                    An inactive role grants nothing to anyone, but stays assigned so it can be switched back on.
+                    {{ t('An inactive role grants nothing to anyone, but stays assigned so it can be switched back on.') }}
                 </span>
             </span>
         </label>
@@ -104,12 +107,11 @@ function submit(): void {
             v-if="locked"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            The Administrator role always holds every permission and is always active, so the system
-            can never be left without someone able to manage access. Only its name and description can change.
+            {{ t('The Administrator role always holds every permission and is always active, so the system can never be left without someone able to manage access. Only its name and description can change.') }}
         </div>
 
         <div class="space-y-4">
-            <h3 class="text-sm font-medium">Permissions ({{ form.permission_ids.length }})</h3>
+            <h3 class="text-sm font-medium">{{ t('Permissions (:count)', { count: form.permission_ids.length }) }}</h3>
             <InputError :message="form.errors.permission_ids" />
 
             <div
@@ -126,7 +128,7 @@ function submit(): void {
                         :disabled="locked"
                         @change="toggleGroup(group)"
                     />
-                    <span class="text-sm font-medium">{{ group.module }}</span>
+                    <span class="text-sm font-medium">{{ t(group.module) }}</span>
                 </label>
                 <div class="grid gap-2 p-4 sm:grid-cols-2">
                     <label v-for="permission in group.permissions" :key="permission.id" class="flex items-start gap-3">
@@ -138,7 +140,7 @@ function submit(): void {
                             :disabled="locked"
                         />
                         <span>
-                            <span class="block text-sm">{{ permission.name }}</span>
+                            <span class="block text-sm">{{ t(permission.name) }}</span>
                             <span class="text-muted-foreground block font-mono text-xs">{{ permission.code }}</span>
                         </span>
                     </label>
@@ -147,8 +149,8 @@ function submit(): void {
         </div>
 
         <div class="flex gap-2">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><Link :href="cancelHref">Cancel</Link></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><Link :href="cancelHref">{{ t('Cancel') }}</Link></Button>
         </div>
     </form>
 </template>

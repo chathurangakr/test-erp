@@ -9,6 +9,7 @@ use App\Models\GoodsReceipt;
 use App\Services\Accounting\GrniReconciliationService;
 use App\Services\Purchasing\PurchaseOrderStatusUpdater;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -74,7 +75,7 @@ class ReverseGoodsReceipt
             // Throws if the stock has already moved on — the negative-stock guard in the
             // inventory engine is what makes that impossible to post.
             $reversal = $this->reverseInventory->handle($transaction, [
-                'notes' => __('Reversal of goods receipt :reference', ['reference' => $locked->grn_number]),
+                'notes' => RecordText::of('Reversal of goods receipt :reference', ['reference' => $locked->grn_number]),
                 'posted_by' => $userId ?? auth()->id(),
             ]);
 

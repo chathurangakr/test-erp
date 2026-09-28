@@ -7,16 +7,19 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/roles';
 import type { RoleRow } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{ roles: RoleRow[]; permissionTotal: number }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Roles & permissions', href: index() }] } });
 
 const { can } = usePermissions();
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Roles & permissions" />
+    <Head :title="t('Roles & permissions')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -25,7 +28,7 @@ const { can } = usePermissions();
                 description="A role is a named set of permissions. A user's access is everything their active roles grant."
             />
             <Button v-if="can('roles.manage')" as-child class="w-full sm:w-auto">
-                <Link :href="create()"><Plus class="size-4" />New role</Link>
+                <Link :href="create()"><Plus class="size-4" />{{ t('New role') }}</Link>
             </Button>
         </div>
 
@@ -33,11 +36,11 @@ const { can } = usePermissions();
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Code</th>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Users</th>
-                        <th class="px-4 py-3 text-right font-medium">Permissions</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Users') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Permissions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,12 +53,12 @@ const { can } = usePermissions();
                             <Link :href="show(role.id)" class="hover:underline">{{ role.code }}</Link>
                         </td>
                         <td class="px-4 py-3">
-                            {{ role.name }}
-                            <span v-if="role.description" class="text-muted-foreground block text-xs">{{ role.description }}</span>
+                            {{ t(role.name) }}
+                            <span v-if="role.description" class="text-muted-foreground block text-xs">{{ t(role.description) }}</span>
                         </td>
                         <td class="px-4 py-3">
                             <Badge :variant="role.is_active ? 'default' : 'outline'">
-                                {{ role.is_active ? 'Active' : 'Inactive' }}
+                                {{ role.is_active ? t('Active') : t('Inactive') }}
                             </Badge>
                         </td>
                         <td class="px-4 py-3 text-right">{{ role.users_count }}</td>
@@ -66,9 +69,7 @@ const { can } = usePermissions();
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Permissions are capabilities built into the application, so they cannot be created
-            here — only assigned. The seeded roles are starting points and can be changed freely,
-            except Administrator, which always holds everything.
+            {{ t('Permissions are capabilities built into the application, so they cannot be created here — only assigned. The seeded roles are starting points and can be changed freely, except Administrator, which always holds everything.') }}
         </p>
     </div>
 </template>

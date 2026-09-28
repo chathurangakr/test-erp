@@ -9,6 +9,7 @@ use App\Models\Delivery;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Services\Sales\SalesOrderStatusUpdater;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -74,7 +75,7 @@ class ReverseDelivery
             }
 
             $reversal = $this->reverseInventory->handle($transaction, [
-                'notes' => __('Reversal of delivery :reference', ['reference' => $locked->delivery_number]),
+                'notes' => RecordText::of('Reversal of delivery :reference', ['reference' => $locked->delivery_number]),
                 'posted_by' => $userId ?? auth()->id(),
             ]);
 

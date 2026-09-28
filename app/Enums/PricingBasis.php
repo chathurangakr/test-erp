@@ -24,12 +24,15 @@ enum PricingBasis: string
     /** Priced on the secondary quantity, e.g. Rs/KG for shell. */
     case Secondary = 'SECONDARY';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Primary => 'Primary unit',
             self::Secondary => 'Secondary unit',
-        };
+        });
     }
 
     public function isSecondary(): bool

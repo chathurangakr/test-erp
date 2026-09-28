@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sidebar';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
+import { useT } from '@/lib/i18n';
 
 type Props = {
     items: NavItem[];
@@ -15,6 +16,8 @@ type Props = {
 };
 
 defineProps<Props>();
+
+const { t } = useT();
 </script>
 
 <template>
@@ -34,7 +37,7 @@ defineProps<Props>();
                             rel="noopener noreferrer"
                         >
                             <component :is="item.icon" />
-                            <span>{{ item.title }}</span>
+                            <span>{{ t(item.title) }}</span>
                         </a>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

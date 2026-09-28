@@ -6,9 +6,12 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { DeliveryDetail } from '@/types';
+
+const { t } = useT();
 
 defineProps<{ delivery: DeliveryDetail }>();
 
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="delivery.can_edit && can('sales.delivery_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${delivery.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -52,7 +55,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" class="w-full" :disabled="processing">
-                        Post to inventory
+                        {{ t('Post to inventory') }}
                     </Button>
                 </Form>
 
@@ -62,7 +65,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Reverse
+                        {{ t('Reverse') }}
                     </Button>
                 </Form>
 
@@ -72,7 +75,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Cancel draft
+                        {{ t('Cancel draft') }}
                     </Button>
                 </Form>
             </div>
@@ -82,27 +85,25 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="delivery.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This delivery is a <strong>draft</strong> — no stock has left the warehouse.
-            Cost and profit appear once it is posted, because the inventory cost is
-            determined by the ledger at that moment.
+            {{ t('This delivery is a') }} <strong>{{ t('draft') }}</strong> {{ t('— no stock has left the warehouse. Cost and profit appear once it is posted, because the inventory cost is determined by the ledger at that moment.') }}
         </div>
 
         <!-- Totals -->
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Sales value</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Sales value') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ delivery.sales_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Cost of goods sold</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cost of goods sold') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ delivery.cogs_total ?? '—' }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Gross profit</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ delivery.gross_profit ?? '—' }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Gross margin</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Gross margin') }}</p>
                 <p class="mt-1 font-mono text-lg">
                     {{ delivery.gross_margin !== null ? `${delivery.gross_margin}%` : '—' }}
                 </p>
@@ -113,37 +114,37 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Warehouse</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Warehouse') }}</dt>
                     <dd class="mt-1 text-sm">{{ delivery.warehouse_code }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Delivery date</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Delivery date') }}</dt>
                     <dd class="mt-1 text-sm">{{ delivery.delivery_date }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Sales order</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Sales order') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ delivery.so_number ?? 'Direct delivery' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Vehicle</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Vehicle') }}</dt>
                     <dd class="mt-1 text-sm">{{ delivery.vehicle_number ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Driver</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Driver') }}</dt>
                     <dd class="mt-1 text-sm">{{ delivery.driver_name ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Customer reference</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Customer reference') }}</dt>
                     <dd class="mt-1 text-sm">{{ delivery.customer_reference ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ delivery.posted_at ? `${delivery.posted_at} by ${delivery.posted_by ?? '—'}` : '—' }}
                     </dd>
                 </div>
                 <div v-if="delivery.inventory_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Inventory transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Inventory transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ delivery.inventory_reference }}
@@ -152,11 +153,11 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div v-if="delivery.reversal_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Reversal transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversal transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ delivery.reversal_reference }}</dd>
                 </div>
                 <div v-if="delivery.notes" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">{{ delivery.notes }}</dd>
                 </div>
             </dl>
@@ -167,18 +168,18 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-3 py-3 font-medium">Product</th>
-                        <th class="px-3 py-3 font-medium">Lot</th>
-                        <th class="px-3 py-3 text-right font-medium">Quantity</th>
-                        <th class="px-3 py-3 font-medium">UOM</th>
-                        <th class="px-3 py-3 text-right font-medium">Secondary</th>
-                        <th class="px-3 py-3 font-medium">Priced per</th>
-                        <th class="px-3 py-3 text-right font-medium">Price</th>
-                        <th class="px-3 py-3 text-right font-medium">Sales value</th>
-                        <th class="px-3 py-3 text-right font-medium">Unit cost</th>
-                        <th class="px-3 py-3 text-right font-medium">COGS</th>
-                        <th class="px-3 py-3 text-right font-medium">Profit</th>
-                        <th class="px-3 py-3 text-right font-medium">Margin</th>
+                        <th class="px-3 py-3 font-medium">{{ t('Product') }}</th>
+                        <th class="px-3 py-3 font-medium">{{ t('Lot') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                        <th class="px-3 py-3 font-medium">{{ t('UOM') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Secondary') }}</th>
+                        <th class="px-3 py-3 font-medium">{{ t('Priced per') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Price') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Sales value') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Unit cost') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('COGS') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Profit') }}</th>
+                        <th class="px-3 py-3 text-right font-medium">{{ t('Margin') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -216,11 +217,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Inventory unit cost is the weighted average the ledger used when this delivery
-            was posted — it is never entered by hand, and the selling price never affects
-            it. Cost of goods sold follows the primary quantity, because that is what left
-            stock, even on a line priced by weight. Figures here are operational
-            profitability only; no accounting entries are created.
+            {{ t('Inventory unit cost is the weighted average the ledger used when this delivery was posted — it is never entered by hand, and the selling price never affects it. Cost of goods sold follows the primary quantity, because that is what left stock, even on a line priced by weight. Figures here are operational profitability only; no accounting entries are created.') }}
         </p>
     </div>
 </template>

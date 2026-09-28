@@ -4,6 +4,7 @@ import SupplierController from '@/actions/App/Http/Controllers/Suppliers/Supplie
 import Heading from '@/components/Heading.vue';
 import SupplierForm from '@/components/masters/SupplierForm.vue';
 import { index } from '@/routes/suppliers';
+import { useT } from '@/lib/i18n';
 
 defineOptions({
     layout: {
@@ -13,10 +14,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New supplier" />
+    <Head :title="t('New supplier')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="New supplier" description="Add a party the factory buys materials from." />

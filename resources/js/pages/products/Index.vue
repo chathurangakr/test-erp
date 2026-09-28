@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/products';
 import type { Paginated, Product, ProductFilters } from '@/types';
 
@@ -23,6 +24,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
+const { t } = useT();
 
 const search = ref(props.filters.search ?? '');
 const status = ref<ProductFilters['status']>(props.filters.status ?? 'all');
@@ -64,7 +66,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
 </script>
 
 <template>
-    <Head title="Products" />
+    <Head :title="t('Products')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div
@@ -77,7 +79,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
             <Button v-if="can('products.manage')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`">
                     <Plus class="size-4" />
-                    New product
+                    {{ t('New product') }}
                 </Link>
             </Button>
         </div>
@@ -91,15 +93,15 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 <Input
                     v-model="search"
                     type="search"
-                    placeholder="Search by code or name…"
+                    :placeholder="t('Search by code or name…')"
                     class="pl-9"
-                    aria-label="Search products"
+                    :aria-label="t('Search products')"
                 />
                 <button
                     v-if="search"
                     type="button"
                     class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                    aria-label="Clear search"
+                    :aria-label="t('Clear search')"
                     @click="clearSearch"
                 >
                     <X class="size-4" />
@@ -109,7 +111,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
             <div
                 class="bg-muted inline-flex shrink-0 rounded-md p-1"
                 role="group"
-                aria-label="Filter by status"
+                :aria-label="t('Filter by status')"
             >
                 <button
                     v-for="option in statusOptions"
@@ -124,7 +126,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                     :aria-pressed="status === option.value"
                     @click="status = option.value"
                 >
-                    {{ option.label }}
+                    {{ t(option.label) }}
                 </button>
             </div>
         </div>
@@ -134,12 +136,12 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
             v-if="products.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No products found</p>
+            <p class="font-medium">{{ t('No products found') }}</p>
             <p class="text-muted-foreground text-sm">
                 {{
                     filters.search
-                        ? 'Try a different search term.'
-                        : 'Create your first product to get started.'
+                        ? t('Try a different search term.')
+                        : t('Create your first product to get started.')
                 }}
             </p>
         </div>
@@ -152,13 +154,13 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Code</th>
-                            <th class="px-4 py-3 font-medium">Name</th>
-                            <th class="px-4 py-3 font-medium">Primary UOM</th>
-                            <th class="px-4 py-3 font-medium">Secondary UOM</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Primary UOM') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Secondary UOM') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
                             <th class="px-4 py-3 text-right font-medium">
-                                Actions
+                                {{ t('Actions') }}
                             </th>
                         </tr>
                     </thead>
@@ -193,8 +195,8 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                 >
                                     {{
                                         product.is_active
-                                            ? 'Active'
-                                            : 'Inactive'
+                                            ? t('Active')
+                                            : t('Inactive')
                                     }}
                                 </Badge>
                             </td>
@@ -212,7 +214,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                             :href="`${index().url}/${product.id}/edit`"
                                         >
                                             <Pencil class="size-3.5" />
-                                            Edit
+                                            {{ t('Edit') }}
                                         </Link>
                                     </Button>
                                     <Form
@@ -231,8 +233,8 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                         >
                                             {{
                                                 product.is_active
-                                                    ? 'Deactivate'
-                                                    : 'Activate'
+                                                    ? t('Deactivate')
+                                                    : t('Activate')
                                             }}
                                         </Button>
                                     </Form>
@@ -267,7 +269,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                 product.is_active ? 'default' : 'secondary'
                             "
                         >
-                            {{ product.is_active ? 'Active' : 'Inactive' }}
+                            {{ product.is_active ? t('Active') : t('Inactive') }}
                         </Badge>
                     </div>
 
@@ -275,11 +277,11 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                         class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs"
                     >
                         <div>
-                            <dt class="font-medium">Primary UOM</dt>
+                            <dt class="font-medium">{{ t('Primary UOM') }}</dt>
                             <dd>{{ product.primary_uom?.code ?? '—' }}</dd>
                         </div>
                         <div>
-                            <dt class="font-medium">Secondary UOM</dt>
+                            <dt class="font-medium">{{ t('Secondary UOM') }}</dt>
                             <dd>{{ product.secondary_uom?.code ?? '—' }}</dd>
                         </div>
                     </dl>
@@ -292,7 +294,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             as-child
                         >
                             <Link :href="`${index().url}/${product.id}/edit`">
-                                Edit
+                                {{ t('Edit') }}
                             </Link>
                         </Button>
                         <Form
@@ -311,8 +313,8 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             >
                                 {{
                                     product.is_active
-                                        ? 'Deactivate'
-                                        : 'Activate'
+                                        ? t('Deactivate')
+                                        : t('Activate')
                                 }}
                             </Button>
                         </Form>
@@ -326,8 +328,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 class="flex flex-col items-center justify-between gap-3 sm:flex-row"
             >
                 <p class="text-muted-foreground text-sm">
-                    Showing {{ products.from }}–{{ products.to }} of
-                    {{ products.total }}
+                    {{ t('Showing :from–:to of :total', { from: products.from ?? 0, to: products.to ?? 0, total: products.total }) }}
                 </p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button

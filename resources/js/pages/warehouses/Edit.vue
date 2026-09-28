@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import WarehouseForm from '@/components/masters/WarehouseForm.vue';
 import { index } from '@/routes/warehouses';
 import type { Warehouse } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     warehouse: Warehouse;
@@ -15,13 +16,15 @@ defineOptions({
         breadcrumbs: [{ title: 'Warehouses', href: index() }],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit ${warehouse.code}`" />
+    <Head :title="t('Edit :code', { code: warehouse.code })" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading :title="`Edit ${warehouse.code}`" description="Update the warehouse master record." />
+        <Heading :title="t('Edit :code', { code: warehouse.code })" description="Update the warehouse master record." />
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">
             <WarehouseForm

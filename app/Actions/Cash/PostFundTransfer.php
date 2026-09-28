@@ -12,6 +12,7 @@ use App\Models\FundTransfer;
 use App\Models\JournalEntry;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -75,7 +76,7 @@ class PostFundTransfer
                 'fiscal_period_id' => $period->id,
                 'source_type' => FundTransfer::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Fund transfer :reference from :from to :to', [
+                'description' => RecordText::of('Fund transfer :reference from :from to :to', [
                     'reference' => $locked->transfer_number,
                     'from' => $from->display_name,
                     'to' => $to->display_name,
@@ -86,14 +87,14 @@ class PostFundTransfer
 
             $entry->lines()->create([
                 'account_id' => $to->account_id,
-                'description' => __('Transfer in from :from', ['from' => $from->display_name]),
+                'description' => RecordText::of('Transfer in from :from', ['from' => $from->display_name]),
                 'debit' => $amount,
                 'credit' => DecimalMath::cost('0'),
             ]);
 
             $entry->lines()->create([
                 'account_id' => $from->account_id,
-                'description' => __('Transfer out to :to', ['to' => $to->display_name]),
+                'description' => RecordText::of('Transfer out to :to', ['to' => $to->display_name]),
                 'debit' => DecimalMath::cost('0'),
                 // The same figure, not a recalculation, so the two legs cannot disagree.
                 'credit' => $amount,

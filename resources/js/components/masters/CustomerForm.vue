@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Customer } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     action: Record<string, unknown>;
@@ -13,29 +14,31 @@ defineProps<{
     submitLabel: string;
     cancelHref: string;
 }>();
+
+const { t } = useT();
 </script>
 
 <template>
     <Form v-bind="action" class="space-y-8" v-slot="{ errors, processing }">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Identification</h3>
+            <h3 class="text-sm font-medium">{{ t('Identification') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="code">Customer code <span class="text-destructive">*</span></Label>
+                    <Label for="code">{{ t('Customer code') }} <span class="text-destructive">*</span></Label>
                     <Input
                         id="code"
                         name="code"
                         :default-value="customer?.code ?? ''"
                         required
                         autocomplete="off"
-                        placeholder="e.g. CUS-001"
+                        :placeholder="t('e.g. CUS-001')"
                         class="uppercase"
                     />
-                    <p class="text-muted-foreground text-xs">Stored in uppercase. Must be unique.</p>
+                    <p class="text-muted-foreground text-xs">{{ t('Stored in uppercase. Must be unique.') }}</p>
                     <InputError :message="errors.code" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="name">Customer name <span class="text-destructive">*</span></Label>
+                    <Label for="name">{{ t('Customer name') }} <span class="text-destructive">*</span></Label>
                     <Input
                         id="name"
                         name="name"
@@ -49,10 +52,10 @@ defineProps<{
         </section>
 
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Credit terms</h3>
+            <h3 class="text-sm font-medium">{{ t('Credit terms') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="credit_limit">Credit limit</Label>
+                    <Label for="credit_limit">{{ t('Credit limit') }}</Label>
                     <Input
                         id="credit_limit"
                         name="credit_limit"
@@ -62,11 +65,11 @@ defineProps<{
                         :default-value="customer?.credit_limit ?? '0.00'"
                         required
                     />
-                    <p class="text-muted-foreground text-xs">Agreed limit. Not an outstanding balance.</p>
+                    <p class="text-muted-foreground text-xs">{{ t('Agreed limit. Not an outstanding balance.') }}</p>
                     <InputError :message="errors.credit_limit" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="credit_days">Credit days</Label>
+                    <Label for="credit_days">{{ t('Credit days') }}</Label>
                     <Input
                         id="credit_days"
                         name="credit_days"
@@ -84,8 +87,8 @@ defineProps<{
         <PartyContactFields :party="customer" :errors="errors" />
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </Form>
 </template>

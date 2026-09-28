@@ -12,6 +12,7 @@ import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as invoicesIndex } from '@/routes/sales-invoices';
 import { index as receiptsIndex } from '@/routes/customer-receipts';
 import type { Customer, CustomerReceivablesSummary } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     customer: Customer;
@@ -38,6 +39,8 @@ function formatDate(value: string | null): string {
 
     return new Date(value).toLocaleString();
 }
+
+const { t } = useT();
 </script>
 
 <template>
@@ -49,7 +52,7 @@ function formatDate(value: string | null): string {
                 <Heading :title="customer.name" :description="customer.code" />
                 <div class="flex flex-wrap gap-2">
                     <Badge :variant="customer.is_active ? 'default' : 'secondary'">
-                        {{ customer.is_active ? 'Active' : 'Inactive' }}
+                        {{ customer.is_active ? t('Active') : t('Inactive') }}
                     </Badge>
                 </div>
             </div>
@@ -58,12 +61,12 @@ function formatDate(value: string | null): string {
                 <Button variant="outline" as-child>
                     <Link :href="`${index().url}/${customer.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
                 <Form v-bind="CustomerStatusController.update.form(customer.id)" v-slot="{ processing }">
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        {{ customer.is_active ? 'Deactivate' : 'Activate' }}
+                        {{ customer.is_active ? t('Deactivate') : t('Activate') }}
                     </Button>
                 </Form>
             </div>
@@ -72,74 +75,74 @@ function formatDate(value: string | null): string {
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-2">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Code</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Code') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ customer.code }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Name</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Name') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.name ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Contact person</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Contact person') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.contact_person ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Email</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Email') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.email ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Phone</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Phone') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.phone ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Secondary phone</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Secondary phone') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.secondary_phone ?? '—' }}</dd>
                 </div>
                 <div class="sm:col-span-2">
-                    <dt class="text-muted-foreground text-sm font-medium">Address line 1</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Address line 1') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.address_line_1 ?? '—' }}</dd>
                 </div>
                 <div class="sm:col-span-2">
-                    <dt class="text-muted-foreground text-sm font-medium">Address line 2</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Address line 2') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.address_line_2 ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">City</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('City') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.city ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">District</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('District') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.district ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Registration number</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Registration number') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.registration_number ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Tax number</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Tax number') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.tax_number ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Credit limit</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Credit limit') }}</dt>
                     <dd class="mt-1 text-sm">{{ customer.credit_limit }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Credit days</dt>
-                    <dd class="mt-1 text-sm">{{ customer.credit_days + ' days' }}</dd>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Credit days') }}</dt>
+                    <dd class="mt-1 text-sm">{{ t(':days days', { days: customer.credit_days }) }}</dd>
                 </div>
                 <div class="sm:col-span-2">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">
                         <template v-if="customer.notes">{{ customer.notes }}</template>
                         <span v-else class="text-muted-foreground">—</span>
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Created</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Created') }}</dt>
                     <dd class="mt-1 text-sm">{{ formatDate(customer.created_at) }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Last updated</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Last updated') }}</dt>
                     <dd class="mt-1 text-sm">{{ formatDate(customer.updated_at) }}</dd>
                 </div>
             </dl>
@@ -148,16 +151,16 @@ function formatDate(value: string | null): string {
         <!-- Sales history -->
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-medium">Sales history</h3>
+                <h3 class="text-sm font-medium">{{ t('Sales history') }}</h3>
                 <p class="text-sm">
-                    Delivered value:
+                    {{ t('Delivered value:') }}
                     <span class="ml-1 font-mono font-medium">{{ salesHistory.delivered_value }}</span>
                 </p>
             </div>
 
             <div class="mt-4 grid gap-6 sm:grid-cols-2">
                 <div>
-                    <p class="text-muted-foreground text-xs font-medium">Recent sales orders</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('Recent sales orders') }}</p>
                     <ul v-if="salesHistory.sales_orders.length" class="mt-2 space-y-1.5">
                         <li
                             v-for="so in salesHistory.sales_orders"
@@ -176,11 +179,11 @@ function formatDate(value: string | null): string {
                             <Badge variant="secondary">{{ so.status_label }}</Badge>
                         </li>
                     </ul>
-                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">{{ t('None yet.') }}</p>
                 </div>
 
                 <div>
-                    <p class="text-muted-foreground text-xs font-medium">Recent deliveries</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('Recent deliveries') }}</p>
                     <ul v-if="salesHistory.deliveries.length" class="mt-2 space-y-1.5">
                         <li
                             v-for="dn in salesHistory.deliveries"
@@ -199,38 +202,37 @@ function formatDate(value: string | null): string {
                             <Badge variant="secondary">{{ dn.status_label }}</Badge>
                         </li>
                     </ul>
-                    <p v-else class="text-muted-foreground mt-2 text-xs">None yet.</p>
+                    <p v-else class="text-muted-foreground mt-2 text-xs">{{ t('None yet.') }}</p>
                 </div>
             </div>
 
             <p class="text-muted-foreground mt-4 text-xs">
-                Delivered value counts posted deliveries only. A delivery is a physical
-                issue — what the customer owes appears below, once the delivery is invoiced.
+                {{ t('Delivered value counts posted deliveries only. A delivery is a physical issue — what the customer owes appears below, once the delivery is invoiced.') }}
             </p>
         </div>
 
         <!-- Accounts receivable -->
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="text-sm font-medium">Accounts receivable</h3>
+                <h3 class="text-sm font-medium">{{ t('Accounts receivable') }}</h3>
                 <Link
                     v-if="can('finance.ar.view')"
                     :href="`${invoicesIndex().url}?customer_id=${customer.id}`"
                     class="text-xs hover:underline"
                 >
-                    All invoices
+                    {{ t('All invoices') }}
                 </Link>
             </div>
 
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">
-                        Outstanding ({{ receivables.currency }})
+                        {{ t('Outstanding (:currency)', { currency: receivables.currency }) }}
                     </p>
                     <p class="mt-1 font-mono text-lg font-medium">{{ receivables.outstanding }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                    <p class="text-muted-foreground text-xs font-medium">Overdue</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('Overdue') }}</p>
                     <p
                         class="mt-1 font-mono text-lg font-medium"
                         :class="Number(receivables.overdue) > 0 ? 'text-destructive' : ''"
@@ -241,7 +243,7 @@ function formatDate(value: string | null): string {
             </div>
 
             <div v-if="receivables.invoices.length" class="mt-4">
-                <p class="text-muted-foreground text-xs font-medium">Recent invoices</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Recent invoices') }}</p>
                 <ul class="mt-2 space-y-1 text-sm">
                     <li v-for="invoice in receivables.invoices" :key="invoice.id" class="flex justify-between gap-3">
                         <Link
@@ -261,7 +263,7 @@ function formatDate(value: string | null): string {
             </div>
 
             <div v-if="receivables.receipts.length" class="mt-4">
-                <p class="text-muted-foreground text-xs font-medium">Recent receipts</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Recent receipts') }}</p>
                 <ul class="mt-2 space-y-1 text-sm">
                     <li v-for="receipt in receivables.receipts" :key="receipt.id" class="flex justify-between gap-3">
                         <Link
@@ -281,9 +283,7 @@ function formatDate(value: string | null): string {
             </div>
 
             <p class="text-muted-foreground mt-4 text-xs">
-                Derived from posted invoices less the receipts still allocated to them. A
-                customer holds no balance column — this is computed every time it is shown.
-                Credit limit and credit days are agreed terms, not balances.
+                {{ t('Derived from posted invoices less the receipts still allocated to them. A customer holds no balance column — this is computed every time it is shown. Credit limit and credit days are agreed terms, not balances.') }}
             </p>
         </div>
     </div>

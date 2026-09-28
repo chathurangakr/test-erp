@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { index, show } from '@/routes/users';
 import type { AdminUser, Paginated } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     users: Paginated<AdminUser>;
@@ -25,10 +26,12 @@ watch(search, () => {
         300,
     );
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Users" />
+    <Head :title="t('Users')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -38,17 +41,17 @@ watch(search, () => {
 
         <div class="relative max-w-md">
             <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input v-model="search" type="search" placeholder="Search by name or email…" class="pl-9" aria-label="Search users" />
+            <Input v-model="search" type="search" :placeholder="t('Search by name or email…')" class="pl-9" :aria-label="t('Search users')" />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Roles</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Email') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Roles') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,19 +72,19 @@ watch(search, () => {
                                     :variant="role.is_active ? 'secondary' : 'outline'"
                                     :class="role.is_active ? '' : 'line-through'"
                                 >
-                                    {{ role.name }}
+                                    {{ t(role.name) }}
                                 </Badge>
-                                <span v-if="user.roles.length === 0" class="text-muted-foreground text-xs">No access</span>
+                                <span v-if="user.roles.length === 0" class="text-muted-foreground text-xs">{{ t('No access') }}</span>
                             </div>
                         </td>
                         <td class="px-4 py-3">
                             <Badge :variant="user.is_active ? 'default' : 'outline'">
-                                {{ user.is_active ? 'Active' : 'Inactive' }}
+                                {{ user.is_active ? t('Active') : t('Inactive') }}
                             </Badge>
                         </td>
                     </tr>
                     <tr v-if="users.data.length === 0">
-                        <td colspan="4" class="text-muted-foreground px-4 py-8 text-center">No users found.</td>
+                        <td colspan="4" class="text-muted-foreground px-4 py-8 text-center">{{ t('No users found.') }}</td>
                     </tr>
                 </tbody>
             </table>

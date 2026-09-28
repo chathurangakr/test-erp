@@ -1231,6 +1231,15 @@ no data change. `BusinessClock` must never be used to write a timestamp column.
 sent to `/kiosk` instead of the dashboard (`App\Http\Responses\LoginResponse`). It grants no
 access; every simple-mode job is still authorized by permissions.
 
+### L-1 — `users.locale` is a display preference; stored text is always English
+
+**Decision:** `users.locale` (nullable, `en` / `si`) chooses the screen language; NULL means the
+system default. No other column changed. Every text saved into a business record is written in
+English through `App\Support\RecordText`, independent of the screen language.
+
+**Why:** a stored description that followed each poster's language would split one kind of record
+across two languages, breaking reports, searches and audits. Translation belongs to display.
+
 ## 3. Not yet designed — required future shape
 
 These tables are **not implemented**. The constraints below are confirmed decisions that

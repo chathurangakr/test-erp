@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import type {
     LotOption,
     OptionRef,
@@ -14,6 +15,8 @@ import type {
     StatusOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+
+const { t } = useT();
 
 type LineInput = {
     product_id: string;
@@ -228,24 +231,24 @@ const selectClass =
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Delivery details</h3>
+            <h3 class="text-sm font-medium">{{ t('Delivery details') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="sales_order_id">Sales order (optional)</Label>
+                    <Label for="sales_order_id">{{ t('Sales order (optional)') }}</Label>
                     <select id="sales_order_id" v-model="form.sales_order_id" :class="selectClass">
-                        <option value="">Direct delivery — no sales order</option>
+                        <option value="">{{ t('Direct delivery — no sales order') }}</option>
                         <option v-for="o in salesOrders" :key="o.id" :value="String(o.id)">
                             {{ o.so_number }}
                         </option>
                     </select>
                     <p class="text-muted-foreground text-xs">
-                        Selecting an order fills the lines from its outstanding quantities.
+                        {{ t('Selecting an order fills the lines from its outstanding quantities.') }}
                     </p>
                     <InputError :message="form.errors.sales_order_id" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="dn_customer">Customer <span class="text-destructive">*</span></Label>
+                    <Label for="dn_customer">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="dn_customer"
                         v-model="form.customer_id"
@@ -253,7 +256,7 @@ const selectClass =
                         :disabled="!!selectedOrder"
                         :class="selectClass"
                     >
-                        <option value="" disabled>Select a customer…</option>
+                        <option value="" disabled>{{ t('Select a customer…') }}</option>
                         <option v-for="c in customers" :key="c.id" :value="String(c.id)">
                             {{ c.code }} — {{ c.name }}
                         </option>
@@ -262,9 +265,9 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="dn_warehouse">Warehouse <span class="text-destructive">*</span></Label>
+                    <Label for="dn_warehouse">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
                     <select id="dn_warehouse" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>Select a warehouse…</option>
+                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
                         <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                             {{ w.code }} — {{ w.name }}
                         </option>
@@ -273,25 +276,25 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="delivery_date">Delivery date <span class="text-destructive">*</span></Label>
+                    <Label for="delivery_date">{{ t('Delivery date') }} <span class="text-destructive">*</span></Label>
                     <Input id="delivery_date" v-model="form.delivery_date" type="date" required />
                     <InputError :message="form.errors.delivery_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="dn_customer_ref">Customer reference</Label>
+                    <Label for="dn_customer_ref">{{ t('Customer reference') }}</Label>
                     <Input id="dn_customer_ref" v-model="form.customer_reference" autocomplete="off" />
                     <InputError :message="form.errors.customer_reference" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="vehicle_number">Vehicle number</Label>
+                    <Label for="vehicle_number">{{ t('Vehicle number') }}</Label>
                     <Input id="vehicle_number" v-model="form.vehicle_number" autocomplete="off" />
                     <InputError :message="form.errors.vehicle_number" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="driver_name">Driver name</Label>
+                    <Label for="driver_name">{{ t('Driver name') }}</Label>
                     <Input id="driver_name" v-model="form.driver_name" autocomplete="off" />
                     <InputError :message="form.errors.driver_name" />
                 </div>
@@ -300,10 +303,10 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Lines</h3>
+                <h3 class="text-sm font-medium">{{ t('Lines') }}</h3>
                 <Button type="button" variant="outline" size="sm" @click="addLine">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('Add line') }}
                 </Button>
             </div>
 
@@ -317,9 +320,9 @@ const selectClass =
                 >
                     <div class="grid gap-3 sm:grid-cols-12 sm:items-end">
                         <div class="grid gap-1.5 sm:col-span-3">
-                            <Label :for="`dn-product-${index}`" class="text-xs">Product</Label>
+                            <Label :for="`dn-product-${index}`" class="text-xs">{{ t('Product') }}</Label>
                             <select :id="`dn-product-${index}`" v-model="line.product_id" required :class="selectClass">
-                                <option value="" disabled>Select…</option>
+                                <option value="" disabled>{{ t('Select…') }}</option>
                                 <option v-for="p in products" :key="p.id" :value="String(p.id)">
                                     {{ p.code }} — {{ p.name }}
                                 </option>
@@ -328,7 +331,7 @@ const selectClass =
                         </div>
 
                         <div class="grid gap-1.5 sm:col-span-3">
-                            <Label :for="`dn-lot-${index}`" class="text-xs">Lot</Label>
+                            <Label :for="`dn-lot-${index}`" class="text-xs">{{ t('Lot') }}</Label>
                             <select :id="`dn-lot-${index}`" v-model="line.lot_id" :class="selectClass">
                                 <option value="">
                                     {{ lotsFor(line.product_id).length ? 'Select a lot…' : 'No lot' }}
@@ -342,7 +345,7 @@ const selectClass =
 
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`dn-qty-${index}`" class="text-xs">
-                                Quantity ({{ productFor(line.product_id)?.uom ?? '—' }})
+                                {{ t('Quantity (:uom)', { uom: productFor(line.product_id)?.uom ?? '—' }) }}
                             </Label>
                             <Input :id="`dn-qty-${index}`" v-model="line.quantity" type="number" step="0.001" min="0" required />
                             <InputError :message="form.errors[`lines.${index}.quantity`]" />
@@ -357,13 +360,13 @@ const selectClass =
                         </div>
 
                         <div class="grid gap-1.5 sm:col-span-2">
-                            <Label :for="`dn-price-${index}`" class="text-xs">Unit price</Label>
+                            <Label :for="`dn-price-${index}`" class="text-xs">{{ t('Unit price') }}</Label>
                             <Input :id="`dn-price-${index}`" v-model="line.unit_price" type="number" step="0.000001" min="0" required />
                             <InputError :message="form.errors[`lines.${index}.unit_price`]" />
                         </div>
 
                         <div class="grid gap-1.5 sm:col-span-3">
-                            <Label :for="`dn-basis-${index}`" class="text-xs">Priced per</Label>
+                            <Label :for="`dn-basis-${index}`" class="text-xs">{{ t('Priced per') }}</Label>
                             <select
                                 :id="`dn-basis-${index}`"
                                 v-model="line.pricing_basis"
@@ -383,17 +386,16 @@ const selectClass =
                         <div class="sm:col-span-12">
                             <div class="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs">
                                 <span>
-                                    Sales value:
+                                    {{ t('Sales value:') }}
                                     <span class="text-foreground font-mono font-medium">{{ salesValue(line) }}</span>
-                                    · Inventory cost is determined by the ledger when this
-                                    delivery is posted.
+                                    {{ t('· Inventory cost is determined by the ledger when this delivery is posted.') }}
                                 </span>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
                                     :disabled="form.lines.length === 1"
-                                    aria-label="Remove line"
+                                    :aria-label="t('Remove line')"
                                     @click="removeLine(index)"
                                 >
                                     <Trash2 class="size-4" />
@@ -406,14 +408,14 @@ const selectClass =
 
             <div class="flex justify-end">
                 <p class="text-sm">
-                    Sales total:
+                    {{ t('Sales total:') }}
                     <span class="ml-2 font-mono font-medium">{{ salesTotal }}</span>
                 </p>
             </div>
         </section>
 
         <div class="grid gap-2">
-            <Label for="dn_notes">Notes</Label>
+            <Label for="dn_notes">{{ t('Notes') }}</Label>
             <textarea
                 id="dn_notes"
                 v-model="form.notes"
@@ -425,7 +427,7 @@ const selectClass =
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

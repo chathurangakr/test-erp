@@ -6,8 +6,11 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/husk-chipping';
 import type { HuskChippingRow, OptionRef, Paginated, StatusOption } from '@/types';
+
+const { t } = useT();
 
 const props = defineProps<{
     orders: Paginated<HuskChippingRow>;
@@ -51,7 +54,7 @@ const controlClass =
 </script>
 
 <template>
-    <Head title="Husk chipping" />
+    <Head :title="t('Husk chipping')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -60,30 +63,30 @@ const controlClass =
                 description="Raw husk is chipped into 7C, 9C and 10C. The operator enters the weights actually measured."
             />
             <Button v-if="can('production.create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New husk chipping</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New husk chipping') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-1.5">
-                <label for="f-from" class="text-sm font-medium">From</label>
+                <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>
                 <input id="f-from" v-model="from" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="f-to" class="text-sm font-medium">To</label>
+                <label for="f-to" class="text-sm font-medium">{{ t('To') }}</label>
                 <input id="f-to" v-model="to" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">Status</label>
+                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
                 <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">All statuses</option>
+                    <option value="">{{ t('All statuses') }}</option>
                     <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="f-whs" class="text-sm font-medium">Warehouse</label>
+                <label for="f-whs" class="text-sm font-medium">{{ t('Warehouse') }}</label>
                 <select id="f-whs" v-model="warehouseId" :class="controlClass">
-                    <option value="">All warehouses</option>
+                    <option value="">{{ t('All warehouses') }}</option>
                     <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">{{ w.code }}</option>
                 </select>
             </div>
@@ -93,8 +96,8 @@ const controlClass =
             v-if="orders.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No husk chipping runs found</p>
-            <p class="text-muted-foreground text-sm">Create one to chip raw husk into 7C, 9C and 10C.</p>
+            <p class="font-medium">{{ t('No husk chipping runs found') }}</p>
+            <p class="text-muted-foreground text-sm">{{ t('Create one to chip raw husk into 7C, 9C and 10C.') }}</p>
         </div>
 
         <template v-else>
@@ -102,14 +105,14 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Production No</th>
-                            <th class="px-4 py-3 font-medium">Date</th>
-                            <th class="px-4 py-3 font-medium">Warehouse</th>
-                            <th class="px-4 py-3 text-right font-medium">Husk in (NOS)</th>
-                            <th class="px-4 py-3 text-right font-medium">Chips out (KG)</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 text-right font-medium">Input value</th>
-                            <th class="px-4 py-3 text-right font-medium">Output value</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Production No') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Warehouse') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Husk in (NOS)') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Chips out (KG)') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Input value') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Output value') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -152,16 +155,16 @@ const controlClass =
                         <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt class="font-medium">Husk in</dt><dd class="font-mono">{{ row.input_quantity }}</dd></div>
-                        <div><dt class="font-medium">Chips out</dt><dd class="font-mono">{{ row.output_quantity }}</dd></div>
-                        <div><dt class="font-medium">Input value</dt><dd class="font-mono">{{ row.input_value ?? '—' }}</dd></div>
-                        <div><dt class="font-medium">Output value</dt><dd class="font-mono">{{ row.output_value ?? '—' }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Husk in') }}</dt><dd class="font-mono">{{ row.input_quantity }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Chips out') }}</dt><dd class="font-mono">{{ row.output_quantity }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Input value') }}</dt><dd class="font-mono">{{ row.input_value ?? '—' }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Output value') }}</dt><dd class="font-mono">{{ row.output_value ?? '—' }}</dd></div>
                     </dl>
                 </Link>
             </div>
 
             <div v-if="orders.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">Showing {{ orders.from }}–{{ orders.to }} of {{ orders.total }}</p>
+                <p class="text-muted-foreground text-sm">{{ t('Showing :from–:to of :total', { from: orders.from ?? 0, to: orders.to ?? 0, total: orders.total }) }}</p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button
                         v-for="link in orders.links"

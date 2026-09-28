@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { OptionRef, ProductOption, PurchaseOrderOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 type LineInput = {
     product_id: string;
@@ -47,6 +48,8 @@ const props = defineProps<{
         }[];
     } | null;
 }>();
+
+const { t } = useT();
 
 const today = businessToday();
 
@@ -206,24 +209,24 @@ const selectClass =
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Receipt details</h3>
+            <h3 class="text-sm font-medium">{{ t('Receipt details') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="purchase_order_id">Purchase order (optional)</Label>
+                    <Label for="purchase_order_id">{{ t('Purchase order (optional)') }}</Label>
                     <select id="purchase_order_id" v-model="form.purchase_order_id" :class="selectClass">
-                        <option value="">Direct purchase — no purchase order</option>
+                        <option value="">{{ t('Direct purchase — no purchase order') }}</option>
                         <option v-for="o in purchaseOrders" :key="o.id" :value="String(o.id)">
                             {{ o.po_number }}
                         </option>
                     </select>
                     <p class="text-muted-foreground text-xs">
-                        Selecting an order fills the lines from its outstanding quantities.
+                        {{ t('Selecting an order fills the lines from its outstanding quantities.') }}
                     </p>
                     <InputError :message="form.errors.purchase_order_id" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="grn_supplier">Supplier <span class="text-destructive">*</span></Label>
+                    <Label for="grn_supplier">{{ t('Supplier') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="grn_supplier"
                         v-model="form.supplier_id"
@@ -231,7 +234,7 @@ const selectClass =
                         :disabled="!!selectedOrder"
                         :class="selectClass"
                     >
-                        <option value="" disabled>Select a supplier…</option>
+                        <option value="" disabled>{{ t('Select a supplier…') }}</option>
                         <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">
                             {{ s.code }} — {{ s.name }}
                         </option>
@@ -240,14 +243,14 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="grn_warehouse">Warehouse <span class="text-destructive">*</span></Label>
+                    <Label for="grn_warehouse">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="grn_warehouse"
                         v-model="form.warehouse_id"
                         required
                         :class="selectClass"
                     >
-                        <option value="" disabled>Select a warehouse…</option>
+                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
                         <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                             {{ w.code }} — {{ w.name }}
                         </option>
@@ -256,13 +259,13 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="receipt_date">Receipt date <span class="text-destructive">*</span></Label>
+                    <Label for="receipt_date">{{ t('Receipt date') }} <span class="text-destructive">*</span></Label>
                     <Input id="receipt_date" v-model="form.receipt_date" type="date" required />
                     <InputError :message="form.errors.receipt_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="delivery_ref">Supplier delivery reference</Label>
+                    <Label for="delivery_ref">{{ t('Supplier delivery reference') }}</Label>
                     <Input id="delivery_ref" v-model="form.supplier_delivery_reference" autocomplete="off" />
                     <InputError :message="form.errors.supplier_delivery_reference" />
                 </div>
@@ -271,10 +274,10 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Lines</h3>
+                <h3 class="text-sm font-medium">{{ t('Lines') }}</h3>
                 <Button type="button" variant="outline" size="sm" @click="addLine">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('Add line') }}
                 </Button>
             </div>
 
@@ -288,14 +291,14 @@ const selectClass =
                 >
                     <div class="grid gap-3 sm:grid-cols-12 sm:items-end">
                         <div class="grid gap-1.5 sm:col-span-4">
-                            <Label :for="`grn-product-${index}`" class="text-xs">Product</Label>
+                            <Label :for="`grn-product-${index}`" class="text-xs">{{ t('Product') }}</Label>
                             <select
                                 :id="`grn-product-${index}`"
                                 v-model="line.product_id"
                                 required
                                 :class="selectClass"
                             >
-                                <option value="" disabled>Select…</option>
+                                <option value="" disabled>{{ t('Select…') }}</option>
                                 <option v-for="p in products" :key="p.id" :value="String(p.id)">
                                     {{ p.code }} — {{ p.name }}
                                 </option>
@@ -305,7 +308,7 @@ const selectClass =
 
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`grn-qty-${index}`" class="text-xs">
-                                Quantity ({{ productFor(line.product_id)?.uom ?? '—' }})
+                                {{ t('Quantity (:uom)', { uom: productFor(line.product_id)?.uom ?? '—' }) }}
                             </Label>
                             <Input
                                 :id="`grn-qty-${index}`"
@@ -336,7 +339,7 @@ const selectClass =
                         </div>
 
                         <div class="grid gap-1.5 sm:col-span-2">
-                            <Label :for="`grn-price-${index}`" class="text-xs">Unit price</Label>
+                            <Label :for="`grn-price-${index}`" class="text-xs">{{ t('Unit price') }}</Label>
                             <Input
                                 :id="`grn-price-${index}`"
                                 v-model="line.unit_price"
@@ -349,7 +352,7 @@ const selectClass =
                         </div>
 
                         <div class="grid gap-1.5 sm:col-span-2">
-                            <Label :for="`grn-lot-${index}`" class="text-xs">Supplier lot</Label>
+                            <Label :for="`grn-lot-${index}`" class="text-xs">{{ t('Supplier lot') }}</Label>
                             <Input :id="`grn-lot-${index}`" v-model="line.supplier_lot_number" />
                         </div>
 
@@ -358,11 +361,11 @@ const selectClass =
                                 class="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs"
                             >
                                 <span>
-                                    Material:
+                                    {{ t('Material:') }}
                                     <span class="font-mono">{{ materialFor(line).toFixed(2) }}</span>
-                                    · Landed share:
+                                    · {{ t('Landed share:') }}
                                     <span class="font-mono">{{ allocatedFor(line).toFixed(2) }}</span>
-                                    · Final unit cost:
+                                    · {{ t('Final unit cost:') }}
                                     <span class="text-foreground font-mono font-medium">
                                         {{ finalUnitCostFor(line) }}
                                     </span>
@@ -372,7 +375,7 @@ const selectClass =
                                     variant="ghost"
                                     size="sm"
                                     :disabled="form.lines.length === 1"
-                                    aria-label="Remove line"
+                                    :aria-label="t('Remove line')"
                                     @click="removeLine(index)"
                                 >
                                     <Trash2 class="size-4" />
@@ -385,20 +388,20 @@ const selectClass =
         </section>
 
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Landed costs</h3>
+            <h3 class="text-sm font-medium">{{ t('Landed costs') }}</h3>
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="grid gap-2">
-                    <Label for="transport_cost">Transport</Label>
+                    <Label for="transport_cost">{{ t('Transport') }}</Label>
                     <Input id="transport_cost" v-model="form.transport_cost" type="number" step="0.01" min="0" required />
                     <InputError :message="form.errors.transport_cost" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="loading_cost">Loading</Label>
+                    <Label for="loading_cost">{{ t('Loading') }}</Label>
                     <Input id="loading_cost" v-model="form.loading_cost" type="number" step="0.01" min="0" required />
                     <InputError :message="form.errors.loading_cost" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="other_cost">Other</Label>
+                    <Label for="other_cost">{{ t('Other') }}</Label>
                     <Input id="other_cost" v-model="form.other_cost" type="number" step="0.01" min="0" required />
                     <InputError :message="form.errors.other_cost" />
                 </div>
@@ -408,28 +411,26 @@ const selectClass =
                 class="border-sidebar-border/70 dark:border-sidebar-border grid gap-2 rounded-lg border p-4 text-sm sm:grid-cols-3"
             >
                 <p>
-                    Material total:
+                    {{ t('Material total:') }}
                     <span class="ml-1 font-mono font-medium">{{ materialTotal.toFixed(2) }}</span>
                 </p>
                 <p>
-                    Landed costs:
+                    {{ t('Landed costs:') }}
                     <span class="ml-1 font-mono font-medium">{{ landedTotal.toFixed(2) }}</span>
                 </p>
                 <p>
-                    Grand landed cost:
+                    {{ t('Grand landed cost:') }}
                     <span class="ml-1 font-mono font-medium">{{ grandTotal.toFixed(2) }}</span>
                 </p>
             </div>
 
             <p class="text-muted-foreground text-xs">
-                Landed costs are shared across lines in proportion to each line's material
-                value, never by quantity. These figures are a preview — the final cost
-                posted to inventory is calculated by the server when the receipt is posted.
+                {{ t("Landed costs are shared across lines in proportion to each line's material value, never by quantity. These figures are a preview — the final cost posted to inventory is calculated by the server when the receipt is posted.") }}
             </p>
         </section>
 
         <div class="grid gap-2">
-            <Label for="grn_notes">Notes</Label>
+            <Label for="grn_notes">{{ t('Notes') }}</Label>
             <textarea
                 id="grn_notes"
                 v-model="form.notes"
@@ -440,8 +441,8 @@ const selectClass =
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

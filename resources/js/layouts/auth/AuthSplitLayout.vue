@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
+import { useT } from '@/lib/i18n';
 
 const page = usePage();
 const name = page.props.name;
@@ -10,6 +11,8 @@ defineProps<{
     title?: string;
     description?: string;
 }>();
+
+const { t } = useT();
 </script>
 
 <template>
@@ -34,10 +37,10 @@ defineProps<{
             >
                 <div class="flex flex-col space-y-2 text-center">
                     <h1 class="text-xl font-medium tracking-tight" v-if="title">
-                        {{ title }}
+                        {{ t(title ?? '') }}
                     </h1>
                     <p class="text-muted-foreground text-sm" v-if="description">
-                        {{ description }}
+                        {{ t(description ?? '') }}
                     </p>
                 </div>
                 <slot />

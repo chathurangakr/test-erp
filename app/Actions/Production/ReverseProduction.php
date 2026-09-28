@@ -6,6 +6,7 @@ use App\Actions\Accounting\RecordOperationalJournal;
 use App\Actions\Inventory\ReverseInventoryTransaction;
 use App\Enums\ProductionStatus;
 use App\Models\ProductionOrder;
+use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -73,14 +74,14 @@ class ReverseProduction
 
             // Outputs first: this is the step that can legitimately fail.
             $outputReversal = $this->reverseInventory->handle($output, [
-                'notes' => __('Reversal of production :reference output', [
+                'notes' => RecordText::of('Reversal of production :reference output', [
                     'reference' => $locked->production_number,
                 ]),
                 'posted_by' => $userId ?? auth()->id(),
             ]);
 
             $consumptionReversal = $this->reverseInventory->handle($consumption, [
-                'notes' => __('Reversal of production :reference input', [
+                'notes' => RecordText::of('Reversal of production :reference input', [
                     'reference' => $locked->production_number,
                 ]),
                 'posted_by' => $userId ?? auth()->id(),

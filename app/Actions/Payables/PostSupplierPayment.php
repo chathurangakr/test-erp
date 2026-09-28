@@ -15,6 +15,7 @@ use App\Models\SupplierPaymentAllocation;
 use App\Services\Accounting\AccountingPolicy;
 use App\Services\Accounting\AccountsPayableService;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -65,7 +66,7 @@ class PostSupplierPayment
                 'fiscal_period_id' => $period->id,
                 'source_type' => SupplierPayment::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Supplier payment :reference to :supplier', [
+                'description' => RecordText::of('Supplier payment :reference to :supplier', [
                     'reference' => $locked->payment_number,
                     'supplier' => $locked->supplier?->code,
                 ]),
@@ -75,7 +76,7 @@ class PostSupplierPayment
 
             $entry->lines()->create([
                 'account_id' => $this->policy->tradePayablesAccount()->id,
-                'description' => __('Settling :supplier', ['supplier' => $locked->supplier?->code ?? __('supplier')]),
+                'description' => RecordText::of('Settling :supplier', ['supplier' => $locked->supplier?->code ?? RecordText::of('supplier')]),
                 'debit' => DecimalMath::cost(DecimalMath::of($locked->amount)),
                 'credit' => DecimalMath::cost('0'),
             ]);

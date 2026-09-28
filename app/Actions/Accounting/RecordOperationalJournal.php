@@ -11,6 +11,7 @@ use App\Models\JournalEntry;
 use App\Models\ProductionOrder;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -68,7 +69,7 @@ class RecordOperationalJournal
 
             $lines[] = [
                 'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
-                'description' => __('Received :product', ['product' => $line->product->code]),
+                'description' => RecordText::of('Received :product', ['product' => $line->product->code]),
                 'debit' => $amount,
                 'credit' => DecimalMath::cost('0'),
             ];
@@ -76,8 +77,8 @@ class RecordOperationalJournal
 
         $lines[] = [
             'account_id' => $this->policy->grniAccount()->id,
-            'description' => __('Goods received not invoiced — :supplier', [
-                'supplier' => $receipt->supplier?->code ?? __('supplier'),
+            'description' => RecordText::of('Goods received not invoiced — :supplier', [
+                'supplier' => $receipt->supplier?->code ?? RecordText::of('supplier'),
             ]),
             'debit' => DecimalMath::cost('0'),
             'credit' => DecimalMath::cost($total),
@@ -86,7 +87,7 @@ class RecordOperationalJournal
         return $this->record(
             $receipt,
             $receipt->receipt_date,
-            __('Goods receipt :reference', ['reference' => $receipt->grn_number]),
+            RecordText::of('Goods receipt :reference', ['reference' => $receipt->grn_number]),
             $lines,
             $userId,
         );
@@ -110,14 +111,14 @@ class RecordOperationalJournal
 
             $lines[] = [
                 'account_id' => $this->policy->cogsAccountFor($line->product)->id,
-                'description' => __('Cost of :product sold', ['product' => $line->product->code]),
+                'description' => RecordText::of('Cost of :product sold', ['product' => $line->product->code]),
                 'debit' => $amount,
                 'credit' => DecimalMath::cost('0'),
             ];
 
             $lines[] = [
                 'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
-                'description' => __('Issued :product', ['product' => $line->product->code]),
+                'description' => RecordText::of('Issued :product', ['product' => $line->product->code]),
                 'debit' => DecimalMath::cost('0'),
                 'credit' => $amount,
             ];
@@ -126,7 +127,7 @@ class RecordOperationalJournal
         return $this->record(
             $delivery,
             $delivery->delivery_date,
-            __('Delivery :reference — cost of goods sold', ['reference' => $delivery->delivery_number]),
+            RecordText::of('Delivery :reference — cost of goods sold', ['reference' => $delivery->delivery_number]),
             $lines,
             $userId,
         );
@@ -154,7 +155,7 @@ class RecordOperationalJournal
         foreach ($this->linesOf($output) as $line) {
             $lines[] = [
                 'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
-                'description' => __('Produced :product', ['product' => $line->product->code]),
+                'description' => RecordText::of('Produced :product', ['product' => $line->product->code]),
                 'debit' => DecimalMath::cost(DecimalMath::of($line->total_cost)),
                 'credit' => DecimalMath::cost('0'),
             ];
@@ -163,7 +164,7 @@ class RecordOperationalJournal
         foreach ($this->linesOf($consumption) as $line) {
             $lines[] = [
                 'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
-                'description' => __('Consumed :product', ['product' => $line->product->code]),
+                'description' => RecordText::of('Consumed :product', ['product' => $line->product->code]),
                 'debit' => DecimalMath::cost('0'),
                 'credit' => DecimalMath::cost(DecimalMath::of($line->total_cost)),
             ];
@@ -172,8 +173,8 @@ class RecordOperationalJournal
         return $this->record(
             $order,
             $order->production_date,
-            __(':type production :reference', [
-                'type' => $order->production_type->label(),
+            RecordText::of(':type production :reference', [
+                'type' => $order->production_type,
                 'reference' => $order->production_number,
             ]),
             $lines,

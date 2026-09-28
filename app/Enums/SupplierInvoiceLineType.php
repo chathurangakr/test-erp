@@ -17,12 +17,15 @@ enum SupplierInvoiceLineType: string
     case GrniMatch = 'GRNI_MATCH';
     case DirectExpense = 'DIRECT_EXPENSE';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::GrniMatch => 'Goods received (GRNI match)',
             self::DirectExpense => 'Direct expense',
-        };
+        });
     }
 
     public function isGrniMatch(): bool

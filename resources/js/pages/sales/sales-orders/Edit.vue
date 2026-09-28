@@ -2,8 +2,11 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import SalesOrderForm from '@/components/sales/SalesOrderForm.vue';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/sales-orders';
 import type { OptionRef, SalesProductOption, StatusOption } from '@/types';
+
+const { t } = useT();
 
 const props = defineProps<{
     order: {
@@ -33,11 +36,11 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Sales orders', href: index() }
 </script>
 
 <template>
-    <Head :title="`Edit ${props.order.so_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.order.so_number })" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading :title="`Edit ${props.order.so_number}`" description="Only a draft sales order can be edited." />
+        <Heading :title="t('Edit :reference', { reference: props.order.so_number })" description="Only a draft sales order can be edited." />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-6xl rounded-xl border p-4 sm:p-6">
-            <SalesOrderForm method="put" :action="`${index().url}/${props.order.id}`" submit-label="Save changes" :cancel-href="`${index().url}/${props.order.id}`" :customers="customers" :warehouses="warehouses" :products="products" :pricing-bases="pricingBases" :initial="props.order" />
+            <SalesOrderForm method="put" :action="`${index().url}/${props.order.id}`" :submit-label="t('Save changes')" :cancel-href="`${index().url}/${props.order.id}`" :customers="customers" :warehouses="warehouses" :products="products" :pricing-bases="pricingBases" :initial="props.order" />
         </div>
     </div>
 </template>

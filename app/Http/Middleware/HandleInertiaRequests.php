@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Support\BusinessClock;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -49,6 +50,8 @@ class HandleInertiaRequests extends Middleware
             // Today's date in the factory's timezone, so forms default to the Sri Lankan date
             // even between midnight and 05:30, when the UTC date is still yesterday.
             'businessToday' => BusinessClock::todayString(),
+            // The screen language; translations themselves ship with the frontend build.
+            'locale' => App::getLocale(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

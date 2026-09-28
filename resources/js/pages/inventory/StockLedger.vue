@@ -11,6 +11,7 @@ import type {
     Paginated,
     TransactionTypeOption,
 } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     lines: Paginated<LedgerRow>;
@@ -33,6 +34,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Stock ledger', href: ledgerIndex() }],
     },
 });
+
+const { t } = useT();
 
 const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
 const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
@@ -72,7 +75,7 @@ const controlClass =
 </script>
 
 <template>
-    <Head title="Stock ledger" />
+    <Head :title="t('Stock ledger')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -82,35 +85,35 @@ const controlClass =
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <div class="grid gap-1.5">
-                <label for="from" class="text-sm font-medium">From</label>
+                <label for="from" class="text-sm font-medium">{{ t('From') }}</label>
                 <input id="from" v-model="from" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="to" class="text-sm font-medium">To</label>
+                <label for="to" class="text-sm font-medium">{{ t('To') }}</label>
                 <input id="to" v-model="to" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="l-product" class="text-sm font-medium">Product</label>
+                <label for="l-product" class="text-sm font-medium">{{ t('Product') }}</label>
                 <select id="l-product" v-model="productId" :class="controlClass">
-                    <option value="">All</option>
+                    <option value="">{{ t('All') }}</option>
                     <option v-for="p in products" :key="p.id" :value="String(p.id)">
                         {{ p.code }}
                     </option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="l-warehouse" class="text-sm font-medium">Warehouse</label>
+                <label for="l-warehouse" class="text-sm font-medium">{{ t('Warehouse') }}</label>
                 <select id="l-warehouse" v-model="warehouseId" :class="controlClass">
-                    <option value="">All</option>
+                    <option value="">{{ t('All') }}</option>
                     <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                         {{ w.code }}
                     </option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="l-type" class="text-sm font-medium">Type</label>
+                <label for="l-type" class="text-sm font-medium">{{ t('Type') }}</label>
                 <select id="l-type" v-model="transactionType" :class="controlClass">
-                    <option value="">All</option>
+                    <option value="">{{ t('All') }}</option>
                     <option
                         v-for="option in transactionTypes"
                         :key="option.value"
@@ -121,9 +124,9 @@ const controlClass =
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="l-lot" class="text-sm font-medium">Lot</label>
+                <label for="l-lot" class="text-sm font-medium">{{ t('Lot') }}</label>
                 <select id="l-lot" v-model="lotId" :class="controlClass">
-                    <option value="">All</option>
+                    <option value="">{{ t('All') }}</option>
                     <option v-for="lot in lots" :key="lot.id" :value="String(lot.id)">
                         {{ lot.lot_number }}
                     </option>
@@ -132,16 +135,16 @@ const controlClass =
         </div>
 
         <div>
-            <Button variant="outline" size="sm" @click="reset">Clear filters</Button>
+            <Button variant="outline" size="sm" @click="reset">{{ t('Clear filters') }}</Button>
         </div>
 
         <div
             v-if="lines.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No movements found</p>
+            <p class="font-medium">{{ t('No movements found') }}</p>
             <p class="text-muted-foreground text-sm">
-                The ledger is empty, or no movement matches these filters.
+                {{ t('The ledger is empty, or no movement matches these filters.') }}
             </p>
         </div>
 
@@ -152,19 +155,19 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-3 py-3 font-medium">Date</th>
-                            <th class="px-3 py-3 font-medium">Reference</th>
-                            <th class="px-3 py-3 font-medium">Type</th>
-                            <th class="px-3 py-3 font-medium">Product</th>
-                            <th class="px-3 py-3 font-medium">Whs</th>
-                            <th class="px-3 py-3 font-medium">Lot</th>
-                            <th class="px-3 py-3 text-right font-medium">In</th>
-                            <th class="px-3 py-3 text-right font-medium">Out</th>
-                            <th class="px-3 py-3 font-medium">UOM</th>
-                            <th class="px-3 py-3 text-right font-medium">2nd</th>
-                            <th class="px-3 py-3 text-right font-medium">Unit cost</th>
-                            <th class="px-3 py-3 text-right font-medium">Total cost</th>
-                            <th class="px-3 py-3 font-medium">User</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Reference') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Type') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Product') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Whs') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Lot') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('In') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('Out') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('UOM') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('2nd') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('Unit cost') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('Total cost') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('User') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -250,22 +253,22 @@ const controlClass =
 
                     <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div>
-                            <dt class="text-muted-foreground font-medium">Movement</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Movement') }}</dt>
                             <dd class="font-mono">
                                 {{ line.in_quantity ? `+${line.in_quantity}` : `−${line.out_quantity}` }}
                                 {{ line.primary_uom }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-muted-foreground font-medium">Unit cost</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Unit cost') }}</dt>
                             <dd class="font-mono">{{ line.unit_cost }}</dd>
                         </div>
                         <div v-if="line.lot_number">
-                            <dt class="text-muted-foreground font-medium">Lot</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Lot') }}</dt>
                             <dd class="font-mono">{{ line.lot_number }}</dd>
                         </div>
                         <div>
-                            <dt class="text-muted-foreground font-medium">Total cost</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Total cost') }}</dt>
                             <dd class="font-mono">{{ line.total_cost }}</dd>
                         </div>
                     </dl>
@@ -277,7 +280,7 @@ const controlClass =
                 class="flex flex-col items-center justify-between gap-3 sm:flex-row"
             >
                 <p class="text-muted-foreground text-sm">
-                    Showing {{ lines.from }}–{{ lines.to }} of {{ lines.total }}
+                    {{ t('Showing :from–:to of :total', { from: lines.from ?? 0, to: lines.to ?? 0, total: lines.total }) }}
                 </p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button
@@ -294,8 +297,7 @@ const controlClass =
         </template>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Posted movements are permanent. Corrections are made by posting a reversal,
-            which appears here as a separate entry referencing the original.
+            {{ t('Posted movements are permanent. Corrections are made by posting a reversal, which appears here as a separate entry referencing the original.') }}
         </p>
     </div>
 </template>

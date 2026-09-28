@@ -16,6 +16,7 @@ use App\Models\SupplierInvoiceLine;
 use App\Services\Accounting\AccountingPolicy;
 use App\Services\Accounting\GrniReconciliationService;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -75,7 +76,7 @@ class PostSupplierInvoice
                 // Payables control accounts, and what makes it traceable to the invoice.
                 'source_type' => SupplierInvoice::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Supplier invoice :internal (:supplier :number)', [
+                'description' => RecordText::of('Supplier invoice :internal (:supplier :number)', [
                     'internal' => $locked->internal_invoice_number,
                     'supplier' => $locked->supplier?->code,
                     'number' => $locked->supplier_invoice_number,
@@ -203,7 +204,7 @@ class PostSupplierInvoice
 
         $journalLines[] = [
             'account_id' => $payables->id,
-            'description' => __('Payable to :supplier', ['supplier' => $invoice->supplier?->code ?? __('supplier')]),
+            'description' => RecordText::of('Payable to :supplier', ['supplier' => $invoice->supplier?->code ?? RecordText::of('supplier')]),
             'debit' => DecimalMath::cost('0'),
             'credit' => DecimalMath::cost($total),
         ];
@@ -263,7 +264,7 @@ class PostSupplierInvoice
 
         return [
             'account_id' => $this->policy->grniAccount()->id,
-            'description' => $line->description ?? __('Invoiced against :reference', ['reference' => $receipt->grn_number]),
+            'description' => $line->description ?? RecordText::of('Invoiced against :reference', ['reference' => $receipt->grn_number]),
             'debit' => $amount,
             'credit' => DecimalMath::cost('0'),
         ];

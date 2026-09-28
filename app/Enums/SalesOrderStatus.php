@@ -21,15 +21,18 @@ enum SalesOrderStatus: string
     case Delivered = 'DELIVERED';
     case Cancelled = 'CANCELLED';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Draft => 'Draft',
             self::Approved => 'Approved',
             self::PartiallyDelivered => 'Partially delivered',
             self::Delivered => 'Delivered',
             self::Cancelled => 'Cancelled',
-        };
+        });
     }
 
     public function isEditable(): bool

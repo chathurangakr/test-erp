@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { LotRow, OptionRef, Paginated } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     lots: Paginated<LotRow>;
@@ -24,6 +25,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Lots', href: lotsIndex() }],
     },
 });
+
+const { t } = useT();
 
 const search = ref(props.filters.search ?? '');
 const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
@@ -67,7 +70,7 @@ const statusOptions = [
 </script>
 
 <template>
-    <Head title="Lots" />
+    <Head :title="t('Lots')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -83,15 +86,15 @@ const statusOptions = [
                 <Input
                     v-model="search"
                     type="search"
-                    placeholder="Search lot number or supplier lot…"
+                    :placeholder="t('Search lot number or supplier lot…')"
                     class="pl-9"
-                    aria-label="Search lots"
+                    :aria-label="t('Search lots')"
                 />
                 <button
                     v-if="search"
                     type="button"
                     class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                    aria-label="Clear search"
+                    :aria-label="t('Clear search')"
                     @click="
                         search = '';
                         applyFilters(true);
@@ -102,9 +105,9 @@ const statusOptions = [
             </div>
 
             <div class="grid gap-1.5 lg:w-64">
-                <label for="lot-product" class="text-sm font-medium">Product</label>
+                <label for="lot-product" class="text-sm font-medium">{{ t('Product') }}</label>
                 <select id="lot-product" v-model="productId" :class="controlClass">
-                    <option value="">All products</option>
+                    <option value="">{{ t('All products') }}</option>
                     <option v-for="p in products" :key="p.id" :value="String(p.id)">
                         {{ p.code }}
                     </option>
@@ -114,7 +117,7 @@ const statusOptions = [
             <div
                 class="bg-muted inline-flex shrink-0 rounded-md p-1"
                 role="group"
-                aria-label="Filter by status"
+                :aria-label="t('Filter by status')"
             >
                 <button
                     v-for="option in statusOptions"
@@ -129,7 +132,7 @@ const statusOptions = [
                     :aria-pressed="status === option.value"
                     @click="status = option.value"
                 >
-                    {{ option.label }}
+                    {{ t(option.label) }}
                 </button>
             </div>
         </div>
@@ -138,10 +141,9 @@ const statusOptions = [
             v-if="lots.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No lots found</p>
+            <p class="font-medium">{{ t('No lots found') }}</p>
             <p class="text-muted-foreground text-sm">
-                Lots are created automatically when purchase or production documents post
-                stock.
+                {{ t('Lots are created automatically when purchase or production documents post stock.') }}
             </p>
         </div>
 
@@ -152,14 +154,14 @@ const statusOptions = [
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Lot number</th>
-                            <th class="px-4 py-3 font-medium">Product</th>
-                            <th class="px-4 py-3 font-medium">Source</th>
-                            <th class="px-4 py-3 font-medium">Received</th>
-                            <th class="px-4 py-3 font-medium">Manufactured</th>
-                            <th class="px-4 py-3 text-right font-medium">Quantity</th>
-                            <th class="px-4 py-3 font-medium">Warehouses</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Lot number') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Source') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Received') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Manufactured') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Warehouses') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -174,7 +176,7 @@ const statusOptions = [
                                     v-if="lot.supplier_lot_number"
                                     class="text-muted-foreground block font-sans"
                                 >
-                                    supplier: {{ lot.supplier_lot_number }}
+                                    {{ t('supplier: :lot', { lot: lot.supplier_lot_number }) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
@@ -210,7 +212,7 @@ const statusOptions = [
                             </td>
                             <td class="px-4 py-3">
                                 <Badge :variant="lot.is_active ? 'default' : 'secondary'">
-                                    {{ lot.is_active ? 'Active' : 'Inactive' }}
+                                    {{ lot.is_active ? t('Active') : t('Inactive') }}
                                 </Badge>
                             </td>
                         </tr>
@@ -234,19 +236,19 @@ const statusOptions = [
                             </p>
                         </div>
                         <Badge :variant="lot.is_active ? 'default' : 'secondary'">
-                            {{ lot.is_active ? 'Active' : 'Inactive' }}
+                            {{ lot.is_active ? t('Active') : t('Inactive') }}
                         </Badge>
                     </div>
 
                     <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div>
-                            <dt class="text-muted-foreground font-medium">Quantity</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Quantity') }}</dt>
                             <dd class="font-mono">
                                 {{ lot.quantity }} {{ lot.primary_uom }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-muted-foreground font-medium">Received</dt>
+                            <dt class="text-muted-foreground font-medium">{{ t('Received') }}</dt>
                             <dd>{{ lot.received_at ?? '—' }}</dd>
                         </div>
                     </dl>
@@ -268,7 +270,7 @@ const statusOptions = [
                 class="flex flex-col items-center justify-between gap-3 sm:flex-row"
             >
                 <p class="text-muted-foreground text-sm">
-                    Showing {{ lots.from }}–{{ lots.to }} of {{ lots.total }}
+                    {{ t('Showing :from–:to of :total', { from: lots.from ?? 0, to: lots.to ?? 0, total: lots.total }) }}
                 </p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button

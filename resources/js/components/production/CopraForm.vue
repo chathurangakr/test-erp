@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import type {
     CopraFormValues,
     CopraOutputColumn,
@@ -13,6 +14,8 @@ import type {
     ProductionLotOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+
+const { t } = useT();
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -165,20 +168,20 @@ const selectClass =
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Production details</h3>
+            <h3 class="text-sm font-medium">{{ t('Production details') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="production_date">
-                        Production date <span class="text-destructive">*</span>
+                        {{ t('Production date') }} <span class="text-destructive">*</span>
                     </Label>
                     <Input id="production_date" v-model="form.production_date" type="date" required />
                     <InputError :message="form.errors.production_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="warehouse_id">Warehouse <span class="text-destructive">*</span></Label>
+                    <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
                     <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>Select a warehouse…</option>
+                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
                         <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                             {{ w.code }} — {{ w.name }}
                         </option>
@@ -190,9 +193,9 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="text-sm font-medium">Input — {{ recipe.input_code }}</h3>
+                <h3 class="text-sm font-medium">{{ t('Input — :code', { code: recipe.input_code }) }}</h3>
                 <p class="text-muted-foreground text-xs">
-                    Company stock on hand:
+                    {{ t('Company stock on hand:') }}
                     <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
                 </p>
             </div>
@@ -200,7 +203,7 @@ const selectClass =
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="lot_id">
-                        Dehusked coconut lot <span class="text-destructive">*</span>
+                        {{ t('Dehusked coconut lot') }} <span class="text-destructive">*</span>
                     </Label>
                     <select
                         id="lot_id"
@@ -217,7 +220,7 @@ const selectClass =
                         </option>
                     </select>
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
-                        Available lot stock:
+                        {{ t('Available lot stock:') }}
                         <span class="font-mono">{{ selectedLotQuantity }}</span>
                         {{ recipe.input_uom }}
                     </p>
@@ -226,12 +229,12 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="quantity">
-                        Dehusked coconut to process ({{ recipe.input_uom }})
+                        {{ t('Dehusked coconut to process (:uom)', { uom: recipe.input_uom ?? '' }) }}
                         <span class="text-destructive">*</span>
                     </Label>
                     <Input id="quantity" v-model="form.quantity" type="number" step="1" min="0" required />
                     <p v-if="exceedsLot" class="text-destructive text-xs">
-                        This exceeds the {{ selectedLotQuantity }} available in the selected lot.
+                        {{ t('This exceeds the :quantity available in the selected lot.', { quantity: selectedLotQuantity ?? '' }) }}
                     </p>
                     <InputError :message="form.errors.quantity" />
                 </div>
@@ -240,12 +243,12 @@ const selectClass =
             <dl class="grid gap-4 sm:grid-cols-2">
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <dt class="text-muted-foreground text-xs font-medium">
-                        Current inventory cost (weighted average)
+                        {{ t('Current inventory cost (weighted average)') }}
                     </dt>
                     <dd class="mt-1 font-mono text-sm">{{ inputUnitCost }}</dd>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                    <dt class="text-muted-foreground text-xs font-medium">Estimated consumed value</dt>
+                    <dt class="text-muted-foreground text-xs font-medium">{{ t('Estimated consumed value') }}</dt>
                     <dd class="mt-1 font-mono text-sm font-medium">
                         {{ money(estimatedConsumedValue) }}
                     </dd>
@@ -255,13 +258,10 @@ const selectClass =
 
         <!-- Measured outputs -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Measured output</h3>
+            <h3 class="text-sm font-medium">{{ t('Measured output') }}</h3>
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
-                Weigh the copra and the shell, and enter what the scale says. Drying loss
-                varies from batch to batch, so nothing here is calculated from the coconut
-                count — there is no coconut-to-kilogram conversion in the system. Only the
-                shell <em>count</em> is calculated, because one coconut leaves one shell.
+                {{ t('Weigh the copra and the shell, and enter what the scale says. Drying loss varies from batch to batch, so nothing here is calculated from the coconut count — there is no coconut-to-kilogram conversion in the system. Only the shell') }} <em>{{ t('count') }}</em> {{ t('is calculated, because one coconut leaves one shell.') }}
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -269,7 +269,7 @@ const selectClass =
                     <!-- Measured: the operator weighs it, because no ratio can predict it. -->
                     <div v-if="output.ratio === null" class="grid gap-2">
                         <Label :for="`output-${output.product_id}`">
-                            {{ output.code }} actual ({{ output.uom }})
+                            {{ t(':code actual (:uom)', { code: output.code ?? '', uom: output.uom ?? '' }) }}
                             <span class="text-destructive">*</span>
                         </Label>
                         <Input
@@ -287,7 +287,7 @@ const selectClass =
                     <!-- Derived: read-only, and refused by the server if submitted. -->
                     <div v-else class="grid gap-2">
                         <Label :for="`derived-${output.product_id}`">
-                            {{ output.code }} ({{ output.uom }}) — calculated
+                            {{ t(':code (:uom) — calculated', { code: output.code ?? '', uom: output.uom ?? '' }) }}
                         </Label>
                         <Input
                             :id="`derived-${output.product_id}`"
@@ -298,15 +298,14 @@ const selectClass =
                             class="bg-muted/50"
                         />
                         <p class="text-muted-foreground text-xs">
-                            {{ Number(output.ratio).toFixed(2) }} per
-                            {{ recipe.input_uom }} processed — not editable.
+                            {{ t(':ratio per :uom processed — not editable.', { ratio: Number(output.ratio).toFixed(2), uom: recipe.input_uom ?? '' }) }}
                         </p>
                         <InputError :message="error(rowIndex(output.product_id), 'quantity')" />
                     </div>
 
                     <div v-if="output.requires_secondary_quantity" class="grid gap-2">
                         <Label :for="`secondary-${output.product_id}`">
-                            {{ output.code }} actual weight ({{ output.secondary_uom }})
+                            {{ t(':code actual weight (:uom)', { code: output.code ?? '', uom: output.secondary_uom ?? '' }) }}
                             <span class="text-destructive">*</span>
                         </Label>
                         <Input
@@ -318,8 +317,7 @@ const selectClass =
                             required
                         />
                         <p class="text-muted-foreground text-xs">
-                            Shell weights vary, so this is measured, never converted from the
-                            count.
+                            {{ t('Shell weights vary, so this is measured, never converted from the count.') }}
                         </p>
                         <InputError
                             :message="error(rowIndex(output.product_id), 'secondary_quantity')"
@@ -333,17 +331,17 @@ const selectClass =
 
         <!-- Provisional allocation -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Provisional cost allocation</h3>
+            <h3 class="text-sm font-medium">{{ t('Provisional cost allocation') }}</h3>
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Output</th>
-                            <th class="px-4 py-3 text-right font-medium">Quantity</th>
-                            <th class="px-4 py-3 text-right font-medium">Share</th>
-                            <th class="px-4 py-3 text-right font-medium">Estimated cost</th>
-                            <th class="px-4 py-3 text-right font-medium">Estimated unit cost</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Output') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Share') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Estimated cost') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Estimated unit cost') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -375,7 +373,7 @@ const selectClass =
                                     class="text-muted-foreground block text-xs"
                                 >
                                     {{ money(row.informational_secondary_unit_cost) }} /
-                                    {{ row.secondary_uom }} (informational)
+                                    {{ row.secondary_uom }} ({{ t('informational') }})
                                 </span>
                             </td>
                         </tr>
@@ -384,25 +382,17 @@ const selectClass =
             </div>
 
             <p class="text-muted-foreground text-xs">
-                These shares total
-                <span class="font-mono">{{ percentTotal.toFixed(2) }}%</span> and are
-                configuration, not something you can type here — the consumed coconut value is
-                divided between copra and shell in exactly these proportions, so copra
-                production neither creates nor destroys inventory value. The
-                <strong>75 / 25 split is provisional</strong> and will later be replaced by a
-                market-value / NRV method. Every figure above is an estimate: the real money is
-                calculated when you post, from the weighted average cost in the ledger at that
-                moment.
+                {{ t('These shares total') }}
+                <span class="font-mono">{{ percentTotal.toFixed(2) }}%</span> {{ t('and are configuration, not something you can type here — the consumed coconut value is divided between copra and shell in exactly these proportions, so copra production neither creates nor destroys inventory value. The') }}
+                <strong>{{ t('75 / 25 split is provisional') }}</strong> {{ t('and will later be replaced by a market-value / NRV method. Every figure above is an estimate: the real money is calculated when you post, from the weighted average cost in the ledger at that moment.') }}
             </p>
             <p class="text-muted-foreground text-xs">
-                Shell is valued against its <strong>count</strong>, because NOS is its primary
-                unit. The per-kilogram figure is shown for information only and is never used
-                as a weighted average cost.
+                {{ t('Shell is valued against its') }} <strong>{{ t('count') }}</strong>{{ t(', because NOS is its primary unit. The per-kilogram figure is shown for information only and is never used as a weighted average cost.') }}
             </p>
         </section>
 
         <div class="grid gap-2">
-            <Label for="prd_notes">Notes</Label>
+            <Label for="prd_notes">{{ t('Notes') }}</Label>
             <textarea
                 id="prd_notes"
                 v-model="form.notes"
@@ -414,7 +404,7 @@ const selectClass =
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

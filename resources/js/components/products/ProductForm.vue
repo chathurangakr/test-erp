@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Product, UnitOfMeasure } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     action: Record<string, unknown>;
@@ -29,6 +30,8 @@ const sameUomSelected = computed(
 
 const selectClass =
     'border-input bg-background ring-offset-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+
+const { t } = useT();
 </script>
 
 <template>
@@ -36,7 +39,7 @@ const selectClass =
         <div class="grid gap-6 sm:grid-cols-2">
             <div class="grid gap-2">
                 <Label for="code">
-                    Product code <span class="text-destructive">*</span>
+                    {{ t('Product code') }} <span class="text-destructive">*</span>
                 </Label>
                 <Input
                     id="code"
@@ -44,18 +47,18 @@ const selectClass =
                     :default-value="product?.code ?? ''"
                     required
                     autocomplete="off"
-                    placeholder="e.g. COCONUT"
+                    :placeholder="t('e.g. COCONUT')"
                     class="uppercase"
                 />
                 <p class="text-muted-foreground text-xs">
-                    Stored in uppercase automatically. Must be unique.
+                    {{ t('Stored in uppercase automatically. Must be unique.') }}
                 </p>
                 <InputError :message="errors.code" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="name">
-                    Product name <span class="text-destructive">*</span>
+                    {{ t('Product name') }} <span class="text-destructive">*</span>
                 </Label>
                 <Input
                     id="name"
@@ -63,14 +66,14 @@ const selectClass =
                     :default-value="product?.name ?? ''"
                     required
                     autocomplete="off"
-                    placeholder="e.g. Whole Coconut"
+                    :placeholder="t('e.g. Whole Coconut')"
                 />
                 <InputError :message="errors.name" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="primary_uom_id">
-                    Primary unit of measure
+                    {{ t('Primary unit of measure') }}
                     <span class="text-destructive">*</span>
                 </Label>
                 <select
@@ -80,7 +83,7 @@ const selectClass =
                     required
                     :class="selectClass"
                 >
-                    <option value="" disabled>Select a unit…</option>
+                    <option value="" disabled>{{ t('Select a unit…') }}</option>
                     <option
                         v-for="uom in unitsOfMeasure"
                         :key="uom.id"
@@ -93,14 +96,14 @@ const selectClass =
             </div>
 
             <div class="grid gap-2">
-                <Label for="secondary_uom_id">Secondary unit of measure</Label>
+                <Label for="secondary_uom_id">{{ t('Secondary unit of measure') }}</Label>
                 <select
                     id="secondary_uom_id"
                     name="secondary_uom_id"
                     v-model="secondaryUomId"
                     :class="selectClass"
                 >
-                    <option value="">None</option>
+                    <option value="">{{ t('None') }}</option>
                     <option
                         v-for="uom in unitsOfMeasure"
                         :key="uom.id"
@@ -110,24 +113,23 @@ const selectClass =
                     </option>
                 </select>
                 <p class="text-muted-foreground text-xs">
-                    Optional. For products sold in two units, such as Raw Coconut
-                    Shell.
+                    {{ t('Optional. For products sold in two units, such as Raw Coconut Shell.') }}
                 </p>
                 <p v-if="sameUomSelected" class="text-destructive text-sm">
-                    The secondary unit must be different from the primary unit.
+                    {{ t('The secondary unit must be different from the primary unit.') }}
                 </p>
                 <InputError :message="errors.secondary_uom_id" />
             </div>
         </div>
 
         <div class="grid gap-2">
-            <Label for="description">Description</Label>
+            <Label for="description">{{ t('Description') }}</Label>
             <textarea
                 id="description"
                 name="description"
                 rows="3"
                 :value="product?.description ?? ''"
-                placeholder="Optional notes about this product"
+                :placeholder="t('Optional notes about this product')"
                 class="border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             />
             <InputError :message="errors.description" />
@@ -135,10 +137,10 @@ const selectClass =
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="processing || sameUomSelected">
-                {{ submitLabel }}
+                {{ t(submitLabel) }}
             </Button>
             <Button variant="outline" as-child>
-                <a :href="cancelHref">Cancel</a>
+                <a :href="cancelHref">{{ t('Cancel') }}</a>
             </Button>
         </div>
     </Form>

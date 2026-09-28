@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireHttpsForApi;
 use App\Http\Middleware\SetKioskLocale;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,10 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'kiosk_locale']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'kiosk_locale', 'erp_locale']);
 
         $middleware->web(append: [
             EnsureUserIsActive::class,
+            SetLocale::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

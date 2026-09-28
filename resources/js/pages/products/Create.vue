@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import ProductForm from '@/components/products/ProductForm.vue';
 import { index } from '@/routes/products';
 import type { UnitOfMeasure } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     unitsOfMeasure: UnitOfMeasure[];
@@ -18,10 +19,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New product" />
+    <Head :title="t('New product')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading

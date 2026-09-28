@@ -614,6 +614,24 @@ Full detail lives in `docs/KIOSK.md` and `docs/DATA_MODEL.md` T-1.
 
 ---
 
+## Language rules (Sinhala + English — Step 1 implemented)
+
+Full detail lives in `docs/LOCALISATION.md`.
+
+- **Screens are bilingual; saved records are English.** Write every stored text (journal /
+  ledger descriptions, notes) with `App\Support\RecordText::of()` — never `__()`. Pass enums
+  themselves (not `->label()`) into it. Never add a `RecordText` key to `lang/si.json`.
+- **One translation file:** `lang/si.json`, keyed by the English text, used by both `__()` and the
+  screens' `useT()` (`@/lib/i18n`). Wrap every new piece of visible English in `t('…')` with
+  `:placeholders`; never concatenate keys. `Heading`, `Breadcrumbs` and `NavMain` translate their
+  own props — pages pass English. `LocalisationTest` fails if a `t('…')` key has no Sinhala entry.
+- **Enum `label()` values are display names** and are translated; never save one.
+- **Language is per person** (`users.locale`, `SetLocale` middleware); simple mode stays per
+  device. Terminology: plain Sinhala, accounting terms with the English in brackets.
+- **Finance screens are Step 2 — not yet translated.**
+
+---
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,
@@ -667,7 +685,8 @@ enforced server-side, user deactivation and last-administrator protection), and 
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts), and **simple mode** (big-button Sinhala/English
 screens at `/kiosk` for receiving, dispatch, the three production jobs and stock, where Done saves
-and posts in one transaction) with **Sri Lanka business time** throughout.
+and posts in one transaction) with **Sri Lanka business time** throughout, and **Sinhala / English** for every screen except
+Finance (each person chooses; saved records stay English).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense

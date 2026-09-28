@@ -17,6 +17,7 @@ use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Services\Production\ProductionCostAllocator;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -86,7 +87,7 @@ class PostDehuskingProduction
                     'transaction_date' => $locked->production_date,
                     'source_type' => ProductionOrder::class,
                     'source_id' => $locked->getKey(),
-                    'notes' => __('Production :reference input', ['reference' => $locked->production_number]),
+                    'notes' => RecordText::of('Production :reference input', ['reference' => $locked->production_number]),
                     'posted_by' => $userId ?? auth()->id(),
                 ],
             );
@@ -113,9 +114,9 @@ class PostDehuskingProduction
                     'source_id' => $locked->getKey(),
                     'manufactured_at' => $locked->production_date,
                     'received_at' => $locked->production_date,
-                    'notes' => __('Produced by :reference from lot :lot', [
+                    'notes' => RecordText::of('Produced by :reference from lot :lot', [
                         'reference' => $locked->production_number,
-                        'lot' => $input->lot?->lot_number ?? __('unlotted stock'),
+                        'lot' => $input->lot?->lot_number ?? RecordText::of('unlotted stock'),
                     ]),
                 ]);
 
@@ -148,7 +149,7 @@ class PostDehuskingProduction
                     'transaction_date' => $locked->production_date,
                     'source_type' => ProductionOrder::class,
                     'source_id' => $locked->getKey(),
-                    'notes' => __('Production :reference output', ['reference' => $locked->production_number]),
+                    'notes' => RecordText::of('Production :reference output', ['reference' => $locked->production_number]),
                     'posted_by' => $userId ?? auth()->id(),
                 ],
             );

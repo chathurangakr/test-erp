@@ -9,8 +9,11 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/purchase-orders';
 import { index as grnIndex } from '@/routes/goods-receipts';
 import type { PurchaseOrderDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ order: PurchaseOrderDetail }>();
+
+const { t } = useT();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Purchase orders', href: index() }] } });
 
@@ -40,7 +43,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="order.can_edit && can('purchasing.order_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -49,7 +52,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="PurchaseOrderApprovalController.approve.form(order.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" class="w-full" :disabled="processing">Approve</Button>
+                    <Button type="submit" class="w-full" :disabled="processing">{{ t('Approve') }}</Button>
                 </Form>
 
                 <Form
@@ -58,7 +61,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Cancel order
+                        {{ t('Cancel order') }}
                     </Button>
                 </Form>
             </div>
@@ -67,19 +70,19 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <!-- Summary totals -->
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Ordered quantity</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Ordered quantity') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.ordered_quantity }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Received quantity</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Received quantity') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.received_quantity }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Remaining</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Remaining') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.remaining_quantity }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Material value</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Material value') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.material_total }}</p>
             </div>
         </div>
@@ -88,31 +91,31 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Warehouse</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Warehouse') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.warehouse_code }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Order date</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Order date') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.order_date }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Expected date</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Expected date') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.expected_date ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Supplier reference</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Supplier reference') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.supplier_reference ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Approved by</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Approved by') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.approved_by ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Approved at</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Approved at') }}</dt>
                     <dd class="mt-1 text-sm">{{ order.approved_at ?? '—' }}</dd>
                 </div>
                 <div v-if="order.notes" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">{{ order.notes }}</dd>
                 </div>
             </dl>
@@ -123,13 +126,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Product</th>
-                        <th class="px-4 py-3 font-medium">UOM</th>
-                        <th class="px-4 py-3 text-right font-medium">Ordered</th>
-                        <th class="px-4 py-3 text-right font-medium">Received</th>
-                        <th class="px-4 py-3 text-right font-medium">Outstanding</th>
-                        <th class="px-4 py-3 text-right font-medium">Unit price</th>
-                        <th class="px-4 py-3 text-right font-medium">Line total</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('UOM') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Ordered') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Received') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Outstanding') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Unit price') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Line total') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -155,7 +158,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
         <!-- Linked receipts -->
         <div v-if="order.goods_receipts.length" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
-            <h3 class="text-sm font-medium">Goods receipts</h3>
+            <h3 class="text-sm font-medium">{{ t('Goods receipts') }}</h3>
             <ul class="mt-3 space-y-2">
                 <li
                     v-for="grn in order.goods_receipts"
@@ -174,8 +177,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            A purchase order never changes stock. Inventory moves only when a goods receipt
-            against it is posted.
+            {{ t('A purchase order never changes stock. Inventory moves only when a goods receipt against it is posted.') }}
         </p>
     </div>
 </template>

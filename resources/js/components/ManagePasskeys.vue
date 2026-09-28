@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import PasskeyItem from '@/components/PasskeyItem.vue';
 import PasskeyRegister from '@/components/PasskeyRegister.vue';
 import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
+import { useT } from '@/lib/i18n';
 
 export type Props = {
     canManagePasskeys?: boolean;
@@ -27,6 +28,8 @@ const handleDelete = (id: number, onError: () => void) => {
 const handleRegisterSuccess = () => {
     router.reload();
 };
+
+const { t } = useT();
 </script>
 
 <template>
@@ -53,9 +56,9 @@ const handleRegisterSuccess = () => {
                 >
                     <KeyRound class="text-muted-foreground h-7 w-7" />
                 </div>
-                <p class="font-medium">No passkeys yet</p>
+                <p class="font-medium">{{ t('No passkeys yet') }}</p>
                 <p class="text-muted-foreground mt-1 text-sm">
-                    Add a passkey to sign in without a password
+                    {{ t('Add a passkey to sign in without a password') }}
                 </p>
             </div>
         </div>

@@ -20,9 +20,12 @@ enum InventoryTransactionType: string
     case AdjustmentOut = 'ADJUSTMENT_OUT';
     case Reversal = 'REVERSAL';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::OpeningBalance => 'Opening balance',
             self::PurchaseReceipt => 'Purchase receipt',
             self::SalesIssue => 'Sales issue',
@@ -32,7 +35,7 @@ enum InventoryTransactionType: string
             self::AdjustmentIn => 'Adjustment in',
             self::AdjustmentOut => 'Adjustment out',
             self::Reversal => 'Reversal',
-        };
+        });
     }
 
     /**

@@ -26,16 +26,19 @@ enum SalesInvoiceStatus: string
     case Reversed = 'REVERSED';
     case Cancelled = 'CANCELLED';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Draft => 'Draft',
             self::Posted => 'Posted',
             self::PartiallyPaid => 'Partially paid',
             self::Paid => 'Paid',
             self::Reversed => 'Reversed',
             self::Cancelled => 'Cancelled',
-        };
+        });
     }
 
     public function isEditable(): bool

@@ -11,6 +11,7 @@ import {
     store as confirmStore,
 } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
 import PasskeyVerify from '@/components/PasskeyVerify.vue';
+import { useT } from '@/lib/i18n';
 
 defineOptions({
     layout: {
@@ -19,10 +20,12 @@ defineOptions({
             'This is a secure area of the application. Please confirm your password before continuing.',
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Confirm password" />
+    <Head :title="t('Confirm password')" />
 
     <PasskeyVerify
         :routes="{
@@ -41,7 +44,7 @@ defineOptions({
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{{ t('Password') }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -61,7 +64,7 @@ defineOptions({
                     data-test="confirm-password-button"
                 >
                     <Spinner v-if="processing" />
-                    Confirm password
+                    {{ t('Confirm password') }}
                 </Button>
             </div>
         </div>

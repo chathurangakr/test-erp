@@ -473,6 +473,25 @@ ERP. See `KIOSK.md` §5.
 
 ---
 
+## Phase 18 — Sinhala + English, Step 1 ✅ COMPLETE (Step 2: Finance — not started)
+
+- [x] Per-person language (`users.locale`, one forward migration), one-tap switch in the top bar
+      and on sign-in screens; simple mode stays per device
+- [x] One translation file, `lang/si.json`, shared by the server and the screens (no new package);
+      untranslated text falls back to English
+- [x] All screens except Finance translated: master data, products, inventory, purchasing, sales,
+      production, administration, settings, sign-in, dashboard and the app shell (~1,000 entries)
+- [x] Status/type names, server messages, form errors, sign-in and page-number messages in Sinhala
+- [x] **Saved records always English** — 49 stored texts moved to `RecordText`
+- [x] 11 new tests, including completeness and "records stay English" guards
+
+**Decided with the owner:** two steps; accounting terms Sinhala + English in brackets; language
+remembered per person.
+
+**Step 2 (not started):** the Finance screens.
+
+---
+
 ## Cross-cutting standing rules
 
 | Rule | Source |

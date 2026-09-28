@@ -6,10 +6,13 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/dehusking';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { DehuskingDetail } from '@/types';
+
+const { t } = useT();
 
 defineProps<{ order: DehuskingDetail }>();
 
@@ -43,7 +46,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="order.can_edit && can('production.create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${order.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -53,7 +56,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" class="w-full" :disabled="processing">
-                        Post production
+                        {{ t('Post production') }}
                     </Button>
                 </Form>
 
@@ -63,7 +66,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Reverse
+                        {{ t('Reverse') }}
                     </Button>
                 </Form>
 
@@ -73,7 +76,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Cancel draft
+                        {{ t('Cancel draft') }}
                     </Button>
                 </Form>
             </div>
@@ -83,26 +86,24 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="order.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This production run is a <strong>draft</strong> — no coconut has been consumed
-            and no output stock exists. Costs appear once it is posted, because the
-            inventory cost is determined by the ledger at that moment.
+            {{ t('This production run is a') }} <strong>{{ t('draft') }}</strong> {{ t('— no coconut has been consumed and no output stock exists. Costs appear once it is posted, because the inventory cost is determined by the ledger at that moment.') }}
         </div>
 
         <!-- Value conservation -->
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Coconut consumed</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Coconut consumed') }}</p>
                 <p class="mt-1 font-mono text-lg">
                     {{ order.input_quantity }}
                     <span class="text-muted-foreground text-sm">{{ order.input?.uom }}</span>
                 </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Input value</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Input value') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.input_value ?? '—' }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Output value</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ order.output_value ?? '—' }}</p>
             </div>
         </div>
@@ -112,14 +113,14 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="order.input"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6"
         >
-            <h3 class="text-sm font-medium">Input</h3>
+            <h3 class="text-sm font-medium">{{ t('Input') }}</h3>
             <dl class="mt-4 grid gap-6 sm:grid-cols-5">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Product</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Product') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ order.input.product_code }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Lot consumed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Lot consumed') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         <Link v-if="can('inventory.view')" :href="lotsIndex().url" class="hover:underline">
                             {{ order.input.lot_number ?? '—' }}
@@ -128,17 +129,17 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Quantity</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Quantity') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         {{ order.input.quantity }} {{ order.input.uom }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Weighted avg cost</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Weighted avg cost') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ order.input.unit_cost ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Value consumed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Value consumed') }}</dt>
                     <dd class="mt-1 font-mono text-sm font-medium">{{ order.input.total_cost ?? '—' }}</dd>
                 </div>
             </dl>
@@ -152,13 +153,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Output product</th>
-                        <th class="px-4 py-3 font-medium">Lot produced</th>
-                        <th class="px-4 py-3 text-right font-medium">Quantity</th>
-                        <th class="px-4 py-3 font-medium">UOM</th>
-                        <th class="px-4 py-3 text-right font-medium">Cost share</th>
-                        <th class="px-4 py-3 text-right font-medium">Allocated cost</th>
-                        <th class="px-4 py-3 text-right font-medium">Unit cost</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Output product') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Lot produced') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('UOM') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Cost share') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Allocated cost') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Unit cost') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -194,7 +195,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="order.input?.lot_number && order.outputs.length"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6"
         >
-            <h3 class="text-sm font-medium">Traceability</h3>
+            <h3 class="text-sm font-medium">{{ t('Traceability') }}</h3>
             <div class="text-muted-foreground mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span class="font-mono">{{ order.input.lot_number }}</span>
                 <ArrowRight class="size-3" />
@@ -205,9 +206,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </span>
             </div>
             <p class="text-muted-foreground mt-3 text-xs">
-                Each output lot records this production run as its source, and this run
-                records the coconut lot it consumed — so stock can be traced in either
-                direction.
+                {{ t('Each output lot records this production run as its source, and this run records the coconut lot it consumed — so stock can be traced in either direction.') }}
             </p>
         </div>
 
@@ -215,7 +214,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div v-if="order.consumption_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Consumption transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Consumption transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.consumption_reference }}
@@ -224,7 +223,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div v-if="order.output_reference">
-                    <dt class="text-muted-foreground text-sm font-medium">Output transaction</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Output transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
                         <Link v-if="can('inventory.view')" :href="ledgerIndex().url" class="hover:underline">
                             {{ order.output_reference }}
@@ -233,23 +232,20 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ order.posted_at ? `${order.posted_at} by ${order.posted_by ?? '—'}` : '—' }}
                     </dd>
                 </div>
                 <div v-if="order.notes" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">{{ order.notes }}</dd>
                 </div>
             </dl>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Dehusking increases the physical item count — one coconut becomes two things —
-            but total inventory value is unchanged: the allocated output costs sum exactly
-            to the value consumed. No labour, electricity or overhead cost is added; that
-            comes in a later costing phase.
+            {{ t('Dehusking increases the physical item count — one coconut becomes two things — but total inventory value is unchanged: the allocated output costs sum exactly to the value consumed. No labour, electricity or overhead cost is added; that comes in a later costing phase.') }}
         </p>
     </div>
 </template>

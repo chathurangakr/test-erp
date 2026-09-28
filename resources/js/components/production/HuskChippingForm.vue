@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import type {
     HuskChippingFormValues,
     HuskChippingRecipeInfo,
@@ -12,6 +13,8 @@ import type {
     ProductionLotOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+
+const { t } = useT();
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -141,20 +144,20 @@ const selectClass =
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Production details</h3>
+            <h3 class="text-sm font-medium">{{ t('Production details') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="production_date">
-                        Production date <span class="text-destructive">*</span>
+                        {{ t('Production date') }} <span class="text-destructive">*</span>
                     </Label>
                     <Input id="production_date" v-model="form.production_date" type="date" required />
                     <InputError :message="form.errors.production_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="warehouse_id">Warehouse <span class="text-destructive">*</span></Label>
+                    <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
                     <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>Select a warehouse…</option>
+                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
                         <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                             {{ w.code }} — {{ w.name }}
                         </option>
@@ -166,16 +169,16 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="text-sm font-medium">Input — {{ recipe.input_code }}</h3>
+                <h3 class="text-sm font-medium">{{ t('Input — :code', { code: recipe.input_code }) }}</h3>
                 <p class="text-muted-foreground text-xs">
-                    Company stock on hand:
+                    {{ t('Company stock on hand:') }}
                     <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
                 </p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="lot_id">Raw husk lot <span class="text-destructive">*</span></Label>
+                    <Label for="lot_id">{{ t('Raw husk lot') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="lot_id"
                         v-model="form.lot_id"
@@ -191,7 +194,7 @@ const selectClass =
                         </option>
                     </select>
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
-                        Available in this lot:
+                        {{ t('Available in this lot:') }}
                         <span class="font-mono">{{ selectedLotQuantity }}</span>
                         {{ recipe.input_uom }}
                     </p>
@@ -200,12 +203,12 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="quantity">
-                        Husk to process ({{ recipe.input_uom }})
+                        {{ t('Husk to process (:uom)', { uom: recipe.input_uom ?? '' }) }}
                         <span class="text-destructive">*</span>
                     </Label>
                     <Input id="quantity" v-model="form.quantity" type="number" step="1" min="0" required />
                     <p v-if="exceedsLot" class="text-destructive text-xs">
-                        This exceeds the {{ selectedLotQuantity }} available in the selected lot.
+                        {{ t('This exceeds the :quantity available in the selected lot.', { quantity: selectedLotQuantity ?? '' }) }}
                     </p>
                     <InputError :message="form.errors.quantity" />
                 </div>
@@ -214,13 +217,10 @@ const selectClass =
 
         <!-- Measured outputs — the operator types these -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Measured output weights</h3>
+            <h3 class="text-sm font-medium">{{ t('Measured output weights') }}</h3>
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
-                Weigh each grade and enter what the scale says. Chipping yields vary from
-                batch to batch, so nothing here is calculated from the husk count — there is
-                no husk-to-kilogram conversion in the system. Enter <strong>0</strong> for a
-                grade this batch did not produce.
+                {{ t('Weigh each grade and enter what the scale says. Chipping yields vary from batch to batch, so nothing here is calculated from the husk count — there is no husk-to-kilogram conversion in the system. Enter') }} <strong>0</strong> {{ t('for a grade this batch did not produce.') }}
             </div>
 
             <div class="grid gap-4 sm:grid-cols-3">
@@ -245,26 +245,26 @@ const selectClass =
             <InputError :message="form.errors.outputs" />
 
             <p v-if="nothingProduced" class="text-destructive text-xs">
-                At least one grade must have a weight greater than zero.
+                {{ t('At least one grade must have a weight greater than zero.') }}
             </p>
             <p v-else class="text-muted-foreground text-xs">
-                Total measured output:
-                <span class="font-mono">{{ totalMeasured.toFixed(3) }}</span> KG
+                {{ t('Total measured output:') }}
+                <span class="font-mono">{{ totalMeasured.toFixed(3) }}</span> {{ t('KG') }}
             </p>
         </section>
 
         <!-- Cost share preview -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Cost allocation</h3>
+            <h3 class="text-sm font-medium">{{ t('Cost allocation') }}</h3>
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Grade</th>
-                            <th class="px-4 py-3 text-right font-medium">Measured</th>
-                            <th class="px-4 py-3 text-right font-medium">Configured share</th>
-                            <th class="px-4 py-3 text-right font-medium">Share applied</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Grade') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Measured') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Configured share') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Share applied') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -293,34 +293,29 @@ const selectClass =
             </div>
 
             <p v-if="redistributed" class="text-muted-foreground text-xs">
-                A grade with no weight takes no cost and gets no lot, so its share is spread
-                over the grades that were produced — which is why the applied shares differ
-                from the configured ones.
+                {{ t('A grade with no weight takes no cost and gets no lot, so its share is spread over the grades that were produced — which is why the applied shares differ from the configured ones.') }}
             </p>
 
             <p class="text-muted-foreground text-xs">
-                The consumed husk value is divided between the grades in these proportions,
-                so chipping neither creates nor destroys inventory value. The money itself is
-                calculated when you post, from the weighted average cost in the ledger at
-                that moment.
+                {{ t('The consumed husk value is divided between the grades in these proportions, so chipping neither creates nor destroys inventory value. The money itself is calculated when you post, from the weighted average cost in the ledger at that moment.') }}
             </p>
         </section>
 
         <!-- Waste — information only -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Waste (optional)</h3>
+            <h3 class="text-sm font-medium">{{ t('Waste (optional)') }}</h3>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="waste_quantity">Waste / loss</Label>
+                    <Label for="waste_quantity">{{ t('Waste / loss') }}</Label>
                     <Input id="waste_quantity" v-model="form.waste_quantity" type="number" step="0.001" min="0" />
                     <InputError :message="form.errors.waste_quantity" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="waste_uom_id">Measured in</Label>
+                    <Label for="waste_uom_id">{{ t('Measured in') }}</Label>
                     <select id="waste_uom_id" v-model="form.waste_uom_id" :class="selectClass">
-                        <option value="">Not recorded</option>
+                        <option value="">{{ t('Not recorded') }}</option>
                         <option v-for="u in wasteUoms" :key="u.id" :value="String(u.id)">
                             {{ u.code }} — {{ u.name }}
                         </option>
@@ -330,14 +325,12 @@ const selectClass =
             </div>
 
             <p class="text-muted-foreground text-xs">
-                Waste is recorded for information only. It creates no stock, no lot and no
-                product, and it takes no cost — the whole consumed value stays with the
-                saleable grades. Leave it blank if it was not measured.
+                {{ t('Waste is recorded for information only. It creates no stock, no lot and no product, and it takes no cost — the whole consumed value stays with the saleable grades. Leave it blank if it was not measured.') }}
             </p>
         </section>
 
         <div class="grid gap-2">
-            <Label for="prd_notes">Notes</Label>
+            <Label for="prd_notes">{{ t('Notes') }}</Label>
             <textarea
                 id="prd_notes"
                 v-model="form.notes"
@@ -349,7 +342,7 @@ const selectClass =
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

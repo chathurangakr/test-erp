@@ -4,6 +4,7 @@ import Heading from '@/components/Heading.vue';
 import GoodsReceiptForm from '@/components/purchasing/GoodsReceiptForm.vue';
 import { index } from '@/routes/goods-receipts';
 import type { OptionRef, ProductOption, PurchaseOrderOption } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     receipt: {
@@ -33,13 +34,15 @@ const props = defineProps<{
     purchaseOrders: PurchaseOrderOption[];
 }>();
 
+const { t } = useT();
+
 defineOptions({ layout: { breadcrumbs: [{ title: 'Goods receipts', href: index() }] } });
 </script>
 
 <template>
-    <Head :title="`Edit ${props.receipt.grn_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.receipt.grn_number })" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading :title="`Edit ${props.receipt.grn_number}`" description="Only a draft goods receipt can be edited." />
+        <Heading :title="t('Edit :reference', { reference: props.receipt.grn_number })" description="Only a draft goods receipt can be edited." />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-6xl rounded-xl border p-4 sm:p-6">
             <GoodsReceiptForm method="put" :action="`${index().url}/${props.receipt.id}`" submit-label="Save changes" :cancel-href="`${index().url}/${props.receipt.id}`" :suppliers="suppliers" :warehouses="warehouses" :products="products" :purchase-orders="purchaseOrders" :initial="props.receipt" />
         </div>

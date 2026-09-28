@@ -16,12 +16,15 @@ enum FiscalPeriodStatus: string
     case Open = 'OPEN';
     case Closed = 'CLOSED';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Open => 'Open',
             self::Closed => 'Closed',
-        };
+        });
     }
 
     public function acceptsPostings(): bool

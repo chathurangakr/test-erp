@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
+import { useT } from '@/lib/i18n';
 
 defineOptions({
     layout: {
@@ -19,10 +20,12 @@ defineOptions({
 defineProps<{
     status?: string;
 }>();
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Forgot password" />
+    <Head :title="t('Forgot password')" />
 
     <div
         v-if="status"
@@ -34,7 +37,7 @@ defineProps<{
     <div class="space-y-6">
         <Form v-bind="email.form()" v-slot="{ errors, processing }">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">{{ t('Email address') }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -53,14 +56,14 @@ defineProps<{
                     data-test="email-password-reset-link-button"
                 >
                     <Spinner v-if="processing" />
-                    Email password reset link
+                    {{ t('Email password reset link') }}
                 </Button>
             </div>
         </Form>
 
         <div class="text-muted-foreground space-x-1 text-center text-sm">
-            <span>Or, return to</span>
-            <TextLink :href="login()">log in</TextLink>
+            <span>{{ t('Or, return to') }}</span>
+            <TextLink :href="login()">{{ t('log in') }}</TextLink>
         </div>
     </div>
 </template>

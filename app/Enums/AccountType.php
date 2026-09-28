@@ -20,16 +20,19 @@ enum AccountType: string
     case CostOfSales = 'COST_OF_SALES';
     case Expense = 'EXPENSE';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Asset => 'Asset',
             self::Liability => 'Liability',
             self::Equity => 'Equity',
             self::Revenue => 'Revenue',
             self::CostOfSales => 'Cost of Sales',
             self::Expense => 'Expense',
-        };
+        });
     }
 
     /**

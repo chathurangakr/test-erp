@@ -4,6 +4,7 @@ import CustomerController from '@/actions/App/Http/Controllers/Customers/Custome
 import Heading from '@/components/Heading.vue';
 import CustomerForm from '@/components/masters/CustomerForm.vue';
 import { index } from '@/routes/customers';
+import { useT } from '@/lib/i18n';
 
 defineOptions({
     layout: {
@@ -13,10 +14,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New customer" />
+    <Head :title="t('New customer')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="New customer" description="Add a party the factory sells products to." />

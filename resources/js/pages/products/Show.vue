@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/products';
 import type { Product } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     product: Product;
@@ -28,6 +29,8 @@ function formatDate(value: string | null): string {
 
     return new Date(value).toLocaleString();
 }
+
+const { t } = useT();
 </script>
 
 <template>
@@ -43,7 +46,7 @@ function formatDate(value: string | null): string {
                     :variant="product.is_active ? 'default' : 'secondary'"
                     class="w-fit"
                 >
-                    {{ product.is_active ? 'Active' : 'Inactive' }}
+                    {{ product.is_active ? t('Active') : t('Inactive') }}
                 </Badge>
             </div>
 
@@ -51,7 +54,7 @@ function formatDate(value: string | null): string {
                 <Button variant="outline" as-child>
                     <Link :href="`${index().url}/${product.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
                 <Form
@@ -64,7 +67,7 @@ function formatDate(value: string | null): string {
                         class="w-full"
                         :disabled="processing"
                     >
-                        {{ product.is_active ? 'Deactivate' : 'Activate' }}
+                        {{ product.is_active ? t('Deactivate') : t('Activate') }}
                     </Button>
                 </Form>
             </div>
@@ -76,19 +79,19 @@ function formatDate(value: string | null): string {
             <dl class="grid gap-6 sm:grid-cols-2">
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Product code
+                        {{ t('Product code') }}
                     </dt>
                     <dd class="mt-1 font-mono text-sm">{{ product.code }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Product name
+                        {{ t('Product name') }}
                     </dt>
                     <dd class="mt-1 text-sm">{{ product.name }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Primary unit of measure
+                        {{ t('Primary unit of measure') }}
                     </dt>
                     <dd class="mt-1 text-sm">
                         {{ product.primary_uom?.code ?? '—' }}
@@ -102,7 +105,7 @@ function formatDate(value: string | null): string {
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Secondary unit of measure
+                        {{ t('Secondary unit of measure') }}
                     </dt>
                     <dd class="mt-1 text-sm">
                         <template v-if="product.secondary_uom">
@@ -116,7 +119,7 @@ function formatDate(value: string | null): string {
                 </div>
                 <div class="sm:col-span-2">
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Description
+                        {{ t('Description') }}
                     </dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">
                         <template v-if="product.description">
@@ -127,7 +130,7 @@ function formatDate(value: string | null): string {
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Created
+                        {{ t('Created') }}
                     </dt>
                     <dd class="mt-1 text-sm">
                         {{ formatDate(product.created_at) }}
@@ -135,7 +138,7 @@ function formatDate(value: string | null): string {
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
-                        Last updated
+                        {{ t('Last updated') }}
                     </dt>
                     <dd class="mt-1 text-sm">
                         {{ formatDate(product.updated_at) }}
@@ -145,8 +148,7 @@ function formatDate(value: string | null): string {
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Stock on hand is not shown here. Inventory is derived from stock
-            transactions and will appear once the inventory ledger is built.
+            {{ t('Stock on hand is not shown here. It is derived from stock transactions — see Stock on Hand or the Stock Ledger.') }}
         </p>
     </div>
 </template>

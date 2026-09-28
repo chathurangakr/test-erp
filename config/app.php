@@ -96,6 +96,9 @@ return [
 
     'locale' => env('APP_LOCALE', 'en'),
 
+    // The screen languages people may choose. English is the record language (RecordText).
+    'locales' => ['en', 'si'],
+
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),

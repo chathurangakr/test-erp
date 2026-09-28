@@ -30,11 +30,14 @@ enum InventoryDirection: string
         return $this === self::Out;
     }
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::In => 'In',
             self::Out => 'Out',
-        };
+        });
     }
 }

@@ -5,8 +5,11 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+
+const { t } = useT();
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -90,20 +93,20 @@ const selectClass =
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Production details</h3>
+            <h3 class="text-sm font-medium">{{ t('Production details') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="production_date">
-                        Production date <span class="text-destructive">*</span>
+                        {{ t('Production date') }} <span class="text-destructive">*</span>
                     </Label>
                     <Input id="production_date" v-model="form.production_date" type="date" required />
                     <InputError :message="form.errors.production_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="warehouse_id">Warehouse <span class="text-destructive">*</span></Label>
+                    <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
                     <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>Select a warehouse…</option>
+                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
                         <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
                             {{ w.code }} — {{ w.name }}
                         </option>
@@ -116,17 +119,17 @@ const selectClass =
         <section class="space-y-4">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class="text-sm font-medium">
-                    Input — {{ recipe.input_code }}
+                    {{ t('Input — :code', { code: recipe.input_code }) }}
                 </h3>
                 <p class="text-muted-foreground text-xs">
-                    Company stock on hand:
+                    {{ t('Company stock on hand:') }}
                     <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
                 </p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="lot_id">Coconut lot <span class="text-destructive">*</span></Label>
+                    <Label for="lot_id">{{ t('Coconut lot') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="lot_id"
                         v-model="form.lot_id"
@@ -142,7 +145,7 @@ const selectClass =
                         </option>
                     </select>
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
-                        Available in this lot:
+                        {{ t('Available in this lot:') }}
                         <span class="font-mono">{{ selectedLotQuantity }}</span>
                         {{ recipe.input_uom }}
                     </p>
@@ -151,7 +154,7 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="quantity">
-                        Quantity to process ({{ recipe.input_uom }})
+                        {{ t('Quantity to process (:uom)', { uom: recipe.input_uom ?? '' }) }}
                         <span class="text-destructive">*</span>
                     </Label>
                     <Input
@@ -163,7 +166,7 @@ const selectClass =
                         required
                     />
                     <p v-if="exceedsLot" class="text-destructive text-xs">
-                        This exceeds the {{ selectedLotQuantity }} available in the selected lot.
+                        {{ t('This exceeds the :quantity available in the selected lot.', { quantity: selectedLotQuantity ?? '' }) }}
                     </p>
                     <InputError :message="form.errors.quantity" />
                 </div>
@@ -172,7 +175,7 @@ const selectClass =
 
         <!-- Derived outputs — read only -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Outputs</h3>
+            <h3 class="text-sm font-medium">{{ t('Outputs') }}</h3>
 
             <div
                 class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
@@ -180,10 +183,10 @@ const selectClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Product</th>
-                            <th class="px-4 py-3 text-right font-medium">Quantity</th>
-                            <th class="px-4 py-3 font-medium">UOM</th>
-                            <th class="px-4 py-3 text-right font-medium">Cost share</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('UOM') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Cost share') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -207,16 +210,12 @@ const selectClass =
             </div>
 
             <p class="text-muted-foreground text-xs">
-                Output quantities are derived from the input — one coconut yields one
-                dehusked coconut and one husk — and cannot be edited. The cost shares are
-                configuration: the consumed inventory value is divided between the outputs
-                in these proportions, so production neither creates nor destroys value.
-                Actual costs are calculated by the ledger when you post.
+                {{ t('Output quantities are derived from the input — one coconut yields one dehusked coconut and one husk — and cannot be edited. The cost shares are configuration: the consumed inventory value is divided between the outputs in these proportions, so production neither creates nor destroys value. Actual costs are calculated by the ledger when you post.') }}
             </p>
         </section>
 
         <div class="grid gap-2">
-            <Label for="prd_notes">Notes</Label>
+            <Label for="prd_notes">{{ t('Notes') }}</Label>
             <textarea
                 id="prd_notes"
                 v-model="form.notes"
@@ -228,7 +227,7 @@ const selectClass =
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

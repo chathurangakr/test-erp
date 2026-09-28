@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
 import type { OptionRef, Paginated, DeliveryRow, StatusOption } from '@/types';
+
+const { t } = useT();
 
 const props = defineProps<{
     deliveries: Paginated<DeliveryRow>;
@@ -58,37 +61,37 @@ const controlClass =
 </script>
 
 <template>
-    <Head title="Deliveries" />
+    <Head :title="t('Deliveries')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Deliveries" description="Dispatch notes. Stock leaves the warehouse only when a delivery is posted." />
             <Button v-if="can('sales.delivery_create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New delivery</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New delivery') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div class="relative">
                 <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input v-model="search" type="search" placeholder="Search delivery number, customer or vehicle…" class="pl-9" aria-label="Search deliveries" />
-                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" aria-label="Clear search" @click="search = ''; applyFilters(true)">
+                <Input v-model="search" type="search" :placeholder="t('Search delivery number, customer or vehicle…')" class="pl-9" :aria-label="t('Search deliveries')" />
+                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" :aria-label="t('Clear search')" @click="search = ''; applyFilters(true)">
                     <X class="size-4" />
                 </button>
             </div>
-            <select v-model="status" :class="controlClass" aria-label="Filter by status">
-                <option value="">All statuses</option>
+            <select v-model="status" :class="controlClass" :aria-label="t('Filter by status')">
+                <option value="">{{ t('All statuses') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
-            <select v-model="customerId" :class="controlClass" aria-label="Filter by customer">
-                <option value="">All customers</option>
+            <select v-model="customerId" :class="controlClass" :aria-label="t('Filter by customer')">
+                <option value="">{{ t('All customers') }}</option>
                 <option v-for="c in customers" :key="c.id" :value="String(c.id)">{{ c.code }} — {{ c.name }}</option>
             </select>
         </div>
 
         <div v-if="deliveries.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">
-            <p class="font-medium">No deliveries found</p>
-            <p class="text-muted-foreground text-sm">Deliveries can be raised against a sales order, or directly.</p>
+            <p class="font-medium">{{ t('No deliveries found') }}</p>
+            <p class="text-muted-foreground text-sm">{{ t('Deliveries can be raised against a sales order, or directly.') }}</p>
         </div>
 
         <template v-else>
@@ -96,15 +99,15 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Delivery No</th>
-                            <th class="px-4 py-3 font-medium">Customer</th>
-                            <th class="px-4 py-3 font-medium">SO</th>
-                            <th class="px-4 py-3 font-medium">Whs</th>
-                            <th class="px-4 py-3 font-medium">Date</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 text-right font-medium">Sales</th>
-                            <th class="px-4 py-3 text-right font-medium">COGS</th>
-                            <th class="px-4 py-3 text-right font-medium">Profit</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Delivery No') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('SO') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Whs') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Sales') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('COGS') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Profit') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -135,16 +138,16 @@ const controlClass =
                         <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt class="font-medium">Date</dt><dd>{{ row.delivery_date }}</dd></div>
-                        <div><dt class="font-medium">Sales</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
-                        <div><dt class="font-medium">COGS</dt><dd class="font-mono">{{ row.cogs_total ?? '—' }}</dd></div>
-                        <div><dt class="font-medium">Profit</dt><dd class="font-mono">{{ row.gross_profit ?? '—' }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ row.delivery_date }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Sales') }}</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('COGS') }}</dt><dd class="font-mono">{{ row.cogs_total ?? '—' }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Profit') }}</dt><dd class="font-mono">{{ row.gross_profit ?? '—' }}</dd></div>
                     </dl>
                 </Link>
             </div>
 
             <div v-if="deliveries.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">Showing {{ deliveries.from }}–{{ deliveries.to }} of {{ deliveries.total }}</p>
+                <p class="text-muted-foreground text-sm">{{ t('Showing :from–:to of :total', { from: deliveries.from ?? 0, to: deliveries.to ?? 0, total: deliveries.total }) }}</p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button v-for="link in deliveries.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })" v-html="link.label" />
                 </div>

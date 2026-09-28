@@ -16,6 +16,7 @@ use App\Models\PurchaseOrderLine;
 use App\Services\Purchasing\LandedCostAllocator;
 use App\Services\Purchasing\PurchaseOrderStatusUpdater;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -109,7 +110,7 @@ class PostGoodsReceipt
                     'transaction_date' => $locked->receipt_date,
                     'source_type' => GoodsReceipt::class,
                     'source_id' => $locked->getKey(),
-                    'notes' => __('Goods receipt :reference', ['reference' => $locked->grn_number]),
+                    'notes' => RecordText::of('Goods receipt :reference', ['reference' => $locked->grn_number]),
                     'posted_by' => $userId ?? auth()->id(),
                 ],
             );
@@ -305,7 +306,7 @@ class PostGoodsReceipt
             'source_type' => GoodsReceipt::class,
             'source_id' => $receipt->getKey(),
             'received_at' => $receipt->receipt_date,
-            'notes' => __('Created by goods receipt :reference', ['reference' => $receipt->grn_number]),
+            'notes' => RecordText::of('Created by goods receipt :reference', ['reference' => $receipt->grn_number]),
         ]);
     }
 }

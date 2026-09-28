@@ -15,6 +15,7 @@ use App\Models\SalesOrderLine;
 use App\Services\Inventory\StockQueryService;
 use App\Services\Sales\SalesOrderStatusUpdater;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -91,7 +92,7 @@ class PostDelivery
                     'transaction_date' => $locked->delivery_date,
                     'source_type' => Delivery::class,
                     'source_id' => $locked->getKey(),
-                    'notes' => __('Delivery :reference', ['reference' => $locked->delivery_number]),
+                    'notes' => RecordText::of('Delivery :reference', ['reference' => $locked->delivery_number]),
                     'posted_by' => $userId ?? auth()->id(),
                 ],
             );

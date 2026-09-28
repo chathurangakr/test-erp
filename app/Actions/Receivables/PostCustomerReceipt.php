@@ -15,6 +15,7 @@ use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountingPolicy;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -65,7 +66,7 @@ class PostCustomerReceipt
                 'fiscal_period_id' => $period->id,
                 'source_type' => CustomerReceipt::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Customer receipt :reference from :customer', [
+                'description' => RecordText::of('Customer receipt :reference from :customer', [
                     'reference' => $locked->receipt_number,
                     'customer' => $locked->customer?->code,
                 ]),
@@ -82,7 +83,7 @@ class PostCustomerReceipt
 
             $entry->lines()->create([
                 'account_id' => $this->policy->tradeReceivablesAccount()->id,
-                'description' => __('Settled by :customer', ['customer' => $locked->customer?->code ?? __('customer')]),
+                'description' => RecordText::of('Settled by :customer', ['customer' => $locked->customer?->code ?? RecordText::of('customer')]),
                 'debit' => DecimalMath::cost('0'),
                 'credit' => DecimalMath::cost(DecimalMath::of($locked->amount)),
             ]);

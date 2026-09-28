@@ -3,6 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PartyContactFields } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     party?: Partial<PartyContactFields> | null;
@@ -11,15 +12,17 @@ defineProps<{
 
 const textareaClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
     <div class="space-y-6">
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Contact</h3>
+            <h3 class="text-sm font-medium">{{ t('Contact') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="contact_person">Contact person</Label>
+                    <Label for="contact_person">{{ t('Contact person') }}</Label>
                     <Input
                         id="contact_person"
                         name="contact_person"
@@ -29,7 +32,7 @@ const textareaClass =
                     <InputError :message="errors.contact_person" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="email">Email</Label>
+                    <Label for="email">{{ t('Email') }}</Label>
                     <Input
                         id="email"
                         name="email"
@@ -40,7 +43,7 @@ const textareaClass =
                     <InputError :message="errors.email" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="phone">Phone</Label>
+                    <Label for="phone">{{ t('Phone') }}</Label>
                     <Input
                         id="phone"
                         name="phone"
@@ -50,7 +53,7 @@ const textareaClass =
                     <InputError :message="errors.phone" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="secondary_phone">Secondary phone</Label>
+                    <Label for="secondary_phone">{{ t('Secondary phone') }}</Label>
                     <Input
                         id="secondary_phone"
                         name="secondary_phone"
@@ -63,10 +66,10 @@ const textareaClass =
         </section>
 
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Address</h3>
+            <h3 class="text-sm font-medium">{{ t('Address') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="address_line_1">Address line 1</Label>
+                    <Label for="address_line_1">{{ t('Address line 1') }}</Label>
                     <Input
                         id="address_line_1"
                         name="address_line_1"
@@ -76,7 +79,7 @@ const textareaClass =
                     <InputError :message="errors.address_line_1" />
                 </div>
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="address_line_2">Address line 2</Label>
+                    <Label for="address_line_2">{{ t('Address line 2') }}</Label>
                     <Input
                         id="address_line_2"
                         name="address_line_2"
@@ -86,7 +89,7 @@ const textareaClass =
                     <InputError :message="errors.address_line_2" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="city">City</Label>
+                    <Label for="city">{{ t('City') }}</Label>
                     <Input
                         id="city"
                         name="city"
@@ -96,7 +99,7 @@ const textareaClass =
                     <InputError :message="errors.city" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="district">District</Label>
+                    <Label for="district">{{ t('District') }}</Label>
                     <Input
                         id="district"
                         name="district"
@@ -109,10 +112,10 @@ const textareaClass =
         </section>
 
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">Registration</h3>
+            <h3 class="text-sm font-medium">{{ t('Registration') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="registration_number">Registration number</Label>
+                    <Label for="registration_number">{{ t('Registration number') }}</Label>
                     <Input
                         id="registration_number"
                         name="registration_number"
@@ -122,7 +125,7 @@ const textareaClass =
                     <InputError :message="errors.registration_number" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="tax_number">Tax number</Label>
+                    <Label for="tax_number">{{ t('Tax number') }}</Label>
                     <Input
                         id="tax_number"
                         name="tax_number"
@@ -135,7 +138,7 @@ const textareaClass =
         </section>
 
         <div class="grid gap-2">
-            <Label for="notes">Notes</Label>
+            <Label for="notes">{{ t('Notes') }}</Label>
             <textarea
                 id="notes"
                 name="notes"

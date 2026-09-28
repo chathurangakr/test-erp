@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/goods-receipts';
 import type { GoodsReceiptRow, OptionRef, Paginated, StatusOption } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     receipts: Paginated<GoodsReceiptRow>;
@@ -16,6 +17,8 @@ const props = defineProps<{
     suppliers: OptionRef[];
     statuses: StatusOption[];
 }>();
+
+const { t } = useT();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Goods receipts', href: index() }] } });
 
@@ -53,37 +56,37 @@ const controlClass =
 </script>
 
 <template>
-    <Head title="Goods receipts" />
+    <Head :title="t('Goods receipts')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading title="Goods receipts" description="Stock enters inventory only when a receipt is posted." />
             <Button v-if="can('purchasing.grn_create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New goods receipt</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New goods receipt') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div class="relative">
                 <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input v-model="search" type="search" placeholder="Search GRN number or supplier…" class="pl-9" aria-label="Search goods receipts" />
-                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" aria-label="Clear search" @click="search = ''; applyFilters(true)">
+                <Input v-model="search" type="search" :placeholder="t('Search GRN number or supplier…')" class="pl-9" :aria-label="t('Search goods receipts')" />
+                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" :aria-label="t('Clear search')" @click="search = ''; applyFilters(true)">
                     <X class="size-4" />
                 </button>
             </div>
-            <select v-model="status" :class="controlClass" aria-label="Filter by status">
-                <option value="">All statuses</option>
+            <select v-model="status" :class="controlClass" :aria-label="t('Filter by status')">
+                <option value="">{{ t('All statuses') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
-            <select v-model="supplierId" :class="controlClass" aria-label="Filter by supplier">
-                <option value="">All suppliers</option>
+            <select v-model="supplierId" :class="controlClass" :aria-label="t('Filter by supplier')">
+                <option value="">{{ t('All suppliers') }}</option>
                 <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }} — {{ s.name }}</option>
             </select>
         </div>
 
         <div v-if="receipts.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">
-            <p class="font-medium">No goods receipts found</p>
-            <p class="text-muted-foreground text-sm">Receipts can be raised against a purchase order, or directly.</p>
+            <p class="font-medium">{{ t('No goods receipts found') }}</p>
+            <p class="text-muted-foreground text-sm">{{ t('Receipts can be raised against a purchase order, or directly.') }}</p>
         </div>
 
         <template v-else>
@@ -91,15 +94,15 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">GRN No</th>
-                            <th class="px-4 py-3 font-medium">Supplier</th>
-                            <th class="px-4 py-3 font-medium">PO</th>
-                            <th class="px-4 py-3 font-medium">Whs</th>
-                            <th class="px-4 py-3 font-medium">Date</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 text-right font-medium">Material</th>
-                            <th class="px-4 py-3 text-right font-medium">Landed</th>
-                            <th class="px-4 py-3 text-right font-medium">Total cost</th>
+                            <th class="px-4 py-3 font-medium">{{ t('GRN No') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Supplier') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('PO') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Whs') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Material') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Landed') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Total cost') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,16 +133,16 @@ const controlClass =
                         <Badge :variant="badgeVariant(grn.status)">{{ grn.status_label }}</Badge>
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt class="font-medium">Date</dt><dd>{{ grn.receipt_date }}</dd></div>
-                        <div><dt class="font-medium">Material</dt><dd class="font-mono">{{ grn.material_total }}</dd></div>
-                        <div><dt class="font-medium">Landed</dt><dd class="font-mono">{{ grn.landed_total }}</dd></div>
-                        <div><dt class="font-medium">Total cost</dt><dd class="font-mono">{{ grn.grand_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ grn.receipt_date }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Material') }}</dt><dd class="font-mono">{{ grn.material_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Landed') }}</dt><dd class="font-mono">{{ grn.landed_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Total cost') }}</dt><dd class="font-mono">{{ grn.grand_total }}</dd></div>
                     </dl>
                 </Link>
             </div>
 
             <div v-if="receipts.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">Showing {{ receipts.from }}–{{ receipts.to }} of {{ receipts.total }}</p>
+                <p class="text-muted-foreground text-sm">{{ t('Showing :from–:to of :total', { from: receipts.from ?? 0, to: receipts.to ?? 0, total: receipts.total }) }}</p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button v-for="link in receipts.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })" v-html="link.label" />
                 </div>

@@ -9,6 +9,7 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -26,6 +27,8 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
+
+const { t } = useT();
 </script>
 
 <template>
@@ -39,7 +42,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             <aside class="w-full max-w-xl lg:w-48">
                 <nav
                     class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Settings"
+                    :aria-label="t('Settings')"
                 >
                     <Button
                         v-for="item in sidebarNavItems"
@@ -53,7 +56,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                     >
                         <Link :href="item.href">
                             <component :is="item.icon" class="h-4 w-4" />
-                            {{ item.title }}
+                            {{ t(item.title) }}
                         </Link>
                     </Button>
                 </nav>

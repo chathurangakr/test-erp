@@ -16,13 +16,16 @@ enum ProductionType: string
     case HuskChipping = 'HUSK_CHIPPING';
     case Copra = 'COPRA';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Dehusking => 'Dehusking',
             self::HuskChipping => 'Husk chipping',
             self::Copra => 'Copra production',
-        };
+        });
     }
 
     /**

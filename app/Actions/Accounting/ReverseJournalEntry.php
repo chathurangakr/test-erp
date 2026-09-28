@@ -7,6 +7,7 @@ use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -67,7 +68,7 @@ class ReverseJournalEntry
                 'fiscal_period_id' => $period->id,
                 'source_type' => $locked->source_type,
                 'source_id' => $locked->source_id,
-                'description' => $attributes['description'] ?? __('Reversal of :reference — :description', [
+                'description' => $attributes['description'] ?? RecordText::of('Reversal of :reference — :description', [
                     'reference' => $locked->journal_number,
                     'description' => $locked->description,
                 ]),

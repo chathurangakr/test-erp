@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/warehouses';
 import type { Paginated, Warehouse, ProductFilters } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     warehouses: Paginated<Warehouse>;
@@ -63,18 +64,20 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
     { value: 'active', label: 'Active' },
     { value: 'inactive', label: 'Inactive' },
 ];
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Warehouses" />
+    <Head :title="t('Warehouses')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Heading title="Warehouses" description="Stock locations. Inventory movements will require a warehouse." />
+            <Heading :title="t('Warehouses')" :description="t('Stock locations. Inventory movements will require a warehouse.')" />
             <Button v-if="can('warehouses.manage')" as-child class="w-full sm:w-auto">
                 <Link :href="`${index().url}/create`">
                     <Plus class="size-4" />
-                    New warehouse
+                    {{ t('New warehouse') }}
                 </Link>
             </Button>
         </div>
@@ -85,22 +88,22 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 <Input
                     v-model="search"
                     type="search"
-                    placeholder="Search by code or name…"
+                    :placeholder="t('Search by code or name…')"
                     class="pl-9"
-                    aria-label="Search warehouses"
+                    :aria-label="t('Search warehouses')"
                 />
                 <button
                     v-if="search"
                     type="button"
                     class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                    aria-label="Clear search"
+                    :aria-label="t('Clear search')"
                     @click="clearSearch"
                 >
                     <X class="size-4" />
                 </button>
             </div>
 
-            <div class="bg-muted inline-flex shrink-0 rounded-md p-1" role="group" aria-label="Filter by status">
+            <div class="bg-muted inline-flex shrink-0 rounded-md p-1" role="group" :aria-label="t('Filter by status')">
                 <button
                     v-for="option in statusOptions"
                     :key="option.value"
@@ -114,7 +117,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                     :aria-pressed="status === option.value"
                     @click="status = option.value"
                 >
-                    {{ option.label }}
+                    {{ t(option.label) }}
                 </button>
             </div>
         </div>
@@ -123,9 +126,9 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
             v-if="warehouses.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No warehouses found</p>
+            <p class="font-medium">{{ t('No warehouses found') }}</p>
             <p class="text-muted-foreground text-sm">
-                {{ filters.search ? 'Try a different search term.' : 'Create your first warehouse to get started.' }}
+                {{ filters.search ? t('Try a different search term.') : t('Create your first warehouse to get started.') }}
             </p>
         </div>
 
@@ -134,11 +137,11 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Code</th>
-                            <th class="px-4 py-3 font-medium">Name</th>
-                            <th class="px-4 py-3 font-medium">Default</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Default') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,12 +157,12 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             </td>
                             <td class="px-4 py-3">{{ warehouse.name ?? '—' }}</td>
                             <td class="px-4 py-3">
-                                <Badge v-if="warehouse.is_default" variant="default">Default</Badge>
+                                <Badge v-if="warehouse.is_default" variant="default">{{ t('Default') }}</Badge>
                                 <span v-else class="text-muted-foreground">—</span>
                             </td>
                             <td class="px-4 py-3">
                                 <Badge :variant="warehouse.is_active ? 'default' : 'secondary'">
-                                    {{ warehouse.is_active ? 'Active' : 'Inactive' }}
+                                    {{ warehouse.is_active ? t('Active') : t('Inactive') }}
                                 </Badge>
                             </td>
                             <td class="px-4 py-3">
@@ -167,7 +170,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                     <Button variant="ghost" size="sm" as-child>
                                         <Link :href="`${index().url}/${warehouse.id}/edit`">
                                             <Pencil class="size-3.5" />
-                                            Edit
+                                            {{ t('Edit') }}
                                         </Link>
                                     </Button>
                                     <Form
@@ -175,7 +178,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                                         v-slot="{ processing }"
                                     >
                                         <Button type="submit" variant="outline" size="sm" :disabled="processing">
-                                            {{ warehouse.is_active ? 'Deactivate' : 'Activate' }}
+                                            {{ warehouse.is_active ? t('Deactivate') : t('Activate') }}
                                         </Button>
                                     </Form>
                                 </div>
@@ -199,23 +202,23 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             <p class="mt-1 truncate font-medium">{{ warehouse.name }}</p>
                         </div>
                         <div class="flex shrink-0 flex-col items-end gap-1">
-                            <Badge v-if="warehouse.is_default" variant="default">Default</Badge>
+                            <Badge v-if="warehouse.is_default" variant="default">{{ t('Default') }}</Badge>
                             <Badge :variant="warehouse.is_active ? 'default' : 'secondary'">
-                                {{ warehouse.is_active ? 'Active' : 'Inactive' }}
+                                {{ warehouse.is_active ? t('Active') : t('Inactive') }}
                             </Badge>
                         </div>
                     </div>
 
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div>
-                            <dt class="font-medium">Description</dt>
+                            <dt class="font-medium">{{ t('Description') }}</dt>
                             <dd>{{ warehouse.description ?? '—' }}</dd>
                         </div>
                     </dl>
 
                     <div v-if="can('warehouses.manage')" class="mt-4 flex gap-2">
                         <Button variant="outline" size="sm" class="flex-1" as-child>
-                            <Link :href="`${index().url}/${warehouse.id}/edit`">Edit</Link>
+                            <Link :href="`${index().url}/${warehouse.id}/edit`">{{ t('Edit') }}</Link>
                         </Button>
                         <Form
                             v-bind="WarehouseStatusController.update.form(warehouse.id)"
@@ -223,7 +226,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
                             v-slot="{ processing }"
                         >
                             <Button type="submit" variant="outline" size="sm" class="w-full" :disabled="processing">
-                                {{ warehouse.is_active ? 'Deactivate' : 'Activate' }}
+                                {{ warehouse.is_active ? t('Deactivate') : t('Activate') }}
                             </Button>
                         </Form>
                     </div>
@@ -232,7 +235,7 @@ const statusOptions: { value: ProductFilters['status']; label: string }[] = [
 
             <div v-if="warehouses.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <p class="text-muted-foreground text-sm">
-                    Showing {{ warehouses.from }}–{{ warehouses.to }} of {{ warehouses.total }}
+                    {{ t('Showing :from–:to of :total', { from: warehouses.from ?? 0, to: warehouses.to ?? 0, total: warehouses.total }) }}
                 </p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button

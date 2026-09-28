@@ -2,8 +2,11 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import HuskChippingForm from '@/components/production/HuskChippingForm.vue';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/husk-chipping';
 import type { HuskChippingRecipeInfo, OptionRef, ProductionLotOption } from '@/types';
+
+const { t } = useT();
 
 defineProps<{
     warehouses: OptionRef[];
@@ -19,7 +22,7 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="New husk chipping" />
+    <Head :title="t('New husk chipping')" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="New husk chipping"
@@ -29,7 +32,7 @@ defineOptions({
             <HuskChippingForm
                 method="post"
                 :action="index().url"
-                submit-label="Save draft"
+                :submit-label="t('Save draft')"
                 :cancel-href="index().url"
                 :warehouses="warehouses"
                 :lots="lots"

@@ -20,15 +20,18 @@ enum PurchaseOrderStatus: string
     case Received = 'RECEIVED';
     case Cancelled = 'CANCELLED';
 
+    /**
+     * The display name, in the reader's language. Never save it — see App\Support\RecordText.
+     */
     public function label(): string
     {
-        return match ($this) {
+        return __(match ($this) {
             self::Draft => 'Draft',
             self::Approved => 'Approved',
             self::PartiallyReceived => 'Partially received',
             self::Received => 'Received',
             self::Cancelled => 'Cancelled',
-        };
+        });
     }
 
     /** Only a draft may have its lines and header freely changed. */

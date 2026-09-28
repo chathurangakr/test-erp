@@ -7,6 +7,7 @@ use App\Enums\InventoryTransactionType;
 use App\Models\InventoryTransaction;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -98,7 +99,7 @@ class ReverseInventoryTransaction
                     'source_type' => $original->source_type,
                     'source_id' => $original->source_id,
                     'reversal_of_id' => $original->getKey(),
-                    'notes' => $attributes['notes'] ?? __('Reversal of :reference', [
+                    'notes' => $attributes['notes'] ?? RecordText::of('Reversal of :reference', [
                         'reference' => $original->reference,
                     ]),
                     'posted_by' => $attributes['posted_by'] ?? null,

@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+// The language switch — open to guests so the sign-in screen can be switched too.
+Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');

@@ -2,8 +2,11 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import CopraForm from '@/components/production/CopraForm.vue';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/copra';
 import type { CopraRecipeInfo, OptionRef, ProductionLotOption } from '@/types';
+
+const { t } = useT();
 
 defineProps<{
     warehouses: OptionRef[];
@@ -19,7 +22,7 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="New copra production" />
+    <Head :title="t('New copra production')" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="New copra production"
@@ -29,7 +32,7 @@ defineOptions({
             <CopraForm
                 method="post"
                 :action="index().url"
-                submit-label="Save draft"
+                :submit-label="t('Save draft')"
                 :cancel-href="index().url"
                 :warehouses="warehouses"
                 :lots="lots"

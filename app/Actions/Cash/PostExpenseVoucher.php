@@ -13,6 +13,7 @@ use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
+use App\Support\RecordText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -64,7 +65,7 @@ class PostExpenseVoucher
                 'fiscal_period_id' => $period->id,
                 'source_type' => ExpenseVoucher::class,
                 'source_id' => $locked->getKey(),
-                'description' => __('Expense voucher :reference paid from :account', [
+                'description' => RecordText::of('Expense voucher :reference paid from :account', [
                     'reference' => $locked->voucher_number,
                     'account' => $configuration->display_name,
                 ]),
