@@ -4,6 +4,7 @@ import Heading from '@/components/Heading.vue';
 import SalesInvoiceForm from '@/components/receivables/SalesInvoiceForm.vue';
 import { create, index } from '@/routes/sales-invoices';
 import type { BillableDeliveryLine, OptionRef } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     customers: (OptionRef & { credit_days?: number })[];
@@ -16,10 +17,12 @@ defineProps<{
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Sales invoices', href: index() }, { title: 'New', href: index() }] },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New sales invoice" />
+    <Head :title="t('New sales invoice')" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="New sales invoice"

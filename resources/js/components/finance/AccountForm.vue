@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import type { AccountFormValues, AccountOption, StatusOption } from '@/types';
 
 const props = defineProps<{
@@ -51,33 +52,35 @@ function submit(): void {
 
 const selectClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-                <Label for="code">Code <span class="text-destructive">*</span></Label>
+                <Label for="code">{{ t('Code') }} <span class="text-destructive">*</span></Label>
                 <Input id="code" v-model="form.code" required maxlength="20" />
                 <InputError :message="form.errors.code" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="name">Name <span class="text-destructive">*</span></Label>
+                <Label for="name">{{ t('Name') }} <span class="text-destructive">*</span></Label>
                 <Input id="name" v-model="form.name" required maxlength="255" />
                 <InputError :message="form.errors.name" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="account_type">Type <span class="text-destructive">*</span></Label>
+                <Label for="account_type">{{ t('Type') }} <span class="text-destructive">*</span></Label>
                 <select id="account_type" v-model="form.account_type" required :class="selectClass">
-                    <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
+                    <option v-for="option in types" :key="option.value" :value="option.value">{{ option.label }}</option>
                 </select>
                 <InputError :message="form.errors.account_type" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="normal_balance">Normal balance <span class="text-destructive">*</span></Label>
+                <Label for="normal_balance">{{ t('Normal balance') }} <span class="text-destructive">*</span></Label>
                 <select id="normal_balance" v-model="form.normal_balance" required :class="selectClass">
                     <option v-for="b in normalBalances" :key="b.value" :value="b.value">{{ b.label }}</option>
                 </select>
@@ -85,9 +88,9 @@ const selectClass =
             </div>
 
             <div class="grid gap-2 sm:col-span-2">
-                <Label for="parent_id">Parent account</Label>
+                <Label for="parent_id">{{ t('Parent account') }}</Label>
                 <select id="parent_id" v-model="form.parent_id" :class="selectClass">
-                    <option value="">None — this is a top-level account</option>
+                    <option value="">{{ t('None — this is a top-level account') }}</option>
                     <option v-for="p in parents" :key="p.id" :value="String(p.id)">
                         {{ p.code }} — {{ p.name }}
                     </option>
@@ -96,7 +99,7 @@ const selectClass =
             </div>
 
             <div class="grid gap-2 sm:col-span-2">
-                <Label for="description">Description</Label>
+                <Label for="description">{{ t('Description') }}</Label>
                 <textarea
                     id="description"
                     v-model="form.description"
@@ -111,10 +114,9 @@ const selectClass =
             <label class="flex items-start gap-3 text-sm">
                 <input v-model="form.is_control_account" type="checkbox" class="mt-1" />
                 <span>
-                    <span class="font-medium">Control account</span>
+                    <span class="font-medium">{{ t('Control account') }}</span>
                     <span class="text-muted-foreground block text-xs">
-                        Reconciled from a subsidiary ledger. Manual journal lines are blocked; only
-                        the system action that owns that ledger may post here.
+                        {{ t('Reconciled from a subsidiary ledger. Manual journal lines are blocked; only the system action that owns that ledger may post here.') }}
                     </span>
                 </span>
             </label>
@@ -122,10 +124,9 @@ const selectClass =
             <label class="flex items-start gap-3 text-sm">
                 <input v-model="form.allow_manual_posting" type="checkbox" class="mt-1" />
                 <span>
-                    <span class="font-medium">Allow manual posting</span>
+                    <span class="font-medium">{{ t('Allow manual posting') }}</span>
                     <span class="text-muted-foreground block text-xs">
-                        Turn this off for group headers, so a total is never posted to alongside its
-                        own children.
+                        {{ t('Turn this off for group headers, so a total is never posted to alongside its own children.') }}
                     </span>
                 </span>
             </label>
@@ -133,17 +134,17 @@ const selectClass =
             <label class="flex items-start gap-3 text-sm">
                 <input v-model="form.is_active" type="checkbox" class="mt-1" />
                 <span>
-                    <span class="font-medium">Active</span>
+                    <span class="font-medium">{{ t('Active') }}</span>
                     <span class="text-muted-foreground block text-xs">
-                        An account with history is deactivated, never deleted.
+                        {{ t('An account with history is deactivated, never deleted.') }}
                     </span>
                 </span>
             </label>
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { index } from '@/routes/fund-transfers';
 import type { CashBankAccountOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     accounts: CashBankAccountOption[];
@@ -23,6 +24,8 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 
 const today = businessToday();
 
@@ -50,7 +53,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="New fund transfer" />
+    <Head :title="t('New fund transfer')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -61,13 +64,13 @@ const selectClass =
         <form class="max-w-3xl space-y-8" @submit.prevent="submit">
             <section class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="transfer_date">Date <span class="text-destructive">*</span></Label>
+                    <Label for="transfer_date">{{ t('Date') }} <span class="text-destructive">*</span></Label>
                     <Input id="transfer_date" v-model="form.transfer_date" type="date" required />
                     <InputError :message="form.errors.transfer_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="amount">Amount ({{ currency }}) <span class="text-destructive">*</span></Label>
+                    <Label for="amount">{{ t('Amount (:currency)', { currency }) }} <span class="text-destructive">*</span></Label>
                     <Input
                         id="amount"
                         v-model="form.amount"
@@ -81,9 +84,9 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="from">From <span class="text-destructive">*</span></Label>
+                    <Label for="from">{{ t('From') }} <span class="text-destructive">*</span></Label>
                     <select id="from" v-model="form.from_cash_bank_account_id" required :class="selectClass">
-                        <option value="" disabled>Select…</option>
+                        <option value="" disabled>{{ t('Select…') }}</option>
                         <option v-for="a in accounts" :key="a.id" :value="a.id">
                             {{ a.code }} — {{ a.name }} ({{ a.kind }})
                         </option>
@@ -92,43 +95,40 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="to">To <span class="text-destructive">*</span></Label>
+                    <Label for="to">{{ t('To') }} <span class="text-destructive">*</span></Label>
                     <select id="to" v-model="form.to_cash_bank_account_id" required :class="selectClass">
-                        <option value="" disabled>Select…</option>
+                        <option value="" disabled>{{ t('Select…') }}</option>
                         <option v-for="a in accounts" :key="a.id" :value="a.id">
                             {{ a.code }} — {{ a.name }} ({{ a.kind }})
                         </option>
                     </select>
                     <InputError :message="form.errors.to_cash_bank_account_id" />
                     <p v-if="sameAccount" class="text-destructive text-xs">
-                        A transfer must be between two different accounts.
+                        {{ t('A transfer must be between two different accounts.') }}
                     </p>
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="reference">Reference</Label>
+                    <Label for="reference">{{ t('Reference') }}</Label>
                     <Input id="reference" v-model="form.reference" maxlength="100" />
                     <InputError :message="form.errors.reference" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="description">Description</Label>
+                    <Label for="description">{{ t('Description') }}</Label>
                     <Input id="description" v-model="form.description" maxlength="500" />
                     <InputError :message="form.errors.description" />
                 </div>
             </section>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button type="submit" :disabled="form.processing || sameAccount">Save draft</Button>
-                <Button variant="outline" as-child><a :href="index().url">Cancel</a></Button>
+                <Button type="submit" :disabled="form.processing || sameAccount">{{ t('Save draft') }}</Button>
+                <Button variant="outline" as-child><a :href="index().url">{{ t('Cancel') }}</a></Button>
             </div>
         </form>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Posting debits the destination and credits the source with the same figure, so the
-            two sides cannot disagree. No expense, no revenue, no payable, no receivable and no
-            inventory — the company is neither richer nor poorer afterwards. There is no edit
-            screen: cancel an incorrect draft and make a new one, or reverse it if it has posted.
+            {{ t('Posting debits the destination and credits the source with the same figure, so the two sides cannot disagree. No expense, no revenue, no payable, no receivable and no inventory — the company is neither richer nor poorer afterwards. There is no edit screen: cancel an incorrect draft and make a new one, or reverse it if it has posted.') }}
         </p>
     </div>
 </template>

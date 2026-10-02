@@ -614,7 +614,7 @@ Full detail lives in `docs/KIOSK.md` and `docs/DATA_MODEL.md` T-1.
 
 ---
 
-## Language rules (Sinhala + English — Step 1 implemented)
+## Language rules (Sinhala + English — implemented)
 
 Full detail lives in `docs/LOCALISATION.md`.
 
@@ -628,7 +628,9 @@ Full detail lives in `docs/LOCALISATION.md`.
 - **Enum `label()` values are display names** and are translated; never save one.
 - **Language is per person** (`users.locale`, `SetLocale` middleware); simple mode stays per
   device. Terminology: plain Sinhala, accounting terms with the English in brackets.
-- **Finance screens are Step 2 — not yet translated.**
+- **Every screen is bilingual, Finance included.** Terminology: `docs/SINHALA_GLOSSARY.md`.
+- **The test suite runs at a fixed moment** (`Tests\TestCase::FIXED_NOW`, inside September 2026,
+  where its scenarios live). Tests needing another moment travel there themselves.
 
 ---
 
@@ -685,8 +687,8 @@ enforced server-side, user deactivation and last-administrator protection), and 
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts), and **simple mode** (big-button Sinhala/English
 screens at `/kiosk` for receiving, dispatch, the three production jobs and stock, where Done saves
-and posts in one transaction) with **Sri Lanka business time** throughout, and **Sinhala / English** for every screen except
-Finance (each person chooses; saved records stay English).
+and posts in one transaction) with **Sri Lanka business time** throughout, and **Sinhala / English** for every screen
+(each person chooses; saved records stay English).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle,
 credit notes, sales returns and allowances, customer and supplier advances, production expense

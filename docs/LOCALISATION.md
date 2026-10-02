@@ -1,8 +1,8 @@
 # Languages — Sinhala and English
 
-> **Status:** Step 1 ✅ **IMPLEMENTED** — every screen except Finance is bilingual. Step 2 (the
-> Finance screens) is **not started**. Simple mode has been bilingual since Phase 17
-> (`docs/KIOSK.md`).
+> **Status:** ✅ **IMPLEMENTED** — every screen is bilingual, Finance included (Step 1: operations,
+> admin and sign-in; Step 2: Finance). Simple mode has been bilingual since Phase 17
+> (`docs/KIOSK.md`). Terminology reference: `docs/SINHALA_GLOSSARY.md`.
 
 ---
 
@@ -56,14 +56,13 @@ editing the values in `lang/si.json` only.
 
 `tests/Feature/Localisation/LocalisationTest.php`: the choice is saved per person; guests can
 switch; only supported languages are accepted; statuses translate; saved records stay English
-even when the poster uses Sinhala; no `RecordText` key is translated; **every `t('…')` on a
-Step-1 screen has a Sinhala entry**; every status/type name has one.
+even when the poster uses Sinhala; no `RecordText` key is translated; **every `t('…')` on every
+screen has a Sinhala entry**; every status/type name has one.
 
 ## 6. Not done yet (`TBD`)
 
 | # | Item |
 | --- | --- |
-| 1 | **Step 2 — the Finance screens** (`resources/js/pages/finance/**`, finance form components, finance server messages). They still show English. |
-| 2 | Relative times from the server ("2 days ago" on passkeys) stay English. |
-| 3 | The Laravel promotional text on the public Welcome page stays English. |
-| 4 | A native speaker's review of all Sinhala wording. |
+| 1 | Relative times from the server ("2 days ago" on passkeys) stay English. |
+| 2 | The Laravel promotional text on the public Welcome page stays English. |
+| 3 | A native speaker's review of all Sinhala wording. |

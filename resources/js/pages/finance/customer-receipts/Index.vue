@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/customer-receipts';
 import type { OptionRef, Paginated, StatusOption, CustomerReceiptRow } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     receipts: Paginated<CustomerReceiptRow>;
@@ -42,34 +43,36 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
 const controlClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Customer receipts" />
+    <Head :title="t('Customer receipts')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading
                 title="Customer receipts"
-                :description="`Money received from customers, in ${currency}. Every receipt is allocated to invoices.`"
+                :description="t('Money received from customers, in :currency. Every receipt is allocated to invoices.', { currency })"
             />
             <Button v-if="can('finance.ar.receipt_create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New receipt</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New receipt') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
             <div class="grid gap-1.5">
-                <label for="f-customer" class="text-sm font-medium">Customer</label>
+                <label for="f-customer" class="text-sm font-medium">{{ t('Customer') }}</label>
                 <select id="f-customer" v-model="customerId" :class="controlClass">
-                    <option value="">All customers</option>
+                    <option value="">{{ t('All customers') }}</option>
                     <option v-for="s in customers" :key="s.id" :value="String(s.id)">{{ s.code }}</option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">Status</label>
+                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
                 <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">All statuses</option>
+                    <option value="">{{ t('All statuses') }}</option>
                     <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
                 </select>
             </div>
@@ -79,20 +82,20 @@ const controlClass =
             v-if="receipts.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No customer receipts found</p>
+            <p class="font-medium">{{ t('No customer receipts found') }}</p>
         </div>
 
         <div v-else class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Receipt No</th>
-                        <th class="px-4 py-3 font-medium">Customer</th>
-                        <th class="px-4 py-3 font-medium">Date</th>
-                        <th class="px-4 py-3 font-medium">Received into</th>
-                        <th class="px-4 py-3 font-medium">Reference</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Amount</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Receipt No') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Received into') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Reference') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,7 +127,7 @@ const controlClass =
 
         <div v-if="receipts.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <p class="text-muted-foreground text-sm">
-                Showing {{ receipts.from }}–{{ receipts.to }} of {{ receipts.total }}
+                {{ t('Showing :from–:to of :total', { from: receipts.from ?? 0, to: receipts.to ?? 0, total: receipts.total }) }}
             </p>
             <div class="flex flex-wrap items-center gap-1">
                 <Button

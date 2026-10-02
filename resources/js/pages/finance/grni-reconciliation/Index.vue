@@ -4,6 +4,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { index } from '@/routes/grni-reconciliation';
 import type { ControlAccountCheck, GrniReconciliationReport } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     report: GrniReconciliationReport;
@@ -22,38 +23,38 @@ function badgeVariant(status: string): 'default' | 'secondary' | 'destructive' |
 function label(status: string): string {
     return { UNMATCHED: 'Unmatched', PARTIALLY_MATCHED: 'Partly invoiced', FULLY_MATCHED: 'Fully invoiced' }[status] ?? status;
 }
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="GRNI reconciliation" />
+    <Head :title="t('GRNI reconciliation')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="Goods Received Not Invoiced"
-            :description="`Stock received but not yet invoiced, in ${currency}.`"
+            :description="t('Stock received but not yet invoiced, in :currency.', { currency })"
         />
 
         <div
             v-if="control && !control.reconciles"
             class="border-destructive text-destructive rounded-xl border p-4 text-sm"
         >
-            <strong>The accrual does not reconcile to the ledger.</strong>
-            This report shows {{ report.remaining_total }} uninvoiced but {{ control.code }}
-            {{ control.name }} carries {{ control.balance }}. GRNI is a control account that refuses
-            manual posting, so a difference means something needs investigating.
+            <strong>{{ t('The accrual does not reconcile to the ledger.') }}</strong>
+            {{ t('This report shows :remaining uninvoiced but :code :name carries :balance. GRNI is a control account that refuses manual posting, so a difference means something needs investigating.', { remaining: report.remaining_total, code: control.code ?? '', name: control.name ?? '', balance: control.balance ?? '' }) }}
         </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Accrued on receipt</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Accrued on receipt') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ report.original_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Invoiced by suppliers</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Invoiced by suppliers') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ report.matched_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Still uninvoiced</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Still uninvoiced') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ report.remaining_total }}</p>
             </div>
         </div>
@@ -62,9 +63,9 @@ function label(status: string): string {
             v-if="report.rows.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No accrual to reconcile</p>
+            <p class="font-medium">{{ t('No accrual to reconcile') }}</p>
             <p class="text-muted-foreground text-sm">
-                No goods receipt has raised one yet — receipts before the accounting cutover never do.
+                {{ t('No goods receipt has raised one yet — receipts before the accounting cutover never do.') }}
             </p>
         </div>
 
@@ -72,13 +73,13 @@ function label(status: string): string {
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Goods receipt</th>
-                        <th class="px-4 py-3 font-medium">Date</th>
-                        <th class="px-4 py-3 font-medium">Received from</th>
-                        <th class="px-4 py-3 text-right font-medium">Accrued</th>
-                        <th class="px-4 py-3 text-right font-medium">Invoiced</th>
-                        <th class="px-4 py-3 text-right font-medium">Remaining</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Goods receipt') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Received from') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Accrued') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Invoiced') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Remaining') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -97,13 +98,13 @@ function label(status: string): string {
                         <td class="px-4 py-3 text-right font-mono">{{ row.matched_amount }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ row.remaining_amount }}</td>
                         <td class="px-4 py-3">
-                            <Badge :variant="badgeVariant(row.status)">{{ label(row.status) }}</Badge>
+                            <Badge :variant="badgeVariant(row.status)">{{ t(label(row.status)) }}</Badge>
                         </td>
                     </tr>
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td class="px-4 py-3 font-medium" colspan="3">Totals</td>
+                        <td class="px-4 py-3 font-medium" colspan="3">{{ t('Totals') }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.original_total }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.matched_total }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.remaining_total }}</td>
@@ -114,11 +115,7 @@ function label(status: string): string {
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            The accrued figure is read from each receipt's own posted journal, never re-derived from
-            quantity and unit cost. A receipt may be invoiced by <strong>several suppliers</strong> —
-            goods, transport and loading are commonly three different companies — so an amount left
-            over here is normal until every one of them has billed. Nothing is written off
-            automatically: if invoices never fully clear a receipt, the remainder stays visible.
+            {{ t("The accrued figure is read from each receipt's own posted journal, never re-derived from quantity and unit cost. A receipt may be invoiced by several suppliers — goods, transport and loading are commonly three different companies — so an amount left over here is normal until every one of them has billed. Nothing is written off automatically: if invoices never fully clear a receipt, the remainder stays visible.") }}
         </p>
     </div>
 </template>

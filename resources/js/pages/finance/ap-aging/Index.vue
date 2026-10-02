@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { index } from '@/routes/ap-aging';
 import type { ApAgingReport, ControlAccountCheck } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     report: ApAgingReport;
@@ -22,20 +23,22 @@ watch(asOf, (value) => {
 
 const controlClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="AP aging" />
+    <Head :title="t('AP aging')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="Accounts payable aging"
-            :description="`What each supplier is owed, in ${currency}, bucketed by how overdue it is.`"
+            :description="t('What each supplier is owed, in :currency, bucketed by how overdue it is.', { currency })"
         />
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="grid gap-1.5">
-                <label for="f-asof" class="text-sm font-medium">As of</label>
+                <label for="f-asof" class="text-sm font-medium">{{ t('As of') }}</label>
                 <input id="f-asof" v-model="asOf" type="date" :class="controlClass" />
             </div>
         </div>
@@ -44,31 +47,29 @@ const controlClass =
             v-if="control && !control.reconciles"
             class="border-destructive text-destructive rounded-xl border p-4 text-sm"
         >
-            <strong>Accounts payable does not reconcile to the ledger.</strong>
-            The aging totals {{ report.totals.total }} but {{ control.code }} {{ control.name }}
-            carries {{ control.balance }}. Since Trade Payables is a control account that refuses
-            manual posting, a difference means something needs investigating.
+            <strong>{{ t('Accounts payable does not reconcile to the ledger.') }}</strong>
+            {{ t('The aging totals :total but :code :name carries :balance. Since Trade Payables is a control account that refuses manual posting, a difference means something needs investigating.', { total: report.totals.total, code: control.code ?? '', name: control.name ?? '', balance: control.balance ?? '' }) }}
         </div>
 
         <div
             v-if="report.rows.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">Nothing outstanding</p>
-            <p class="text-muted-foreground text-sm">Every supplier invoice has been paid or reversed.</p>
+            <p class="font-medium">{{ t('Nothing outstanding') }}</p>
+            <p class="text-muted-foreground text-sm">{{ t('Every supplier invoice has been paid or reversed.') }}</p>
         </div>
 
         <div v-else class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Supplier</th>
-                        <th class="px-4 py-3 text-right font-medium">Current</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Supplier') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Current') }}</th>
                         <th class="px-4 py-3 text-right font-medium">1–30</th>
                         <th class="px-4 py-3 text-right font-medium">31–60</th>
                         <th class="px-4 py-3 text-right font-medium">61–90</th>
                         <th class="px-4 py-3 text-right font-medium">90+</th>
-                        <th class="px-4 py-3 text-right font-medium">Total</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Total') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,7 +92,7 @@ const controlClass =
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td class="px-4 py-3 font-medium">Totals</td>
+                        <td class="px-4 py-3 font-medium">{{ t('Totals') }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.current }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_1_30 }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_31_60 }}</td>
@@ -113,10 +114,7 @@ const controlClass =
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Every figure is derived from posted invoices less the payments still allocated to them —
-            nothing is stored, and no supplier carries a balance column. A reversed invoice
-            disappears from this report entirely, and a reversed payment stops reducing what is
-            owed. No revenue or tax is modelled anywhere in this phase.
+            {{ t('Every figure is derived from posted invoices less the payments still allocated to them — nothing is stored, and no supplier carries a balance column. A reversed invoice disappears from this report entirely, and a reversed payment stops reducing what is owed. No revenue or tax is modelled anywhere in this phase.') }}
         </p>
     </div>
 </template>

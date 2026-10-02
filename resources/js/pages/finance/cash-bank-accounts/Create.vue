@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/cash-bank-accounts';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     availableAccounts: { id: number; code: string; name: string }[];
     kinds: { value: string; label: string }[];
 }>();
+
+const { t } = useT();
 
 defineOptions({
     layout: {
@@ -41,7 +44,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="Configure cash / bank account" />
+    <Head :title="t('Configure cash / bank account')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -52,22 +55,21 @@ const selectClass =
         <form class="max-w-3xl space-y-8" @submit.prevent="submit">
             <section class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="account_id">Ledger account <span class="text-destructive">*</span></Label>
+                    <Label for="account_id">{{ t('Ledger account') }} <span class="text-destructive">*</span></Label>
                     <select id="account_id" v-model="form.account_id" required :class="selectClass">
-                        <option value="" disabled>Select an asset account…</option>
+                        <option value="" disabled>{{ t('Select an asset account…') }}</option>
                         <option v-for="a in props.availableAccounts" :key="a.id" :value="a.id">
                             {{ a.code }} — {{ a.name }}
                         </option>
                     </select>
                     <InputError :message="form.errors.account_id" />
                     <p class="text-muted-foreground text-xs">
-                        Only active asset accounts that are not control accounts or group
-                        headers appear here, and each may be configured once.
+                        {{ t('Only active asset accounts that are not control accounts or group headers appear here, and each may be configured once.') }}
                     </p>
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="account_kind">Kind <span class="text-destructive">*</span></Label>
+                    <Label for="account_kind">{{ t('Kind') }} <span class="text-destructive">*</span></Label>
                     <select id="account_kind" v-model="form.account_kind" required :class="selectClass">
                         <option v-for="k in props.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
                     </select>
@@ -75,47 +77,46 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="display_name">Display name <span class="text-destructive">*</span></Label>
+                    <Label for="display_name">{{ t('Display name') }} <span class="text-destructive">*</span></Label>
                     <Input id="display_name" v-model="form.display_name" maxlength="150" required />
                     <InputError :message="form.errors.display_name" />
                 </div>
 
                 <template v-if="form.account_kind === 'BANK'">
                     <div class="grid gap-2">
-                        <Label for="bank_name">Bank name</Label>
+                        <Label for="bank_name">{{ t('Bank name') }}</Label>
                         <Input id="bank_name" v-model="form.bank_name" maxlength="150" />
                         <InputError :message="form.errors.bank_name" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="branch_name">Branch</Label>
+                        <Label for="branch_name">{{ t('Branch') }}</Label>
                         <Input id="branch_name" v-model="form.branch_name" maxlength="150" />
                         <InputError :message="form.errors.branch_name" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="account_number">Account number</Label>
+                        <Label for="account_number">{{ t('Account number') }}</Label>
                         <Input id="account_number" v-model="form.account_number" maxlength="100" />
                         <InputError :message="form.errors.account_number" />
                     </div>
                 </template>
 
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="notes">Notes</Label>
+                    <Label for="notes">{{ t('Notes') }}</Label>
                     <Input id="notes" v-model="form.notes" maxlength="500" />
                     <InputError :message="form.errors.notes" />
                 </div>
             </section>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button type="submit" :disabled="form.processing">Save configuration</Button>
-                <Button variant="outline" as-child><a :href="index().url">Cancel</a></Button>
+                <Button type="submit" :disabled="form.processing">{{ t('Save configuration') }}</Button>
+                <Button variant="outline" as-child><a :href="index().url">{{ t('Cancel') }}</a></Button>
             </div>
         </form>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            This creates no opening balance and posts no journal. If the account already holds
-            money, that money is already in the general ledger.
+            {{ t('This creates no opening balance and posts no journal. If the account already holds money, that money is already in the general ledger.') }}
         </p>
     </div>
 </template>

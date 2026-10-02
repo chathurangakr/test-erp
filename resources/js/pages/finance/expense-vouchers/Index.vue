@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, ExpenseVoucherRow, Paginated } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     vouchers: Paginated<ExpenseVoucherRow>;
@@ -19,6 +20,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Expense vouchers', href: index() }] } });
+
+const { t } = useT();
 
 const { can } = usePermissions();
 
@@ -44,7 +47,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="Expense vouchers" />
+    <Head :title="t('Expense vouchers')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -52,15 +55,15 @@ const selectClass =
             <Button v-if="can('finance.cash.expense_create')" as-child>
                 <Link :href="create()">
                     <Plus class="size-4" />
-                    New voucher
+                    {{ t('New voucher') }}
                 </Link>
             </Button>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Input v-model="search" placeholder="Search number, payee or reference" />
+            <Input v-model="search" :placeholder="t('Search number, payee or reference')" />
             <select v-model="status" :class="selectClass">
-                <option value="">All statuses</option>
+                <option value="">{{ t('All statuses') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
         </div>
@@ -69,12 +72,12 @@ const selectClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Voucher</th>
-                        <th class="px-4 py-3 font-medium">Date</th>
-                        <th class="px-4 py-3 font-medium">Payee</th>
-                        <th class="px-4 py-3 font-medium">Paid from</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Amount ({{ currency }})</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Voucher') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Payee') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Paid from') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -101,7 +104,7 @@ const selectClass =
                     </tr>
                     <tr v-if="vouchers.data.length === 0">
                         <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">
-                            No expense vouchers yet.
+                            {{ t('No expense vouchers yet.') }}
                         </td>
                     </tr>
                 </tbody>
@@ -109,9 +112,7 @@ const selectClass =
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            An expense voucher is for money that has already gone — it debits the expense and
-            credits cash or the bank in one step, and raises no payable. A supplier who invoices
-            you and is paid later belongs on a supplier invoice instead.
+            {{ t('An expense voucher is for money that has already gone — it debits the expense and credits cash or the bank in one step, and raises no payable. A supplier who invoices you and is paid later belongs on a supplier invoice instead.') }}
         </p>
     </div>
 </template>

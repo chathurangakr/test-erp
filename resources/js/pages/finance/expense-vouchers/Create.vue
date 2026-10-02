@@ -4,6 +4,7 @@ import ExpenseVoucherForm from '@/components/cash/ExpenseVoucherForm.vue';
 import Heading from '@/components/Heading.vue';
 import { index } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, OptionRef } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     accounts: CashBankAccountOption[];
@@ -20,10 +21,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New expense voucher" />
+    <Head :title="t('New expense voucher')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -43,10 +46,7 @@ defineOptions({
         />
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Use this when the money goes out at the same moment the expense is incurred. If the
-            supplier invoices you and you pay later, record a supplier invoice instead and settle
-            it with a supplier payment — that route raises a payable, and this one deliberately
-            does not.
+            {{ t('Use this when the money goes out at the same moment the expense is incurred. If the supplier invoices you and you pay later, record a supplier invoice instead and settle it with a supplier payment — that route raises a payable, and this one deliberately does not.') }}
         </p>
     </div>
 </template>

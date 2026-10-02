@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import { profitLoss } from '@/routes/reports';
 import type { ProfitLossStatement } from '@/types';
 
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Profit & loss', href: profitLoss() }] } });
+
+const { t } = useT();
 
 const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
 const from = ref(props.filters.from ?? '');
@@ -38,32 +41,32 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="Profit & loss" />
+    <Head :title="t('Profit & loss')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            title="Profit &amp; loss"
+            title="Profit & loss"
             :description="
                 statement.period
                     ? statement.period
-                    : `${statement.from ?? 'the beginning'} to ${statement.to ?? 'today'}`
+                    : t(':from to :to', { from: statement.from ?? t('the beginning'), to: statement.to ?? t('today') })
             "
         />
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
-                <Label for="period">Fiscal period</Label>
+                <Label for="period">{{ t('Fiscal period') }}</Label>
                 <select id="period" v-model="periodId" :class="selectClass">
-                    <option value="">All — use dates</option>
+                    <option value="">{{ t('All — use dates') }}</option>
                     <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
                 </select>
             </div>
             <div class="grid gap-2">
-                <Label for="from">From</Label>
+                <Label for="from">{{ t('From') }}</Label>
                 <Input id="from" v-model="from" type="date" :disabled="periodId !== ''" />
             </div>
             <div class="grid gap-2">
-                <Label for="to">To</Label>
+                <Label for="to">{{ t('To') }}</Label>
                 <Input id="to" v-model="to" type="date" :disabled="periodId !== ''" />
             </div>
         </section>
@@ -73,7 +76,7 @@ const selectClass =
                 title="Revenue"
                 :rows="statement.revenue.rows"
                 :total="statement.revenue.total"
-                :total-label="`Total revenue (${currency})`"
+                :total-label="t('Total revenue (:currency)', { currency })"
                 :from="statement.from"
                 :to="statement.to"
                 empty-message="No revenue recognised in this period."
@@ -90,11 +93,11 @@ const selectClass =
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border flex flex-wrap items-baseline justify-between gap-3 rounded-xl border p-4">
             <div>
-                <p class="text-muted-foreground text-xs font-medium">Gross profit</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
                 <p class="mt-1 font-mono text-xl font-medium">{{ statement.gross_profit }}</p>
             </div>
             <p class="text-muted-foreground text-sm">
-                Margin <span class="font-mono">{{ statement.gross_margin_percent }}%</span>
+                {{ t('Margin') }} <span class="font-mono">{{ statement.gross_margin_percent }}%</span>
             </p>
         </div>
 
@@ -109,7 +112,7 @@ const selectClass =
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <p class="text-muted-foreground text-xs font-medium">
-                {{ Number(statement.net_profit) < 0 ? 'Net loss' : 'Net profit' }} ({{ currency }})
+                {{ Number(statement.net_profit) < 0 ? t('Net loss') : t('Net profit') }} ({{ currency }})
             </p>
             <p
                 class="mt-1 font-mono text-2xl font-medium"
@@ -120,12 +123,7 @@ const selectClass =
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Revenue less cost of sales is gross profit; less operating expenses is net profit.
-            Every figure comes from posted journals, so this shows revenue that has actually
-            been <strong>recognised</strong> — a delivery that has not been invoiced appears
-            here as cost with no revenue beside it, which is why the unbilled-deliveries report
-            exists. Accounts are grouped by the chart's own hierarchy and classified by account
-            type, never by account number. Click any account to open its ledger.
+            {{ t('Revenue less cost of sales is gross profit; less operating expenses is net profit. Every figure comes from posted journals, so this shows revenue that has actually been recognised — a delivery that has not been invoiced appears here as cost with no revenue beside it, which is why the unbilled-deliveries report exists. Accounts are grouped by the chart\'s own hierarchy and classified by account type, never by account number. Click any account to open its ledger.') }}
         </p>
     </div>
 </template>

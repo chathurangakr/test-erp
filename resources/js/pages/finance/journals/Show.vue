@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ entry: JournalDetail; currency: string }>();
 
@@ -20,6 +21,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     if (value === 'POSTED') return 'default';
     return 'outline';
 }
+
+const { t } = useT();
 </script>
 
 <template>
@@ -39,7 +42,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="entry.can_edit && can('finance.journal_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${entry.id}/edit`">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -49,7 +52,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" class="w-full" :disabled="processing || !entry.is_balanced">
-                        Post entry
+                        {{ t('Post entry') }}
                     </Button>
                 </Form>
 
@@ -59,7 +62,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Reverse
+                        {{ t('Reverse') }}
                     </Button>
                 </Form>
 
@@ -69,7 +72,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-slot="{ processing }"
                 >
                     <Button type="submit" variant="outline" class="w-full" :disabled="processing">
-                        Cancel draft
+                        {{ t('Cancel draft') }}
                     </Button>
                 </Form>
             </div>
@@ -79,10 +82,9 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="entry.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This entry is a <strong>draft</strong>. It affects no account balance and appears in no
-            report until it is posted.
+            {{ t('This entry is a draft. It affects no account balance and appears in no report until it is posted.') }}
             <span v-if="!entry.is_balanced" class="text-destructive">
-                It is currently out of balance by {{ entry.difference }} and cannot be posted.
+                {{ t('It is currently out of balance by :difference and cannot be posted.', { difference: entry.difference }) }}
             </span>
         </div>
 
@@ -91,16 +93,16 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 text-sm"
         >
             <template v-if="entry.reversal_of">
-                This entry reverses
+                {{ t('This entry reverses') }}
                 <Link :href="`${index().url}/${entry.reversal_of.id}`" class="font-mono hover:underline">
                     {{ entry.reversal_of.journal_number }}
                 </Link>.
             </template>
             <template v-if="entry.reversed_by">
-                This entry was reversed by
+                {{ t('This entry was reversed by') }}
                 <Link :href="`${index().url}/${entry.reversed_by.id}`" class="font-mono hover:underline">
                     {{ entry.reversed_by.journal_number }}
-                </Link>. Its own lines remain exactly as posted — both sides stay on the record.
+                </Link>. {{ t('Its own lines remain exactly as posted — both sides stay on the record.') }}
             </template>
         </div>
 
@@ -112,10 +114,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 font-medium">Description</th>
-                        <th class="px-4 py-3 text-right font-medium">Debit</th>
-                        <th class="px-4 py-3 text-right font-medium">Credit</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Description') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,7 +141,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td class="px-4 py-3 font-medium" colspan="2">Totals ({{ currency }})</td>
+                        <td class="px-4 py-3 font-medium" colspan="2">{{ t('Totals (:currency)', { currency }) }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ entry.debit_total }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ entry.credit_total }}</td>
                     </tr>
@@ -150,36 +152,34 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Created by</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Created by') }}</dt>
                     <dd class="mt-1 text-sm">{{ entry.created_by ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
-                        {{ entry.posted_at ? `${entry.posted_at} by ${entry.posted_by ?? '—'}` : '—' }}
+                        {{ entry.posted_at ? t(':date by :user', { date: entry.posted_at, user: entry.posted_by ?? '—' }) : '—' }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Reversed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversed') }}</dt>
                     <dd class="mt-1 text-sm">
-                        {{ entry.reversed_at ? `${entry.reversed_at} by ${entry.reversed_by_user ?? '—'}` : '—' }}
+                        {{ entry.reversed_at ? t(':date by :user', { date: entry.reversed_at, user: entry.reversed_by_user ?? '—' }) : '—' }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Fiscal period</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Fiscal period') }}</dt>
                     <dd class="mt-1 text-sm">{{ entry.fiscal_period ?? '—' }} ({{ entry.period_status ?? '—' }})</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Source</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Source') }}</dt>
                     <dd class="mt-1 text-sm">{{ entry.source }}</dd>
                 </div>
             </dl>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            A posted entry is permanent. Correcting one means posting a reversing entry, so both
-            the original and its correction stay on the record — that is what makes the books
-            auditable. Account balances are derived from these lines and are never stored.
+            {{ t('A posted entry is permanent. Correcting one means posting a reversing entry, so both the original and its correction stay on the record — that is what makes the books auditable. Account balances are derived from these lines and are never stored.') }}
         </p>
     </div>
 </template>

@@ -10,6 +10,7 @@ import type {
     StatusOption,
     SupplierInvoiceFormValues,
 } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     invoice: SupplierInvoiceFormValues & { id: number; internal_invoice_number: string };
@@ -21,13 +22,15 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier invoices', href: index() }] } });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit ${props.invoice.internal_invoice_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.invoice.internal_invoice_number })" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit ${props.invoice.internal_invoice_number}`"
+            :title="t('Edit :reference', { reference: props.invoice.internal_invoice_number })"
             description="Only a draft supplier invoice can be edited."
         />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-6xl rounded-xl border p-4 sm:p-6">

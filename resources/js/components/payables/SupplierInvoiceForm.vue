@@ -14,6 +14,7 @@ import type {
     SupplierInvoiceFormValues,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -134,15 +135,17 @@ function submit(): void {
 
 const selectClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+
+const { t } = useT();
 </script>
 
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-2">
-                <Label for="supplier_id">Supplier <span class="text-destructive">*</span></Label>
+                <Label for="supplier_id">{{ t('Supplier') }} <span class="text-destructive">*</span></Label>
                 <select id="supplier_id" v-model="form.supplier_id" required :class="selectClass">
-                    <option value="" disabled>Select a supplier…</option>
+                    <option value="" disabled>{{ t('Select a supplier…') }}</option>
                     <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">
                         {{ s.code }} — {{ s.name }}
                     </option>
@@ -152,26 +155,26 @@ const selectClass =
 
             <div class="grid gap-2">
                 <Label for="supplier_invoice_number">
-                    Supplier's invoice number <span class="text-destructive">*</span>
+                    {{ t("Supplier's invoice number") }} <span class="text-destructive">*</span>
                 </Label>
                 <Input id="supplier_invoice_number" v-model="form.supplier_invoice_number" required maxlength="100" />
                 <InputError :message="form.errors.supplier_invoice_number" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="invoice_date">Invoice date <span class="text-destructive">*</span></Label>
+                <Label for="invoice_date">{{ t('Invoice date') }} <span class="text-destructive">*</span></Label>
                 <Input id="invoice_date" v-model="form.invoice_date" type="date" required />
                 <InputError :message="form.errors.invoice_date" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="due_date">Due date <span class="text-destructive">*</span></Label>
+                <Label for="due_date">{{ t('Due date') }} <span class="text-destructive">*</span></Label>
                 <Input id="due_date" v-model="form.due_date" type="date" required />
                 <InputError :message="form.errors.due_date" />
             </div>
 
             <div class="grid gap-2 sm:col-span-2 lg:col-span-4">
-                <Label for="description">Description</Label>
+                <Label for="description">{{ t('Description') }}</Label>
                 <Input id="description" v-model="form.description" maxlength="500" />
                 <InputError :message="form.errors.description" />
             </div>
@@ -179,10 +182,10 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-medium">Lines</h3>
+                <h3 class="text-sm font-medium">{{ t('Lines') }}</h3>
                 <Button type="button" variant="outline" size="sm" @click="addLine">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('Add line') }}
                 </Button>
             </div>
 
@@ -194,20 +197,20 @@ const selectClass =
                 >
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="grid gap-2">
-                            <Label :for="`type-${index}`">Type</Label>
+                            <Label :for="`type-${index}`">{{ t('Type') }}</Label>
                             <select
                                 :id="`type-${index}`"
                                 v-model="line.line_type"
                                 :class="selectClass"
                                 @change="onTypeChange(index)"
                             >
-                                <option v-for="t in lineTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
+                                <option v-for="lineType in lineTypes" :key="lineType.value" :value="lineType.value">{{ lineType.label }}</option>
                             </select>
                         </div>
 
                         <template v-if="line.line_type === 'GRNI_MATCH'">
                             <div class="grid gap-2 lg:col-span-2">
-                                <Label :for="`grn-${index}`">Goods receipt</Label>
+                                <Label :for="`grn-${index}`">{{ t('Goods receipt') }}</Label>
                                 <select
                                     :id="`grn-${index}`"
                                     v-model.number="line.goods_receipt_id"
@@ -215,9 +218,9 @@ const selectClass =
                                     :class="selectClass"
                                     @change="onReceiptChange(index)"
                                 >
-                                    <option :value="null" disabled>Select a receipt…</option>
+                                    <option :value="null" disabled>{{ t('Select a receipt…') }}</option>
                                     <option v-for="r in goodsReceipts" :key="r.id" :value="r.id">
-                                        {{ r.grn_number }} — {{ r.remaining_amount }} uninvoiced
+                                        {{ t(':number — :amount uninvoiced', { number: r.grn_number, amount: r.remaining_amount }) }}
                                     </option>
                                 </select>
                                 <InputError :message="lineError(index, 'goods_receipt_id')" />
@@ -226,14 +229,14 @@ const selectClass =
 
                         <template v-else>
                             <div class="grid gap-2">
-                                <Label :for="`acct-${index}`">Expense account</Label>
+                                <Label :for="`acct-${index}`">{{ t('Expense account') }}</Label>
                                 <select
                                     :id="`acct-${index}`"
                                     v-model.number="line.debit_account_id"
                                     required
                                     :class="selectClass"
                                 >
-                                    <option :value="null" disabled>Select an account…</option>
+                                    <option :value="null" disabled>{{ t('Select an account…') }}</option>
                                     <option v-for="a in expenseAccounts" :key="a.id" :value="a.id">
                                         {{ a.code }} — {{ a.name }}
                                     </option>
@@ -242,13 +245,13 @@ const selectClass =
                             </div>
 
                             <div class="grid gap-2">
-                                <Label :for="`desc-${index}`">Description</Label>
+                                <Label :for="`desc-${index}`">{{ t('Description') }}</Label>
                                 <Input :id="`desc-${index}`" v-model="line.description" maxlength="500" />
                             </div>
                         </template>
 
                         <div class="grid gap-2">
-                            <Label :for="`amount-${index}`">Amount ({{ currency }})</Label>
+                            <Label :for="`amount-${index}`">{{ t('Amount (:currency)', { currency }) }}</Label>
                             <div class="flex gap-2">
                                 <Input
                                     :id="`amount-${index}`"
@@ -278,22 +281,21 @@ const selectClass =
                         class="text-muted-foreground mt-3 grid gap-2 text-xs sm:grid-cols-3"
                     >
                         <div>
-                            <span class="font-medium">Original accrual</span>
+                            <span class="font-medium">{{ t('Original accrual') }}</span>
                             <span class="block font-mono">{{ receiptFor(line)?.original_accrual }}</span>
                         </div>
                         <div>
-                            <span class="font-medium">Already invoiced</span>
+                            <span class="font-medium">{{ t('Already invoiced') }}</span>
                             <span class="block font-mono">{{ receiptFor(line)?.matched_amount }}</span>
                         </div>
                         <div>
-                            <span class="font-medium">Remaining</span>
+                            <span class="font-medium">{{ t('Remaining') }}</span>
                             <span class="block font-mono">{{ receiptFor(line)?.remaining_amount }}</span>
                         </div>
                     </div>
 
                     <p v-if="exceedsRemaining(line)" class="text-destructive mt-2 text-xs">
-                        This is more than the receipt has left uninvoiced, and will be refused when
-                        you post.
+                        {{ t('This is more than the receipt has left uninvoiced, and will be refused when you post.') }}
                     </p>
                 </div>
             </div>
@@ -301,20 +303,18 @@ const selectClass =
             <InputError :message="form.errors.lines" />
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border flex items-center justify-between rounded-xl border p-4">
-                <span class="text-sm font-medium">Invoice total ({{ currency }})</span>
+                <span class="text-sm font-medium">{{ t('Invoice total (:currency)', { currency }) }}</span>
                 <span class="font-mono text-lg font-medium">{{ money(total) }}</span>
             </div>
 
             <p class="text-muted-foreground text-xs">
-                The credit side is Trade Payables, taken from Accounting Setup — it is never typed
-                here. A goods-receipt line clears part of that receipt's accrual; a direct expense
-                line charges the account you choose.
+                {{ t("The credit side is Trade Payables, taken from Accounting Setup — it is never typed here. A goods-receipt line clears part of that receipt's accrual; a direct expense line charges the account you choose.") }}
             </p>
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

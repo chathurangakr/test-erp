@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { BillableDeliveryLine, OptionRef, SalesInvoiceFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -99,15 +100,17 @@ function submit(): void {
 
 const selectClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+
+const { t } = useT();
 </script>
 
 <template>
     <form class="space-y-8" @submit.prevent="submit">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-2">
-                <Label for="customer_id">Customer <span class="text-destructive">*</span></Label>
+                <Label for="customer_id">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
                 <select id="customer_id" v-model="customerId" required :class="selectClass">
-                    <option value="" disabled>Select a customer…</option>
+                    <option value="" disabled>{{ t('Select a customer…') }}</option>
                     <option v-for="c in customers" :key="c.id" :value="String(c.id)">
                         {{ c.code }} — {{ c.name }}
                     </option>
@@ -116,55 +119,54 @@ const selectClass =
             </div>
 
             <div class="grid gap-2">
-                <Label for="invoice_date">Invoice date <span class="text-destructive">*</span></Label>
+                <Label for="invoice_date">{{ t('Invoice date') }} <span class="text-destructive">*</span></Label>
                 <Input id="invoice_date" v-model="form.invoice_date" type="date" required />
                 <InputError :message="form.errors.invoice_date" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="due_date">Due date <span class="text-destructive">*</span></Label>
+                <Label for="due_date">{{ t('Due date') }} <span class="text-destructive">*</span></Label>
                 <Input id="due_date" v-model="form.due_date" type="date" required @input="dueDateTouched = true" />
                 <p v-if="creditDays > 0 && !dueDateTouched" class="text-muted-foreground text-xs">
-                    {{ creditDays }} days from the invoice date, per this customer's terms.
+                    {{ t(":days days from the invoice date, per this customer's terms.", { days: creditDays }) }}
                 </p>
                 <InputError :message="form.errors.due_date" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="customer_reference">Customer reference</Label>
+                <Label for="customer_reference">{{ t('Customer reference') }}</Label>
                 <Input id="customer_reference" v-model="form.customer_reference" maxlength="100" />
                 <InputError :message="form.errors.customer_reference" />
             </div>
 
             <div class="grid gap-2 sm:col-span-2 lg:col-span-4">
-                <Label for="description">Description</Label>
+                <Label for="description">{{ t('Description') }}</Label>
                 <Input id="description" v-model="form.description" maxlength="500" />
                 <InputError :message="form.errors.description" />
             </div>
         </section>
 
         <section v-if="customerId" class="space-y-4">
-            <h3 class="text-sm font-medium">Delivered but not yet invoiced</h3>
+            <h3 class="text-sm font-medium">{{ t('Delivered but not yet invoiced') }}</h3>
 
             <div
                 v-if="billableLines.length === 0"
                 class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-8 text-center text-sm"
             >
-                This customer has nothing left to invoice. A delivery becomes billable once it is
-                posted and its cost of sales has reached the ledger.
+                {{ t('This customer has nothing left to invoice. A delivery becomes billable once it is posted and its cost of sales has reached the ledger.') }}
             </div>
 
             <div v-else class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Delivery</th>
-                            <th class="px-4 py-3 font-medium">Product</th>
-                            <th class="px-4 py-3 font-medium">Date</th>
-                            <th class="px-4 py-3 text-right font-medium">Delivered value</th>
-                            <th class="px-4 py-3 text-right font-medium">Already invoiced</th>
-                            <th class="px-4 py-3 text-right font-medium">Remaining</th>
-                            <th class="px-4 py-3 text-right font-medium">Invoice now</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Delivery') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Delivered value') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Already invoiced') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Remaining') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Invoice now') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -192,14 +194,14 @@ const selectClass =
                                         class="text-right"
                                     />
                                     <Button type="button" variant="ghost" size="sm" @click="billInFull(index)">
-                                        All
+                                        {{ t('All') }}
                                     </Button>
                                 </div>
                                 <InputError
                                     :message="(form.errors as Record<string, string | undefined>)[`lines.${index}.amount`]"
                                 />
                                 <p v-if="exceedsRemaining(index)" class="text-destructive mt-1 text-xs">
-                                    More than this line has left to invoice.
+                                    {{ t('More than this line has left to invoice.') }}
                                 </p>
                             </td>
                         </tr>
@@ -210,21 +212,18 @@ const selectClass =
             <InputError :message="form.errors.lines" />
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border flex items-center justify-between rounded-xl border p-4">
-                <span class="text-sm font-medium">Invoice total ({{ currency }})</span>
+                <span class="text-sm font-medium">{{ t('Invoice total (:currency)', { currency }) }}</span>
                 <span class="font-mono text-lg font-medium">{{ money(total) }}</span>
             </div>
 
             <p class="text-muted-foreground text-xs">
-                Each line bills part of what was delivered, at the value the delivery already
-                recorded — nothing is repriced here. The revenue account comes from the product's
-                mapping, so there is no account to choose. Billing less than the remaining amount is
-                fine; the rest stays available for a later invoice.
+                {{ t("Each line bills part of what was delivered, at the value the delivery already recorded — nothing is repriced here. The revenue account comes from the product's mapping, so there is no account to choose. Billing less than the remaining amount is fine; the rest stays available for a later invoice.") }}
             </p>
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing || !customerId">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing || !customerId">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

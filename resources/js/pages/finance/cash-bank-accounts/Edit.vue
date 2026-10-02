@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import { index, update } from '@/routes/cash-bank-accounts';
 
 const props = defineProps<{
@@ -32,6 +33,8 @@ defineOptions({
     },
 });
 
+const { t } = useT();
+
 const form = useForm({
     account_kind: props.cashBankAccount.account_kind,
     display_name: props.cashBankAccount.display_name,
@@ -51,7 +54,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head :title="`Edit ${props.cashBankAccount.display_name}`" />
+    <Head :title="t('Edit :name', { name: props.cashBankAccount.display_name })" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -62,7 +65,7 @@ const selectClass =
         <form class="max-w-3xl space-y-8" @submit.prevent="submit">
             <section class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="account_kind">Kind <span class="text-destructive">*</span></Label>
+                    <Label for="account_kind">{{ t('Kind') }} <span class="text-destructive">*</span></Label>
                     <select id="account_kind" v-model="form.account_kind" required :class="selectClass">
                         <option v-for="k in props.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
                     </select>
@@ -70,49 +73,45 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="display_name">Display name <span class="text-destructive">*</span></Label>
+                    <Label for="display_name">{{ t('Display name') }} <span class="text-destructive">*</span></Label>
                     <Input id="display_name" v-model="form.display_name" maxlength="150" required />
                     <InputError :message="form.errors.display_name" />
                 </div>
 
                 <template v-if="form.account_kind === 'BANK'">
                     <div class="grid gap-2">
-                        <Label for="bank_name">Bank name</Label>
+                        <Label for="bank_name">{{ t('Bank name') }}</Label>
                         <Input id="bank_name" v-model="form.bank_name" maxlength="150" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="branch_name">Branch</Label>
+                        <Label for="branch_name">{{ t('Branch') }}</Label>
                         <Input id="branch_name" v-model="form.branch_name" maxlength="150" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="account_number">Account number</Label>
+                        <Label for="account_number">{{ t('Account number') }}</Label>
                         <Input id="account_number" v-model="form.account_number" maxlength="100" />
                     </div>
                 </template>
 
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="notes">Notes</Label>
+                    <Label for="notes">{{ t('Notes') }}</Label>
                     <Input id="notes" v-model="form.notes" maxlength="500" />
                 </div>
 
                 <div class="flex items-center gap-2 sm:col-span-2">
                     <input id="is_active" v-model="form.is_active" type="checkbox" class="size-4" />
-                    <Label for="is_active">Active</Label>
+                    <Label for="is_active">{{ t('Active') }}</Label>
                 </div>
             </section>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button type="submit" :disabled="form.processing">Save changes</Button>
-                <Button variant="outline" as-child><a :href="index().url">Cancel</a></Button>
+                <Button type="submit" :disabled="form.processing">{{ t('Save changes') }}</Button>
+                <Button variant="outline" as-child><a :href="index().url">{{ t('Cancel') }}</a></Button>
             </div>
         </form>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            The ledger account cannot be changed. Repointing this configuration at a different
-            account would silently rewrite the meaning of every document already recorded
-            against it — deactivate this one and configure the other instead. Deactivating stops
-            new payments, receipts, vouchers and transfers from using it; everything already
-            posted stays exactly as it is.
+            {{ t('The ledger account cannot be changed. Repointing this configuration at a different account would silently rewrite the meaning of every document already recorded against it — deactivate this one and configure the other instead. Deactivating stops new payments, receipts, vouchers and transfers from using it; everything already posted stays exactly as it is.') }}
         </p>
     </div>
 </template>

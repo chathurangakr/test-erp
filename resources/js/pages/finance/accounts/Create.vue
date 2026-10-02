@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import AccountForm from '@/components/finance/AccountForm.vue';
 import Heading from '@/components/Heading.vue';
+import { useT } from '@/lib/i18n';
 import { index } from '@/routes/accounts';
 import type { AccountOption, StatusOption } from '@/types';
 
@@ -15,10 +16,11 @@ defineProps<{
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Chart of accounts', href: index() }, { title: 'New', href: index() }] },
 });
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New account" />
+    <Head :title="t('New account')" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="New account" description="Add an account to the chart." />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">

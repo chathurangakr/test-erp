@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index } from '@/routes/trial-balance';
 import type { TrialBalanceReport } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     report: TrialBalanceReport;
@@ -33,26 +34,28 @@ watch([periodId, asOf], applyFilters);
 
 const controlClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Trial balance" />
+    <Head :title="t('Trial balance')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="Trial balance"
-            :description="`Every account with a balance, in ${currency}. The two totals must be identical.`"
+            :description="t('Every account with a balance, in :currency. The two totals must be identical.', { currency })"
         />
 
         <div class="grid gap-3 sm:grid-cols-2">
             <div class="grid gap-1.5">
-                <label for="f-asof" class="text-sm font-medium">As of date</label>
+                <label for="f-asof" class="text-sm font-medium">{{ t('As of date') }}</label>
                 <input id="f-asof" v-model="asOf" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="f-period" class="text-sm font-medium">Fiscal period</label>
+                <label for="f-period" class="text-sm font-medium">{{ t('Fiscal period') }}</label>
                 <select id="f-period" v-model="periodId" :class="controlClass">
-                    <option value="">All periods</option>
+                    <option value="">{{ t('All periods') }}</option>
                     <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
                 </select>
             </div>
@@ -62,19 +65,17 @@ const controlClass =
             v-if="!report.balanced"
             class="border-destructive text-destructive rounded-xl border p-4 text-sm"
         >
-            <strong>The trial balance does not balance.</strong> Debits total
-            {{ report.debit_total }} against credits of {{ report.credit_total }}. Every posted
-            journal balances individually, so a difference here means something is wrong that needs
-            investigating rather than presenting.
+            <strong>{{ t('The trial balance does not balance.') }}</strong>
+            {{ t('Debits total :debit against credits of :credit. Every posted journal balances individually, so a difference here means something is wrong that needs investigating rather than presenting.', { debit: report.debit_total, credit: report.credit_total }) }}
         </div>
 
         <div
             v-if="report.rows.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">Nothing posted yet</p>
+            <p class="font-medium">{{ t('Nothing posted yet') }}</p>
             <p class="text-muted-foreground text-sm">
-                The books are empty, so every total is zero — which balances.
+                {{ t('The books are empty, so every total is zero — which balances.') }}
             </p>
         </div>
 
@@ -82,11 +83,11 @@ const controlClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Code</th>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 font-medium">Type</th>
-                        <th class="px-4 py-3 text-right font-medium">Debit</th>
-                        <th class="px-4 py-3 text-right font-medium">Credit</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Type') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -112,7 +113,7 @@ const controlClass =
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td class="px-4 py-3 font-medium" colspan="3">Totals</td>
+                        <td class="px-4 py-3 font-medium" colspan="3">{{ t('Totals') }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.debit_total }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ report.credit_total }}</td>
                     </tr>
@@ -121,9 +122,7 @@ const controlClass =
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Balances are derived from posted journal lines on request — nothing here is stored. An
-            account whose debits and credits cancel out is omitted, because it has no balance to
-            report.
+            {{ t('Balances are derived from posted journal lines on request — nothing here is stored. An account whose debits and credits cancel out is omitted, because it has no balance to report.') }}
         </p>
     </div>
 </template>

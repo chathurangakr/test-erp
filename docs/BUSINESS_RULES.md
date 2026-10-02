@@ -1216,7 +1216,7 @@ Full detail in `docs/KIOSK.md`.
 - **Records are always kept in English**, whoever enters them and in whatever language — so
   reports, searches and audits always agree.
 - **Accounting words are shown in Sinhala with the English term in brackets.**
-- **The Finance screens are still English** until step 2.
+- **Finance screens are translated too.** Accounting terms keep the English in brackets.
 
 Full detail in `docs/LOCALISATION.md`.
 

@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { cashBankPosition } from '@/routes/reports';
 import type { CashBankAccountRow, CashBankSummary } from '@/types';
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Cash / bank position', href: cashBankPosition() }] } });
+
+const { t } = useT();
 
 const asOf = ref(props.filters.as_of ?? '');
 const showInactive = ref(props.filters.show_inactive);
@@ -46,36 +49,36 @@ function bookUrl(row: CashBankAccountRow): string {
 </script>
 
 <template>
-    <Head title="Cash / bank position" />
+    <Head :title="t('Cash / bank position')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="Cash / bank position"
-            :description="`Money held, as at ${filters.as_of ?? 'today'}.`"
+            :description="filters.as_of ? t('Money held, as at :date.', { date: filters.as_of }) : t('Money held, as at today.')"
         />
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
-                <Label for="as_of">As at</Label>
+                <Label for="as_of">{{ t('As at') }}</Label>
                 <Input id="as_of" v-model="asOf" type="date" />
             </div>
             <label class="flex items-end gap-2 pb-2 text-sm">
                 <input v-model="showInactive" type="checkbox" class="size-4" />
-                Include inactive accounts
+                {{ t('Include inactive accounts') }}
             </label>
         </section>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total cash ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total cash (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg">{{ summary.cash_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total bank ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total bank (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg">{{ summary.bank_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Cash + bank ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cash + bank (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ summary.combined_total }}</p>
             </div>
         </div>
@@ -86,15 +89,15 @@ function bookUrl(row: CashBankAccountRow): string {
             class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
         >
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
-                <h3 class="text-sm font-medium">{{ group.title }}</h3>
+                <h3 class="text-sm font-medium">{{ t(group.title) }}</h3>
             </div>
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">GL code</th>
-                        <th class="px-4 py-3 font-medium">Kind</th>
-                        <th class="px-4 py-3 text-right font-medium">Balance</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('GL code') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Kind') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Balance') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,7 +113,7 @@ function bookUrl(row: CashBankAccountRow): string {
                             <span v-if="row.bank_name" class="text-muted-foreground block text-xs">
                                 {{ row.bank_name }}<template v-if="row.account_number"> · {{ row.account_number }}</template>
                             </span>
-                            <Badge v-if="!row.is_active" variant="secondary" class="mt-1">Inactive</Badge>
+                            <Badge v-if="!row.is_active" variant="secondary" class="mt-1">{{ t('Inactive') }}</Badge>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs">{{ row.account_code }}</td>
                         <td class="px-4 py-3">{{ row.kind_label }}</td>
@@ -123,11 +126,11 @@ function bookUrl(row: CashBankAccountRow): string {
                     </tr>
                     <tr v-if="group.rows.length === 0">
                         <td colspan="4" class="text-muted-foreground px-4 py-6 text-center">
-                            No accounts of this kind are configured.
+                            {{ t('No accounts of this kind are configured.') }}
                         </td>
                     </tr>
                     <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td colspan="3" class="px-4 py-3 font-medium">{{ group.totalLabel }}</td>
+                        <td colspan="3" class="px-4 py-3 font-medium">{{ t(group.totalLabel) }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ group.total }}</td>
                     </tr>
                 </tbody>
@@ -135,10 +138,7 @@ function bookUrl(row: CashBankAccountRow): string {
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Every balance is derived from posted journal lines on each visit — nothing is stored —
-            using the same calculation as the cash / bank book, so the two always agree. Click an
-            account to open its book. A negative balance is shown as it stands: no overdraft
-            policy has been decided yet.
+            {{ t('Every balance is derived from posted journal lines on each visit — nothing is stored — using the same calculation as the cash / bank book, so the two always agree. Click an account to open its book. A negative balance is shown as it stands: no overdraft policy has been decided yet.') }}
         </p>
     </div>
 </template>

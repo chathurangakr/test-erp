@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/customer-receipts';
 import type { AccountOption, OptionRef, OutstandingSalesInvoice } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     customers: OptionRef[];
@@ -79,10 +80,12 @@ function submit(): void {
 
 const selectClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New customer receipt" />
+    <Head :title="t('New customer receipt')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -93,9 +96,9 @@ const selectClass =
         <form class="max-w-6xl space-y-8" @submit.prevent="submit">
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="grid gap-2">
-                    <Label for="customer">Customer <span class="text-destructive">*</span></Label>
+                    <Label for="customer">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
                     <select id="customer" v-model="customerId" required :class="selectClass">
-                        <option value="" disabled>Select a customer…</option>
+                        <option value="" disabled>{{ t('Select a customer…') }}</option>
                         <option v-for="s in customers" :key="s.id" :value="String(s.id)">
                             {{ s.code }} — {{ s.name }}
                         </option>
@@ -104,15 +107,15 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="receipt_date">Receipt date <span class="text-destructive">*</span></Label>
+                    <Label for="receipt_date">{{ t('Receipt date') }} <span class="text-destructive">*</span></Label>
                     <Input id="receipt_date" v-model="form.receipt_date" type="date" required />
                     <InputError :message="form.errors.receipt_date" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="receipt_account_id">Received into <span class="text-destructive">*</span></Label>
+                    <Label for="receipt_account_id">{{ t('Received into') }} <span class="text-destructive">*</span></Label>
                     <select id="receipt_account_id" v-model="form.receipt_account_id" required :class="selectClass">
-                        <option value="" disabled>Cash or bank…</option>
+                        <option value="" disabled>{{ t('Cash or bank…') }}</option>
                         <option v-for="a in receiptAccounts" :key="a.id" :value="a.id">
                             {{ a.code }} — {{ a.name }}
                         </option>
@@ -121,43 +124,43 @@ const selectClass =
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="reference">Reference</Label>
-                    <Input id="reference" v-model="form.reference" maxlength="100" placeholder="Cheque or transfer no" />
+                    <Label for="reference">{{ t('Reference') }}</Label>
+                    <Input id="reference" v-model="form.reference" maxlength="100" :placeholder="t('Cheque or transfer no')" />
                     <InputError :message="form.errors.reference" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="amount">Receipt amount ({{ currency }}) <span class="text-destructive">*</span></Label>
+                    <Label for="amount">{{ t('Receipt amount (:currency)', { currency }) }} <span class="text-destructive">*</span></Label>
                     <Input id="amount" v-model="form.amount" type="number" step="0.000001" min="0" required class="text-right" />
                     <InputError :message="form.errors.amount" />
                 </div>
 
                 <div class="grid gap-2 sm:col-span-2 lg:col-span-3">
-                    <Label for="notes">Notes</Label>
+                    <Label for="notes">{{ t('Notes') }}</Label>
                     <Input id="notes" v-model="form.notes" maxlength="500" />
                 </div>
             </section>
 
             <section v-if="customerId" class="space-y-4">
-                <h3 class="text-sm font-medium">Outstanding invoices</h3>
+                <h3 class="text-sm font-medium">{{ t('Outstanding invoices') }}</h3>
 
                 <div
                     v-if="outstandingInvoices.length === 0"
                     class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-8 text-center text-sm"
                 >
-                    This customer has nothing outstanding.
+                    {{ t('This customer has nothing outstanding.') }}
                 </div>
 
                 <div v-else class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
                     <table class="w-full text-sm">
                         <thead class="bg-muted/50 text-left">
                             <tr>
-                                <th class="px-4 py-3 font-medium">Invoice</th>
-                                <th class="px-4 py-3 font-medium">Due</th>
-                                <th class="px-4 py-3 text-right font-medium">Total</th>
-                                <th class="px-4 py-3 text-right font-medium">Received</th>
-                                <th class="px-4 py-3 text-right font-medium">Outstanding</th>
-                                <th class="px-4 py-3 text-right font-medium">Allocate</th>
+                                <th class="px-4 py-3 font-medium">{{ t('Invoice') }}</th>
+                                <th class="px-4 py-3 font-medium">{{ t('Due') }}</th>
+                                <th class="px-4 py-3 text-right font-medium">{{ t('Total') }}</th>
+                                <th class="px-4 py-3 text-right font-medium">{{ t('Received') }}</th>
+                                <th class="px-4 py-3 text-right font-medium">{{ t('Outstanding') }}</th>
+                                <th class="px-4 py-3 text-right font-medium">{{ t('Allocate') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -186,7 +189,7 @@ const selectClass =
                                             class="text-right"
                                         />
                                         <Button type="button" variant="ghost" size="sm" @click="payInFull(index)">
-                                            All
+                                            {{ t('All') }}
                                         </Button>
                                     </div>
                                 </td>
@@ -199,15 +202,15 @@ const selectClass =
 
                 <div class="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
                     <div>
-                        <p class="text-muted-foreground text-xs font-medium">Receipt total</p>
+                        <p class="text-muted-foreground text-xs font-medium">{{ t('Receipt total') }}</p>
                         <p class="mt-1 font-mono text-lg">{{ money(receiptTotal) }}</p>
                     </div>
                     <div>
-                        <p class="text-muted-foreground text-xs font-medium">Allocated</p>
+                        <p class="text-muted-foreground text-xs font-medium">{{ t('Allocated') }}</p>
                         <p class="mt-1 font-mono text-lg">{{ money(allocatedTotal) }}</p>
                     </div>
                     <div>
-                        <p class="text-muted-foreground text-xs font-medium">Difference</p>
+                        <p class="text-muted-foreground text-xs font-medium">{{ t('Difference') }}</p>
                         <p
                             class="mt-1 font-mono text-lg font-medium"
                             :class="canPost ? 'text-muted-foreground' : 'text-destructive'"
@@ -218,14 +221,13 @@ const selectClass =
                 </div>
 
                 <p v-if="!canPost" class="text-destructive text-xs">
-                    Every rupee must be allocated to an invoice before this receipt can be posted.
-                    Receipts on account are not supported.
+                    {{ t('Every rupee must be allocated to an invoice before this receipt can be posted. Receipts on account are not supported.') }}
                 </p>
             </section>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button type="submit" :disabled="form.processing || !customerId">Save draft</Button>
-                <Button variant="outline" as-child><a :href="index().url">Cancel</a></Button>
+                <Button type="submit" :disabled="form.processing || !customerId">{{ t('Save draft') }}</Button>
+                <Button variant="outline" as-child><a :href="index().url">{{ t('Cancel') }}</a></Button>
             </div>
         </form>
     </div>

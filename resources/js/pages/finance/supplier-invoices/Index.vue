@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-invoices';
 import type { OptionRef, Paginated, StatusOption, SupplierInvoiceRow } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     invoices: Paginated<SupplierInvoiceRow>;
@@ -52,49 +53,51 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
 const controlClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="Supplier invoices" />
+    <Head :title="t('Supplier invoices')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Heading
                 title="Supplier invoices"
-                :description="`What suppliers have billed, in ${currency}. A draft owes nothing until it is posted.`"
+                :description="t('What suppliers have billed, in :currency. A draft owes nothing until it is posted.', { currency })"
             />
             <Button v-if="can('finance.ap.invoice_create')" as-child class="w-full sm:w-auto">
-                <Link :href="`${index().url}/create`"><Plus class="size-4" />New supplier invoice</Link>
+                <Link :href="`${index().url}/create`"><Plus class="size-4" />{{ t('New supplier invoice') }}</Link>
             </Button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div class="grid gap-1.5">
-                <label for="f-supplier" class="text-sm font-medium">Supplier</label>
+                <label for="f-supplier" class="text-sm font-medium">{{ t('Supplier') }}</label>
                 <select id="f-supplier" v-model="supplierId" :class="controlClass">
-                    <option value="">All suppliers</option>
+                    <option value="">{{ t('All suppliers') }}</option>
                     <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }}</option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">Status</label>
+                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
                 <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">All statuses</option>
+                    <option value="">{{ t('All statuses') }}</option>
                     <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
                 </select>
             </div>
             <div class="grid gap-1.5">
-                <label for="f-from" class="text-sm font-medium">From</label>
+                <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>
                 <input id="f-from" v-model="from" type="date" :class="controlClass" />
             </div>
             <div class="grid gap-1.5">
-                <label for="f-to" class="text-sm font-medium">To</label>
+                <label for="f-to" class="text-sm font-medium">{{ t('To') }}</label>
                 <input id="f-to" v-model="to" type="date" :class="controlClass" />
             </div>
             <div class="flex items-end">
                 <label class="flex items-center gap-2 text-sm">
                     <input v-model="overdue" type="checkbox" />
-                    Overdue only
+                    {{ t('Overdue only') }}
                 </label>
             </div>
         </div>
@@ -103,9 +106,9 @@ const controlClass =
             v-if="invoices.data.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
         >
-            <p class="font-medium">No supplier invoices found</p>
+            <p class="font-medium">{{ t('No supplier invoices found') }}</p>
             <p class="text-muted-foreground text-sm">
-                Record one to clear a goods receipt's accrual, or to charge an expense directly.
+                {{ t("Record one to clear a goods receipt's accrual, or to charge an expense directly.") }}
             </p>
         </div>
 
@@ -113,15 +116,15 @@ const controlClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Internal No</th>
-                        <th class="px-4 py-3 font-medium">Supplier's No</th>
-                        <th class="px-4 py-3 font-medium">Supplier</th>
-                        <th class="px-4 py-3 font-medium">Invoice date</th>
-                        <th class="px-4 py-3 font-medium">Due</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Total</th>
-                        <th class="px-4 py-3 text-right font-medium">Paid</th>
-                        <th class="px-4 py-3 text-right font-medium">Outstanding</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Internal No') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t("Supplier's No") }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Supplier') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Invoice date') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Due') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Total') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Paid') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Outstanding') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -143,7 +146,7 @@ const controlClass =
                         <td class="px-4 py-3">{{ row.invoice_date }}</td>
                         <td class="px-4 py-3">
                             {{ row.due_date }}
-                            <span v-if="row.is_overdue" class="text-destructive block text-xs">Overdue</span>
+                            <span v-if="row.is_overdue" class="text-destructive block text-xs">{{ t('Overdue') }}</span>
                         </td>
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
@@ -158,7 +161,7 @@ const controlClass =
 
         <div v-if="invoices.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <p class="text-muted-foreground text-sm">
-                Showing {{ invoices.from }}–{{ invoices.to }} of {{ invoices.total }}
+                {{ t('Showing :from–:to of :total', { from: invoices.from ?? 0, to: invoices.to ?? 0, total: invoices.total }) }}
             </p>
             <div class="flex flex-wrap items-center gap-1">
                 <Button

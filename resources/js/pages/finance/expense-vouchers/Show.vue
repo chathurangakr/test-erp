@@ -9,10 +9,13 @@ import { usePermissions } from '@/composables/usePermissions';
 import { edit, index } from '@/routes/expense-vouchers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { ExpenseVoucherDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ voucher: ExpenseVoucherDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Expense vouchers', href: index() }] } });
+
+const { t } = useT();
 
 const { can } = usePermissions();
 
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <Button v-if="props.voucher.can_edit && can('finance.cash.expense_create')" variant="outline" as-child>
                     <Link :href="edit(props.voucher.id)">
                         <Pencil class="size-4" />
-                        Edit
+                        {{ t('Edit') }}
                     </Link>
                 </Button>
 
@@ -51,7 +54,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="ExpenseVoucherActionController.post.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" class="w-full" :disabled="processing">Post voucher</Button>
+                    <Button type="submit" class="w-full" :disabled="processing">{{ t('Post voucher') }}</Button>
                 </Form>
 
                 <Form
@@ -59,7 +62,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="ExpenseVoucherActionController.reverse.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Reverse</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Reverse') }}</Button>
                 </Form>
 
                 <Form
@@ -67,7 +70,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="ExpenseVoucherActionController.cancel.form(props.voucher.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Cancel draft</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Cancel draft') }}</Button>
                 </Form>
             </div>
         </div>
@@ -76,35 +79,34 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="props.voucher.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This voucher is a <strong>draft</strong>. No money has left the account and no
-            journal exists until it is posted.
+            {{ t('This voucher is a draft. No money has left the account and no journal exists until it is posted.') }}
         </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ props.voucher.total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Payee</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Payee') }}</p>
                 <p class="mt-1 text-lg">{{ props.voucher.payee ?? '—' }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Reference</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Reference') }}</p>
                 <p class="mt-1 text-lg">{{ props.voucher.reference ?? '—' }}</p>
             </div>
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
-                <h3 class="text-sm font-medium">Expenses charged</h3>
+                <h3 class="text-sm font-medium">{{ t('Expenses charged') }}</h3>
             </div>
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 font-medium">Description</th>
-                        <th class="px-4 py-3 text-right font-medium">Amount</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Description') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -130,7 +132,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         >
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
                 <h3 class="text-sm font-medium">
-                    Journal
+                    {{ t('Journal') }}
                     <Link
                         v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${props.voucher.journal.id}`"
@@ -144,9 +146,9 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 text-right font-medium">Debit</th>
-                        <th class="px-4 py-3 text-right font-medium">Credit</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,17 +175,17 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Created by</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Created by') }}</dt>
                     <dd class="mt-1 text-sm">{{ props.voucher.created_by ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ props.voucher.posted_at ? `${props.voucher.posted_at} by ${props.voucher.posted_by ?? '—'}` : '—' }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Reversed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversed') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ props.voucher.reversed_at ? `${props.voucher.reversed_at} by ${props.voucher.reversed_by ?? '—'}` : '—' }}
                         <span v-if="props.voucher.reversal_journal_number" class="font-mono text-xs">
@@ -192,17 +194,14 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div v-if="props.voucher.description" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Description</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Description') }}</dt>
                     <dd class="mt-1 text-sm">{{ props.voucher.description }}</dd>
                 </div>
             </dl>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Posting debits each expense and credits the cash or bank account with the total, in
-            one journal. Nothing becomes payable, and no stock, cost or inventory value moves.
-            Naming a supplier records who was paid; it does not turn this into a credit purchase.
-            Reversing mirrors the journal exactly and leaves both entries on the record.
+            {{ t('Posting debits each expense and credits the cash or bank account with the total, in one journal. Nothing becomes payable, and no stock, cost or inventory value moves. Naming a supplier records who was paid; it does not turn this into a credit purchase. Reversing mirrors the journal exactly and leaves both entries on the record.') }}
         </p>
     </div>
 </template>

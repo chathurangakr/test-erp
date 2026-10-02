@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useT } from '@/lib/i18n';
 import { show as deliveryShow } from '@/routes/deliveries';
 import { productProfitability, profitLoss } from '@/routes/reports';
 import type { OptionRef, ProductProfitabilityReport } from '@/types';
@@ -26,6 +27,8 @@ const props = defineProps<{
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Operational product profitability', href: productProfitability() }] },
 });
+
+const { t } = useT();
 
 const from = ref(props.filters.from ?? '');
 const to = ref(props.filters.to ?? '');
@@ -50,7 +53,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="Operational product profitability" />
+    <Head :title="t('Operational product profitability')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
@@ -60,26 +63,26 @@ const selectClass =
 
         <section class="grid gap-4 sm:grid-cols-4">
             <div class="grid gap-2">
-                <Label for="from">From</Label>
+                <Label for="from">{{ t('From') }}</Label>
                 <Input id="from" v-model="from" type="date" />
             </div>
             <div class="grid gap-2">
-                <Label for="to">To</Label>
+                <Label for="to">{{ t('To') }}</Label>
                 <Input id="to" v-model="to" type="date" />
             </div>
             <div class="grid gap-2">
-                <Label for="product">Product</Label>
+                <Label for="product">{{ t('Product') }}</Label>
                 <select id="product" v-model="productId" :class="selectClass">
-                    <option value="">All products</option>
+                    <option value="">{{ t('All products') }}</option>
                     <option v-for="p in products" :key="p.id" :value="String(p.id)">
                         {{ p.code }} — {{ p.name }}
                     </option>
                 </select>
             </div>
             <div class="grid gap-2">
-                <Label for="customer">Customer</Label>
+                <Label for="customer">{{ t('Customer') }}</Label>
                 <select id="customer" v-model="customerId" :class="selectClass">
-                    <option value="">All customers</option>
+                    <option value="">{{ t('All customers') }}</option>
                     <option v-for="c in customers" :key="c.id" :value="String(c.id)">
                         {{ c.code }} — {{ c.name }}
                     </option>
@@ -89,15 +92,15 @@ const selectClass =
 
         <div class="grid gap-3 sm:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Sales value ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Sales value (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg">{{ report.sales_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Cost of goods sold</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cost of goods sold') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ report.cogs_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Gross profit</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
                 <p
                     class="mt-1 font-mono text-lg font-medium"
                     :class="Number(report.gross_profit_total) < 0 ? 'text-destructive' : ''"
@@ -106,7 +109,7 @@ const selectClass =
                 </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Margin · deliveries</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Margin · deliveries') }}</p>
                 <p class="mt-1 font-mono text-lg">
                     {{ report.gross_margin_percent }}%
                     <span class="text-muted-foreground text-sm">· {{ report.delivery_count }}</span>
@@ -118,14 +121,14 @@ const selectClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Product</th>
-                        <th class="px-4 py-3 text-right font-medium">Delivered</th>
-                        <th class="px-4 py-3 text-right font-medium">Secondary</th>
-                        <th class="px-4 py-3 text-right font-medium">Sales value</th>
-                        <th class="px-4 py-3 text-right font-medium">COGS</th>
-                        <th class="px-4 py-3 text-right font-medium">Gross profit</th>
-                        <th class="px-4 py-3 text-right font-medium">Margin</th>
-                        <th class="px-4 py-3 text-right font-medium">Deliveries</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Delivered') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Secondary') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Sales value') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('COGS') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Gross profit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Margin') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Deliveries') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,7 +178,7 @@ const selectClass =
                     </tr>
                     <tr v-if="report.rows.length === 0">
                         <td colspan="8" class="text-muted-foreground px-4 py-8 text-center">
-                            No posted deliveries match these filters.
+                            {{ t('No posted deliveries match these filters.') }}
                         </td>
                     </tr>
                 </tbody>
@@ -187,8 +190,8 @@ const selectClass =
             class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
         >
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
-                <h3 class="text-sm font-medium">Deliveries behind these figures</h3>
-                <p class="text-muted-foreground text-xs">The 50 most recent posted deliveries of this product.</p>
+                <h3 class="text-sm font-medium">{{ t('Deliveries behind these figures') }}</h3>
+                <p class="text-muted-foreground text-xs">{{ t('The 50 most recent posted deliveries of this product.') }}</p>
             </div>
             <table class="w-full text-sm">
                 <tbody>
@@ -206,21 +209,16 @@ const selectClass =
                         <td class="px-4 py-2">{{ d.customer_code }} — {{ d.customer_name }}</td>
                     </tr>
                     <tr v-if="deliveries.length === 0">
-                        <td colspan="3" class="text-muted-foreground px-4 py-6 text-center">No deliveries.</td>
+                        <td colspan="3" class="text-muted-foreground px-4 py-6 text-center">{{ t('No deliveries.') }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            This is <strong>operational</strong> profitability: each posted delivery's own sales
-            value less the cost of the stock that left, exactly as the delivery recorded them.
-            It answers "was this physical sale profitable?". The
-            <Link :href="profitLoss()" class="underline">Profit &amp; loss</Link> answers a
-            different question — what revenue has been recognised through sales invoices — so
-            the two can legitimately differ while a delivery is unbilled or partly billed.
-            Products sold by weight use the delivery's stored value; nothing is converted between
-            count and weight. Reversed deliveries are excluded.
+            {{ t('This is operational profitability: each posted delivery\'s own sales value less the cost of the stock that left, exactly as the delivery recorded them. It answers "was this physical sale profitable?".') }}
+            <Link :href="profitLoss()" class="underline">{{ t('Profit & loss') }}</Link>
+            {{ t('answers a different question — what revenue has been recognised through sales invoices — so the two can legitimately differ while a delivery is unbilled or partly billed. Products sold by weight use the delivery\'s stored value; nothing is converted between count and weight. Reversed deliveries are excluded.') }}
         </p>
     </div>
 </template>

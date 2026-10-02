@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { AccountOption, JournalFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -100,6 +101,8 @@ function submit(): void {
 
 const selectClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+
+const { t } = useT();
 </script>
 
 <template>
@@ -107,19 +110,19 @@ const selectClass =
         <section class="space-y-4">
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="grid gap-2">
-                    <Label for="journal_date">Date <span class="text-destructive">*</span></Label>
+                    <Label for="journal_date">{{ t('Date') }} <span class="text-destructive">*</span></Label>
                     <Input id="journal_date" v-model="form.journal_date" type="date" required />
                     <p v-if="periodFor" class="text-muted-foreground text-xs">
-                        Posts into <span class="font-medium">{{ periodFor.name }}</span>
+                        {{ t('Posts into') }} <span class="font-medium">{{ periodFor.name }}</span>
                     </p>
                     <p v-else class="text-destructive text-xs">
-                        No open fiscal period covers this date.
+                        {{ t('No open fiscal period covers this date.') }}
                     </p>
                     <InputError :message="form.errors.journal_date" />
                 </div>
 
                 <div class="grid gap-2 sm:col-span-2">
-                    <Label for="description">Description <span class="text-destructive">*</span></Label>
+                    <Label for="description">{{ t('Description') }} <span class="text-destructive">*</span></Label>
                     <Input id="description" v-model="form.description" required maxlength="500" />
                     <InputError :message="form.errors.description" />
                 </div>
@@ -128,10 +131,10 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-medium">Lines</h3>
+                <h3 class="text-sm font-medium">{{ t('Lines') }}</h3>
                 <Button type="button" variant="outline" size="sm" @click="addLine">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('Add line') }}
                 </Button>
             </div>
 
@@ -139,10 +142,10 @@ const selectClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-3 py-3 font-medium">Account</th>
-                            <th class="px-3 py-3 font-medium">Description</th>
-                            <th class="px-3 py-3 text-right font-medium">Debit</th>
-                            <th class="px-3 py-3 text-right font-medium">Credit</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Account') }}</th>
+                            <th class="px-3 py-3 font-medium">{{ t('Description') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                            <th class="px-3 py-3 text-right font-medium">{{ t('Credit') }}</th>
                             <th class="w-10 px-3 py-3"></th>
                         </tr>
                     </thead>
@@ -154,7 +157,7 @@ const selectClass =
                         >
                             <td class="px-3 py-2">
                                 <select v-model.number="line.account_id" required :class="selectClass">
-                                    <option :value="null" disabled>Select an account…</option>
+                                    <option :value="null" disabled>{{ t('Select an account…') }}</option>
                                     <option v-for="account in accounts" :key="account.id" :value="account.id">
                                         {{ account.code }} — {{ account.name }}
                                     </option>
@@ -201,13 +204,13 @@ const selectClass =
                     </tbody>
                     <tfoot class="bg-muted/30">
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                            <td class="px-3 py-3 font-medium" colspan="2">Totals ({{ currency }})</td>
+                            <td class="px-3 py-3 font-medium" colspan="2">{{ t('Totals (:currency)', { currency }) }}</td>
                             <td class="px-3 py-3 text-right font-mono font-medium">{{ money(debitTotal) }}</td>
                             <td class="px-3 py-3 text-right font-mono font-medium">{{ money(creditTotal) }}</td>
                             <td></td>
                         </tr>
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                            <td class="px-3 py-3 font-medium" colspan="2">Difference</td>
+                            <td class="px-3 py-3 font-medium" colspan="2">{{ t('Difference') }}</td>
                             <td
                                 class="px-3 py-3 text-right font-mono font-medium"
                                 :class="isBalanced ? 'text-muted-foreground' : 'text-destructive'"
@@ -224,17 +227,16 @@ const selectClass =
             <InputError :message="form.errors.lines" />
 
             <p v-if="!isBalanced" class="text-destructive text-xs">
-                Debits and credits must be equal, and greater than zero, before this entry can
-                be posted. You may still save it as a draft.
+                {{ t('Debits and credits must be equal, and greater than zero, before this entry can be posted. You may still save it as a draft.') }}
             </p>
             <p v-else class="text-muted-foreground text-xs">
-                Balanced. A draft still affects no account until you post it.
+                {{ t('Balanced. A draft still affects no account until you post it.') }}
             </p>
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelHref">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelHref">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

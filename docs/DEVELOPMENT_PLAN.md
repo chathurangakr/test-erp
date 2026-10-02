@@ -473,7 +473,7 @@ ERP. See `KIOSK.md` §5.
 
 ---
 
-## Phase 18 — Sinhala + English, Step 1 ✅ COMPLETE (Step 2: Finance — not started)
+## Phase 18 — Sinhala + English ✅ COMPLETE (Step 1: operations · Step 2: Finance)
 
 - [x] Per-person language (`users.locale`, one forward migration), one-tap switch in the top bar
       and on sign-in screens; simple mode stays per device
@@ -488,7 +488,12 @@ ERP. See `KIOSK.md` §5.
 **Decided with the owner:** two steps; accounting terms Sinhala + English in brackets; language
 remembered per person.
 
-**Step 2 (not started):** the Finance screens.
+- [x] **Step 2:** every Finance screen — chart of accounts, journals, ledger, trial balance,
+      periods, setup, AP, AR, cash and bank, reports and the finance dashboard — plus finance server
+      messages and form fields (~640 more entries, ~1,650 in total)
+- [x] The completeness test now covers every screen, and the suite runs at a fixed moment
+      (`Tests\TestCase::FIXED_NOW`) so date-dependent tests no longer drift with the calendar
+- [x] Terminology published as `docs/SINHALA_GLOSSARY.md` for the factory's review
 
 ---
 

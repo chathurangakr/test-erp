@@ -4,6 +4,7 @@ import Heading from '@/components/Heading.vue';
 import SalesInvoiceForm from '@/components/receivables/SalesInvoiceForm.vue';
 import { index } from '@/routes/sales-invoices';
 import type { BillableDeliveryLine, OptionRef, SalesInvoiceFormValues } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     invoice: SalesInvoiceFormValues & { id: number; invoice_number: string };
@@ -15,13 +16,15 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Sales invoices', href: index() }] } });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit ${props.invoice.invoice_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.invoice.invoice_number })" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit ${props.invoice.invoice_number}`"
+            :title="t('Edit :reference', { reference: props.invoice.invoice_number })"
             description="Only a draft sales invoice can be edited."
         />
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-6xl rounded-xl border p-4 sm:p-6">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, edit, index } from '@/routes/cash-bank-accounts';
 import type { CashBankSummary } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     summary: CashBankSummary;
@@ -18,6 +19,8 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Cash / bank accounts', href: i
 
 const { can } = usePermissions();
 
+const { t } = useT();
+
 function toggleInactive(): void {
     router.get(index().url, { show_inactive: props.filters.show_inactive ? undefined : 1 }, {
         preserveState: false,
@@ -27,7 +30,7 @@ function toggleInactive(): void {
 </script>
 
 <template>
-    <Head title="Cash / bank accounts" />
+    <Head :title="t('Cash / bank accounts')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -37,12 +40,12 @@ function toggleInactive(): void {
             />
             <div class="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" @click="toggleInactive">
-                    {{ filters.show_inactive ? 'Hide inactive' : 'Show inactive' }}
+                    {{ filters.show_inactive ? t('Hide inactive') : t('Show inactive') }}
                 </Button>
                 <Button v-if="can('finance.cash.accounts_manage')" as-child>
                     <Link :href="create()">
                         <Plus class="size-4" />
-                        Configure account
+                        {{ t('Configure account') }}
                     </Link>
                 </Button>
             </div>
@@ -50,15 +53,15 @@ function toggleInactive(): void {
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total cash ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total cash (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg">{{ summary.cash_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total bank</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total bank') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ summary.bank_total }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Combined</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Combined') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ summary.combined_total }}</p>
             </div>
         </div>
@@ -67,12 +70,12 @@ function toggleInactive(): void {
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">GL account</th>
-                        <th class="px-4 py-3 font-medium">Kind</th>
-                        <th class="px-4 py-3 font-medium">Bank</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Balance</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('GL account') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Kind') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Bank') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Balance') }}</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
@@ -104,19 +107,19 @@ function toggleInactive(): void {
                         </td>
                         <td class="px-4 py-3">
                             <Badge :variant="row.is_active ? 'default' : 'secondary'">
-                                {{ row.is_active ? 'Active' : 'Inactive' }}
+                                {{ row.is_active ? t('Active') : t('Inactive') }}
                             </Badge>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ row.balance }}</td>
                         <td class="px-4 py-3 text-right">
                             <Button v-if="can('finance.cash.accounts_manage')" variant="ghost" size="sm" as-child>
-                                <Link :href="edit(row.id)">Edit</Link>
+                                <Link :href="edit(row.id)">{{ t('Edit') }}</Link>
                             </Button>
                         </td>
                     </tr>
                     <tr v-if="summary.rows.length === 0">
                         <td colspan="7" class="text-muted-foreground px-4 py-8 text-center">
-                            No cash or bank accounts are configured yet.
+                            {{ t('No cash or bank accounts are configured yet.') }}
                         </td>
                     </tr>
                 </tbody>
@@ -124,12 +127,7 @@ function toggleInactive(): void {
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            Each balance is calculated from posted journal lines every time this page loads.
-            There is no stored balance anywhere and there never will be — the general ledger is
-            the only record of how much money there is. Configuring an account here does not
-            create or change a single rupee; it only says which ledger account is a real till or
-            bank account, so payments, receipts, expense vouchers and transfers all draw on one
-            list. An account that money has moved through is deactivated, never deleted.
+            {{ t('Each balance is calculated from posted journal lines every time this page loads. There is no stored balance anywhere and there never will be — the general ledger is the only record of how much money there is. Configuring an account here does not create or change a single rupee; it only says which ledger account is a real till or bank account, so payments, receipts, expense vouchers and transfers all draw on one list. An account that money has moved through is deactivated, never deleted.') }}
         </p>
     </div>
 </template>

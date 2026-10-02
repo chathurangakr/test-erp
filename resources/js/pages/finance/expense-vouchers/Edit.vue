@@ -4,6 +4,7 @@ import ExpenseVoucherForm from '@/components/cash/ExpenseVoucherForm.vue';
 import Heading from '@/components/Heading.vue';
 import { index, show, update } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, OptionRef } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     voucher: {
@@ -31,10 +32,12 @@ defineOptions({
         ],
     },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head :title="`Edit ${props.voucher.voucher_number}`" />
+    <Head :title="t('Edit :reference', { reference: props.voucher.voucher_number })" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading :title="props.voucher.voucher_number" description="Draft — not yet posted." />

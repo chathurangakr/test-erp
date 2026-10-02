@@ -175,7 +175,7 @@ class LocalisationTest extends TestCase
         $sinhala = $this->sinhala();
         $missing = [];
 
-        // Step 1: everything except the Finance screens (step 2) and simple mode (own word list).
+        // Every screen, Finance included. Simple mode has its own word list (kiosk/text.ts).
         $roots = ['pages', 'components', 'layouts'];
 
         foreach ($roots as $root) {
@@ -184,13 +184,17 @@ class LocalisationTest extends TestCase
             foreach ($files as $file) {
                 $path = str_replace(resource_path('js').'/', '', $file->getPathname());
 
-                if (! str_ends_with($path, '.vue') || str_contains($path, 'finance/') || str_contains(strtolower($path), 'kiosk') || str_starts_with($path, 'components/ui/')) {
+                if (! str_ends_with($path, '.vue') || str_contains(strtolower($path), 'kiosk') || str_starts_with($path, 'components/ui/')) {
                     continue;
                 }
 
-                preg_match_all("/\bt\('((?:[^'\\\\]|\\\\.)+)'/", (string) file_get_contents($file->getPathname()), $matches);
+                $source = (string) file_get_contents($file->getPathname());
 
-                foreach ($matches[1] as $key) {
+                // Single-quoted keys, and double-quoted ones (used when the English has an apostrophe).
+                preg_match_all("/\bt\('((?:[^'\\\\]|\\\\.)+)'/", $source, $single);
+                preg_match_all('/\bt\("((?:[^"\\\\]|\\\\.)+)"/', $source, $double);
+
+                foreach ([...$single[1], ...$double[1]] as $key) {
                     $key = stripslashes($key);
 
                     if (! array_key_exists($key, $sinhala)) {

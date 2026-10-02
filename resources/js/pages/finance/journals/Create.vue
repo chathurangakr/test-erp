@@ -4,6 +4,7 @@ import Heading from '@/components/Heading.vue';
 import JournalEntryForm from '@/components/finance/JournalEntryForm.vue';
 import { index } from '@/routes/journals';
 import type { AccountOption } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{
     accounts: AccountOption[];
@@ -14,10 +15,12 @@ defineProps<{
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Journal entries', href: index() }, { title: 'New', href: index() }] },
 });
+
+const { t } = useT();
 </script>
 
 <template>
-    <Head title="New journal entry" />
+    <Head :title="t('New journal entry')" />
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="New journal entry"

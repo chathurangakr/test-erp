@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import type { StatementRow } from '@/types';
 
@@ -13,6 +14,10 @@ defineProps<{
     to?: string | null;
     emptyMessage?: string;
 }>();
+
+// Section titles and labels arrive in English (or already translated) and are shown in the
+// reader's language, like <Heading>. Account names are chart data and are never translated.
+const { t } = useT();
 
 /** Flatten the tree so one table can render the whole section with indents. */
 function flatten(rows: StatementRow[]): StatementRow[] {
@@ -32,7 +37,7 @@ function ledgerUrl(row: StatementRow, from?: string | null, to?: string | null):
 <template>
     <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
         <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
-            <h3 class="text-sm font-medium">{{ title }}</h3>
+            <h3 class="text-sm font-medium">{{ t(title) }}</h3>
         </div>
 
         <table class="w-full text-sm">
@@ -64,12 +69,12 @@ function ledgerUrl(row: StatementRow, from?: string | null, to?: string | null):
 
                 <tr v-if="rows.length === 0">
                     <td colspan="2" class="text-muted-foreground px-4 py-6 text-center">
-                        {{ emptyMessage ?? 'Nothing posted in this period.' }}
+                        {{ t(emptyMessage ?? 'Nothing posted in this period.') }}
                     </td>
                 </tr>
 
                 <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
-                    <td class="px-4 py-3 font-medium">{{ totalLabel }}</td>
+                    <td class="px-4 py-3 font-medium">{{ t(totalLabel) }}</td>
                     <td class="px-4 py-3 text-right font-mono font-medium">{{ total }}</td>
                 </tr>
             </tbody>

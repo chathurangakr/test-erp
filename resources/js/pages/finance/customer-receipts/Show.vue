@@ -9,6 +9,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import { index as invoicesIndex } from '@/routes/sales-invoices';
 import { index } from '@/routes/customer-receipts';
 import type { CustomerReceiptDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 defineProps<{ receipt: CustomerReceiptDetail; currency: string }>();
 
@@ -21,6 +22,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     if (value === 'POSTED') return 'default';
     return 'outline';
 }
+
+const { t } = useT();
 </script>
 
 <template>
@@ -42,7 +45,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="CustomerReceiptActionController.post.form(receipt.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" class="w-full" :disabled="processing">Post receipt</Button>
+                    <Button type="submit" class="w-full" :disabled="processing">{{ t('Post receipt') }}</Button>
                 </Form>
 
                 <Form
@@ -50,7 +53,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="CustomerReceiptActionController.reverse.form(receipt.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Reverse</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Reverse') }}</Button>
                 </Form>
 
                 <Form
@@ -58,7 +61,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="CustomerReceiptActionController.cancel.form(receipt.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Cancel draft</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Cancel draft') }}</Button>
                 </Form>
             </div>
         </div>
@@ -67,36 +70,35 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="receipt.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This receipt is a <strong>draft</strong>. No money has left the bank and no invoice has
-            been settled until it is posted.
+            {{ t('This receipt is a draft. No money has been received into the account and no invoice has been settled until it is posted.') }}
         </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Amount ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Amount (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ receipt.amount }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Allocated</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Allocated') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ receipt.allocated }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Reference</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Reference') }}</p>
                 <p class="mt-1 text-lg">{{ receipt.reference ?? '—' }}</p>
             </div>
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
-                <h3 class="text-sm font-medium">Invoices settled</h3>
+                <h3 class="text-sm font-medium">{{ t('Invoices settled') }}</h3>
             </div>
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Invoice</th>
-                        <th class="px-4 py-3 font-medium">Due</th>
-                        <th class="px-4 py-3 font-medium">Invoice status</th>
-                        <th class="px-4 py-3 text-right font-medium">Allocated</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Invoice') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Due') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Invoice status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Allocated') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -128,7 +130,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         >
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
                 <h3 class="text-sm font-medium">
-                    Journal
+                    {{ t('Journal') }}
                     <Link
                         v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${receipt.journal.id}`"
@@ -142,9 +144,9 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 text-right font-medium">Debit</th>
-                        <th class="px-4 py-3 text-right font-medium">Credit</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,36 +173,33 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Created by</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Created by') }}</dt>
                     <dd class="mt-1 text-sm">{{ receipt.created_by ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
-                        {{ receipt.posted_at ? `${receipt.posted_at} by ${receipt.posted_by ?? '—'}` : '—' }}
+                        {{ receipt.posted_at ? t(':date by :user', { date: receipt.posted_at, user: receipt.posted_by ?? '—' }) : '—' }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Reversed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversed') }}</dt>
                     <dd class="mt-1 text-sm">
-                        {{ receipt.reversed_at ? `${receipt.reversed_at} by ${receipt.reversed_by ?? '—'}` : '—' }}
+                        {{ receipt.reversed_at ? t(':date by :user', { date: receipt.reversed_at, user: receipt.reversed_by ?? '—' }) : '—' }}
                         <span v-if="receipt.reversal_journal_number" class="font-mono text-xs">
                             ({{ receipt.reversal_journal_number }})
                         </span>
                     </dd>
                 </div>
                 <div v-if="receipt.notes" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Notes</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm">{{ receipt.notes }}</dd>
                 </div>
             </dl>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            A receipt settles invoices. It recognises no revenue — the invoice already did that —
-            and it touches no inventory or cost of sales. Reversing it restores each invoice's
-            outstanding balance without deleting anything: the allocations stay on the record and
-            simply stop counting.
+            {{ t("A receipt settles invoices. It recognises no revenue — the invoice already did that — and it touches no inventory or cost of sales. Reversing it restores each invoice's outstanding balance without deleting anything: the allocations stay on the record and simply stop counting.") }}
         </p>
     </div>
 </template>

@@ -9,10 +9,13 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/fund-transfers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { FundTransferDetail } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{ transfer: FundTransferDetail; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Fund transfers', href: index() }] } });
+
+const { t } = useT();
 
 const { can } = usePermissions();
 
@@ -41,7 +44,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="FundTransferActionController.post.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" class="w-full" :disabled="processing">Post transfer</Button>
+                    <Button type="submit" class="w-full" :disabled="processing">{{ t('Post transfer') }}</Button>
                 </Form>
 
                 <Form
@@ -49,7 +52,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="FundTransferActionController.reverse.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Reverse</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Reverse') }}</Button>
                 </Form>
 
                 <Form
@@ -57,7 +60,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     v-bind="FundTransferActionController.cancel.form(props.transfer.id)"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">Cancel draft</Button>
+                    <Button type="submit" variant="outline" class="w-full" :disabled="processing">{{ t('Cancel draft') }}</Button>
                 </Form>
             </div>
         </div>
@@ -66,14 +69,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             v-if="props.transfer.status === 'DRAFT'"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
-            This transfer is a <strong>draft</strong>. No money has moved and no journal exists
-            until it is posted.
+            {{ t('This transfer is a draft. No money has moved and no journal exists until it is posted.') }}
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-muted-foreground text-xs font-medium">From</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('From') }}</p>
                     <p class="mt-1 text-lg font-medium">{{ props.transfer.from_name }}</p>
                     <p class="text-muted-foreground font-mono text-xs">{{ props.transfer.from_code }}</p>
                 </div>
@@ -81,13 +83,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <ArrowRight class="text-muted-foreground size-6 shrink-0" />
 
                 <div>
-                    <p class="text-muted-foreground text-xs font-medium">To</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('To') }}</p>
                     <p class="mt-1 text-lg font-medium">{{ props.transfer.to_name }}</p>
                     <p class="text-muted-foreground font-mono text-xs">{{ props.transfer.to_code }}</p>
                 </div>
 
                 <div class="sm:text-right">
-                    <p class="text-muted-foreground text-xs font-medium">Amount ({{ currency }})</p>
+                    <p class="text-muted-foreground text-xs font-medium">{{ t('Amount (:currency)', { currency }) }}</p>
                     <p class="mt-1 font-mono text-lg font-medium">{{ props.transfer.amount }}</p>
                 </div>
             </div>
@@ -99,7 +101,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         >
             <div class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3">
                 <h3 class="text-sm font-medium">
-                    Journal
+                    {{ t('Journal') }}
                     <Link
                         v-if="can('finance.view')"
                         :href="`${journalsIndex().url}/${props.transfer.journal.id}`"
@@ -113,9 +115,9 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Account</th>
-                        <th class="px-4 py-3 text-right font-medium">Debit</th>
-                        <th class="px-4 py-3 text-right font-medium">Credit</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -142,17 +144,17 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 sm:p-6">
             <dl class="grid gap-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Created by</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Created by') }}</dt>
                     <dd class="mt-1 text-sm">{{ props.transfer.created_by ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Posted</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Posted') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ props.transfer.posted_at ? `${props.transfer.posted_at} by ${props.transfer.posted_by ?? '—'}` : '—' }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-muted-foreground text-sm font-medium">Reversed</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversed') }}</dt>
                     <dd class="mt-1 text-sm">
                         {{ props.transfer.reversed_at ? `${props.transfer.reversed_at} by ${props.transfer.reversed_by ?? '—'}` : '—' }}
                         <span v-if="props.transfer.reversal_journal_number" class="font-mono text-xs">
@@ -161,17 +163,14 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     </dd>
                 </div>
                 <div v-if="props.transfer.description" class="sm:col-span-3">
-                    <dt class="text-muted-foreground text-sm font-medium">Description</dt>
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Description') }}</dt>
                     <dd class="mt-1 text-sm">{{ props.transfer.description }}</dd>
                 </div>
             </dl>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            The debit and the credit are the same figure used twice, so the two legs cannot drift
-            apart. Nothing reaches profit or loss, and the combined cash-and-bank total is
-            unchanged. Reversing puts the money back where it started and leaves both journals on
-            the record.
+            {{ t('The debit and the credit are the same figure used twice, so the two legs cannot drift apart. Nothing reaches profit or loss, and the combined cash-and-bank total is unchanged. Reversing puts the money back where it started and leaves both journals on the record.') }}
         </p>
     </div>
 </template>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CashBankAccountOption, OptionRef } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
 
 type VoucherLine = {
     expense_account_id: number | string;
@@ -34,6 +35,8 @@ const props = defineProps<{
         lines: VoucherLine[];
     };
 }>();
+
+const { t } = useT();
 
 const today = businessToday();
 
@@ -91,15 +94,15 @@ const selectClass =
     <form class="max-w-6xl space-y-8" @submit.prevent="submit">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div class="grid gap-2">
-                <Label for="voucher_date">Date <span class="text-destructive">*</span></Label>
+                <Label for="voucher_date">{{ t('Date') }} <span class="text-destructive">*</span></Label>
                 <Input id="voucher_date" v-model="form.voucher_date" type="date" required />
                 <InputError :message="form.errors.voucher_date" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="cash_bank_account_id">Paid from <span class="text-destructive">*</span></Label>
+                <Label for="cash_bank_account_id">{{ t('Paid from') }} <span class="text-destructive">*</span></Label>
                 <select id="cash_bank_account_id" v-model="form.cash_bank_account_id" required :class="selectClass">
-                    <option value="" disabled>Cash or bank…</option>
+                    <option value="" disabled>{{ t('Cash or bank…') }}</option>
                     <option v-for="a in accounts" :key="a.id" :value="a.id">
                         {{ a.code }} — {{ a.name }} ({{ a.kind }})
                     </option>
@@ -108,29 +111,29 @@ const selectClass =
             </div>
 
             <div class="grid gap-2">
-                <Label for="reference">Reference</Label>
-                <Input id="reference" v-model="form.reference" maxlength="100" placeholder="Cheque or bill no" />
+                <Label for="reference">{{ t('Reference') }}</Label>
+                <Input id="reference" v-model="form.reference" maxlength="100" :placeholder="t('Cheque or bill no')" />
                 <InputError :message="form.errors.reference" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="supplier_id">Supplier (optional)</Label>
+                <Label for="supplier_id">{{ t('Supplier (optional)') }}</Label>
                 <select id="supplier_id" v-model="form.supplier_id" :class="selectClass">
-                    <option value="">None</option>
+                    <option value="">{{ t('None') }}</option>
                     <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.code }} — {{ s.name }}</option>
                 </select>
                 <InputError :message="form.errors.supplier_id" />
-                <p class="text-muted-foreground text-xs">Recorded for reporting. This raises no payable.</p>
+                <p class="text-muted-foreground text-xs">{{ t('Recorded for reporting. This raises no payable.') }}</p>
             </div>
 
             <div class="grid gap-2">
-                <Label for="payee_name">Payee (if not a supplier)</Label>
+                <Label for="payee_name">{{ t('Payee (if not a supplier)') }}</Label>
                 <Input id="payee_name" v-model="form.payee_name" maxlength="150" />
                 <InputError :message="form.errors.payee_name" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="description">Description</Label>
+                <Label for="description">{{ t('Description') }}</Label>
                 <Input id="description" v-model="form.description" maxlength="500" />
                 <InputError :message="form.errors.description" />
             </div>
@@ -138,10 +141,10 @@ const selectClass =
 
         <section class="space-y-4">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Expenses</h3>
+                <h3 class="text-sm font-medium">{{ t('Expenses') }}</h3>
                 <Button type="button" variant="outline" size="sm" @click="addLine">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('Add line') }}
                 </Button>
             </div>
 
@@ -149,9 +152,9 @@ const selectClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Expense account</th>
-                            <th class="px-4 py-3 font-medium">Description</th>
-                            <th class="px-4 py-3 text-right font-medium">Amount</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Expense account') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Description') }}</th>
+                            <th class="px-4 py-3 text-right font-medium">{{ t('Amount') }}</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -163,7 +166,7 @@ const selectClass =
                         >
                             <td class="px-4 py-3">
                                 <select v-model="line.expense_account_id" required :class="selectClass">
-                                    <option value="" disabled>Select…</option>
+                                    <option value="" disabled>{{ t('Select…') }}</option>
                                     <option v-for="a in expenseAccounts" :key="a.id" :value="a.id">
                                         {{ a.code }} — {{ a.name }}
                                     </option>
@@ -203,19 +206,17 @@ const selectClass =
             <InputError :message="form.errors.lines" />
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">Total ({{ currency }})</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Total (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ money(total) }}</p>
                 <p class="text-muted-foreground mt-2 text-xs">
-                    This is what will be credited to the cash or bank account when the voucher is
-                    posted. Cost of sales cannot be charged here — it is derived from stock
-                    movements.
+                    {{ t('This is what will be credited to the cash or bank account when the voucher is posted. Cost of sales cannot be charged here — it is derived from stock movements.') }}
                 </p>
             </div>
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" :disabled="form.processing">{{ submitLabel }}</Button>
-            <Button variant="outline" as-child><a :href="cancelUrl">Cancel</a></Button>
+            <Button type="submit" :disabled="form.processing">{{ t(submitLabel) }}</Button>
+            <Button variant="outline" as-child><a :href="cancelUrl">{{ t('Cancel') }}</a></Button>
         </div>
     </form>
 </template>

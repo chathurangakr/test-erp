@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/fund-transfers';
 import type { FundTransferRow, Paginated } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     transfers: Paginated<FundTransferRow>;
@@ -18,6 +19,8 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Fund transfers', href: index() }] } });
+
+const { t } = useT();
 
 const { can } = usePermissions();
 
@@ -43,7 +46,7 @@ const selectClass =
 </script>
 
 <template>
-    <Head title="Fund transfers" />
+    <Head :title="t('Fund transfers')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -54,15 +57,15 @@ const selectClass =
             <Button v-if="can('finance.cash.transfer_create')" as-child>
                 <Link :href="create()">
                     <Plus class="size-4" />
-                    New transfer
+                    {{ t('New transfer') }}
                 </Link>
             </Button>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Input v-model="search" placeholder="Search number or reference" />
+            <Input v-model="search" :placeholder="t('Search number or reference')" />
             <select v-model="status" :class="selectClass">
-                <option value="">All statuses</option>
+                <option value="">{{ t('All statuses') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
         </div>
@@ -71,12 +74,12 @@ const selectClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Transfer</th>
-                        <th class="px-4 py-3 font-medium">Date</th>
-                        <th class="px-4 py-3 font-medium">From</th>
-                        <th class="px-4 py-3 font-medium">To</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Amount ({{ currency }})</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Transfer') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('From') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('To') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -102,15 +105,14 @@ const selectClass =
                         <td class="px-4 py-3 text-right font-mono">{{ transfer.amount }}</td>
                     </tr>
                     <tr v-if="transfers.data.length === 0">
-                        <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">No fund transfers yet.</td>
+                        <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">{{ t('No fund transfers yet.') }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            A transfer moves money between accounts the factory already owns. Nothing is earned,
-            spent or owed, and the combined cash-and-bank total is identical before and after.
+            {{ t('A transfer moves money between accounts the factory already owns. Nothing is earned, spent or owed, and the combined cash-and-bank total is identical before and after.') }}
         </p>
     </div>
 </template>
