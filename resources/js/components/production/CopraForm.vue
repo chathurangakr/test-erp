@@ -157,8 +157,15 @@ function money(value: number): string {
     });
 }
 
+/** Pooled dehusked coconut has no lots: the lot picker only appears for lot-tracked input. */
+const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
+
 function submit(): void {
-    form.submit(props.method, props.action, { preserveScroll: true });
+    form.transform((data) => ({ ...data, lot_id: usesLots.value ? data.lot_id || null : null })).submit(
+        props.method,
+        props.action,
+        { preserveScroll: true },
+    );
 }
 
 const selectClass =
@@ -201,7 +208,7 @@ const selectClass =
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <div class="grid gap-2">
+                <div v-if="usesLots" class="grid gap-2">
                     <Label for="lot_id">
                         {{ t('Dehusked coconut lot') }} <span class="text-destructive">*</span>
                     </Label>

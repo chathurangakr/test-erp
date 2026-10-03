@@ -17,7 +17,8 @@ import { store as storeDispatch } from '@/routes/kiosk/dispatch';
  * Staff choose the batch (never assumed — our rule), type the quantity, the weight where the
  * product is weighed too, and the selling price. The cost of what leaves is decided by the
  * server at the weighted average; the screen never states a cost. "By count / by weight" only
- * appears for a product that has a second unit.
+ * appears for a product that has a second unit. Pooled stock has no batch to choose. A product
+ * that deducts a raw material when it leaves (chips, cocopeat) asks how many raw husks it used.
  */
 const props = defineProps<{ customers: KioskParty[]; products: KioskStockedProduct[]; warehouses: KioskStore[] }>();
 
@@ -30,9 +31,18 @@ type Line = {
     secondary_quantity: string;
     pricing_basis: 'PRIMARY' | 'SECONDARY';
     unit_price: string;
+    backflush_quantity: string;
 };
 
-const emptyLine = (): Line => ({ product_id: 0, lot_id: null, quantity: '', secondary_quantity: '', pricing_basis: 'PRIMARY', unit_price: '' });
+const emptyLine = (): Line => ({
+    product_id: 0,
+    lot_id: null,
+    quantity: '',
+    secondary_quantity: '',
+    pricing_basis: 'PRIMARY',
+    unit_price: '',
+    backflush_quantity: '',
+});
 
 const form = useForm({
     customer_id: null as number | null,
@@ -64,6 +74,10 @@ const steps = computed(() => {
 
     if (draftProduct.value?.secondary_uom) {
         list.push('weight', 'basis');
+    }
+
+    if (draftProduct.value?.backflush) {
+        list.push('husks');
     }
 
     list.push('price', 'lines', 'vehicle', 'review');
@@ -138,6 +152,8 @@ const canNext = computed(() => {
             return draft.value.pricing_basis === 'PRIMARY' || isPositive(draft.value.secondary_quantity);
         case 'basis':
             return draft.value.pricing_basis === 'PRIMARY' || isPositive(draft.value.secondary_quantity);
+        case 'husks':
+            return isPositive(draft.value.backflush_quantity);
         case 'price':
             return draft.value.unit_price !== '';
         case 'lines':
@@ -160,6 +176,7 @@ function submit(): void {
         lines: data.lines.map((line) => ({
             ...line,
             secondary_quantity: line.secondary_quantity === '' ? null : line.secondary_quantity,
+            backflush_quantity: productOf(line.product_id)?.backflush ? line.backflush_quantity : null,
         })),
     })).post(storeDispatch().url);
 }
@@ -176,13 +193,22 @@ function submit(): void {
                 count: draftProduct?.name ?? '',
                 weight: draftProduct?.name ?? '',
                 basis: t('price.by'),
+                husks: draftProduct?.name ?? '',
                 price: draftProduct?.name ?? '',
                 lines: t('task.dispatch'),
                 vehicle: t('enter.vehicle'),
                 review: t('common.check'),
             }[current] ?? ''
         "
-        :hint="current === 'lot' ? t('pick.lot.hint') : current === 'vehicle' ? t('common.optional') : null"
+        :hint="
+            current === 'lot'
+                ? t('pick.lot.hint')
+                : current === 'vehicle'
+                  ? t('common.optional')
+                  : current === 'husks'
+                    ? t('dispatch.husks.hint')
+                    : null
+        "
         :step="index + 1"
         :total="steps.length"
         :can-next="canNext"
@@ -260,6 +286,13 @@ function submit(): void {
         </div>
 
         <KioskNumberPad
+            v-else-if="current === 'husks'"
+            v-model="draft.backflush_quantity"
+            :label="t('dispatch.husks', { uom: draftProduct?.backflush?.uom ?? '' })"
+            :decimals="draftProduct?.backflush?.decimals ?? 0"
+        />
+
+        <KioskNumberPad
             v-else-if="current === 'price'"
             v-model="draft.unit_price"
             :label="draft.pricing_basis === 'SECONDARY' ? t('enter.priceKg') : t('enter.price', { uom: draftProduct?.uom ?? '' })"
@@ -276,6 +309,9 @@ function submit(): void {
                         · Rs. {{ plainNumber(line.unit_price) }} / {{ priceUnit(line) }}
                     </p>
                     <p v-if="line.lot_id" class="text-muted-foreground font-mono text-sm">{{ lotOf(line) }}</p>
+                    <p v-if="line.backflush_quantity" class="text-muted-foreground text-base">
+                        {{ t('dispatch.husks', { uom: productOf(line.product_id)?.backflush?.uom ?? '' }) }}: {{ plainNumber(line.backflush_quantity) }}
+                    </p>
                 </div>
                 <button type="button" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-red-700" :aria-label="t('common.remove')" @click="removeLine(position)">
                     <Trash2 class="size-6" />
@@ -309,6 +345,9 @@ function submit(): void {
                         <span class="font-mono tabular-nums">{{ plainNumber(line.quantity) }} {{ productOf(line.product_id)?.uom }}</span>
                         <span v-if="line.secondary_quantity" class="font-mono tabular-nums"> · {{ plainNumber(line.secondary_quantity) }} {{ productOf(line.product_id)?.secondary_uom }}</span>
                         · Rs. {{ plainNumber(line.unit_price) }} / {{ priceUnit(line) }}
+                        <span v-if="line.backflush_quantity" class="text-muted-foreground block text-base">
+                            {{ t('dispatch.husks', { uom: productOf(line.product_id)?.backflush?.uom ?? '' }) }}: {{ plainNumber(line.backflush_quantity) }}
+                        </span>
                     </li>
                 </ul>
             </div>

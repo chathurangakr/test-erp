@@ -25,6 +25,7 @@ const props = defineProps<{
         warehouse_id: number | null;
         lot_id: number | null;
         quantity: string | null;
+        labour_rate?: string | null;
         notes: string | null;
     } | null;
 }>();
@@ -36,7 +37,17 @@ const form = useForm({
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
     lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
     quantity: props.initial?.quantity ?? '',
+    labour_rate: props.initial?.labour_rate ?? props.recipe.default_labour_rate ?? '',
     notes: props.initial?.notes ?? '',
+});
+
+/** Pooled coconut has no lots: the lot picker only appears for lot-tracked input. */
+const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
+
+const labourCost = computed(() => {
+    const rate = Number(form.labour_rate);
+
+    return Number.isFinite(rate) && rate >= 0 ? (inputQuantity.value * rate).toFixed(2) : '0.00';
 });
 
 /** Lots holding coconut in the chosen warehouse. */
@@ -83,7 +94,11 @@ const exceedsLot = computed(() => {
 });
 
 function submit(): void {
-    form.submit(props.method, props.action, { preserveScroll: true });
+    form.transform((data) => ({ ...data, lot_id: usesLots.value ? data.lot_id || null : null })).submit(
+        props.method,
+        props.action,
+        { preserveScroll: true },
+    );
 }
 
 const selectClass =
@@ -128,7 +143,7 @@ const selectClass =
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <div class="grid gap-2">
+                <div v-if="usesLots" class="grid gap-2">
                     <Label for="lot_id">{{ t('Coconut lot') }} <span class="text-destructive">*</span></Label>
                     <select
                         id="lot_id"
@@ -170,6 +185,17 @@ const selectClass =
                     </p>
                     <InputError :message="form.errors.quantity" />
                 </div>
+
+                <div class="grid gap-2">
+                    <Label for="labour_rate">
+                        {{ t('Labour per coconut (Rs.)') }} <span class="text-destructive">*</span>
+                    </Label>
+                    <Input id="labour_rate" v-model="form.labour_rate" type="number" step="0.01" min="0" required />
+                    <p class="text-muted-foreground text-xs">
+                        {{ t('Labour cost for this run: Rs. :amount — this becomes the cost of the raw husk.', { amount: labourCost }) }}
+                    </p>
+                    <InputError :message="form.errors.labour_rate" />
+                </div>
             </div>
         </section>
 
@@ -202,7 +228,8 @@ const selectClass =
                             <td class="px-4 py-3 text-right font-mono">{{ output.quantity }}</td>
                             <td class="text-muted-foreground px-4 py-3">{{ output.uom }}</td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(output.allocation_percent).toFixed(2) }}%
+                                <template v-if="output.absorbs_labour">{{ t('Labour Rs. :amount', { amount: labourCost }) }}</template>
+                                <template v-else>{{ Number(output.allocation_percent).toFixed(2) }}%</template>
                             </td>
                         </tr>
                     </tbody>
@@ -210,7 +237,7 @@ const selectClass =
             </div>
 
             <p class="text-muted-foreground text-xs">
-                {{ t('Output quantities are derived from the input — one coconut yields one dehusked coconut and one husk — and cannot be edited. The cost shares are configuration: the consumed inventory value is divided between the outputs in these proportions, so production neither creates nor destroys value. Actual costs are calculated by the ledger when you post.') }}
+                {{ t('Output quantities are derived from the input — one coconut yields one dehusked coconut and one husk — and cannot be edited. The dehusked coconut carries the whole coconut cost; the raw husk carries only the dehusking labour. Actual costs are calculated by the ledger when you post.') }}
             </p>
         </section>
 

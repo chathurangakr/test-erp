@@ -224,7 +224,7 @@ class PostInventoryTransaction
             );
 
             $this->validateSecondaryQuantity($line, $product, $field);
-            $this->validateLot($line, $lots, $field);
+            $this->validateLot($type, $line, $product, $lots, $field);
             $this->validateSuppliedCost($line, $field);
         }
     }
@@ -260,10 +260,29 @@ class PostInventoryTransaction
     /**
      * @param  array<int, InventoryLot>  $lots
      */
-    private function validateLot(PendingInventoryLine $line, array $lots, string $field): void
-    {
+    private function validateLot(
+        InventoryTransactionType $type,
+        PendingInventoryLine $line,
+        Product $product,
+        array $lots,
+        string $field,
+    ): void {
         if ($line->lotId === null) {
             return;
+        }
+
+        // A pooled product receives stock into its lot-free pool only. Its old lots may still
+        // be drawn down, a reversal may put stock back exactly where it came from, and a lot
+        // consolidation may bring an overdrawn old lot back to zero — but no new stock may
+        // land in a lot (docs/INVENTORY_RULES.md §15).
+        $mayRefillLot = in_array($type, [InventoryTransactionType::Reversal, InventoryTransactionType::LotConsolidation], true);
+
+        if ($line->direction->isIn() && ! $product->tracksLots() && ! $mayRefillLot) {
+            throw ValidationException::withMessages([
+                $field.'.lot_id' => __(':product is kept as one pooled stock without lots, so no lot can be chosen.', [
+                    'product' => $product->code,
+                ]),
+            ]);
         }
 
         $lot = $lots[$line->lotId] ?? null;

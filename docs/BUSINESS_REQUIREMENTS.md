@@ -23,10 +23,11 @@ through several stages, and sells both intermediate and finished products.
         ┌────────────────────┐  ┌──────────────────┐
         │ Dehusked Coconut   │  │ Raw Coconut Husk │ ◀─── Supplier (direct purchase)
         └─────┬──────────┬───┘  └────────┬─────────┘
-              │          │               │ Husk chipping
+              │          │               │ Husk chipping (husk taken at DELIVERY)
               │          ▼               ▼
               │     Customer      ┌──────────────────┐
-              │   (direct sale)   │  7C / 9C / 10C   │ (KG)
+              │   (direct sale)   │  7C / 9C / 10C   │ (KG or L)
+              │                   │  Cocopeat        │ (KG or L)
               │                   │  + waste (loss)  │
               │ Copra production  └──────────────────┘
               ▼
@@ -48,13 +49,23 @@ through several stages, and sells both intermediate and finished products.
 | 6 | 9C | `HUSK-9C` | `KG` | — |
 | 7 | 10C | `HUSK-10C` | `KG` | — |
 | 8 | Raw Coconut Shell | `RAW-SHELL` | `NOS` | `KG` |
+| 9 | Cocopeat | `COCOPEAT` | `KG` | — |
+| 10 | 7C (litres) | `HUSK-7C-L` | `L` | — |
+| 11 | 9C (litres) | `HUSK-9C-L` | `L` | — |
+| 12 | 10C (litres) | `HUSK-10C-L` | `L` | — |
+| 13 | Cocopeat (litres) | `COCOPEAT-L` | `L` | — |
 
 The product list must be **extensible** — new products and UOMs are added through data,
 never through code changes.
 
-**Units of measure: exactly two.** `NOS` for countable physical items, `KG` for weight.
-There is no separate "Qty" unit — that is UI wording for a `NOS` count.
-See `DATA_MODEL.md` decision D-1.
+**Units of measure: three.** `NOS` for countable physical items, `KG` for weight, `L` (litre)
+for volume. There is no separate "Qty" unit — that is UI wording for a `NOS` count. **No
+conversion exists between any two units.** A husk product measured both by weight and by
+volume is two stock items (rows 5–7, 9 and 10–13), so KG and litre balances never mix.
+See `DATA_MODEL.md` decision D-1 and `BUSINESS_RULES.md` §32.
+
+**Pooled stock.** Coconut, dehusked coconut, raw husk, the chips and cocopeat are **one stock
+each, with no lots** (`tracks_lots = false`). Copra and raw shell keep lots.
 
 ## 4. Functional scope
 
@@ -74,13 +85,15 @@ See `DATA_MODEL.md` decision D-1.
   of goods sold and gross profit, with lot selection, dual-unit pricing, and reversal.
   Supports both deliveries against a sales order and direct deliveries.
 - **Dehusking production** — converts whole coconut into dehusked coconut and raw husk at
-  the confirmed 1:1:1 ratio, creating traceable output lots and sharing the consumed value
-  by configurable percentages, with reversal.
-- **Husk chipping production** — converts raw husk (NOS) into 7C, 9C and 10C chips (KG)
-  using the **weights the operator actually measured**; there is no husk-to-KG conversion
-  in the system. Waste is recorded for information only and creates no stock. Value is
-  shared by configurable percentages, redistributed when a grade produces nothing, with
-  traceable output lots and reversal.
+  the confirmed 1:1:1 ratio. The dehusked coconut carries the whole coconut value; the raw
+  husk carries the **dehusking labour** (quantity × labour rate per coconut), credited to a
+  `Production Labour Absorbed` contra-expense. Pooled stock, no lots. Reversal supported.
+- **Husk chipping production** — records the measured outputs (7C / 9C / 10C / Cocopeat, by
+  KG or by litre) as flexible rows. It takes **no raw husk**: the outputs enter stock at zero
+  value ("raw husk material cost pending backflush") and the raw husks are **backflushed** —
+  issued at their weighted average into cost of goods sold — when the outputs are delivered
+  and the delivery states "Raw Husks Used". There is no husk-to-KG or KG-to-litre conversion
+  anywhere. Waste is recorded for information only. Reversal supported.
 - **Copra production** — dries dehusked coconut (NOS) into copra (KG) and raw coconut shell.
   The copra weight and the shell weight are both **measured by the operator**; only the
   shell **count** is derived, one shell per coconut processed. Shell stock keeps both its
@@ -89,8 +102,13 @@ See `DATA_MODEL.md` decision D-1.
   reversal.
 - **Accounting foundation** — a chart of accounts, fiscal periods, manual double-entry
   journals with reversal, derived account balances, a general ledger and a trial balance.
-  Every posted journal balances exactly; balances are never stored. **No operational
-  document generates a journal yet.**
+  Every posted journal balances exactly; balances are never stored.
+- **Finance** — inventory accounting behind a cutover date, accounts payable and receivable
+  with partial payments, cash and bank, and derived financial reports. Payments and receipts
+  record **how** the money moved: **cash, cheque (number, date, bank) or bank transfer**.
+  "Credit" is an invoice left outstanding, not a method.
+- **Roles and permissions, a versioned mobile API, simple mode (Sinhala / English) and full
+  bilingual screens.**
 
 No master record can be deleted through the UI; all use active/inactive status. Posted
 inventory transactions cannot be edited or deleted at all.
@@ -98,15 +116,15 @@ inventory transactions cannot be edited or deleted at all.
 ### 4.2 Planned, not started
 
 Credit notes, sales returns and allowances, customer advances and deposits, VAT/SVAT,
-payroll, bank reconciliation, P&L and balance sheet, year-end closing, multi-currency,
-production expenses (labour / electricity / machine / fuel / overhead), the permanent
-joint-product costing method, role-based permissions, REST API for the Flutter mobile
-application.
+payroll, bank reconciliation, the cheque lifecycle (deposited / cleared / bounced), year-end
+closing, multi-currency, production expenses other than dehusking labour (electricity /
+machine / fuel / overhead), the permanent joint-product costing method, the Flutter app
+itself.
 
-**Production adds no expenses.** Total input inventory value equals total output inventory
-value exactly, and no labour, electricity, machine, fuel or overhead cost enters a product.
-Production does journal — `Dr output inventory / Cr input inventory` — but the journal only
-moves value between inventory accounts; it never creates any.
+**Production adds only dehusking labour.** Dehusking output value = consumed coconut value +
+labour (`Dr output inventory / Cr input inventory, Cr Production Labour Absorbed`). Copra
+conserves value exactly. Husk chipping moves no value at all until its outputs are delivered.
+No electricity, machine, fuel or overhead cost enters a product.
 
 **A delivery journals cost of sales, not revenue.** Revenue and the receivable are recognised
 by the sales invoice, which is a separate document. A delivery that is never invoiced
@@ -138,7 +156,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | --- | --- | --- |
 | 1 | Husk-chipping **waste/by-product** treatment | **Recorded as production waste; creates NO inventory.** May be promoted to a stocked product later if the factory sells dust. No `DUST` product now. |
 | 2 | **Warehouse** structure | **Multiple warehouses must be supported.** V1 uses one default `MAIN` / "Main Warehouse", created in a later task. Every inventory transaction requires a warehouse. |
-| 3 | **Lot/batch** tracking | **Must be supported** by the architecture. Movements may reference a lot/batch (nullable). Not implemented yet. |
+| 3 | **Lot/batch** tracking | **Supported, per product.** `tracks_lots` decides it: coconut, dehusked coconut, raw husk, chips and cocopeat are pooled (no lots); copra and shell keep lots. See row 40. |
 | 4 | **Negative inventory** | **Not allowed by default.** A transaction taking stock below zero must fail atomically. |
 | 5 | `QTY` vs `NOS` for shell | **No separate `QTY` unit.** Shell uses Primary `NOS`, Secondary `KG`. |
 | 6 | Stock scope | Tracked per **product + warehouse**, and per **product + warehouse + lot** where lots apply. |
@@ -152,16 +170,16 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 14 | Selling price vs cost | Entirely separate. Selling price never affects the weighted average cost. |
 | 15 | Cost of goods sold | `primary quantity × the weighted average the ledger used`. Never typed by a seller. |
 | 16 | Dual-unit pricing | `pricing_basis` chooses which recorded quantity revenue follows; allowed only where the product has a secondary unit. |
-| 17 | Lot selection on issue | A lot must be explicitly chosen wherever lotted stock exists. |
+| 17 | Lot selection on issue | For **lot-tracked** products, a lot must be explicitly chosen wherever lotted stock exists. Pooled products have no lot to choose. |
 | 18 | Dehusking ratio | **Fixed 1:1:1**, held as recipe configuration, not code. Outputs are derived and never typed. |
-| 19 | Production value | **Conserved.** Item count rises; total inventory value does not. Allocated output costs sum exactly to the consumed value. |
-| 20 | Dehusking cost split | **Configurable fixed percentages**, currently 85% dehusked / 15% husk — provisional until the costing policy is set. Must total 100%. |
-| 21 | Production expenses | **None yet.** No labour, electricity, machine, fuel or overhead cost is added in this phase. |
-| 22 | Husk chipping yields | **Measured, never derived.** The operator enters the actual 7C / 9C / 10C weights. The recipe stores **no** husk-to-KG ratio, so none can be applied. |
-| 23 | Husk chipping cost split | **Configurable fixed percentages**, currently 30% 7C / 30% 9C / 40% 10C — provisional. Must total 100%. |
-| 24 | A grade that produced nothing | Takes **no cost and no lot**; its share is redistributed across the grades that were produced. |
+| 19 | Production value | **Conserved, plus labour.** Output value = consumed value + labour, exactly (labour is zero except in dehusking). |
+| 20 | Dehusking cost split | **Superseded (recipe version 2):** dehusked coconut 100% of the coconut value; raw husk 0% + the dehusking labour. Version 1's 85 / 15 is deactivated and kept for history. |
+| 21 | Production expenses | **Dehusking labour only** — operator-confirmed rate per coconut, pre-filled from the recipe default (NULL until the owner gives a figure). No electricity, machine, fuel or overhead cost. |
+| 22 | Husk chipping yields | **Measured, never derived.** The operator enters the actual quantities as rows (7C / 9C / 10C / Cocopeat, KG or L). No husk-to-KG or KG-to-litre ratio exists. |
+| 23 | Husk chipping costing | **Backflushed at delivery (recipe version 2).** Chipping takes no husk; outputs enter at zero value; the delivery's "Raw Husks Used" are issued at their weighted average into cost of goods sold, atomically with the sale. Version 1's 30 / 30 / 40 is deactivated. |
+| 24 | A product that produced nothing | Simply **left out** of the run — zero rows are refused. |
 | 25 | Chipping waste | **Optional and informational.** No inventory line, no lot, no product, no cost. Its unit comes from the UOM master; no unit is invented. |
-| 26 | Copra input | **Dehusked Coconut in `NOS`**, from an explicitly chosen lot and warehouse. |
+| 26 | Copra input | **Dehusked Coconut in `NOS`** from a chosen warehouse — pooled stock, no lot. |
 | 27 | Copra output | **Measured, never derived.** The operator enters the actual copra KG. There is **no** coconut-to-KG ratio in the recipe, so none can be applied. |
 | 28 | Raw shell count | **Derived 1:1** — one shell per coconut processed. Held as recipe configuration, never typed; a submitted figure is **refused**, and the server recalculates it regardless. |
 | 29 | Raw shell weight | **Measured and required.** No NOS↔KG conversion exists. Recorded as the inventory secondary quantity. |
@@ -174,7 +192,12 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 36 | Fiscal periods | Journals post only into an **OPEN** period containing their date. A period with drafts cannot be closed. Reopening is not offered. |
 | 37 | Control accounts | Receivables, payables and inventory accounts **refuse manual posting** — they belong to the system actions that will later own them. |
 | 38 | Base currency | **LKR**, held as configuration rather than a literal. Multi-currency is TBD. |
-| 39 | Operational accounting | **Not yet.** No GRN, delivery or production run creates a journal; the account mapping is still to be confirmed. |
+| 39 | Operational accounting | **Implemented behind a cutover date** — see `ACCOUNTING_RULES.md` §13. |
+| 40 | Lot-free operations | **Pooled stock** for coconut, dehusked coconut, raw husk, 7C / 9C / 10C and Cocopeat. Old lots keep their history; their balances are moved into the pool once by `php artisan inventory:consolidate-pooled-lots --user=email` (`--dry-run` shows the plan). |
+| 41 | Litre unit | **`L` added.** Litre stock items for 7C, 9C, 10C and Cocopeat, each separate from its KG twin; no KG↔L conversion. |
+| 42 | Cocopeat accounts | **Its own:** 1370 Cocopeat Inventory, 5170 Cocopeat COGS, 4170 Cocopeat Sales. The litre chip items share their grade's 1340 / 5130 / 4130. |
+| 43 | Payment methods | **Cash, cheque, bank transfer.** Cash through a cash account; cheque and transfer through a bank account. Credit = invoice left outstanding; partial payments supported. |
+| 44 | Cheques | **Details only** — number, date, bank. No status lifecycle or clearing account yet. |
 
 ## 7. Remaining open questions (`TBD`)
 
@@ -203,14 +226,18 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 20 | Should **sales returns** from customers be a distinct document, or handled purely by delivery reversal? | Sales |
 | 21 | Are **customer-specific price lists** required, or does price remain per-order? | Sales |
 | 22 | Should a sales order **reserve** stock, or continue to reserve nothing until delivery? | Sales / Inventory |
-| 23 | What is the **permanent joint-product costing method** (market value / NRV / other), replacing the provisional 85/15? | Costing |
+| 23 | What is the **permanent joint-product costing method** (market value / NRV / other) for copra / shell? | Costing |
 | 24 | Should the dehusking allocation vary by **period or coconut grade**, rather than being a single fixed pair? | Costing |
-| 25 | How are **labour, electricity, machine, fuel and overhead** costs captured and absorbed into production? | Costing |
+| 25 | How are **electricity, machine, fuel and overhead** costs captured and absorbed into production? (Dehusking labour is done.) | Costing |
 | 26 | Does dehusking ever produce **waste or loss** (shrinkage, rejects), or is 1:1:1 absolute? | Production |
 | 27 | Should production record **machine, shift or operator** for throughput reporting? | Production |
 | 28 | Should **drying / moisture / process loss** be captured for copra, and on what basis (input weight vs. output weight, per batch or per dryer run)? | Copra production |
 | 29 | Is the **1 coconut = 1 shell** rule absolute, or do broken shells and rejects need recording? | Copra production |
 | 30 | Should copra be gradeable (edible / milling / rejected), each grade taking its own share? | Copra production / Costing |
+| 31 | What is the factory's **standard dehusking labour rate** per coconut? (Recipe default is NULL; operators type the rate.) | Dehusking |
+| 32 | Is a **cheque lifecycle** (received / deposited / cleared / bounced, with a clearing account) required? | Finance |
+| 33 | Should unsold chips and cocopeat show an **estimated husk value** while their cost is pending backflush? | Costing / Reports |
+| 34 | Should **copra and raw shell** also become pooled (lot-free) stock? | Inventory |
 
 **Confirmed and closed this phase:** reversal cost basis (I-1), secondary quantity (I-2),
 company-wide weighted average (I-3), and the inactive-product incoming-stock rule.

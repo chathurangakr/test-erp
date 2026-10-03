@@ -2,6 +2,10 @@
 
 namespace Tests;
 
+use App\Models\Product;
+use App\Models\UnitOfMeasure;
+use Database\Seeders\ProductionRecipeSeeder;
+use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\Features;
@@ -24,6 +28,44 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->travelTo(Carbon::parse(self::FIXED_NOW, 'UTC'));
+    }
+
+    /**
+     * Seed the production recipes, first creating any recipe product a test did not.
+     *
+     * Tests create the products they examine with factories (lot-tracked, unless they say
+     * otherwise). The recipes name more products than most tests care about — Cocopeat and
+     * the litre stock items among them — so those are created here from the seeded master
+     * data, with its units and lot policy, rather than in every test.
+     */
+    protected function seedProductionRecipes(): void
+    {
+        $units = [
+            'NOS' => ['name' => 'Numbers', 'decimal_places' => 0],
+            'KG' => ['name' => 'Kilogram', 'decimal_places' => 3],
+            'L' => ['name' => 'Litre', 'decimal_places' => 3],
+        ];
+
+        foreach (ProductSeeder::PRODUCTS as $definition) {
+            if (Product::query()->where('code', $definition['code'])->exists()) {
+                continue;
+            }
+
+            $uom = fn (string $code): UnitOfMeasure => UnitOfMeasure::query()->firstOrCreate(
+                ['code' => $code],
+                $units[$code] + ['is_active' => true],
+            );
+
+            Product::factory()->create([
+                'code' => $definition['code'],
+                'name' => $definition['name'],
+                'primary_uom_id' => $uom($definition['primary'])->id,
+                'secondary_uom_id' => $definition['secondary'] === null ? null : $uom($definition['secondary'])->id,
+                'tracks_lots' => $definition['lots'],
+            ]);
+        }
+
+        $this->seed(ProductionRecipeSeeder::class);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

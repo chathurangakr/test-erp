@@ -79,6 +79,15 @@ class ReverseDelivery
                 'posted_by' => $userId ?? auth()->id(),
             ]);
 
+            // Any raw material the delivery backflushed goes back too, at its original cost.
+            $backflush = $locked->backflushTransaction()->first();
+            $backflushReversal = $backflush === null ? null : $this->reverseInventory->handle($backflush, [
+                'notes' => RecordText::of('Reversal of raw material backflushed by delivery :reference', [
+                    'reference' => $locked->delivery_number,
+                ]),
+                'posted_by' => $userId ?? auth()->id(),
+            ]);
+
             $this->statusUpdater->applyDelivery($locked, $locked->lines()->orderBy('id')->get(), reverse: true);
 
             $this->accounting->reverseFor($locked, $userId);
@@ -87,6 +96,7 @@ class ReverseDelivery
                 // REVERSED, not CANCELLED: stock really left and was put back.
                 'status' => DeliveryStatus::Reversed,
                 'reversal_inventory_transaction_id' => $reversal->getKey(),
+                'backflush_reversal_transaction_id' => $backflushReversal?->getKey(),
                 'reversed_at' => now(),
                 'reversed_by' => $userId ?? auth()->id(),
             ])->save();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentMethod;
 use App\Enums\SupplierPaymentStatus;
 use App\Support\DecimalMath;
 use Database\Factories\SupplierPaymentFactory;
@@ -31,6 +32,10 @@ class SupplierPayment extends Model
         'payment_account_id',
         'reference',
         'amount',
+        'payment_method',
+        'cheque_number',
+        'cheque_date',
+        'cheque_bank',
         'status',
         'notes',
         'journal_entry_id',
@@ -46,6 +51,8 @@ class SupplierPayment extends Model
     {
         return [
             'status' => SupplierPaymentStatus::class,
+            'payment_method' => PaymentMethod::class,
+            'cheque_date' => 'date',
             'payment_date' => 'date',
             'amount' => 'decimal:6',
             'posted_at' => 'datetime',

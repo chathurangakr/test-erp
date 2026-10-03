@@ -98,8 +98,12 @@ class RecordOperationalJournal
      *
      * The selling price has no influence here at all; it does not appear in this journal.
      */
-    public function forDelivery(Delivery $delivery, InventoryTransaction $transaction, ?int $userId = null): ?JournalEntry
-    {
+    public function forDelivery(
+        Delivery $delivery,
+        InventoryTransaction $transaction,
+        ?int $userId = null,
+        ?InventoryTransaction $backflush = null,
+    ): ?JournalEntry {
         if (! $this->policy->appliesTo($delivery->delivery_date)) {
             return null;
         }
@@ -124,6 +128,53 @@ class RecordOperationalJournal
             ];
         }
 
+        if ($backflush !== null) {
+            // Each backflush ledger line belongs, in order, to the delivery line that needed
+            // it. Its cost is part of what THAT product cost to sell, so it lands in the
+            // delivered product's cost of sales — not in the raw material's.
+            $owners = $delivery->lines()->with('product')->whereNotNull('backflush_product_id')->orderBy('id')->get()->values();
+
+            foreach ($this->linesOf($backflush)->values() as $position => $line) {
+                $owner = $owners[$position] ?? null;
+
+                if ($owner === null) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('The backflushed raw material could not be matched to its delivery line.'),
+                    ]);
+                }
+
+                $amount = DecimalMath::cost(DecimalMath::of($line->total_cost));
+
+                $lines[] = [
+                    'account_id' => $this->policy->cogsAccountFor($owner->product)->id,
+                    'description' => RecordText::of(':input used in :product sold', [
+                        'input' => $line->product->code,
+                        'product' => $owner->product->code,
+                    ]),
+                    'debit' => $amount,
+                    'credit' => DecimalMath::cost('0'),
+                ];
+
+                $lines[] = [
+                    'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
+                    'description' => RecordText::of('Backflushed :product', ['product' => $line->product->code]),
+                    'debit' => DecimalMath::cost('0'),
+                    'credit' => $amount,
+                ];
+            }
+        }
+
+        // A line can be worth nothing — chips whose raw husk is only now being costed — and a
+        // journal line is a debit or a credit, never neither.
+        $lines = array_values(array_filter(
+            $lines,
+            fn (array $line): bool => DecimalMath::isPositive($line['debit']) || DecimalMath::isPositive($line['credit']),
+        ));
+
+        if ($lines === []) {
+            return null;
+        }
+
         return $this->record(
             $delivery,
             $delivery->delivery_date,
@@ -134,15 +185,17 @@ class RecordOperationalJournal
     }
 
     /**
-     * Dr output inventory, Cr input inventory — value moving between asset accounts.
+     * Production: Dr each output's inventory account, Cr the input's — and, when the run
+     * carried labour, Cr the production-labour-absorbed account for it.
      *
-     * Accounting does not recalculate the 85/15, 30/30/40 or 75/25 split. Those percentages
-     * decided the inventory valuation upstream; Finance simply records the figures the
-     * ledger already holds, which is why debits and credits agree exactly.
+     * Every figure is read from the ledger lines and the order exactly as posted, so the entry
+     * balances by construction: outputs = consumed value + labour. Zero-value lines are left
+     * out (a journal line is a debit or a credit, never neither), and a run that moved no value
+     * at all — husk chipping, whose raw husk is backflushed at delivery — records no journal.
      */
     public function forProduction(
         ProductionOrder $order,
-        InventoryTransaction $consumption,
+        ?InventoryTransaction $consumption,
         InventoryTransaction $output,
         ?int $userId = null,
     ): ?JournalEntry {
@@ -161,13 +214,35 @@ class RecordOperationalJournal
             ];
         }
 
-        foreach ($this->linesOf($consumption) as $line) {
+        if ($consumption !== null) {
+            foreach ($this->linesOf($consumption) as $line) {
+                $lines[] = [
+                    'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
+                    'description' => RecordText::of('Consumed :product', ['product' => $line->product->code]),
+                    'debit' => DecimalMath::cost('0'),
+                    'credit' => DecimalMath::cost(DecimalMath::of($line->total_cost)),
+                ];
+            }
+        }
+
+        $labour = DecimalMath::cost(DecimalMath::of($order->labour_cost ?? '0'));
+
+        if (DecimalMath::isPositive($labour)) {
             $lines[] = [
-                'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
-                'description' => RecordText::of('Consumed :product', ['product' => $line->product->code]),
+                'account_id' => $this->policy->productionLabourAccount()->id,
+                'description' => RecordText::of('Labour absorbed into :reference', ['reference' => $order->production_number]),
                 'debit' => DecimalMath::cost('0'),
-                'credit' => DecimalMath::cost(DecimalMath::of($line->total_cost)),
+                'credit' => $labour,
             ];
+        }
+
+        $lines = array_values(array_filter(
+            $lines,
+            fn (array $line): bool => DecimalMath::isPositive($line['debit']) || DecimalMath::isPositive($line['credit']),
+        ));
+
+        if ($lines === []) {
+            return null;
         }
 
         return $this->record(

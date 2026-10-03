@@ -164,7 +164,8 @@ class PostCustomerReceipt
             ]);
         }
 
-        $this->policy->assertReceiptAccount($account);
+        $this->policy->assertReceiptAccount($account, $receipt->payment_method);
+        $this->policy->assertChequeDetails($receipt->payment_method, $receipt->cheque_number, $receipt->cheque_date, $receipt->cheque_bank);
 
         return $account;
     }

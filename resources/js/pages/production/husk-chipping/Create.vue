@@ -4,13 +4,12 @@ import Heading from '@/components/Heading.vue';
 import HuskChippingForm from '@/components/production/HuskChippingForm.vue';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/husk-chipping';
-import type { HuskChippingRecipeInfo, OptionRef, ProductionLotOption } from '@/types';
+import type { HuskChippingRecipeInfo, OptionRef } from '@/types';
 
 const { t } = useT();
 
 defineProps<{
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
     recipe: HuskChippingRecipeInfo;
     wasteUoms: OptionRef[];
     inputStock: string;
@@ -35,7 +34,6 @@ defineOptions({
                 :submit-label="t('Save draft')"
                 :cancel-href="index().url"
                 :warehouses="warehouses"
-                :lots="lots"
                 :recipe="recipe"
                 :waste-uoms="wasteUoms"
                 :input-stock="inputStock"

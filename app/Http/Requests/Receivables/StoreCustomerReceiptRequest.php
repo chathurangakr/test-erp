@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Receivables;
 
+use App\Http\Requests\Concerns\ValidatesPaymentMethod;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Creating a DRAFT customer receipt.
@@ -14,6 +16,8 @@ use Illuminate\Validation\Rule;
  */
 class StoreCustomerReceiptRequest extends FormRequest
 {
+    use ValidatesPaymentMethod;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -30,7 +34,7 @@ class StoreCustomerReceiptRequest extends FormRequest
             'allocations' => ['required', 'array', 'min:1'],
             'allocations.*.sales_invoice_id' => ['required', 'integer', Rule::exists('sales_invoices', 'id')],
             'allocations.*.amount' => ['required', 'numeric', 'gt:0'],
-        ];
+        ] + $this->paymentMethodRules();
     }
 
     /**
@@ -38,8 +42,13 @@ class StoreCustomerReceiptRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
+        return $this->paymentMethodMessages() + [
             'allocations.min' => __('A receipt must be allocated to at least one invoice. Receipts on account are not supported.'),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->validateMethodAgainstAccount($validator, 'receipt_account_id'));
     }
 }

@@ -29,6 +29,8 @@ export type DehuskingOutputRow = {
     quantity: string;
     allocation_percent: string;
     allocated_cost: string;
+    /** The part of allocated_cost that is dehusking labour. */
+    labour_cost: string | null;
     unit_cost: string;
 };
 
@@ -38,6 +40,8 @@ export type DehuskingDetail = DehuskingRow & {
     posted_at: string | null;
     created_by: string | null;
     reversed_at: string | null;
+    labour_rate: string | null;
+    labour_cost: string | null;
     consumption_reference: string | null;
     output_reference: string | null;
     can_post: boolean;
@@ -58,6 +62,10 @@ export type ProductionRecipeInfo = {
     input_code: string;
     input_name: string;
     input_uom: string | null;
+    /** False for pooled stock: no lot is chosen. */
+    input_tracks_lots?: boolean;
+    /** Dehusking: pre-fills the labour rate per coconut; null until configured. */
+    default_labour_rate?: string | null;
     outputs: {
         code: string | null;
         name: string | null;
@@ -65,6 +73,8 @@ export type ProductionRecipeInfo = {
         /** Null when the operator measures the output instead of deriving it. */
         ratio: string | null;
         allocation_percent: string;
+        /** Carries the run's labour as its cost (dehusking raw husk). */
+        absorbs_labour?: boolean;
     }[];
 };
 
@@ -77,7 +87,8 @@ export type HuskChippingRow = {
     warehouse_code: string | null;
     status: string;
     status_label: string;
-    input_quantity: string;
+    /** Null for a run that took no raw husk (it is backflushed at delivery). */
+    input_quantity: string | null;
     output_quantity: string;
     waste_quantity: string | null;
     input_value: string | null;
@@ -111,6 +122,8 @@ export type HuskChippingDetail = HuskChippingRow & {
     can_edit: boolean;
     can_cancel: boolean;
     input: DehuskingInputRow | null;
+    /** True when the run took no raw husk: its material cost arrives at delivery. */
+    pending_backflush: boolean;
     outputs: HuskChippingOutputRow[];
 };
 
@@ -123,17 +136,13 @@ export type HuskChippingRecipeInfo = {
         code: string | null;
         name: string | null;
         uom: string | null;
-        /** Always null: there is no fixed husk-to-KG conversion. */
-        ratio: string | null;
-        allocation_percent: string;
+        decimals: number;
     }[];
 };
 
 export type HuskChippingFormValues = {
     production_date: string | null;
     warehouse_id: number | null;
-    lot_id: number | null;
-    quantity: string | null;
     waste_quantity: string | null;
     waste_uom_id: number | null;
     notes: string | null;
@@ -219,6 +228,8 @@ export type CopraRecipeInfo = {
     input_code: string;
     input_name: string;
     input_uom: string | null;
+    /** False for pooled dehusked coconut: no lot is chosen. */
+    input_tracks_lots?: boolean;
     outputs: CopraOutputColumn[];
 };
 

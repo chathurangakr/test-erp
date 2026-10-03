@@ -122,6 +122,7 @@ class DehuskingController extends Controller
                 'warehouse_id' => $dehusking->warehouse_id,
                 'lot_id' => $input?->lot_id,
                 'quantity' => $input?->quantity,
+                'labour_rate' => $dehusking->labour_rate,
                 'notes' => $dehusking->notes,
             ],
         ]));
@@ -151,7 +152,8 @@ class DehuskingController extends Controller
         $balances = $this->stock->balancesByLot()
             ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
 
-        $lots = InventoryLot::query()
+        // Pooled coconut has no lots to choose from (docs/INVENTORY_RULES.md §15).
+        $lots = ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
             ->where('product_id', $inputProduct->id)
             ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
             ->orderByDesc('id')
@@ -176,12 +178,16 @@ class DehuskingController extends Controller
                 'input_code' => $inputProduct->code,
                 'input_name' => $inputProduct->name,
                 'input_uom' => $inputProduct->primaryUom?->code,
+                'input_tracks_lots' => $inputProduct->tracksLots(),
+                // Pre-fills the labour rate the operator confirms; null until configured.
+                'default_labour_rate' => $recipe->default_labour_rate,
                 'outputs' => $recipe->outputs->map(fn ($output): array => [
                     'code' => $output->product?->code,
                     'name' => $output->product?->name,
                     'uom' => $output->product?->primaryUom?->code,
                     'ratio' => $output->output_ratio,
                     'allocation_percent' => $output->allocation_percent,
+                    'absorbs_labour' => $output->absorbs_labour,
                 ])->values(),
             ],
             // Company-wide coconut position, shown for context on the form.
@@ -221,6 +227,8 @@ class DehuskingController extends Controller
             'posted_at' => BusinessClock::display($order->posted_at),
             'created_by' => $order->createdBy?->name,
             'reversed_at' => BusinessClock::display($order->reversed_at),
+            'labour_rate' => $order->labour_rate,
+            'labour_cost' => $order->labour_cost,
             'consumption_reference' => $order->consumptionTransaction?->reference,
             'output_reference' => $order->outputTransaction?->reference,
             'can_post' => $order->status->canPost(),
@@ -245,6 +253,7 @@ class DehuskingController extends Controller
                 'quantity' => $output->quantity,
                 'allocation_percent' => $output->allocation_percent,
                 'allocated_cost' => $output->allocated_cost,
+                'labour_cost' => $output->labour_cost,
                 'unit_cost' => $output->unit_cost,
             ])->values(),
         ]);

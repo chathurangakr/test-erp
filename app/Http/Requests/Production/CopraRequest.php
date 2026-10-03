@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Production;
 
 use App\Enums\ProductionType;
+use App\Http\Requests\Production\Concerns\ValidatesInputLot;
 use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Support\DecimalMath;
@@ -40,6 +41,8 @@ use Illuminate\Validation\Validator;
  */
 abstract class CopraRequest extends FormRequest
 {
+    use ValidatesInputLot;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -48,7 +51,7 @@ abstract class CopraRequest extends FormRequest
         return [
             'production_date' => ['required', 'date'],
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
-            'lot_id' => ['required', 'integer', Rule::exists('inventory_lots', 'id')],
+            'lot_id' => $this->inputLotRules(ProductionType::Copra),
             'quantity' => ['required', 'numeric', 'gt:0'],
 
             'outputs' => ['required', 'array', 'min:1'],
@@ -67,6 +70,7 @@ abstract class CopraRequest extends FormRequest
     {
         return [
             'lot_id.required' => __('Select the dehusked coconut lot being processed, so the output lots remain traceable.'),
+            'lot_id.prohibited' => $this->pooledInputMessage(ProductionType::Copra),
             'quantity.gt' => __('The quantity to process must be greater than zero.'),
         ];
     }

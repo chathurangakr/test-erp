@@ -6,7 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
-import { index as receiptsIndex } from '@/routes/customer-receipts';
+import { create as receiptCreate, index as receiptsIndex } from '@/routes/customer-receipts';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as journalsIndex } from '@/routes/journals';
 import { index } from '@/routes/sales-invoices';
@@ -46,6 +46,14 @@ const { t } = useT();
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
+                <Button
+                    v-if="(invoice.status === 'POSTED' || invoice.status === 'PARTIALLY_PAID') && Number(invoice.outstanding) > 0 && can('finance.ar.receipt_create')"
+                    as-child
+                >
+                    <Link :href="receiptCreate({ query: { customer_id: invoice.customer_id, invoice_id: invoice.id } }).url">
+                        {{ t('Record payment') }}
+                    </Link>
+                </Button>
                 <Button v-if="invoice.can_edit && can('finance.ar.invoice_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${invoice.id}/edit`">
                         <Pencil class="size-4" />

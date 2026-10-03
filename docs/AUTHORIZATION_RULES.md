@@ -188,3 +188,16 @@ authority must say so in its docblock.
 - User and role administration remain **web-only**. `GET /api/v1/auth/me` returns the user's
   effective permissions for the app's UI; the server still enforces every one.
 
+
+## 14. Husk production rework — no new permissions
+
+The rework added no permission, role or route. Each new field rides on the permission its
+document already had:
+
+| What | Covered by |
+| --- | --- |
+| Dehusking labour rate; flexible chipping outputs | `production.create` (draft), `production.post` (posting) |
+| "Raw husks used" on a delivery, and its backflush at posting | `sales.delivery_create`, `sales.delivery_post`; reversal `sales.delivery_reverse` |
+| Payment method and cheque details | `finance.ap.payment_create` / `_post`, `finance.ar.receipt_create` / `_post` |
+| "Record payment" button on an invoice | shown only with `finance.ap.payment_create` / `finance.ar.receipt_create`; the payment screen it opens enforces the same |
+| `inventory:consolidate-pooled-lots` | **server console only** — no route, so it needs shell access, like `authorization:grant-admin`. It records the move under the named active user |

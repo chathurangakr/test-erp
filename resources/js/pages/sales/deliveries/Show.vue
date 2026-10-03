@@ -156,6 +156,15 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Reversal transaction') }}</dt>
                     <dd class="mt-1 font-mono text-sm">{{ delivery.reversal_reference }}</dd>
                 </div>
+                <div v-if="delivery.backflush_reference">
+                    <dt class="text-muted-foreground text-sm font-medium">{{ t('Raw material transaction') }}</dt>
+                    <dd class="mt-1 font-mono text-sm">
+                        {{ delivery.backflush_reference }}
+                        <span v-if="delivery.backflush_reversal_reference" class="text-muted-foreground">
+                            · {{ t('reversed by :reference', { reference: delivery.backflush_reversal_reference }) }}
+                        </span>
+                    </dd>
+                </div>
                 <div v-if="delivery.notes" class="sm:col-span-3">
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Notes') }}</dt>
                     <dd class="mt-1 text-sm whitespace-pre-line">{{ delivery.notes }}</dd>
@@ -191,6 +200,12 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-3 py-3">
                             <span class="font-mono text-xs">{{ line.product_code }}</span>
                             <span class="text-muted-foreground block text-xs">{{ line.product_name }}</span>
+                            <span v-if="line.backflush_quantity" class="mt-1 block text-xs text-amber-700 dark:text-amber-300">
+                                {{ t('Raw husks used: :quantity :uom', { quantity: line.backflush_quantity, uom: line.backflush_uom ?? '' }) }}
+                                <template v-if="line.backflush_cost !== null">
+                                    · {{ t('husk cost :amount', { amount: line.backflush_cost }) }}
+                                </template>
+                            </span>
                         </td>
                         <td class="text-muted-foreground px-3 py-3 font-mono text-xs">
                             {{ line.lot_number ?? '—' }}
@@ -217,7 +232,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            {{ t('Inventory unit cost is the weighted average the ledger used when this delivery was posted — it is never entered by hand, and the selling price never affects it. Cost of goods sold follows the primary quantity, because that is what left stock, even on a line priced by weight. Figures here are operational profitability only; no accounting entries are created.') }}
+            {{ t('Inventory unit cost is the weighted average the ledger used when this delivery was posted — it is never entered by hand, and the selling price never affects it. Cost of goods sold follows the primary quantity, because that is what left stock, even on a line priced by weight. For chips and cocopeat it also includes the raw husks used, taken from stock at their average cost when the delivery was posted. Figures here are operational profitability only; no accounting entries are created.') }}
         </p>
     </div>
 </template>

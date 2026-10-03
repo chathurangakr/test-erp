@@ -24,8 +24,20 @@ export type KioskLot = {
     stock: KioskStockRow[];
 };
 
-export type KioskStockedProduct = KioskProduct & { stock: KioskStockRow[]; lots: KioskLot[] };
+/** `backflush`: the raw material a dispatch of this product deducts (raw husk for chips). */
+export type KioskStockedProduct = KioskProduct & { stock: KioskStockRow[]; lots: KioskLot[]; backflush: KioskProduct | null };
 
 export type KioskRecipeOutput = KioskProduct & { derived: boolean; requires_secondary_quantity: boolean };
 
-export type KioskRecipe = { input: KioskProduct; lots: KioskLot[]; outputs: KioskRecipeOutput[] };
+/**
+ * `consumes_input` false: the run takes no input now (husk chipping — husk is deducted at
+ * dispatch). `labour`: the run asks for a labour rate per input unit (dehusking).
+ */
+export type KioskRecipe = {
+    input: KioskProduct;
+    lots: KioskLot[];
+    outputs: KioskRecipeOutput[];
+    consumes_input: boolean;
+    input_tracks_lots: boolean;
+    labour: { default_rate: string | null } | null;
+};

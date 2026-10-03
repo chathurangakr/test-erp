@@ -26,6 +26,7 @@ type LineInput = {
     secondary_quantity: string;
     pricing_basis: string;
     unit_price: string;
+    backflush_quantity: string;
 };
 
 const props = defineProps<{
@@ -56,6 +57,7 @@ const props = defineProps<{
             secondary_quantity: string | null;
             pricing_basis: string;
             unit_price: string;
+            backflush_quantity?: string | null;
         }[];
     } | null;
 }>();
@@ -71,6 +73,7 @@ function emptyLine(): LineInput {
         secondary_quantity: '',
         pricing_basis: 'PRIMARY',
         unit_price: '',
+        backflush_quantity: '',
     };
 }
 
@@ -92,6 +95,7 @@ const form = useForm({
             secondary_quantity: line.secondary_quantity ?? '',
             pricing_basis: line.pricing_basis,
             unit_price: line.unit_price,
+            backflush_quantity: line.backflush_quantity ?? '',
         }),
     ),
 });
@@ -130,6 +134,7 @@ watch(
                 secondary_quantity: '',
                 pricing_basis: line.pricing_basis,
                 unit_price: line.unit_price,
+                backflush_quantity: '',
             }));
         }
     },
@@ -147,6 +152,16 @@ function removeLine(index: number): void {
 
 function productFor(productId: string): SalesProductOption | undefined {
     return props.products.find((p) => String(p.id) === productId);
+}
+
+/** Pooled stock has no lots, so no lot picker is shown for it. */
+function tracksLots(productId: string): boolean {
+    return productFor(productId)?.tracks_lots !== false;
+}
+
+/** The raw material this product's delivery deducts (raw husk for chips), if any. */
+function backflushFor(productId: string) {
+    return productFor(productId)?.backflush ?? null;
 }
 
 function supportsSecondary(productId: string): boolean {
@@ -215,7 +230,8 @@ function submit(): void {
         lines: data.lines.map((line) => ({
             ...line,
             sales_order_line_id: line.sales_order_line_id || null,
-            lot_id: line.lot_id || null,
+            lot_id: tracksLots(line.product_id) ? line.lot_id || null : null,
+            backflush_quantity: backflushFor(line.product_id) ? line.backflush_quantity || null : null,
             pricing_basis: supportsSecondary(line.product_id) ? line.pricing_basis : 'PRIMARY',
             secondary_quantity: line.secondary_quantity === '' ? null : line.secondary_quantity,
         })),
@@ -330,7 +346,7 @@ const selectClass =
                             <InputError :message="form.errors[`lines.${index}.product_id`]" />
                         </div>
 
-                        <div class="grid gap-1.5 sm:col-span-3">
+                        <div v-if="tracksLots(line.product_id)" class="grid gap-1.5 sm:col-span-3">
                             <Label :for="`dn-lot-${index}`" class="text-xs">{{ t('Lot') }}</Label>
                             <select :id="`dn-lot-${index}`" v-model="line.lot_id" :class="selectClass">
                                 <option value="">
@@ -381,6 +397,31 @@ const selectClass =
                                 </option>
                             </select>
                             <InputError :message="form.errors[`lines.${index}.pricing_basis`]" />
+                        </div>
+
+                        <div
+                            v-if="backflushFor(line.product_id)"
+                            class="grid gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-3 sm:col-span-12 dark:border-amber-800 dark:bg-amber-950"
+                        >
+                            <Label :for="`dn-backflush-${index}`" class="text-sm font-medium">
+                                {{ t('Raw Husks Used') }} <span class="text-destructive">*</span>
+                            </Label>
+                            <div class="flex items-center gap-2">
+                                <Input
+                                    :id="`dn-backflush-${index}`"
+                                    v-model="line.backflush_quantity"
+                                    type="number"
+                                    step="1"
+                                    min="1"
+                                    required
+                                    class="w-40"
+                                />
+                                <span class="text-muted-foreground font-mono text-sm">{{ backflushFor(line.product_id)?.uom }}</span>
+                            </div>
+                            <p class="text-xs text-amber-900 dark:text-amber-100">
+                                {{ t('Enter how many raw husks were used to make the goods on this line. They are taken out of raw husk stock when this delivery is posted, and their cost is added to the cost of goods sold.') }}
+                            </p>
+                            <InputError :message="form.errors[`lines.${index}.backflush_quantity`]" />
                         </div>
 
                         <div class="sm:col-span-12">

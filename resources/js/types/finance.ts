@@ -41,6 +41,15 @@ export type AccountOption = {
     code: string;
     name: string;
     account_type_label?: string;
+    /** Cash/bank accounts only: CASH or BANK. */
+    account_kind?: string;
+};
+
+/** Cash, cheque or bank transfer; account_kind is where that money must go. */
+export type PaymentMethodOption = {
+    value: string;
+    label: string;
+    account_kind: string;
 };
 
 export type JournalLineRow = {
@@ -181,6 +190,7 @@ export type SupplierInvoiceRow = {
     id: number;
     internal_invoice_number: string;
     supplier_invoice_number: string;
+    supplier_id: number;
     supplier_code: string | null;
     supplier_name: string | null;
     invoice_date: string | null;
@@ -278,6 +288,9 @@ export type SupplierPaymentRow = {
     payment_account: string | null;
     reference: string | null;
     amount: string;
+    /** Null on documents recorded before payment methods existed. */
+    payment_method: string | null;
+    payment_method_label: string | null;
     allocated: string;
     status: string;
     status_label: string;
@@ -285,6 +298,9 @@ export type SupplierPaymentRow = {
 
 export type SupplierPaymentDetail = SupplierPaymentRow & {
     notes: string | null;
+    cheque_number: string | null;
+    cheque_date: string | null;
+    cheque_bank: string | null;
     created_by: string | null;
     posted_by: string | null;
     posted_at: string | null;
@@ -386,6 +402,7 @@ export type SupplierPayablesSummary = {
 export type SalesInvoiceRow = {
     id: number;
     invoice_number: string;
+    customer_id: number;
     customer_code: string | null;
     customer_name: string | null;
     invoice_date: string | null;
@@ -474,6 +491,9 @@ export type CustomerReceiptRow = {
     receipt_account: string | null;
     reference: string | null;
     amount: string;
+    /** Null on documents recorded before payment methods existed. */
+    payment_method: string | null;
+    payment_method_label: string | null;
     allocated: string;
     status: string;
     status_label: string;
@@ -481,6 +501,9 @@ export type CustomerReceiptRow = {
 
 export type CustomerReceiptDetail = CustomerReceiptRow & {
     notes: string | null;
+    cheque_number: string | null;
+    cheque_date: string | null;
+    cheque_bank: string | null;
     created_by: string | null;
     posted_by: string | null;
     posted_at: string | null;

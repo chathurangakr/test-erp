@@ -164,7 +164,8 @@ class PostSupplierPayment
             ]);
         }
 
-        $this->policy->assertPaymentAccount($account);
+        $this->policy->assertPaymentAccount($account, $payment->payment_method);
+        $this->policy->assertChequeDetails($payment->payment_method, $payment->cheque_number, $payment->cheque_date, $payment->cheque_bank);
 
         return $account;
     }

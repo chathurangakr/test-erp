@@ -5,6 +5,7 @@ namespace Tests\Feature\Finance;
 use App\Actions\Accounting\UpdateAccountingSettings;
 use App\Actions\Payables\PostSupplierInvoice;
 use App\Actions\Purchasing\PostGoodsReceipt;
+use App\Enums\PaymentMethod;
 use App\Enums\SupplierInvoiceStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Models\Account;
@@ -22,7 +23,6 @@ use App\Models\Warehouse;
 use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -62,7 +62,7 @@ class AccountsPayableScreensTest extends TestCase
         $this->supplier = Supplier::factory()->create(['code' => 'TEST-SUPPLIER']);
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         // Money may only move through a configured cash or bank account.
         $this->seed(CashBankAccountSeeder::class);
@@ -354,6 +354,10 @@ class AccountsPayableScreensTest extends TestCase
             'payment_account_id' => $this->account('1120')->id,
             'reference' => 'CHQ-1001',
             'amount' => '400000.000000',
+            'payment_method' => 'CHEQUE',
+            'cheque_number' => '1001',
+            'cheque_date' => '2026-09-20',
+            'cheque_bank' => 'People\'s Bank',
             'allocations' => [
                 ['supplier_invoice_id' => $invoice->id, 'amount' => '400000.000000'],
             ],
@@ -361,6 +365,8 @@ class AccountsPayableScreensTest extends TestCase
 
         $payment = SupplierPayment::firstOrFail();
         $this->assertMatchesRegularExpression('/^PAY-\d{8}-\d{6}$/', $payment->payment_number);
+        $this->assertSame(PaymentMethod::Cheque, $payment->payment_method);
+        $this->assertSame('1001', $payment->cheque_number);
 
         $this->actingAs($user)
             ->patch(route('supplier-payments.post', $payment))

@@ -26,14 +26,37 @@ class Product extends Model
         'description',
         'primary_uom_id',
         'secondary_uom_id',
+        'tracks_lots',
         'is_active',
+    ];
+
+    /**
+     * New products keep lots unless master data says otherwise.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'tracks_lots' => true,
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'tracks_lots' => 'boolean',
         ];
+    }
+
+    /**
+     * Whether this product's stock is kept in lots.
+     *
+     * A product that does not track lots is ONE pooled stock: its new movements carry no lot,
+     * and no screen asks for one. Old lots it held before it was pooled keep their history.
+     * See docs/INVENTORY_RULES.md §15.
+     */
+    public function tracksLots(): bool
+    {
+        return (bool) $this->tracks_lots;
     }
 
     /**

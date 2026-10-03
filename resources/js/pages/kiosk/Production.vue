@@ -22,6 +22,11 @@ import { store as storeHuskChipping } from '@/routes/kiosk/husk-chipping';
  *  - an output without one is MEASURED (chip grades, copra KG) and must be weighed;
  *  - an output flagged requires_secondary_quantity also needs its weight (shell KG).
  * No conversion between count and weight exists here, or anywhere.
+ *
+ * A recipe that takes no input now (`consumes_input` false — husk chipping) asks for no
+ * batch and no count: the worker picks what was made and measures only those; the raw husk
+ * is deducted later, at dispatch. A recipe with `labour` (dehusking) asks for the labour per
+ * coconut, pre-filled from its default.
  */
 const props = defineProps<{
     task: 'dehusking' | 'husk-chipping' | 'copra';
@@ -33,9 +38,17 @@ const { t } = useKioskText();
 
 type Measure = { output: KioskRecipeOutput; field: 'quantity' | 'secondary_quantity' };
 
+/** For a run with flexible outputs: which products the worker says were made. */
+const made = ref<number[]>([]);
+const flexible = computed(() => !props.recipe.consumes_input);
+
+function toggleMade(id: number): void {
+    made.value = made.value.includes(id) ? made.value.filter((m) => m !== id) : [...made.value, id];
+}
+
 /** Every value the worker must weigh, one screen each. */
 const measures = computed<Measure[]>(() =>
-    props.recipe.outputs.flatMap((output) => [
+    props.recipe.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).flatMap((output) => [
         ...(output.derived ? [] : [{ output, field: 'quantity' as const }]),
         ...(output.requires_secondary_quantity ? [{ output, field: 'secondary_quantity' as const }] : []),
     ]),
@@ -45,6 +58,7 @@ const form = useForm({
     warehouse_id: (props.warehouses.find((w) => w.is_default) ?? props.warehouses[0])?.id ?? null,
     lot_id: null as number | null,
     quantity: '',
+    labour_rate: props.recipe.labour?.default_rate ?? '',
 });
 
 /** Measured values keyed "productId:field". */
@@ -55,7 +69,15 @@ const inStore = (rows: { warehouse_id: number; quantity: string }[]) => rows.fin
 const lotsHere = computed(() => props.recipe.lots.filter((lot) => inStore(lot.stock) !== null));
 const chosenLot = computed(() => props.recipe.lots.find((l) => l.id === form.lot_id) ?? null);
 
-const steps = computed(() => ['store', 'lot', 'count', ...measures.value.map((m) => `measure:${key(m)}`), 'review']);
+const steps = computed(() => [
+    'store',
+    ...(props.recipe.consumes_input && props.recipe.input_tracks_lots ? ['lot'] : []),
+    ...(props.recipe.consumes_input ? ['count'] : []),
+    ...(props.recipe.labour ? ['labour'] : []),
+    ...(flexible.value ? ['made'] : []),
+    ...measures.value.map((m) => `measure:${key(m)}`),
+    'review',
+]);
 const current = ref('store');
 const index = computed(() => steps.value.indexOf(current.value));
 const currentMeasure = computed(() => measures.value.find((m) => `measure:${key(m)}` === current.value) ?? null);
@@ -97,9 +119,19 @@ const canNext = computed(() => {
         return form.quantity !== '' && Number(form.quantity) > 0;
     }
 
+    if (current.value === 'labour') {
+        return form.labour_rate !== '' && Number(form.labour_rate) >= 0;
+    }
+
+    if (current.value === 'made') {
+        return made.value.length > 0;
+    }
+
     if (currentMeasure.value) {
-        // 0 is a valid weight for a grade that was not produced; empty is not.
-        return (values.value[key(currentMeasure.value)] ?? '') !== '';
+        const value = values.value[key(currentMeasure.value)] ?? '';
+
+        // A flexible run only lists what was made, so every amount must be above zero.
+        return value !== '' && (!flexible.value || Number(value) > 0);
     }
 
     return true;
@@ -114,7 +146,7 @@ function measureLabel(m: Measure): string {
 const storeName = computed(() => props.warehouses.find((w) => w.id === form.warehouse_id)?.name);
 
 function submit(): void {
-    const outputs = props.recipe.outputs.map((output) => ({
+    const outputs = props.recipe.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).map((output) => ({
         product_id: output.id,
         quantity: output.derived ? null : (values.value[`${output.id}:quantity`] ?? null),
         secondary_quantity: output.requires_secondary_quantity ? (values.value[`${output.id}:secondary_quantity`] ?? null) : null,
@@ -122,8 +154,22 @@ function submit(): void {
 
     const url = { dehusking: storeDehusking(), 'husk-chipping': storeHuskChipping(), copra: storeCopra() }[props.task].url;
 
-    // Dehusking outputs are all derived, so it sends none — exactly like the full ERP form.
-    form.transform((data) => (props.task === 'dehusking' ? data : { ...data, outputs })).post(url);
+    // Dehusking outputs are all derived, so it sends none — exactly like the full ERP form. A
+    // run that takes no input sends no batch and no count; only dehusking sends a labour rate.
+    form.transform((data) => {
+        const payload: Record<string, unknown> = { warehouse_id: data.warehouse_id };
+
+        if (props.recipe.consumes_input) {
+            payload.quantity = data.quantity;
+            payload.lot_id = props.recipe.input_tracks_lots ? data.lot_id : null;
+        }
+
+        if (props.recipe.labour) {
+            payload.labour_rate = data.labour_rate;
+        }
+
+        return props.task === 'dehusking' ? payload : { ...payload, outputs };
+    }).post(url);
 }
 </script>
 
@@ -136,11 +182,25 @@ function submit(): void {
                   ? t('pick.lot')
                   : current === 'count'
                     ? t('prod.input')
-                    : current === 'review'
-                      ? t('common.check')
-                      : t('prod.outputs')
+                    : current === 'labour'
+                      ? t('prod.labour')
+                      : current === 'made'
+                        ? t('prod.made')
+                        : current === 'review'
+                          ? t('common.check')
+                          : t('prod.outputs')
         "
-        :hint="current === 'lot' ? t('pick.lot.hint') : currentMeasure && task === 'husk-chipping' ? t('prod.outputs.hint') : null"
+        :hint="
+            current === 'lot'
+                ? t('pick.lot.hint')
+                : current === 'labour'
+                  ? t('prod.labour.hint')
+                  : current === 'made'
+                    ? `${t('prod.made.hint')} ${t('prod.huskLater')}`
+                    : currentMeasure && flexible
+                      ? t('prod.measure.hint')
+                      : null
+        "
         :step="index + 1"
         :total="steps.length"
         :can-next="canNext"
@@ -182,6 +242,27 @@ function submit(): void {
         </div>
 
         <KioskNumberPad
+            v-else-if="current === 'labour'"
+            v-model="form.labour_rate"
+            :label="t('prod.labour')"
+            :decimals="2"
+        />
+
+        <div v-else-if="current === 'made'" class="grid gap-3 sm:grid-cols-2">
+            <button
+                v-for="output in recipe.outputs"
+                :key="output.id"
+                type="button"
+                class="rounded-2xl border-2 p-5 text-left text-xl"
+                :class="made.includes(output.id) ? 'border-blue-700 bg-blue-50 dark:bg-blue-950' : 'border-sidebar-border/70 bg-background'"
+                @click="toggleMade(output.id)"
+            >
+                <span class="font-medium">{{ output.name }}</span>
+                <span class="text-muted-foreground block text-base">{{ output.uom }}</span>
+            </button>
+        </div>
+
+        <KioskNumberPad
             v-else-if="currentMeasure"
             :key="current"
             :model-value="values[`${currentMeasure.output.id}:${currentMeasure.field}`] ?? ''"
@@ -194,13 +275,19 @@ function submit(): void {
             <KioskErrors :errors="form.errors" />
             <div class="bg-background border-sidebar-border/70 rounded-2xl border p-5 text-xl">
                 <p class="text-muted-foreground">{{ t(`task.${task}` as KioskTextKey) }} · {{ storeName }}</p>
-                <p class="mt-2">
+                <p v-if="recipe.consumes_input" class="mt-2">
                     <strong>{{ recipe.input.name }}</strong>:
                     <span class="font-mono tabular-nums">{{ plainNumber(form.quantity) }} {{ recipe.input.uom }}</span>
                 </p>
+                <p v-else class="text-muted-foreground mt-2 text-base">{{ t('prod.huskLater') }}</p>
+                <p v-if="recipe.labour" class="mt-1">
+                    {{ t('prod.labour') }}: <span class="font-mono tabular-nums">{{ plainNumber(form.labour_rate) }}</span>
+                </p>
                 <p v-if="chosenLot" class="text-muted-foreground font-mono text-sm">{{ chosenLot.lot_number }}</p>
                 <ul class="mt-3 flex flex-col gap-2">
-                    <li v-for="output in recipe.outputs" :key="output.id" class="bg-muted/50 rounded-xl p-3">
+                    <li
+                        v-for="output in recipe.outputs.filter((o) => !flexible || made.includes(o.id))"
+                        :key="output.id" class="bg-muted/50 rounded-xl p-3">
                         <strong>{{ output.name }}</strong>:
                         <template v-if="output.derived">
                             <span class="text-muted-foreground"> {{ t('prod.auto') }}</span>

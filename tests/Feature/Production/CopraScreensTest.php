@@ -16,7 +16,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -75,7 +74,7 @@ class CopraScreensTest extends TestCase
         ]);
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
 
         $this->lot = app(CreateInventoryLot::class)->handle($this->dehusked);
     }
@@ -335,6 +334,23 @@ class CopraScreensTest extends TestCase
             ->assertSessionHasErrors('quantity');
 
         $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function pooled_dehusked_coconut_is_entered_without_a_lot_and_a_lot_is_refused(): void
+    {
+        $user = User::factory()->admin()->create();
+        $this->dehusked->update(['tracks_lots' => false]);
+
+        $this->actingAs($user)->post(route('copra.store'), $this->payload())
+            ->assertSessionHasErrors('lot_id');
+
+        $this->assertSame(0, ProductionOrder::count());
+
+        $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: ['lot_id' => null]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(ProductionOrder::firstOrFail()->inputs()->first()->lot_id);
     }
 
     #[Test]

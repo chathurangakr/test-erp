@@ -3,20 +3,19 @@
 namespace App\Actions\Production;
 
 use App\Actions\Accounting\RecordOperationalJournal;
-use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
-use App\Models\InventoryLot;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
 use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Services\Production\ProductionCostAllocator;
+use App\Services\Production\ProductionLots;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
 use Illuminate\Support\Collection;
@@ -58,7 +57,7 @@ class PostCopraProduction
 {
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
-        private readonly CreateInventoryLot $createLot,
+        private readonly ProductionLots $lots,
         private readonly RecordOperationalJournal $accounting,
         private readonly ProductionCostAllocator $allocator,
     ) {}
@@ -126,19 +125,10 @@ class PostCopraProduction
                 /** @var ProductionOutput $line */
                 $line = $output['model'];
 
-                $lot = $this->createLot->handle($allocation['product'], [
-                    'source_type' => ProductionOrder::class,
-                    'source_id' => $locked->getKey(),
-                    'manufactured_at' => $locked->production_date,
-                    'received_at' => $locked->production_date,
-                    'notes' => RecordText::of('Produced by :reference from lot :lot', [
-                        'reference' => $locked->production_number,
-                        'lot' => $input->lot?->lot_number ?? RecordText::of('unlotted stock'),
-                    ]),
-                ]);
+                $lot = $this->lots->outputLot($allocation['product'], $locked, $input);
 
                 $line->forceFill([
-                    'lot_id' => $lot->id,
+                    'lot_id' => $lot?->id,
                     'allocation_percent' => $allocation['effective_percent'],
                     // Valued against the PRIMARY quantity: KG for copra, NOS for shell.
                     'allocated_cost' => $allocation['allocated_cost'],
@@ -150,7 +140,7 @@ class PostCopraProduction
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
                     quantity: $allocation['quantity'],
-                    lotId: $lot->id,
+                    lotId: $lot?->id,
                     // The measured weight travels into the ledger as the secondary quantity,
                     // so stock keeps both the count and the weight actually received.
                     secondaryQuantity: $line->secondary_quantity === null
@@ -176,6 +166,7 @@ class PostCopraProduction
 
             $locked->forceFill([
                 'status' => ProductionStatus::Posted,
+                'production_recipe_id' => $recipe->getKey(),
                 'inventory_transaction_id' => $consumption->getKey(),
                 'output_inventory_transaction_id' => $outputTransaction->getKey(),
                 'posted_by' => $userId ?? auth()->id(),
@@ -270,26 +261,12 @@ class PostCopraProduction
             ]);
         }
 
-        // A lot is required so the copra and shell remain traceable to the coconut.
-        if ($input->lot_id === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Select the dehusked coconut lot being processed, so the output lots remain traceable.'),
-            ]);
-        }
-
-        $lot = InventoryLot::query()->whereKey($input->lot_id)->first();
-
-        if ($lot === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('The selected lot does not exist.'),
-            ]);
-        }
-
-        if ($lot->product_id !== $input->product_id) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Lot :lot belongs to a different product.', ['lot' => $lot->lot_number]),
-            ]);
-        }
+        // A lot-tracked input must name its lot so the copra and shell stay traceable;
+        // pooled dehusked coconut has none to name.
+        $this->lots->assertInputLot(
+            $input,
+            __('Select the dehusked coconut lot being processed, so the output lots remain traceable.'),
+        );
 
         return $input;
     }

@@ -219,6 +219,7 @@ class SupplierInvoiceController extends Controller
             'id' => $invoice->id,
             'internal_invoice_number' => $invoice->internal_invoice_number,
             'supplier_invoice_number' => $invoice->supplier_invoice_number,
+            'supplier_id' => $invoice->supplier_id,
             'supplier_code' => $invoice->supplier?->code,
             'supplier_name' => $invoice->supplier?->name,
             'invoice_date' => $invoice->invoice_date?->toDateString(),

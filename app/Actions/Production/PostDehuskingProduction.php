@@ -3,19 +3,18 @@
 namespace App\Actions\Production;
 
 use App\Actions\Accounting\RecordOperationalJournal;
-use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
-use App\Models\InventoryLot;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
 use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Services\Production\ProductionCostAllocator;
+use App\Services\Production\ProductionLots;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
 use Illuminate\Support\Facades\DB;
@@ -28,22 +27,30 @@ use Illuminate\Validation\ValidationException;
  * ratio. Both outputs are DERIVED from the input quantity via the recipe — an operator
  * never types them.
  *
+ * COSTING (recipe version 2): the dehusked coconut carries 100% of the consumed coconut
+ * value, and the raw husk carries none of it. The husk's cost is the run's LABOUR instead:
+ * quantity x the per-coconut rate confirmed on the draft. Which output carries labour is the
+ * recipe's `absorbs_labour` flag, never a product code.
+ *
  * Two inventory transactions are written, because the ledger records one transaction type
  * per transaction and production involves two:
  *
  *   PRODUCTION_CONSUMPTION — whole coconut OUT, valued by the engine at the weighted
  *                            average in force
  *   PRODUCTION_OUTPUT      — dehusked coconut and raw husk IN, each carrying its
- *                            configured share of the consumed value
+ *                            configured share of the consumed value, plus the labour on
+ *                            the output that absorbs it
  *
  * Both are written inside ONE database transaction, so the pair is atomic: a failure
  * anywhere leaves no consumed stock, no output stock, no lots and no posted order.
  *
- * VALUE IS CONSERVED. Physical item count rises — one coconut becomes two things — but the
- * total money in inventory does not change. The allocated costs sum exactly to the consumed
- * value, with the final output absorbing any rounding remainder.
+ * VALUE IS CONSERVED: consumed value + labour = output value, exactly. The allocated shares
+ * sum exactly to the consumed value (the final output absorbs any rounding remainder) and
+ * the labour is added on top, so the books show where every rupee came from:
+ * Dr output inventory / Cr input inventory, Cr production labour absorbed.
  *
- * No labour, electricity, machine or overhead cost is added; that is a later costing phase.
+ * No electricity, machine or overhead cost is added; that is a later costing phase.
+ * Lots follow each product's `tracks_lots` flag (ProductionLots).
  *
  * See docs/BUSINESS_RULES.md §18.
  */
@@ -51,7 +58,7 @@ class PostDehuskingProduction
 {
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
-        private readonly CreateInventoryLot $createLot,
+        private readonly ProductionLots $lots,
         private readonly RecordOperationalJournal $accounting,
         private readonly ProductionCostAllocator $allocator,
     ) {}
@@ -102,30 +109,23 @@ class PostDehuskingProduction
                 'total_cost' => $consumedValue,
             ])->save();
 
-            // 3. Derive output quantities and share the consumed value across them.
-            $allocations = $this->allocate($recipe, DecimalMath::of($input->quantity), $consumedValue);
+            // 3. Derive output quantities and share the consumed value across them, then add
+            //    the labour to the output that carries it.
+            $labourCost = $this->labourCost($locked, $recipe, DecimalMath::of($input->quantity));
+            $allocations = $this->allocate($recipe, DecimalMath::of($input->quantity), $consumedValue, $labourCost);
 
             $outputLines = [];
             $outputRecords = [];
 
             foreach ($allocations as $allocation) {
-                $lot = $this->createLot->handle($allocation['product'], [
-                    'source_type' => ProductionOrder::class,
-                    'source_id' => $locked->getKey(),
-                    'manufactured_at' => $locked->production_date,
-                    'received_at' => $locked->production_date,
-                    'notes' => RecordText::of('Produced by :reference from lot :lot', [
-                        'reference' => $locked->production_number,
-                        'lot' => $input->lot?->lot_number ?? RecordText::of('unlotted stock'),
-                    ]),
-                ]);
+                $lot = $this->lots->outputLot($allocation['product'], $locked, $input);
 
                 $outputLines[] = (new PendingInventoryLine(
                     productId: $allocation['product']->id,
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
                     quantity: $allocation['quantity'],
-                    lotId: $lot->id,
+                    lotId: $lot?->id,
                 ))
                     // The allocator's exact allocated cost reaches the ledger unchanged, so
                     // the outputs sum to the consumed value to the last decimal even when
@@ -134,10 +134,11 @@ class PostDehuskingProduction
 
                 $outputRecords[] = [
                     'product_id' => $allocation['product']->id,
-                    'lot_id' => $lot->id,
+                    'lot_id' => $lot?->id,
                     'quantity' => $allocation['quantity'],
                     'allocation_percent' => $allocation['percent'],
                     'allocated_cost' => $allocation['allocated_cost'],
+                    'labour_cost' => $allocation['labour_cost'],
                     'unit_cost' => $allocation['unit_cost'],
                 ];
             }
@@ -160,15 +161,17 @@ class PostDehuskingProduction
 
             $locked->forceFill([
                 'status' => ProductionStatus::Posted,
+                'production_recipe_id' => $recipe->getKey(),
+                'labour_cost' => $labourCost,
                 'inventory_transaction_id' => $consumption->getKey(),
                 'output_inventory_transaction_id' => $outputTransaction->getKey(),
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
 
-            // Dr output inventory, Cr input inventory — value moving between asset
-            // accounts at the exact figures the ledger holds. Accounting never recalculates
-            // the allocation percentages; it records what they already produced.
+            // Dr output inventory, Cr input inventory and Cr production labour absorbed — at
+            // the exact figures the ledger holds. Accounting never recalculates the allocation
+            // percentages or the labour; it records what they already produced.
             $this->accounting->forProduction($locked, $consumption, $outputTransaction, $userId);
 
             return $locked->refresh()->load(['inputs', 'outputs']);
@@ -176,17 +179,49 @@ class PostDehuskingProduction
     }
 
     /**
+     * The run's labour: quantity processed x the rate confirmed on the draft.
+     *
+     * Only a recipe with an output that absorbs labour has any; the rate is then required,
+     * because a missing rate would silently give that output no cost at all. Zero is a
+     * deliberate, accepted answer.
+     */
+    private function labourCost(ProductionOrder $order, ProductionRecipe $recipe, string $inputQuantity): ?string
+    {
+        if ($recipe->labourOutput() === null) {
+            return null;
+        }
+
+        if ($order->labour_rate === null) {
+            throw ValidationException::withMessages([
+                'labour_rate' => __('Enter the dehusking labour rate per coconut before posting.'),
+            ]);
+        }
+
+        $rate = DecimalMath::of($order->labour_rate);
+
+        if (DecimalMath::isNegative($rate)) {
+            throw ValidationException::withMessages([
+                'labour_rate' => __('The labour rate cannot be negative.'),
+            ]);
+        }
+
+        return DecimalMath::cost(DecimalMath::mul($inputQuantity, $rate));
+    }
+
+    /**
      * Derive each output's quantity from the recipe ratio, then hand the whole set to the
      * shared allocator, which shares the consumed value and guarantees the totals are
-     * exact.
+     * exact. The labour is then added, whole, to the output that absorbs it.
      *
      * The ratio is what encodes the 1:1:1 rule — it is configuration, not a constant in
      * code. Dehusking always produces every output, so every one participates.
      *
      * @return list<array<string, mixed>>
      */
-    private function allocate(ProductionRecipe $recipe, string $inputQuantity, string $consumedValue): array
+    private function allocate(ProductionRecipe $recipe, string $inputQuantity, string $consumedValue, ?string $labourCost): array
     {
+        $labourProductId = $recipe->labourOutput()?->product_id;
+
         $outputs = $recipe->outputs->values()->map(function (ProductionRecipeOutput $output) use ($inputQuantity): array {
             return [
                 'product' => $output->product,
@@ -198,13 +233,32 @@ class PostDehuskingProduction
         })->all();
 
         return array_map(
-            fn (array $allocation): array => [
-                'product' => $allocation['product'],
-                'quantity' => $allocation['quantity'],
-                'percent' => $allocation['configured_percent'],
-                'allocated_cost' => $allocation['allocated_cost'],
-                'unit_cost' => $allocation['unit_cost'],
-            ],
+            function (array $allocation) use ($labourProductId, $labourCost): array {
+                $carriesLabour = $labourCost !== null && $allocation['product']->id === $labourProductId;
+
+                if (! $carriesLabour) {
+                    return [
+                        'product' => $allocation['product'],
+                        'quantity' => $allocation['quantity'],
+                        'percent' => $allocation['configured_percent'],
+                        'allocated_cost' => $allocation['allocated_cost'],
+                        'labour_cost' => null,
+                        'unit_cost' => $allocation['unit_cost'],
+                    ];
+                }
+
+                $total = DecimalMath::cost(DecimalMath::add($allocation['allocated_cost'], $labourCost));
+
+                return [
+                    'product' => $allocation['product'],
+                    'quantity' => $allocation['quantity'],
+                    'percent' => $allocation['configured_percent'],
+                    'allocated_cost' => $total,
+                    'labour_cost' => $labourCost,
+                    // Quantity is derived from a positive input at a positive ratio.
+                    'unit_cost' => DecimalMath::cost(DecimalMath::div($total, $allocation['quantity'])),
+                ];
+            },
             $this->allocator->allocate($outputs, $consumedValue),
         );
     }
@@ -299,27 +353,12 @@ class PostDehuskingProduction
             ]);
         }
 
-        // A lot is required: dehusking output must be traceable back to the coconut it came
-        // from, which is only possible when the consumed lot is known.
-        if ($input->lot_id === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Select the coconut lot being processed, so the output lots remain traceable.'),
-            ]);
-        }
-
-        $lot = InventoryLot::query()->whereKey($input->lot_id)->first();
-
-        if ($lot === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('The selected lot does not exist.'),
-            ]);
-        }
-
-        if ($lot->product_id !== $input->product_id) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Lot :lot belongs to a different product.', ['lot' => $lot->lot_number]),
-            ]);
-        }
+        // A lot-tracked coconut must name its lot, so the output stays traceable; pooled
+        // coconut has none to name.
+        $this->lots->assertInputLot(
+            $input,
+            __('Select the coconut lot being processed, so the output lots remain traceable.'),
+        );
 
         return $input;
     }

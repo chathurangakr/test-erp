@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1\Production;
 
 use App\Enums\ProductionStatus;
+use App\Enums\ProductionType;
 use App\Http\Resources\V1\ApiResource;
 use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
@@ -45,6 +46,11 @@ class ProductionOrderResource extends ApiResource
                 'quantity' => $this->quantity($this->waste_quantity),
                 'uom' => $this->relationLoaded('wasteUom') ? $this->wasteUom?->code : null,
             ],
+            // Dehusking labour: the rate the operator confirmed, and the cost it produced.
+            'labour_rate' => $this->labour_rate === null ? null : $this->money($this->labour_rate),
+            'labour_cost' => $isDraft || $this->labour_cost === null ? null : $this->money($this->labour_cost),
+            // A chipping run takes no raw husk: its outputs' material cost arrives at delivery.
+            'raw_material_pending_backflush' => $this->whenLoaded('inputs', fn () => $this->production_type === ProductionType::HuskChipping && $this->inputs->isEmpty()),
             'input_value' => $this->whenLoaded('inputs', fn () => $priced ? $this->money($this->inputValue()) : null),
             'output_value' => $this->whenLoaded('outputs', fn () => $priced ? $this->money($this->outputValue()) : null),
             'actions' => [
@@ -85,6 +91,7 @@ class ProductionOrderResource extends ApiResource
                 // The share actually applied at posting, never the configured draft value.
                 'allocation_percent' => $isDraft || $output->allocation_percent === null ? null : (string) $output->allocation_percent,
                 'allocated_cost' => $isDraft ? null : $this->money($output->allocated_cost),
+                'labour_cost' => $isDraft || $output->labour_cost === null ? null : $this->money($output->labour_cost),
                 'unit_cost' => $isDraft ? null : $this->money($output->unit_cost),
                 // Informational only — never stored, never a weighted average (DATA_MODEL P-10).
                 'informational_secondary_unit_cost' => $isDraft ? null : $output->informationalSecondaryUnitCost(),

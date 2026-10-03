@@ -43,6 +43,13 @@ class ProductAccountMappingSeeder extends Seeder
         'HUSK-7C' => ['1340', '5130', '4130'],
         'HUSK-9C' => ['1340', '5130', '4130'],
         'HUSK-10C' => ['1340', '5130', '4130'],
+        // The litre stock items are the same grades measured another way, so they share
+        // their grade's accounts. Cocopeat is its own product with its own accounts.
+        'HUSK-7C-L' => ['1340', '5130', '4130'],
+        'HUSK-9C-L' => ['1340', '5130', '4130'],
+        'HUSK-10C-L' => ['1340', '5130', '4130'],
+        'COCOPEAT' => ['1370', '5170', '4170'],
+        'COCOPEAT-L' => ['1370', '5170', '4170'],
         'COPRA' => ['1350', '5140', '4140'],
         'RAW-SHELL' => ['1360', '5150', '4150'],
     ];
@@ -52,6 +59,8 @@ class ProductAccountMappingSeeder extends Seeder
     private const TRADE_PAYABLES_CODE = '2110';
 
     private const TRADE_RECEIVABLES_CODE = '1210';
+
+    private const PRODUCTION_LABOUR_CODE = '6310';
 
     public function run(): void
     {
@@ -89,6 +98,7 @@ class ProductAccountMappingSeeder extends Seeder
             $accounts->get(self::GRNI_CODE),
             $accounts->get(self::TRADE_PAYABLES_CODE),
             $accounts->get(self::TRADE_RECEIVABLES_CODE),
+            $accounts->get(self::PRODUCTION_LABOUR_CODE),
         );
     }
 
@@ -99,11 +109,13 @@ class ProductAccountMappingSeeder extends Seeder
         ?int $grniAccountId,
         ?int $tradePayablesAccountId,
         ?int $tradeReceivablesAccountId,
+        ?int $productionLabourAccountId,
     ): void {
         $attributes = array_filter([
             'grni_account_id' => $grniAccountId,
             'trade_payables_account_id' => $tradePayablesAccountId,
             'trade_receivables_account_id' => $tradeReceivablesAccountId,
+            'production_labour_account_id' => $productionLabourAccountId,
         ], fn (?int $id): bool => $id !== null);
 
         if ($attributes === []) {

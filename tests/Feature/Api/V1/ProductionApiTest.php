@@ -17,7 +17,6 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
-use Database\Seeders\ProductionRecipeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -73,7 +72,7 @@ class ProductionApiTest extends TestCase
         ]);
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
 
         $this->operator = User::factory()->admin()->create(['name' => 'Floor Operator']);
     }
@@ -131,6 +130,7 @@ class ProductionApiTest extends TestCase
             'warehouse_id' => $this->main->id,
             'lot_id' => $lot->id,
             'quantity' => '1000',
+            'labour_rate' => '2.5',
             // Not part of the contract: the web ignores it, and so does the API.
             'outputs' => [['product_id' => $this->dehusked->id, 'quantity' => '5']],
         ])->assertCreated();
@@ -140,6 +140,8 @@ class ProductionApiTest extends TestCase
             ->assertJsonPath('data.inputs.0.quantity', '1000.000')
             ->assertJsonPath('data.inputs.0.total_cost', null)
             ->assertJsonPath('data.outputs', [])
+            ->assertJsonPath('data.labour_rate', '2.500000')
+            ->assertJsonPath('data.labour_cost', null)
             ->assertJsonPath('data.created_by.name', 'Floor Operator');
         $this->assertSame('1000.000', $this->stock($this->coconut), 'A draft moves no stock.');
 
@@ -156,10 +158,16 @@ class ProductionApiTest extends TestCase
         $this->assertSame('1000.000', $this->stock($this->dehusked));
         $this->assertSame('1000.000', $this->stock($this->husk));
 
-        // Value conservation: every rupee consumed reaches the outputs, exactly.
+        // The dehusked coconut carries the whole coconut value; the raw husk carries only the
+        // labour (1,000 x 2.50). Input value + labour = output value, exactly.
         $this->assertSame('40000.000000', $body['inputs'][0]['total_cost']);
-        $this->assertSame(0, DecimalMath::compare($this->sumAllocated($body['outputs']), '40000.000000'));
-        $this->assertSame($body['input_value'], $body['output_value']);
+        $this->assertSame('2500.000000', $body['labour_cost']);
+        $this->assertSame('40000.000000', $outputs['DEHUSKED-COCONUT']['allocated_cost']);
+        $this->assertNull($outputs['DEHUSKED-COCONUT']['labour_cost']);
+        $this->assertSame('2500.000000', $outputs['RAW-HUSK']['allocated_cost']);
+        $this->assertSame('2500.000000', $outputs['RAW-HUSK']['labour_cost']);
+        $this->assertSame(0, DecimalMath::compare($this->sumAllocated($body['outputs']), '42500.000000'));
+        $this->assertSame(0, DecimalMath::compare(DecimalMath::add($body['input_value'], $body['labour_cost']), $body['output_value']));
     }
 
     #[Test]
@@ -169,7 +177,7 @@ class ProductionApiTest extends TestCase
         $this->actAs($this->operator);
 
         $id = $this->postJson(route('api.v1.dehusking.store'), [
-            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '500',
+            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '500', 'labour_rate' => '2',
         ])->json('data.id');
 
         $this->postJson(route('api.v1.dehusking.post', $id))->assertOk();
@@ -190,7 +198,7 @@ class ProductionApiTest extends TestCase
         $this->actAs($this->operator);
 
         $posted = $this->postJson(route('api.v1.dehusking.store'), [
-            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '300',
+            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '300', 'labour_rate' => '2',
         ])->json('data.id');
         $this->postJson(route('api.v1.dehusking.post', $posted))->assertOk();
 
@@ -203,7 +211,7 @@ class ProductionApiTest extends TestCase
         $this->assertSame('0.000', $this->stock($this->dehusked));
 
         $draft = $this->postJson(route('api.v1.dehusking.store'), [
-            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '100',
+            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '100', 'labour_rate' => '2',
         ])->json('data.id');
 
         $this->postJson(route('api.v1.dehusking.cancel', $draft))->assertOk()->assertJsonPath('data.status.value', 'CANCELLED');
@@ -215,7 +223,7 @@ class ProductionApiTest extends TestCase
     {
         $lot = $this->stockLot($this->coconut, '1000', '40.000000');
         $this->actAs($this->operator);
-        $payload = ['production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '100'];
+        $payload = ['production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '100', 'labour_rate' => '2'];
 
         $id = $this->postJson(route('api.v1.dehusking.store'), $payload)->json('data.id');
 
@@ -249,55 +257,62 @@ class ProductionApiTest extends TestCase
     #[Test]
     public function husk_chipping_keeps_the_operators_measured_weights_exactly(): void
     {
-        $lot = $this->stockLot($this->husk, '2000', '3.000000');
+        $this->stockLot($this->husk, '2000', '3.000000');
         $this->actAs($this->operator);
+
+        $outputs = [
+            ['product_id' => $this->chips['HUSK-7C']->id, 'quantity' => '150.125'],
+            ['product_id' => $this->chips['HUSK-9C']->id, 'quantity' => '200.000'],
+            ['product_id' => $this->chips['HUSK-10C']->id, 'quantity' => '280.750'],
+        ];
+
+        // A client still sending a husk lot or count believes husk is consumed here: refused.
+        $this->postJson(route('api.v1.husk-chipping.store'), [
+            'production_date' => '2026-09-20',
+            'warehouse_id' => $this->main->id,
+            'quantity' => '2000',
+            'outputs' => $outputs,
+        ])->assertUnprocessable()->assertJsonValidationErrors('quantity');
 
         $draft = $this->postJson(route('api.v1.husk-chipping.store'), [
             'production_date' => '2026-09-20',
             'warehouse_id' => $this->main->id,
-            'lot_id' => $lot->id,
-            'quantity' => '2000',
-            'outputs' => [
-                ['product_id' => $this->chips['HUSK-7C']->id, 'quantity' => '150.125'],
-                ['product_id' => $this->chips['HUSK-9C']->id, 'quantity' => '200.000'],
-                ['product_id' => $this->chips['HUSK-10C']->id, 'quantity' => '280.750'],
-            ],
+            'outputs' => $outputs,
         ])->assertCreated();
 
-        // A draft reports no share: the configured one may not be the one posting applies.
+        // A draft reports no share and no cost.
         $this->assertNull($draft->json('data.outputs.0.allocation_percent'));
 
         $body = $this->postJson(route('api.v1.husk-chipping.post', $draft->json('data.id')))->assertOk()->json('data');
-        $outputs = collect($body['outputs'])->keyBy(fn (array $o): string => $o['product']['code']);
+        $byCode = collect($body['outputs'])->keyBy(fn (array $o): string => $o['product']['code']);
 
-        $this->assertSame('150.125', $outputs['HUSK-7C']['quantity']);
-        $this->assertSame('200.000', $outputs['HUSK-9C']['quantity']);
-        $this->assertSame('280.750', $outputs['HUSK-10C']['quantity']);
-        $this->assertSame('KG', $outputs['HUSK-7C']['uom']);
+        $this->assertSame('150.125', $byCode['HUSK-7C']['quantity']);
+        $this->assertSame('200.000', $byCode['HUSK-9C']['quantity']);
+        $this->assertSame('280.750', $byCode['HUSK-10C']['quantity']);
+        $this->assertSame('KG', $byCode['HUSK-7C']['uom']);
         $this->assertSame('280.750', $this->stock($this->chips['HUSK-10C']));
 
-        $this->assertSame('6000.000000', $body['inputs'][0]['total_cost']);
-        $this->assertSame(0, DecimalMath::compare($this->sumAllocated($body['outputs']), '6000.000000'));
+        // No husk taken at production: it is backflushed at delivery, so the chips carry no
+        // material cost yet and the husk stock is untouched.
+        $this->assertSame([], $body['inputs']);
+        $this->assertTrue($body['raw_material_pending_backflush']);
+        $this->assertSame(0, DecimalMath::compare($this->sumAllocated($body['outputs']), '0'));
+        $this->assertSame('2000.000', $this->stock($this->husk));
     }
 
     #[Test]
     public function husk_chipping_waste_is_recorded_as_information_only(): void
     {
-        $lot = $this->stockLot($this->husk, '100', '3.000000');
         $kg = UnitOfMeasure::where('code', 'KG')->firstOrFail();
         $this->actAs($this->operator);
 
         $this->postJson(route('api.v1.husk-chipping.store'), [
             'production_date' => '2026-09-20',
             'warehouse_id' => $this->main->id,
-            'lot_id' => $lot->id,
-            'quantity' => '100',
             'waste_quantity' => '12.5',
             'waste_uom_id' => $kg->id,
             'outputs' => [
                 ['product_id' => $this->chips['HUSK-7C']->id, 'quantity' => '10'],
-                ['product_id' => $this->chips['HUSK-9C']->id, 'quantity' => '0'],
-                ['product_id' => $this->chips['HUSK-10C']->id, 'quantity' => '0'],
             ],
         ])->assertCreated()
             ->assertJsonPath('data.waste.quantity', '12.500')
@@ -373,7 +388,7 @@ class ProductionApiTest extends TestCase
 
         $this->actAs(User::factory()->withRoles('PRODUCTION')->create());
         $id = $this->postJson(route('api.v1.dehusking.store'), [
-            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '200',
+            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '200', 'labour_rate' => '2',
         ])->assertCreated()->json('data.id');
 
         $this->postJson(route('api.v1.dehusking.post', $id))->assertOk();
@@ -402,7 +417,7 @@ class ProductionApiTest extends TestCase
         $this->actAs($this->operator);
 
         $id = $this->postJson(route('api.v1.dehusking.store'), [
-            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '10',
+            'production_date' => '2026-09-20', 'warehouse_id' => $this->main->id, 'lot_id' => $lot->id, 'quantity' => '10', 'labour_rate' => '2',
         ])->json('data.id');
         $body = $this->postJson(route('api.v1.dehusking.post', $id))->json('data');
 

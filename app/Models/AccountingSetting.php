@@ -22,6 +22,7 @@ class AccountingSetting extends Model
         'grni_account_id',
         'trade_payables_account_id',
         'trade_receivables_account_id',
+        'production_labour_account_id',
         'updated_by',
     ];
 
@@ -74,6 +75,16 @@ class AccountingSetting extends Model
     public function tradeReceivablesAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'trade_receivables_account_id');
+    }
+
+    /**
+     * Credited when production labour is absorbed into inventory (a contra-expense).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function productionLabourAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'production_labour_account_id');
     }
 
     public function isOperationalAccountingEnabled(): bool

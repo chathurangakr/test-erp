@@ -3,19 +3,16 @@
 namespace App\Actions\Production;
 
 use App\Actions\Accounting\RecordOperationalJournal;
-use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
-use App\Models\InventoryLot;
-use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
 use App\Models\ProductionRecipe;
-use App\Services\Production\ProductionCostAllocator;
+use App\Services\Production\ProductionLots;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
 use Illuminate\Support\Collection;
@@ -25,21 +22,21 @@ use Illuminate\Validation\ValidationException;
 /**
  * Posts a draft husk chipping production order.
  *
- * Chipping differs from dehusking in one crucial way: yields genuinely vary, so there is NO
- * fixed husk-to-KG conversion. The operator measures and enters the actual KG of 7C, 9C and
- * 10C produced, and those figures are what reach inventory. Nothing here derives an output
- * weight from the input count, and the recipe records a null ratio to make that structural.
+ * Chipping does NOT take raw husk out of stock. The factory cannot say, run by run, how many
+ * husks a batch of chips used — it knows that when the chips are sold. So the recipe defers
+ * its input to delivery (`input_consumption` AT_DELIVERY): posting a run brings the measured
+ * outputs into stock and nothing else, and the raw husk is BACKFLUSHED by the delivery that
+ * sells them (PostDelivery), at the husk's weighted average, straight into cost of goods sold.
  *
- * As with dehusking, two inventory transactions are written — PRODUCTION_CONSUMPTION for
- * the raw husk and PRODUCTION_OUTPUT for the chips — inside ONE database transaction.
+ * The outputs therefore enter stock with their raw-material cost PENDING — at zero value.
+ * Nothing of value moved, so no journal is written and the ledger is not distorted: the husk
+ * stays in Raw Husk inventory at its true cost until it is backflushed.
  *
- * Value is conserved: the consumed husk value is shared across the outputs this batch
- * actually produced, summing exactly. Waste is recorded as information only — it creates no
- * inventory line, no lot and no value, so the consumed cost is absorbed by the saleable
- * outputs.
+ * The operator's rows are the measured truth: any product the recipe allows, in that
+ * product's own unit (KG or L — separate stock items, never converted), every row positive.
+ * There is NO conversion from husks to KG or litres anywhere. Waste is information only.
  *
- * No labour, electricity, machine, packaging or overhead cost is added; that is a later
- * costing phase.
+ * One PRODUCTION_OUTPUT transaction is written, inside one database transaction.
  *
  * See docs/BUSINESS_RULES.md §19.
  */
@@ -47,9 +44,8 @@ class PostHuskChippingProduction
 {
     public function __construct(
         private readonly PostInventoryTransaction $postInventory,
-        private readonly CreateInventoryLot $createLot,
+        private readonly ProductionLots $lots,
         private readonly RecordOperationalJournal $accounting,
-        private readonly ProductionCostAllocator $allocator,
     ) {}
 
     public function handle(ProductionOrder $order, ?int $userId = null): ProductionOrder
@@ -63,103 +59,30 @@ class PostHuskChippingProduction
             $this->assertPostable($locked);
 
             $recipe = $this->resolveRecipe($locked);
-            $input = $this->resolveInput($locked, $recipe);
+            $this->assertNoInput($locked);
             $outputs = $this->resolveOutputs($locked, $recipe);
-
-            // 1. Consume the raw husk. The engine values it at the weighted average in
-            //    force and rejects it if stock — or the chosen lot — would go negative.
-            $consumption = $this->postInventory->handle(
-                InventoryTransactionType::ProductionConsumption,
-                [
-                    new PendingInventoryLine(
-                        productId: $input->product_id,
-                        warehouseId: $locked->warehouse_id,
-                        direction: InventoryDirection::Out,
-                        quantity: DecimalMath::of($input->quantity),
-                        lotId: $input->lot_id,
-                    ),
-                ],
-                [
-                    'transaction_date' => $locked->production_date,
-                    'source_type' => ProductionOrder::class,
-                    'source_id' => $locked->getKey(),
-                    'notes' => RecordText::of('Production :reference input', ['reference' => $locked->production_number]),
-                    'posted_by' => $userId ?? auth()->id(),
-                ],
-            );
-
-            // 2. Read back what the ledger actually charged — never recompute it here.
-            $consumedLine = $consumption->lines->first();
-            $unitCost = DecimalMath::cost(DecimalMath::of($consumedLine->unit_cost));
-            $consumedValue = DecimalMath::cost(DecimalMath::of($consumedLine->total_cost));
-
-            $input->forceFill([
-                'unit_cost' => $unitCost,
-                'total_cost' => $consumedValue,
-            ])->save();
-
-            // 3. Share that value across the outputs this batch actually produced. Outputs
-            //    with zero quantity take nothing, and the rest are renormalised.
-            $allocations = $this->allocator->allocate(
-                $outputs->map(fn (ProductionOutput $output): array => [
-                    'product' => $output->product,
-                    'quantity' => DecimalMath::of($output->quantity),
-                    'percent' => DecimalMath::of($output->allocation_percent),
-                ])->all(),
-                $consumedValue,
-            );
 
             $outputLines = [];
 
-            foreach ($outputs->values() as $index => $output) {
-                $allocation = $allocations[$index];
-                $produced = DecimalMath::isPositive(DecimalMath::of($output->quantity));
+            foreach ($outputs as $output) {
+                $lot = $this->lots->outputLot($output->product, $locked, null);
 
-                if (! $produced) {
-                    // Nothing was made, so there is no stock, no lot and no value. The share
-                    // is stored as the 0% it actually received, not the configured 30% — so
-                    // every line satisfies allocated cost = consumed value x stored share.
-                    $output->forceFill([
-                        'lot_id' => null,
-                        'allocation_percent' => $allocation['effective_percent'],
-                        'allocated_cost' => DecimalMath::cost('0'),
-                        'unit_cost' => DecimalMath::cost('0'),
-                    ])->save();
-
-                    continue;
-                }
-
-                $lot = $this->createLot->handle($allocation['product'], [
-                    'source_type' => ProductionOrder::class,
-                    'source_id' => $locked->getKey(),
-                    'manufactured_at' => $locked->production_date,
-                    'received_at' => $locked->production_date,
-                    'notes' => RecordText::of('Produced by :reference from lot :lot', [
-                        'reference' => $locked->production_number,
-                        'lot' => $input->lot?->lot_number ?? RecordText::of('unlotted stock'),
-                    ]),
-                ]);
-
+                // Zero value: the raw husk's cost is pending until the delivery backflushes it.
                 $output->forceFill([
-                    'lot_id' => $lot->id,
-                    // The effective share is stored, so a batch where an output produced
-                    // nothing can always be explained after the fact.
-                    'allocation_percent' => $allocation['effective_percent'],
-                    'allocated_cost' => $allocation['allocated_cost'],
-                    'unit_cost' => $allocation['unit_cost'],
+                    'lot_id' => $lot?->id,
+                    'allocation_percent' => DecimalMath::round('0', 6),
+                    'allocated_cost' => DecimalMath::cost('0'),
+                    'labour_cost' => null,
+                    'unit_cost' => DecimalMath::cost('0'),
                 ])->save();
 
                 $outputLines[] = (new PendingInventoryLine(
-                    productId: $allocation['product']->id,
+                    productId: $output->product_id,
                     warehouseId: $locked->warehouse_id,
                     direction: InventoryDirection::In,
-                    quantity: $allocation['quantity'],
-                    lotId: $lot->id,
-                ))
-                    // The allocator's exact allocated cost reaches the ledger unchanged, so
-                    // the outputs sum to the consumed value to the last decimal even when
-                    // the per-unit rate repeats.
-                    ->withAuthoritativeCost($allocation['unit_cost'], $allocation['allocated_cost']);
+                    quantity: DecimalMath::quantity(DecimalMath::of($output->quantity)),
+                    lotId: $lot?->id,
+                ))->withAuthoritativeCost(DecimalMath::cost('0'), DecimalMath::cost('0'));
             }
 
             $outputTransaction = $this->postInventory->handle(
@@ -169,23 +92,24 @@ class PostHuskChippingProduction
                     'transaction_date' => $locked->production_date,
                     'source_type' => ProductionOrder::class,
                     'source_id' => $locked->getKey(),
-                    'notes' => RecordText::of('Production :reference output', ['reference' => $locked->production_number]),
+                    'notes' => RecordText::of('Production :reference output (raw husk pending backflush)', [
+                        'reference' => $locked->production_number,
+                    ]),
                     'posted_by' => $userId ?? auth()->id(),
                 ],
             );
 
             $locked->forceFill([
                 'status' => ProductionStatus::Posted,
-                'inventory_transaction_id' => $consumption->getKey(),
+                'production_recipe_id' => $recipe->getKey(),
                 'output_inventory_transaction_id' => $outputTransaction->getKey(),
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
 
-            // Dr output inventory, Cr input inventory — value moving between asset
-            // accounts at the exact figures the ledger holds. Accounting never recalculates
-            // the allocation percentages; it records what they already produced.
-            $this->accounting->forProduction($locked, $consumption, $outputTransaction, $userId);
+            // Still asked, so the rule lives in one place: a run that moved no value records
+            // no journal.
+            $this->accounting->forProduction($locked, null, $outputTransaction, $userId);
 
             return $locked->refresh()->load(['inputs', 'outputs']);
         });
@@ -237,88 +161,53 @@ class PostHuskChippingProduction
             ]);
         }
 
-        // The configured shares must total 100%; otherwise a batch producing every output
-        // would create or destroy value.
         $recipe->assertAllocationIsComplete();
+
+        if (! $recipe->consumesInputAtDelivery()) {
+            throw ValidationException::withMessages([
+                'recipe' => __('The active husk chipping recipe must backflush its raw husk at delivery.'),
+            ]);
+        }
 
         return $recipe;
     }
 
-    private function resolveInput(ProductionOrder $order, ProductionRecipe $recipe): ProductionInput
+    /**
+     * A draft written under the old method carries a raw-husk input line. Posting it now would
+     * take no husk while the operator believed it did — so it is refused, not reinterpreted.
+     */
+    private function assertNoInput(ProductionOrder $order): void
     {
-        $inputs = $order->inputs()->with(['product', 'lot'])->orderBy('id')->get();
-
-        if ($inputs->count() !== 1) {
+        if ($order->inputs()->exists()) {
             throw ValidationException::withMessages([
-                'inputs' => __('A husk chipping order must have exactly one input line.'),
+                'inputs' => __('This draft was entered under the old chipping method, which took raw husk at production. Cancel it and record the run again.'),
             ]);
         }
-
-        $input = $inputs->first();
-
-        if ($input->product_id !== $recipe->input_product_id) {
-            throw ValidationException::withMessages([
-                'inputs' => __('Husk chipping consumes :expected, not :actual.', [
-                    'expected' => $recipe->inputProduct->code,
-                    'actual' => $input->product?->code ?? __('an unknown product'),
-                ]),
-            ]);
-        }
-
-        if (! DecimalMath::isPositive(DecimalMath::of($input->quantity))) {
-            throw ValidationException::withMessages([
-                'inputs.0.quantity' => __('The quantity to process must be greater than zero.'),
-            ]);
-        }
-
-        // A lot is required so the chips remain traceable back to the husk they came from.
-        if ($input->lot_id === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Select the raw husk lot being processed, so the output lots remain traceable.'),
-            ]);
-        }
-
-        $lot = InventoryLot::query()->whereKey($input->lot_id)->first();
-
-        if ($lot === null) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('The selected lot does not exist.'),
-            ]);
-        }
-
-        if ($lot->product_id !== $input->product_id) {
-            throw ValidationException::withMessages([
-                'inputs.0.lot_id' => __('Lot :lot belongs to a different product.', ['lot' => $lot->lot_number]),
-            ]);
-        }
-
-        return $input;
     }
 
     /**
-     * The operator-entered outputs, checked against the recipe.
+     * The operator-entered output rows, checked against the recipe.
      *
-     * Quantities come from the draft exactly as measured — nothing is derived. Zero is
-     * allowed for an individual grade a batch genuinely did not produce, but at least one
-     * saleable output must be positive or there is nothing to carry the consumed value.
+     * Every row must be a positive measured quantity of a product the recipe allows, each
+     * product once. A grade a batch did not produce is simply left out.
      *
      * @return Collection<int, ProductionOutput>
      */
-    private function resolveOutputs(ProductionOrder $order, ProductionRecipe $recipe)
+    private function resolveOutputs(ProductionOrder $order, ProductionRecipe $recipe): Collection
     {
         $outputs = $order->outputs()->with('product')->orderBy('id')->get();
 
         if ($outputs->isEmpty()) {
             throw ValidationException::withMessages([
-                'outputs' => __('Enter the measured output weights before posting.'),
+                'outputs' => __('Add at least one output with its measured quantity before posting.'),
             ]);
         }
 
-        $allowed = $recipe->outputs->pluck('allocation_percent', 'product_id');
-        $anyPositive = false;
+        $allowed = $recipe->outputs->pluck('product_id')->map(fn ($id): int => (int) $id);
+        $seen = [];
 
-        foreach ($outputs as $index => $output) {
-            if (! $allowed->has($output->product_id)) {
+        foreach ($outputs->values() as $index => $output) {
+            if (! $allowed->contains($output->product_id)) {
                 throw ValidationException::withMessages([
                     "outputs.{$index}.product_id" => __('Product :product is not an output of the husk chipping recipe.', [
                         'product' => $output->product?->code ?? __('unknown'),
@@ -326,27 +215,19 @@ class PostHuskChippingProduction
                 ]);
             }
 
-            $quantity = DecimalMath::of($output->quantity);
-
-            if (DecimalMath::isNegative($quantity)) {
+            if (in_array($output->product_id, $seen, true)) {
                 throw ValidationException::withMessages([
-                    "outputs.{$index}.quantity" => __('An output quantity cannot be negative.'),
+                    "outputs.{$index}.product_id" => __('Each output product may appear only once.'),
                 ]);
             }
 
-            if (DecimalMath::isPositive($quantity)) {
-                $anyPositive = true;
+            $seen[] = $output->product_id;
+
+            if (! DecimalMath::isPositive(DecimalMath::of($output->quantity))) {
+                throw ValidationException::withMessages([
+                    "outputs.{$index}.quantity" => __('Every output row needs a quantity greater than zero. Remove rows that produced nothing.'),
+                ]);
             }
-
-            // Snapshot the configured share onto the line, so the allocator works from the
-            // recipe rather than from whatever might be sitting on the draft.
-            $output->allocation_percent = $allowed->get($output->product_id);
-        }
-
-        if (! $anyPositive) {
-            throw ValidationException::withMessages([
-                'outputs' => __('At least one output must have a measured quantity greater than zero.'),
-            ]);
         }
 
         return $outputs;

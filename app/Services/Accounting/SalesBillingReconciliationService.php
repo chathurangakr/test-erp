@@ -32,7 +32,10 @@ use Illuminate\Support\Collection;
  */
 class SalesBillingReconciliationService
 {
-    public function __construct(private readonly RecordOperationalJournal $journals) {}
+    public function __construct(
+        private readonly RecordOperationalJournal $journals,
+        private readonly AccountingPolicy $policy,
+    ) {}
 
     /**
      * The value this delivered line may be billed for, in total.
@@ -76,6 +79,10 @@ class SalesBillingReconciliationService
      * whose cost of sales was never posted — one from before the accounting cutover, or one
      * that has been reversed — would leave the income statement showing a sale with no cost
      * against it.
+     *
+     * One delivery reaches the ledger without a journal: one posted under accounting whose
+     * goods genuinely cost nothing, so there was no amount to journal. It is billable — its
+     * zero cost of sales is the truth, not a gap.
      */
     public function isBillable(Delivery $delivery): bool
     {
@@ -85,7 +92,14 @@ class SalesBillingReconciliationService
 
         $journal = $this->journals->originalJournalFor($delivery);
 
-        return $journal !== null && $journal->status === JournalEntryStatus::Posted;
+        if ($journal !== null) {
+            return $journal->status === JournalEntryStatus::Posted;
+        }
+
+        return $this->policy->appliesTo($delivery->delivery_date)
+            && $delivery->lines->every(
+                fn (DeliveryLine $line): bool => DecimalMath::isZero(DecimalMath::of($line->cost_of_goods_sold ?? '0')),
+            );
     }
 
     /**

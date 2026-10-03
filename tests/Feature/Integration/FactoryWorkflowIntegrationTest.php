@@ -43,7 +43,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -93,23 +92,32 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
         $this->nos = UnitOfMeasure::factory()->create(['code' => 'NOS', 'name' => 'Numbers', 'decimal_places' => 0]);
         $this->kg = UnitOfMeasure::factory()->weight()->create(['code' => 'KG', 'name' => 'Kilogram']);
+        $litre = UnitOfMeasure::factory()->weight()->create(['code' => 'L', 'name' => 'Litre']);
 
-        // The eight products of the seeded Product Master, with their real units.
+        // The seeded Product Master, with its real units and lot policy: the coconut and husk
+        // products are ONE pooled stock each (no lots); copra and shell keep their lots. A husk
+        // product measured by volume is its own stock item, never converted from KG.
         foreach ([
-            ['COCONUT', 'Whole Coconut', $this->nos, null],
-            ['DEHUSKED-COCONUT', 'Dehusked Coconut', $this->nos, null],
-            ['RAW-HUSK', 'Raw Coconut Husk', $this->nos, null],
-            ['COPRA', 'Copra', $this->kg, null],
-            ['HUSK-7C', '7C Husk Chips', $this->kg, null],
-            ['HUSK-9C', '9C Husk Chips', $this->kg, null],
-            ['HUSK-10C', '10C Husk Chips', $this->kg, null],
-            ['RAW-SHELL', 'Raw Coconut Shell', $this->nos, $this->kg],
-        ] as [$code, $name, $primary, $secondary]) {
+            ['COCONUT', 'Whole Coconut', $this->nos, null, false],
+            ['DEHUSKED-COCONUT', 'Dehusked Coconut', $this->nos, null, false],
+            ['RAW-HUSK', 'Raw Coconut Husk', $this->nos, null, false],
+            ['COPRA', 'Copra', $this->kg, null, true],
+            ['HUSK-7C', '7C', $this->kg, null, false],
+            ['HUSK-9C', '9C', $this->kg, null, false],
+            ['HUSK-10C', '10C', $this->kg, null, false],
+            ['COCOPEAT', 'Cocopeat', $this->kg, null, false],
+            ['HUSK-7C-L', '7C (L)', $litre, null, false],
+            ['HUSK-9C-L', '9C (L)', $litre, null, false],
+            ['HUSK-10C-L', '10C (L)', $litre, null, false],
+            ['COCOPEAT-L', 'Cocopeat (L)', $litre, null, false],
+            ['RAW-SHELL', 'Raw Coconut Shell', $this->nos, $this->kg, true],
+        ] as [$code, $name, $primary, $secondary, $lots]) {
             $this->products[$code] = Product::factory()->create([
                 'code' => $code,
                 'name' => $name,
                 'primary_uom_id' => $primary->id,
                 'secondary_uom_id' => $secondary?->id,
+                'tracks_lots' => $lots,
             ]);
         }
 
@@ -119,7 +127,7 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN', 'name' => 'Main Warehouse']);
         $this->store = Warehouse::factory()->create(['code' => 'STORE', 'name' => 'Husk Store']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
     }
 
     // ================================================================= helpers
@@ -167,7 +175,10 @@ class FactoryWorkflowIntegrationTest extends TestCase
     /**
      * Sell goods: a draft delivery, then posted through sales.
      *
-     * @param  list<array{code: string, quantity: string, price: string, lot: int, secondary?: string, basis?: PricingBasis}>  $lines
+     * `lot` only for lot-tracked stock (copra, shell); `husks` is the raw husk a chipping
+     * output used, backflushed by the delivery.
+     *
+     * @param  list<array{code: string, quantity: string, price: string, lot?: int|null, secondary?: string, basis?: PricingBasis, husks?: string}>  $lines
      */
     private function deliver(array $lines, ?Warehouse $warehouse = null): Delivery
     {
@@ -180,11 +191,12 @@ class FactoryWorkflowIntegrationTest extends TestCase
             DeliveryLine::factory()->create([
                 'delivery_id' => $delivery->id,
                 'product_id' => $this->product($line['code'])->id,
-                'lot_id' => $line['lot'],
+                'lot_id' => $line['lot'] ?? null,
                 'quantity' => $line['quantity'],
                 'secondary_quantity' => $line['secondary'] ?? null,
                 'pricing_basis' => $line['basis'] ?? PricingBasis::Primary,
                 'unit_price' => $line['price'],
+                'backflush_quantity' => $line['husks'] ?? null,
             ]);
         }
 
@@ -192,32 +204,37 @@ class FactoryWorkflowIntegrationTest extends TestCase
     }
 
     /**
-     * A draft production order with one input and the given outputs.
+     * A draft production order with the given input and outputs.
      *
      * Dehusking passes NO outputs: every dehusking quantity is derived from the recipe, so
-     * the posting action writes the output rows itself. Chipping and copra pass theirs,
-     * because the operator measured them.
+     * the posting action writes the output rows itself. It carries a labour rate. Chipping
+     * passes NO input: its raw husk is backflushed at delivery. Chipping and copra pass their
+     * outputs, because the operator measured them.
      *
      * @param  list<array{code: string, quantity: string, secondary?: string|null}>  $outputs
      */
     private function draftProduction(
         ProductionType $type,
-        string $inputCode,
-        string $inputQuantity,
-        int $lotId,
+        ?string $inputCode,
+        ?string $inputQuantity,
         array $outputs = [],
+        ?string $labourRate = null,
+        ?int $lotId = null,
     ): ProductionOrder {
         $order = ProductionOrder::factory()->create([
             'production_type' => $type,
             'warehouse_id' => $this->main->id,
+            'labour_rate' => $labourRate,
         ]);
 
-        ProductionInput::factory()->create([
-            'production_order_id' => $order->id,
-            'product_id' => $this->product($inputCode)->id,
-            'lot_id' => $lotId,
-            'quantity' => $inputQuantity,
-        ]);
+        if ($inputCode !== null) {
+            ProductionInput::factory()->create([
+                'production_order_id' => $order->id,
+                'product_id' => $this->product($inputCode)->id,
+                'lot_id' => $lotId,
+                'quantity' => $inputQuantity,
+            ]);
+        }
 
         foreach ($outputs as $output) {
             ProductionOutput::factory()->create([
@@ -233,15 +250,12 @@ class FactoryWorkflowIntegrationTest extends TestCase
         return $order->refresh();
     }
 
-    /** The lot a posted production run created for one of its outputs. */
-    private function outputLot(ProductionOrder $order, string $code): int
+    /** The lot a posted production run created for one of its outputs, if it has lots. */
+    private function outputLot(ProductionOrder $order, string $code): ?int
     {
-        return (int) $order->outputs->firstWhere('product_id', $this->product($code)->id)->lot_id;
-    }
+        $lot = $order->outputs->firstWhere('product_id', $this->product($code)->id)->lot_id;
 
-    private function receiptLot(GoodsReceipt $receipt): int
-    {
-        return (int) $receipt->lines->first()->lot_id;
+        return $lot === null ? null : (int) $lot;
     }
 
     /**
@@ -254,52 +268,54 @@ class FactoryWorkflowIntegrationTest extends TestCase
      */
     private function runFactoryFlow(): array
     {
-        // ---- Step 1: buy 10,000 whole coconut, with transport and loading.
+        // ---- Step 1: buy 10,000 whole coconut, with transport and loading. Pooled: no lot.
         $coconutGrn = $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
-        $coconutLot = $this->receiptLot($coconutGrn);
 
         // ---- Step 2: sell 2,000 whole coconut.
         $coconutSale = $this->deliver([
-            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000', 'lot' => $coconutLot],
+            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000'],
         ]);
 
-        // ---- Step 3: dehusk 3,000. Both outputs are derived 1:1 by the recipe.
+        // ---- Step 3: dehusk 3,000 at Rs. 2.50 labour per coconut. Both outputs are derived
+        //      1:1 by the recipe; the dehusked coconut carries the coconut value and the raw
+        //      husk carries the labour.
         $dehusking = app(PostDehuskingProduction::class)->handle(
-            $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '3000.000', $coconutLot)
+            $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '3000.000', labourRate: '2.500000')
         );
-        $dehuskedLot = $this->outputLot($dehusking, 'DEHUSKED-COCONUT');
-        $huskInternalLot = $this->outputLot($dehusking, 'RAW-HUSK');
 
         // ---- Step 4: sell 1,000 dehusked coconut.
         $dehuskedSale = $this->deliver([
-            ['code' => 'DEHUSKED-COCONUT', 'quantity' => '1000.000', 'price' => '150.000000', 'lot' => $dehuskedLot],
+            ['code' => 'DEHUSKED-COCONUT', 'quantity' => '1000.000', 'price' => '150.000000'],
         ]);
 
-        // ---- Step 5: buy 5,000 raw husk at a different cost, into a different warehouse.
+        // ---- Step 5: buy 5,000 raw husk at a different cost, into a different warehouse. It
+        //      joins the one raw husk pool.
         $huskGrn = $this->receive('RAW-HUSK', '5000.000', '20.000000', warehouse: $this->store, supplierLot: 'SUP-HUSK-01');
-        $huskPurchasedLot = $this->receiptLot($huskGrn);
 
-        // ---- Step 6: chip 2,000 husk from the internally produced lot.
+        // ---- Step 6: chip. No husk leaves stock; the measured outputs — in KG and, for
+        //      cocopeat, in litres — arrive with their raw husk cost pending.
         $chipping = app(PostHuskChippingProduction::class)->handle(
-            $this->draftProduction(ProductionType::HuskChipping, 'RAW-HUSK', '2000.000', $huskInternalLot, [
+            $this->draftProduction(ProductionType::HuskChipping, null, null, [
                 ['code' => 'HUSK-7C', 'quantity' => '150.500'],
                 ['code' => 'HUSK-9C', 'quantity' => '205.250'],
                 ['code' => 'HUSK-10C', 'quantity' => '281.750'],
+                ['code' => 'COCOPEAT-L', 'quantity' => '100.000'],
             ])
         );
 
         // ---- Step 7: dry 1,000 dehusked coconut into copra and shell.
         $copra = app(PostCopraProduction::class)->handle(
-            $this->draftProduction(ProductionType::Copra, 'DEHUSKED-COCONUT', '1000.000', $dehuskedLot, [
+            $this->draftProduction(ProductionType::Copra, 'DEHUSKED-COCONUT', '1000.000', [
                 ['code' => 'COPRA', 'quantity' => '190.500'],
                 // The draft carries the derived count; the action recalculates it anyway.
                 ['code' => 'RAW-SHELL', 'quantity' => '1000.000', 'secondary' => '420.750'],
             ])
         );
 
-        // ---- Step 8: sell finished goods, including shell priced by weight.
+        // ---- Step 8: sell finished goods. The chips backflush the 180 raw husks they used;
+        //      shell is priced by weight.
         $chipSale = $this->deliver([
-            ['code' => 'HUSK-7C', 'quantity' => '50.000', 'price' => '200.000000', 'lot' => $this->outputLot($chipping, 'HUSK-7C')],
+            ['code' => 'HUSK-7C', 'quantity' => '50.000', 'price' => '200.000000', 'husks' => '180.000'],
         ]);
 
         $copraSale = $this->deliver([
@@ -321,14 +337,10 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
         return [
             'coconut_grn' => $coconutGrn,
-            'coconut_lot' => $coconutLot,
             'coconut_sale' => $coconutSale,
             'dehusking' => $dehusking,
-            'dehusked_lot' => $dehuskedLot,
-            'husk_internal_lot' => $huskInternalLot,
             'dehusked_sale' => $dehuskedSale,
             'husk_grn' => $huskGrn,
-            'husk_purchased_lot' => $huskPurchasedLot,
             'chipping' => $chipping,
             'copra' => $copra,
             'chip_sale' => $chipSale,
@@ -362,20 +374,20 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
         $this->assertStock('COCONUT', '10000.000', '1025000.000000', '102.500000');
 
-        // A lot exists and traces back to this receipt.
-        $lot = InventoryLot::findOrFail($this->receiptLot($receipt));
-        $this->assertSame(GoodsReceipt::class, $lot->source_type);
-        $this->assertSame($receipt->id, (int) $lot->source_id);
-        $this->assertSame('10000.000', $this->stock()->quantityForLot($lot->id));
+        // Coconut is pooled stock: no lot is created; the ledger traces to the receipt.
+        $this->assertNull($line->lot_id);
+        $this->assertSame(0, InventoryLot::count());
+        $this->assertSame(GoodsReceipt::class, $receipt->inventoryTransaction->source_type);
+        $this->assertSame($receipt->id, (int) $receipt->inventoryTransaction->source_id);
     }
 
     #[Test]
     public function step_2_selling_whole_coconut_costs_at_the_weighted_average_and_leaves_it_unchanged(): void
     {
-        $receipt = $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
+        $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
 
         $sale = $this->deliver([
-            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000', 'lot' => $this->receiptLot($receipt)],
+            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000'],
         ]);
 
         $line = $sale->lines->first();
@@ -384,47 +396,58 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->assertSame('102.500000', $line->inventory_unit_cost);
         $this->assertSame('205000.000000', $line->cost_of_goods_sold);
         $this->assertSame('55000.000000', $line->grossProfit());
+        $this->assertNull($line->backflush_quantity);
 
         // Selling at 130 did not drag the average anywhere near it.
         $this->assertStock('COCONUT', '8000.000', '820000.000000', '102.500000');
     }
 
     #[Test]
-    public function step_3_dehusking_converts_one_to_one_and_conserves_value_exactly(): void
+    public function step_3_dehusking_gives_the_coconut_value_to_the_dehusked_coconut_and_the_labour_to_the_husk(): void
     {
-        $receipt = $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
-        $coconutLot = $this->receiptLot($receipt);
+        $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
 
         $this->deliver([
-            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000', 'lot' => $coconutLot],
+            ['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000'],
         ]);
 
         $dehusking = app(PostDehuskingProduction::class)->handle(
-            $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '3000.000', $coconutLot)
+            $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '3000.000', labourRate: '2.500000')
         );
 
         // 3,000 x 102.50
         $this->assertSame('307500.000000', $dehusking->inputs->first()->total_cost);
+        // 3,000 x 2.50 — the operator's labour rate, not a share of the coconut.
+        $this->assertSame('7500.000000', $dehusking->labour_cost);
 
         $outputs = $dehusking->outputs->keyBy('product_id');
         $dehusked = $outputs[$this->product('DEHUSKED-COCONUT')->id];
         $husk = $outputs[$this->product('RAW-HUSK')->id];
 
-        $this->assertSame('85.000000', $dehusked->allocation_percent);
-        $this->assertSame('261375.000000', $dehusked->allocated_cost);
-        $this->assertSame('87.125000', $dehusked->unit_cost);
+        $this->assertSame('100.000000', $dehusked->allocation_percent);
+        $this->assertSame('307500.000000', $dehusked->allocated_cost);
+        $this->assertNull($dehusked->labour_cost);
+        $this->assertSame('102.500000', $dehusked->unit_cost);
 
-        $this->assertSame('15.000000', $husk->allocation_percent);
-        $this->assertSame('46125.000000', $husk->allocated_cost);
-        $this->assertSame('15.375000', $husk->unit_cost);
+        $this->assertSame('0.000000', $husk->allocation_percent);
+        $this->assertSame('7500.000000', $husk->allocated_cost);
+        $this->assertSame('7500.000000', $husk->labour_cost);
+        $this->assertSame('2.500000', $husk->unit_cost);
 
-        // Value in equals value out, to the last stored decimal.
-        $this->assertSame($dehusking->inputValue(), $dehusking->outputValue());
-        $this->assertSame('307500.000000', $dehusking->outputValue());
+        // Output value = input value + labour, to the last stored decimal.
+        $this->assertSame('315000.000000', $dehusking->outputValue());
+        $this->assertSame(
+            DecimalMath::cost(DecimalMath::add($dehusking->inputValue(), $dehusking->labour_cost)),
+            $dehusking->outputValue(),
+        );
+
+        // Pooled outputs carry no lot.
+        $this->assertNull($dehusked->lot_id);
+        $this->assertNull($husk->lot_id);
 
         $this->assertStock('COCONUT', '5000.000', '512500.000000', '102.500000');
-        $this->assertStock('DEHUSKED-COCONUT', '3000.000', '261375.000000', '87.125000');
-        $this->assertStock('RAW-HUSK', '3000.000', '46125.000000', '15.375000');
+        $this->assertStock('DEHUSKED-COCONUT', '3000.000', '307500.000000', '102.500000');
+        $this->assertStock('RAW-HUSK', '3000.000', '7500.000000', '2.500000');
     }
 
     #[Test]
@@ -433,86 +456,69 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $flow = $this->runFactoryFlow();
         $line = $flow['dehusked_sale']->lines->first();
 
-        // The cost came from dehusking's allocation, not from the coconut price.
-        $this->assertSame('87.125000', $line->inventory_unit_cost);
-        $this->assertSame('87125.000000', $line->cost_of_goods_sold);
+        // The dehusked coconut carries the full coconut cost.
+        $this->assertSame('102.500000', $line->inventory_unit_cost);
+        $this->assertSame('102500.000000', $line->cost_of_goods_sold);
         $this->assertSame('150000.000000', $line->sales_value);
-        $this->assertSame('62875.000000', $line->grossProfit());
+        $this->assertSame('47500.000000', $line->grossProfit());
     }
 
     #[Test]
-    public function step_5_purchased_and_produced_husk_blend_into_one_company_average(): void
+    public function step_5_purchased_and_produced_husk_form_one_pool_at_one_company_average(): void
     {
         $flow = $this->runFactoryFlow();
-
-        // Before chipping consumed any: 3,000 internal at 15.375 + 5,000 bought at 20.
-        // 46,125 + 100,000 = 146,125 over 8,000 = 18.265625.
         $huskId = $this->product('RAW-HUSK')->id;
 
         $purchased = $flow['husk_grn']->lines->first();
         $this->assertSame('20.000000', $purchased->final_unit_cost);
         $this->assertSame('0.000000', $purchased->allocated_landed_cost);
 
-        // The two lots stay separate and separately traceable.
-        $internal = InventoryLot::findOrFail($flow['husk_internal_lot']);
-        $bought = InventoryLot::findOrFail($flow['husk_purchased_lot']);
+        // One pool: no lots at all — the supplier's own lot number stays on the receipt line.
+        $this->assertNull($purchased->lot_id);
+        $this->assertSame('SUP-HUSK-01', $purchased->supplier_lot_number);
+        $this->assertSame(0, InventoryLot::where('product_id', $huskId)->count());
 
-        $this->assertNotSame($internal->id, $bought->id);
-        $this->assertSame(ProductionOrder::class, $internal->source_type);
-        $this->assertSame($flow['dehusking']->id, (int) $internal->source_id);
-        $this->assertSame(GoodsReceipt::class, $bought->source_type);
-        $this->assertSame($flow['husk_grn']->id, (int) $bought->source_id);
-        $this->assertSame('SUP-HUSK-01', $bought->supplier_lot_number);
-
-        // 3,000 internal − 2,000 chipped = 1,000; 5,000 purchased untouched.
-        $this->assertSame('1000.000', $this->stock()->quantityForLot($internal->id));
-        $this->assertSame('5000.000', $this->stock()->quantityForLot($bought->id));
-
-        // The average is company-wide, so it blends across both warehouses.
-        $this->assertSame('1000.000', $this->stock()->quantityForProductInWarehouse($huskId, $this->main->id));
+        // Before the chip sale: 3,000 internal at 2.50 + 5,000 bought at 20.
+        // 7,500 + 100,000 = 107,500 over 8,000 = 13.4375. Chipping took none of it; the chip
+        // sale then backflushed 180 at 13.4375 = 2,418.75 from MAIN.
+        $this->assertSame('2820.000', $this->stock()->quantityForProductInWarehouse($huskId, $this->main->id));
         $this->assertSame('5000.000', $this->stock()->quantityForProductInWarehouse($huskId, $this->store->id));
-        $this->assertStock('RAW-HUSK', '6000.000', '109593.750000', '18.265625');
+        $this->assertStock('RAW-HUSK', '7820.000', '105081.250000', '13.437500');
     }
 
     #[Test]
-    public function step_6_chipping_uses_the_measured_weights_and_the_configured_split(): void
+    public function step_6_chipping_records_the_measured_outputs_and_takes_no_husk(): void
     {
         $flow = $this->runFactoryFlow();
         $chipping = $flow['chipping'];
 
-        // 2,000 x 18.265625 — the blended average, not either source cost.
-        $this->assertSame('18.265625', $chipping->inputs->first()->unit_cost);
-        $this->assertSame('36531.250000', $chipping->inputs->first()->total_cost);
+        // No input line and no consumption transaction: the husk is backflushed at delivery.
+        $this->assertTrue($chipping->inputs->isEmpty());
+        $this->assertNull($chipping->inventory_transaction_id);
 
         $outputs = $chipping->outputs->keyBy('product_id');
-        $c7 = $outputs[$this->product('HUSK-7C')->id];
-        $c9 = $outputs[$this->product('HUSK-9C')->id];
-        $c10 = $outputs[$this->product('HUSK-10C')->id];
 
-        $this->assertSame('150.500', $c7->quantity);
-        $this->assertSame('205.250', $c9->quantity);
-        $this->assertSame('281.750', $c10->quantity);
+        foreach ([
+            'HUSK-7C' => '150.500',
+            'HUSK-9C' => '205.250',
+            'HUSK-10C' => '281.750',
+            'COCOPEAT-L' => '100.000',
+        ] as $code => $quantity) {
+            $output = $outputs[$this->product($code)->id];
 
-        $this->assertSame('30.000000', $c7->allocation_percent);
-        $this->assertSame('10959.375000', $c7->allocated_cost);
-        $this->assertSame('72.819767', $c7->unit_cost);
-
-        $this->assertSame('30.000000', $c9->allocation_percent);
-        $this->assertSame('10959.375000', $c9->allocated_cost);
-        $this->assertSame('53.395250', $c9->unit_cost);
-
-        $this->assertSame('40.000000', $c10->allocation_percent);
-        $this->assertSame('14612.500000', $c10->allocated_cost);
-        $this->assertSame('51.863354', $c10->unit_cost);
-
-        $this->assertSame($chipping->inputValue(), $chipping->outputValue());
-
-        // Husk left in NOS, chips arrived in KG. Nothing converted one into the other:
-        // 2,000 husk produced 637.500 KG, a ratio that exists nowhere in the system.
-        $this->assertSame('2000.000', $chipping->inputQuantity());
-        foreach ($chipping->outputs as $output) {
-            $this->assertNotNull($output->lot_id);
+            $this->assertSame($quantity, $output->quantity, $code);
+            // Raw husk material cost pending backflush: nothing of value moved yet.
+            $this->assertSame('0.000000', $output->allocated_cost, $code);
+            $this->assertSame('0.000000', $output->unit_cost, $code);
+            // Pooled outputs carry no lot.
+            $this->assertNull($output->lot_id, $code);
         }
+
+        $this->assertSame('0.000000', $chipping->outputValue());
+
+        // KG and litres are separate stock items: cocopeat in litres is not cocopeat in KG.
+        $this->assertSame('100.000', $this->stock()->quantityForProduct($this->product('COCOPEAT-L')->id));
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($this->product('COCOPEAT')->id));
     }
 
     #[Test]
@@ -521,8 +527,10 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $flow = $this->runFactoryFlow();
         $copra = $flow['copra'];
 
-        $this->assertSame('87.125000', $copra->inputs->first()->unit_cost);
-        $this->assertSame('87125.000000', $copra->inputs->first()->total_cost);
+        $this->assertSame('102.500000', $copra->inputs->first()->unit_cost);
+        $this->assertSame('102500.000000', $copra->inputs->first()->total_cost);
+        // Pooled dehusked coconut: no input lot.
+        $this->assertNull($copra->inputs->first()->lot_id);
 
         $outputs = $copra->outputs->keyBy('product_id');
         $copraOut = $outputs[$this->product('COPRA')->id];
@@ -532,35 +540,51 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->assertSame('190.500', $copraOut->quantity);
         $this->assertNull($copraOut->secondary_quantity);
         $this->assertSame('75.000000', $copraOut->allocation_percent);
-        $this->assertSame('65343.750000', $copraOut->allocated_cost);
-        $this->assertSame('343.011811', $copraOut->unit_cost);
+        $this->assertSame('76875.000000', $copraOut->allocated_cost);
+        $this->assertSame('403.543307', $copraOut->unit_cost);
 
         // Count derived 1:1 from the coconuts; weight measured.
         $this->assertSame('1000.000', $shellOut->quantity);
         $this->assertSame('420.750', $shellOut->secondary_quantity);
         $this->assertSame('25.000000', $shellOut->allocation_percent);
-        $this->assertSame('21781.250000', $shellOut->allocated_cost);
+        $this->assertSame('25625.000000', $shellOut->allocated_cost);
         // Valued per NOS, its primary unit.
-        $this->assertSame('21.781250', $shellOut->unit_cost);
+        $this->assertSame('25.625000', $shellOut->unit_cost);
 
         $this->assertSame($copra->inputValue(), $copra->outputValue());
-        $this->assertSame('87125.000000', $copra->outputValue());
+        $this->assertSame('102500.000000', $copra->outputValue());
+
+        // Copra and shell still keep lots, traced to this run.
+        $this->assertNotNull($copraOut->lot_id);
+        $this->assertNotNull($shellOut->lot_id);
     }
 
     #[Test]
-    public function step_8_shell_sells_by_weight_while_stock_and_cost_follow_the_count(): void
+    public function step_8_chips_backflush_their_husk_and_shell_sells_by_weight(): void
     {
         $flow = $this->runFactoryFlow();
 
+        // The chips themselves cost nothing yet; the 180 raw husks they used are the cost.
         $chip = $flow['chip_sale']->lines->first();
         $this->assertSame('10000.000000', $chip->sales_value);
-        $this->assertSame('72.819767', $chip->inventory_unit_cost);
-        $this->assertSame('3640.988350', $chip->cost_of_goods_sold);
+        $this->assertSame('0.000000', $chip->inventory_unit_cost);
+        $this->assertSame($this->product('RAW-HUSK')->id, $chip->backflush_product_id);
+        $this->assertSame('180.000', $chip->backflush_quantity);
+        // 180 x 13.4375
+        $this->assertSame('2418.750000', $chip->backflush_cost);
+        $this->assertSame('2418.750000', $chip->cost_of_goods_sold);
+        $this->assertSame('7581.250000', $chip->grossProfit());
+
+        $backflush = $flow['chip_sale']->backflushTransaction;
+        $this->assertSame(InventoryTransactionType::BackflushIssue, $backflush->transaction_type);
+        $this->assertSame(Delivery::class, $backflush->source_type);
+        $this->assertSame($flow['chip_sale']->id, (int) $backflush->source_id);
 
         $copra = $flow['copra_sale']->lines->first();
         $this->assertSame('45250.000000', $copra->sales_value);
-        $this->assertSame('343.011811', $copra->inventory_unit_cost);
-        $this->assertSame('31042.568896', $copra->cost_of_goods_sold);
+        $this->assertSame('403.543307', $copra->inventory_unit_cost);
+        // 90.5 x 403.543307
+        $this->assertSame('36520.669284', $copra->cost_of_goods_sold);
 
         $shell = $flow['shell_sale']->lines->first();
         $this->assertSame(PricingBasis::Secondary, $shell->pricing_basis);
@@ -568,9 +592,9 @@ class FactoryWorkflowIntegrationTest extends TestCase
         // Revenue follows the measured weight: 208.750 x 80.
         $this->assertSame('16700.000000', $shell->sales_value);
         // Cost follows the count, because the count is what left stock.
-        $this->assertSame('21.781250', $shell->inventory_unit_cost);
-        $this->assertSame('10890.625000', $shell->cost_of_goods_sold);
-        $this->assertSame('5809.375000', $shell->grossProfit());
+        $this->assertSame('25.625000', $shell->inventory_unit_cost);
+        $this->assertSame('12812.500000', $shell->cost_of_goods_sold);
+        $this->assertSame('3887.500000', $shell->grossProfit());
 
         // The weight that left was measured, not apportioned: half the shells by count did
         // not carry half the weight.
@@ -588,13 +612,16 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->runFactoryFlow();
 
         $this->assertStock('COCONUT', '5000.000', '512500.000000', '102.500000');
-        $this->assertStock('DEHUSKED-COCONUT', '1000.000', '87125.000000', '87.125000');
-        $this->assertStock('RAW-HUSK', '6000.000', '109593.750000', '18.265625');
-        $this->assertStock('HUSK-7C', '100.500', '7318.386650', '72.819768');
-        $this->assertStock('HUSK-9C', '205.250', '10959.375000', '53.395250');
-        $this->assertStock('HUSK-10C', '281.750', '14612.500000', '51.863354');
-        $this->assertStock('COPRA', '100.000', '34301.181104', '343.011811');
-        $this->assertStock('RAW-SHELL', '500.000', '10890.625000', '21.781250');
+        $this->assertStock('DEHUSKED-COCONUT', '1000.000', '102500.000000', '102.500000');
+        $this->assertStock('RAW-HUSK', '7820.000', '105081.250000', '13.437500');
+        // Chips and cocopeat hold quantity with their raw husk cost still pending.
+        $this->assertStock('HUSK-7C', '100.500', '0.000000', '0.000000');
+        $this->assertStock('HUSK-9C', '205.250', '0.000000', '0.000000');
+        $this->assertStock('HUSK-10C', '281.750', '0.000000', '0.000000');
+        $this->assertStock('COCOPEAT-L', '100.000', '0.000000', '0.000000');
+        $this->assertStock('COCOPEAT', '0.000', '0.000000', '0.000000');
+        $this->assertStock('COPRA', '100.000', '40354.330716', '403.543307');
+        $this->assertStock('RAW-SHELL', '500.000', '12812.500000', '25.625000');
 
         // Shell keeps its measured weight alongside its count.
         $this->assertSame('212.000', $this->stock()->secondaryQuantityForProduct($this->product('RAW-SHELL')->id));
@@ -605,23 +632,20 @@ class FactoryWorkflowIntegrationTest extends TestCase
     {
         $flow = $this->runFactoryFlow();
 
-        foreach (['dehusking', 'chipping', 'copra'] as $key) {
+        foreach (['dehusking', 'copra'] as $key) {
             /** @var ProductionOrder $order */
             $order = $flow[$key];
+            $labour = DecimalMath::of($order->labour_cost ?? '0');
 
-            // Exact at document level: the allocation sums to the consumed value.
-            $this->assertSame($order->inputValue(), $order->outputValue(), "{$key} document value");
-
-            $allocated = $order->outputs->reduce(
-                fn (string $carry, ProductionOutput $o): string => DecimalMath::add($carry, DecimalMath::of($o->allocated_cost ?? '0')),
-                DecimalMath::zero(),
+            // Exact at document level: outputs = consumed value + labour.
+            $this->assertSame(
+                DecimalMath::cost(DecimalMath::add($order->inputValue(), $labour)),
+                $order->outputValue(),
+                "{$key} document value",
             );
 
-            $this->assertSame($order->inputs->first()->total_cost, DecimalMath::cost($allocated), "{$key} allocation");
-
             // And exact at LEDGER level too: total_cost is authoritative, so the allocated
-            // figures reach the ledger unchanged and nothing is lost re-deriving them from a
-            // rounded unit cost. See docs/INVENTORY_RULES.md §8.1.
+            // figures reach the ledger unchanged. See docs/INVENTORY_RULES.md §8.1.
             $consumedLedger = DecimalMath::cost(
                 DecimalMath::of($order->consumptionTransaction->lines->sum(fn ($l): string => $l->total_cost))
             );
@@ -633,16 +657,18 @@ class FactoryWorkflowIntegrationTest extends TestCase
             }
 
             $this->assertSame(
-                $consumedLedger,
+                DecimalMath::cost(DecimalMath::add($consumedLedger, $labour)),
                 DecimalMath::cost($outputLedger),
                 "{$key} ledger value is not conserved exactly",
             );
+        }
 
-            $this->assertSame(
-                '0.000000',
-                DecimalMath::cost(DecimalMath::sub($consumedLedger, $outputLedger)),
-                "{$key} left a monetary residue",
-            );
+        // Chipping moved no value at all: nothing consumed, every output at zero.
+        $chipping = $flow['chipping'];
+        $this->assertNull($chipping->consumptionTransaction);
+
+        foreach ($chipping->outputTransaction->lines as $line) {
+            $this->assertSame('0.000000', $line->total_cost);
         }
     }
 
@@ -847,13 +873,29 @@ class FactoryWorkflowIntegrationTest extends TestCase
         foreach ([$flow['dehusking'], $flow['chipping'], $flow['copra']] as $order) {
             $this->assertSame(ProductionStatus::Posted, $order->status);
             $this->assertSame(
-                InventoryTransactionType::ProductionConsumption,
-                $order->consumptionTransaction->transaction_type,
-            );
-            $this->assertSame(
                 InventoryTransactionType::ProductionOutput,
                 $order->outputTransaction->transaction_type,
             );
+        }
+
+        // Dehusking and copra consumed at production; chipping consumed nothing then.
+        foreach ([$flow['dehusking'], $flow['copra']] as $order) {
+            $this->assertSame(
+                InventoryTransactionType::ProductionConsumption,
+                $order->consumptionTransaction->transaction_type,
+            );
+        }
+
+        $this->assertNull($flow['chipping']->consumptionTransaction);
+
+        // Only the chip sale backflushed raw material.
+        $this->assertSame(
+            InventoryTransactionType::BackflushIssue,
+            $flow['chip_sale']->backflushTransaction->transaction_type,
+        );
+
+        foreach ([$flow['coconut_sale'], $flow['dehusked_sale'], $flow['copra_sale'], $flow['shell_sale']] as $delivery) {
+            $this->assertNull($delivery->backflush_inventory_transaction_id);
         }
     }
 
@@ -864,29 +906,22 @@ class FactoryWorkflowIntegrationTest extends TestCase
     {
         $flow = $this->runFactoryFlow();
 
-        // Supplier → GRN → coconut lot
-        $coconutLot = InventoryLot::findOrFail($flow['coconut_lot']);
+        // Supplier → GRN → the pooled coconut stock, traced by the ledger's source.
         $this->assertSame($this->supplier->id, $flow['coconut_grn']->supplier_id);
-        $this->assertSame(GoodsReceipt::class, $coconutLot->source_type);
-        $this->assertSame($flow['coconut_grn']->id, (int) $coconutLot->source_id);
+        $this->assertSame(GoodsReceipt::class, $flow['coconut_grn']->inventoryTransaction->source_type);
 
-        // coconut lot → dehusking → dehusked lot
-        $this->assertSame($coconutLot->id, $flow['dehusking']->inputs->first()->lot_id);
-        $dehuskedLot = InventoryLot::findOrFail($flow['dehusked_lot']);
-        $this->assertSame(ProductionOrder::class, $dehuskedLot->source_type);
-        $this->assertSame($flow['dehusking']->id, (int) $dehuskedLot->source_id);
-        $this->assertStringContainsString($coconutLot->lot_number, (string) $dehuskedLot->notes);
+        // Pooled coconut → dehusking → pooled dehusked coconut: the production order is the
+        // link, through its consumption and output transactions.
+        $this->assertSame(ProductionOrder::class, $flow['dehusking']->consumptionTransaction->source_type);
+        $this->assertSame($flow['dehusking']->id, (int) $flow['dehusking']->outputTransaction->source_id);
 
-        // dehusked lot → copra run → copra lot and shell lot
-        $this->assertSame($dehuskedLot->id, $flow['copra']->inputs->first()->lot_id);
-
+        // Dehusked coconut → copra run → copra lot and shell lot, each recording the run.
         foreach (['COPRA', 'RAW-SHELL'] as $code) {
             $lot = InventoryLot::findOrFail($this->outputLot($flow['copra'], $code));
 
             $this->assertSame($this->product($code)->id, $lot->product_id);
             $this->assertSame(ProductionOrder::class, $lot->source_type);
             $this->assertSame($flow['copra']->id, (int) $lot->source_id);
-            $this->assertStringContainsString($dehuskedLot->lot_number, (string) $lot->notes);
         }
 
         // copra lot → delivery, shell lot → delivery
@@ -902,37 +937,34 @@ class FactoryWorkflowIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function the_husk_chain_traces_from_the_same_coconut_lot_to_the_chip_lots(): void
+    public function the_husk_chain_traces_from_the_pool_to_the_delivery_that_used_it(): void
     {
         $flow = $this->runFactoryFlow();
+        $huskId = $this->product('RAW-HUSK')->id;
 
-        $coconutLot = InventoryLot::findOrFail($flow['coconut_lot']);
-        $huskLot = InventoryLot::findOrFail($flow['husk_internal_lot']);
+        // Husk entered the pool from dehusking and from a supplier.
+        $dehuskingHusk = $flow['dehusking']->outputTransaction->lines->firstWhere('product_id', $huskId);
+        $this->assertSame('3000.000', $dehuskingHusk->quantity);
+        $this->assertSame(GoodsReceipt::class, $flow['husk_grn']->inventoryTransaction->source_type);
 
-        // coconut lot → dehusking → raw husk lot
-        $this->assertSame(ProductionOrder::class, $huskLot->source_type);
-        $this->assertSame($flow['dehusking']->id, (int) $huskLot->source_id);
-        $this->assertStringContainsString($coconutLot->lot_number, (string) $huskLot->notes);
-
-        // raw husk lot → chipping → 7C / 9C / 10C lots
-        $this->assertSame($huskLot->id, $flow['chipping']->inputs->first()->lot_id);
-
-        foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C'] as $code) {
-            $lot = InventoryLot::findOrFail($this->outputLot($flow['chipping'], $code));
-
-            $this->assertSame($this->product($code)->id, $lot->product_id);
-            $this->assertSame($flow['chipping']->id, (int) $lot->source_id);
-            $this->assertStringContainsString($huskLot->lot_number, (string) $lot->notes);
-        }
-
-        // 7C lot → delivery
+        // Chipping produced its outputs without touching the pool.
         $this->assertSame(
-            $this->outputLot($flow['chipping'], 'HUSK-7C'),
-            (int) $flow['chip_sale']->lines->first()->lot_id,
+            0,
+            InventoryTransactionLine::where('product_id', $huskId)
+                ->whereIn('inventory_transaction_id', [$flow['chipping']->output_inventory_transaction_id])
+                ->count(),
         );
 
-        // The purchased husk never entered this chain.
-        $this->assertNotSame($flow['husk_purchased_lot'], $flow['chipping']->inputs->first()->lot_id);
+        // The delivery that sold the chips is the document that took the husk out.
+        $backflush = $flow['chip_sale']->backflushTransaction;
+        $line = $backflush->lines->first();
+
+        $this->assertSame($huskId, $line->product_id);
+        $this->assertSame(InventoryDirection::Out, $line->direction);
+        $this->assertSame('180.000', $line->quantity);
+        $this->assertNull($line->lot_id);
+        $this->assertSame($this->main->id, $line->warehouse_id);
+        $this->assertSame($flow['chip_sale']->id, (int) $backflush->source_id);
     }
 
     // ================================================================= step 10
@@ -986,8 +1018,8 @@ class FactoryWorkflowIntegrationTest extends TestCase
     {
         $flow = $this->runFactoryFlow();
 
-        // The coconut lot has been sold from and dehusked from; 5,000 remain, but the
-        // receipt brought in 10,000, so undoing it would drive the lot negative.
+        // The coconut has been sold and dehusked; 5,000 remain, but the receipt brought in
+        // 10,000, so undoing it would drive the stock negative.
         try {
             app(ReverseGoodsReceipt::class)->handle($flow['coconut_grn']);
             $this->fail('Expected the coconut receipt reversal to be rejected.');
@@ -1030,8 +1062,7 @@ class FactoryWorkflowIntegrationTest extends TestCase
     #[Test]
     public function draft_documents_create_no_inventory(): void
     {
-        $receipt = $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
-        $lot = $this->receiptLot($receipt);
+        $this->receive('COCONUT', '10000.000', '100.000000', '20000.000000', '5000.000000');
 
         $transactions = InventoryTransaction::count();
         $lots = InventoryLot::count();
@@ -1053,18 +1084,19 @@ class FactoryWorkflowIntegrationTest extends TestCase
                 'warehouse_id' => $this->main->id,
             ])->id,
             'product_id' => $this->product('COCONUT')->id,
-            'lot_id' => $lot,
             'quantity' => '500.000',
             'unit_price' => '130.000000',
         ]);
 
-        $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '500.000', $lot);
+        $this->draftProduction(ProductionType::Dehusking, 'COCONUT', '500.000', labourRate: '2.500000');
+        $this->draftProduction(ProductionType::HuskChipping, null, null, [['code' => 'HUSK-7C', 'quantity' => '10.000']]);
 
         // Nothing moved, nothing was lotted, nothing was valued.
         $this->assertSame($transactions, InventoryTransaction::count());
         $this->assertSame($lots, InventoryLot::count());
         $this->assertStock('COCONUT', '10000.000', '1025000.000000', '102.500000');
         $this->assertSame('0.000', $this->stock()->quantityForProduct($this->product('DEHUSKED-COCONUT')->id));
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($this->product('HUSK-7C')->id));
     }
 
     #[Test]

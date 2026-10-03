@@ -26,7 +26,6 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -91,7 +90,7 @@ class CopraProductionTest extends TestCase
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
     }
 
     private function stock(): StockQueryService
@@ -517,10 +516,66 @@ class CopraProductionTest extends TestCase
         // Output value is exactly the consumed value — nothing was added on the way.
         $this->assertSame('87125.000000', $posted->outputValue());
 
-        foreach (['labour_cost', 'fuel_cost', 'electricity_cost', 'machine_cost', 'overhead_cost', 'drying_cost'] as $column) {
+        // The labour columns exist for dehusking; copra carries no labour.
+        $this->assertNull($posted->labour_cost);
+        foreach ($posted->outputs as $output) {
+            $this->assertNull($output->labour_cost);
+        }
+
+        foreach (['fuel_cost', 'electricity_cost', 'machine_cost', 'overhead_cost', 'drying_cost'] as $column) {
             $this->assertFalse(Schema::hasColumn('production_orders', $column));
             $this->assertFalse(Schema::hasColumn('production_outputs', $column));
         }
+    }
+
+    // ------------------------------------------------------------- pooled (lot-free) input
+
+    #[Test]
+    public function pooled_dehusked_coconut_is_processed_without_a_lot_while_copra_and_shell_keep_lots(): void
+    {
+        $this->dehusked->update(['tracks_lots' => false]);
+
+        app(PostInventoryTransaction::class)->handle(InventoryTransactionType::PurchaseReceipt, [
+            new PendingInventoryLine(
+                productId: $this->dehusked->id,
+                warehouseId: $this->main->id,
+                direction: InventoryDirection::In,
+                quantity: '5000.000',
+                unitCost: '87.125000',
+            ),
+        ]);
+
+        $posted = $this->dry($this->draftOrder('1000.000', null));
+
+        $this->assertNull($posted->inputs->first()->lot_id);
+        $this->assertSame('4000.000', $this->stock()->quantityForProduct($this->dehusked->id));
+
+        // Copra and shell still track lots, so each output gets one naming the run.
+        foreach ($posted->outputs as $output) {
+            $this->assertNotNull($output->lot_id);
+            $lot = InventoryLot::findOrFail($output->lot_id);
+            $this->assertSame(ProductionOrder::class, $lot->source_type);
+            $this->assertStringContainsString('unlotted stock', (string) $lot->notes);
+        }
+    }
+
+    #[Test]
+    public function a_lot_chosen_for_pooled_dehusked_coconut_is_refused(): void
+    {
+        // Stock received into a lot before the product was pooled.
+        $lot = $this->lotFor($this->dehusked);
+        $this->receive('5000.000', '87.125000', $lot);
+
+        $this->dehusked->update(['tracks_lots' => false]);
+
+        try {
+            $this->dry($this->draftOrder('1000.000', $lot));
+            $this->fail('Expected a lot on pooled stock to be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('inputs.0.lot_id', $e->errors());
+        }
+
+        $this->assertSame('5000.000', $this->stock()->quantityForProduct($this->dehusked->id));
     }
 
     // ------------------------------------------------------------- output validation

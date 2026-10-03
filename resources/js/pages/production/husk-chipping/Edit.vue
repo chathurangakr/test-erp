@@ -8,7 +8,6 @@ import type {
     HuskChippingFormValues,
     HuskChippingRecipeInfo,
     OptionRef,
-    ProductionLotOption,
 } from '@/types';
 
 const { t } = useT();
@@ -16,7 +15,6 @@ const { t } = useT();
 const props = defineProps<{
     order: HuskChippingFormValues & { id: number; production_number: string };
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
     recipe: HuskChippingRecipeInfo;
     wasteUoms: OptionRef[];
     inputStock: string;
@@ -39,7 +37,6 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Husk chipping', href: index() 
                 :submit-label="t('Save changes')"
                 :cancel-href="`${index().url}/${props.order.id}`"
                 :warehouses="warehouses"
-                :lots="lots"
                 :recipe="recipe"
                 :waste-uoms="wasteUoms"
                 :input-stock="inputStock"

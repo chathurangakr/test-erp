@@ -17,7 +17,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -62,7 +61,7 @@ class DehuskingScreensTest extends TestCase
         ]);
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
 
         $this->lot = app(CreateInventoryLot::class)->handle($this->coconut);
     }
@@ -84,7 +83,7 @@ class DehuskingScreensTest extends TestCase
     #[Test]
     public function a_guest_cannot_access_the_production_screens(): void
     {
-        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
+        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id, 'labour_rate' => '2.500000']);
 
         $this->get(route('dehusking.index'))->assertRedirect(route('login'));
         $this->get(route('dehusking.create'))->assertRedirect(route('login'));
@@ -120,9 +119,14 @@ class DehuskingScreensTest extends TestCase
                 ->has('recipe.outputs', 2)
                 ->where('recipe.outputs.0.code', 'DEHUSKED-COCONUT')
                 ->where('recipe.outputs.0.ratio', '1.000000')
-                ->where('recipe.outputs.0.allocation_percent', '85.000000')
+                ->where('recipe.outputs.0.allocation_percent', '100.000000')
+                ->where('recipe.outputs.0.absorbs_labour', false)
                 ->where('recipe.outputs.1.code', 'RAW-HUSK')
-                ->where('recipe.outputs.1.allocation_percent', '15.000000')
+                ->where('recipe.outputs.1.allocation_percent', '0.000000')
+                // The raw husk carries the dehusking labour instead of coconut value.
+                ->where('recipe.outputs.1.absorbs_labour', true)
+                ->where('recipe.default_labour_rate', null)
+                ->where('recipe.input_tracks_lots', true)
                 // Only lots holding stock are offered.
                 ->has('lots', 1));
     }
@@ -138,6 +142,7 @@ class DehuskingScreensTest extends TestCase
             'warehouse_id' => $this->main->id,
             'lot_id' => $this->lot->id,
             'quantity' => '1000',
+            'labour_rate' => '2.50',
         ])->assertSessionHasNoErrors();
 
         $order = ProductionOrder::firstOrFail();
@@ -165,6 +170,7 @@ class DehuskingScreensTest extends TestCase
             'warehouse_id' => $this->main->id,
             'lot_id' => $this->lot->id,
             'quantity' => '1000',
+            'labour_rate' => '2.50',
             'outputs' => [
                 ['product_id' => $this->dehusked->id, 'quantity' => '99999', 'allocated_cost' => '1'],
             ],
@@ -194,7 +200,7 @@ class DehuskingScreensTest extends TestCase
         $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
-        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
+        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id, 'labour_rate' => '2.500000']);
         ProductionInput::factory()->create([
             'production_order_id' => $order->id,
             'product_id' => $this->coconut->id,
@@ -215,8 +221,10 @@ class DehuskingScreensTest extends TestCase
         $posted = $order->fresh(['inputs', 'outputs']);
         $this->assertSame(ProductionStatus::Posted, $posted->status);
         $this->assertSame($user->id, $posted->posted_by);
+        // Output value = coconut value + 1,000 x 2.50 of labour.
         $this->assertSame('102500.000000', $posted->inputValue());
-        $this->assertSame('102500.000000', $posted->outputValue());
+        $this->assertSame('2500.000000', $posted->labour_cost);
+        $this->assertSame('105000.000000', $posted->outputValue());
     }
 
     #[Test]
@@ -225,7 +233,7 @@ class DehuskingScreensTest extends TestCase
         $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
-        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
+        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id, 'labour_rate' => '2.500000']);
         ProductionInput::factory()->create([
             'production_order_id' => $order->id,
             'product_id' => $this->coconut->id,
@@ -252,13 +260,17 @@ class DehuskingScreensTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('order.status', 'POSTED')
                 ->where('order.input_value', '102500.000000')
-                ->where('order.output_value', '102500.000000')
+                ->where('order.output_value', '105000.000000')
                 ->where('order.input.unit_cost', '102.500000')
+                ->where('order.labour_rate', '2.500000')
+                ->where('order.labour_cost', '2500.000000')
                 ->has('order.outputs', 2)
-                ->where('order.outputs.0.allocated_cost', '87125.000000')
-                ->where('order.outputs.0.unit_cost', '87.125000')
-                ->where('order.outputs.1.allocated_cost', '15375.000000')
-                ->where('order.outputs.1.unit_cost', '15.375000'));
+                ->where('order.outputs.0.allocated_cost', '102500.000000')
+                ->where('order.outputs.0.unit_cost', '102.500000')
+                ->where('order.outputs.0.labour_cost', null)
+                ->where('order.outputs.1.allocated_cost', '2500.000000')
+                ->where('order.outputs.1.labour_cost', '2500.000000')
+                ->where('order.outputs.1.unit_cost', '2.500000'));
     }
 
     #[Test]
@@ -267,7 +279,7 @@ class DehuskingScreensTest extends TestCase
         $user = User::factory()->admin()->create();
         $this->receive('10000.000', '102.500000');
 
-        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id]);
+        $order = ProductionOrder::factory()->create(['warehouse_id' => $this->main->id, 'labour_rate' => '2.500000']);
         ProductionInput::factory()->create([
             'production_order_id' => $order->id,
             'product_id' => $this->coconut->id,
@@ -286,9 +298,70 @@ class DehuskingScreensTest extends TestCase
             'warehouse_id' => $this->main->id,
             'lot_id' => $this->lot->id,
             'quantity' => '5',
+            'labour_rate' => '2.50',
         ])->assertSessionHasErrors('status');
 
         $this->assertSame('1000.000', $order->fresh()->inputs()->first()->quantity);
+    }
+
+    #[Test]
+    public function the_screen_requires_a_non_negative_labour_rate(): void
+    {
+        $user = User::factory()->admin()->create();
+        $this->receive('10000.000', '102.500000');
+
+        $payload = [
+            'production_date' => now()->toDateString(),
+            'warehouse_id' => $this->main->id,
+            'lot_id' => $this->lot->id,
+            'quantity' => '1000',
+        ];
+
+        $this->actingAs($user)->post(route('dehusking.store'), $payload)
+            ->assertSessionHasErrors('labour_rate');
+
+        $this->actingAs($user)->post(route('dehusking.store'), $payload + ['labour_rate' => '-1'])
+            ->assertSessionHasErrors('labour_rate');
+
+        $this->assertSame(0, ProductionOrder::count());
+
+        // Zero is a deliberate answer, not a missing one.
+        $this->actingAs($user)->post(route('dehusking.store'), $payload + ['labour_rate' => '0'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('0.000000', ProductionOrder::firstOrFail()->labour_rate);
+    }
+
+    #[Test]
+    public function pooled_coconut_is_entered_without_a_lot_and_a_lot_is_refused(): void
+    {
+        $user = User::factory()->admin()->create();
+        $this->coconut->update(['tracks_lots' => false]);
+
+        $payload = [
+            'production_date' => now()->toDateString(),
+            'warehouse_id' => $this->main->id,
+            'quantity' => '100',
+            'labour_rate' => '2',
+        ];
+
+        // A lot for pooled stock is refused rather than silently ignored.
+        $this->actingAs($user)->post(route('dehusking.store'), $payload + ['lot_id' => $this->lot->id])
+            ->assertSessionHasErrors('lot_id');
+
+        $this->assertSame(0, ProductionOrder::count());
+
+        $this->actingAs($user)->post(route('dehusking.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(ProductionOrder::firstOrFail()->inputs()->first()->lot_id);
+
+        // The create screen offers no lots for pooled coconut.
+        $this->actingAs($user)
+            ->get(route('dehusking.create'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('recipe.input_tracks_lots', false)
+                ->has('lots', 0));
     }
 
     #[Test]

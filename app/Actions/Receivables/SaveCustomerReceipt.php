@@ -3,6 +3,7 @@
 namespace App\Actions\Receivables;
 
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\PaymentMethod;
 use App\Models\CustomerReceipt;
 use App\Support\DecimalMath;
 use Illuminate\Support\Carbon;
@@ -34,6 +35,7 @@ class SaveCustomerReceipt
                 'reference' => $data['reference'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'amount' => DecimalMath::cost(DecimalMath::of((string) $data['amount'])),
+                ...$this->paymentDetails($data),
                 'status' => CustomerReceiptStatus::Draft,
                 'created_by' => $userId ?? auth()->id(),
             ]);
@@ -47,5 +49,25 @@ class SaveCustomerReceipt
 
             return $receipt->refresh();
         });
+    }
+
+    /**
+     * The method, and a cheque's details only when it IS a cheque — details typed for cash or
+     * a transfer would describe a cheque that does not exist.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{payment_method: PaymentMethod, cheque_number: string|null, cheque_date: string|null, cheque_bank: string|null}
+     */
+    private function paymentDetails(array $data): array
+    {
+        $method = PaymentMethod::from($data['payment_method']);
+        $cheque = $method->requiresChequeDetails();
+
+        return [
+            'payment_method' => $method,
+            'cheque_number' => $cheque ? ($data['cheque_number'] ?? null) : null,
+            'cheque_date' => $cheque ? ($data['cheque_date'] ?? null) : null,
+            'cheque_bank' => $cheque ? ($data['cheque_bank'] ?? null) : null,
+        ];
     }
 }

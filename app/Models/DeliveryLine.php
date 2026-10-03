@@ -26,6 +26,9 @@ class DeliveryLine extends Model
         'sales_value',
         'inventory_unit_cost',
         'cost_of_goods_sold',
+        'backflush_product_id',
+        'backflush_quantity',
+        'backflush_cost',
     ];
 
     protected function casts(): array
@@ -37,7 +40,10 @@ class DeliveryLine extends Model
             'unit_price' => 'decimal:6',
             'sales_value' => 'decimal:6',
             'inventory_unit_cost' => 'decimal:6',
+            // Includes backflush_cost: the full cost of what this line sold.
             'cost_of_goods_sold' => 'decimal:6',
+            'backflush_quantity' => 'decimal:3',
+            'backflush_cost' => 'decimal:6',
         ];
     }
 
@@ -71,6 +77,16 @@ class DeliveryLine extends Model
     public function lot(): BelongsTo
     {
         return $this->belongsTo(InventoryLot::class, 'lot_id');
+    }
+
+    /**
+     * The raw material backflushed by this line, if its product defers its input to delivery.
+     *
+     * @return BelongsTo<Product, $this>
+     */
+    public function backflushProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'backflush_product_id');
     }
 
     /**

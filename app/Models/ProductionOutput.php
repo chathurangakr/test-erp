@@ -21,6 +21,7 @@ class ProductionOutput extends Model
         'secondary_quantity',
         'allocation_percent',
         'allocated_cost',
+        'labour_cost',
         'unit_cost',
     ];
 
@@ -33,6 +34,8 @@ class ProductionOutput extends Model
             'secondary_quantity' => 'decimal:3',
             'allocation_percent' => 'decimal:6',
             'allocated_cost' => 'decimal:6',
+            // The part of allocated_cost that is production labour rather than input value.
+            'labour_cost' => 'decimal:6',
             'unit_cost' => 'decimal:6',
         ];
     }

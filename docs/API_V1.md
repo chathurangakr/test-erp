@@ -440,3 +440,27 @@ Posting the same receipt again:
   account.
 - **`/expense-vouchers/options` and `/fund-transfers/options`** have no web twin: they return what
   the web create forms offer, guarded by the create permission.
+
+## 16. Husk production rework — field changes (still v1)
+
+The business rules for husk production, lots and payments changed. The endpoints, routes and
+permissions did not; the request and response fields below did. They follow the website exactly,
+because both doors use the same FormRequests and actions.
+
+| Area | Change |
+| --- | --- |
+| Products | Every product returns `tracks_lots` (boolean). `false` = pooled stock: send no `lot_id` for it anywhere — a lot is refused (422), and none is created or returned |
+| Dehusking create / update | **`labour_rate` is required** (money string, ≥ 0, up to 6 dp): the labour per coconut, which becomes the raw husk's cost. `lot_id` is required only when the input product tracks lots, and refused otherwise |
+| Husk chipping create / update | **No input any more.** `lot_id` and `quantity` are **refused (422)** — raw husk is deducted at delivery. `outputs` is a list of rows `{product_id, quantity}`: any recipe output (7C / 9C / 10C / Cocopeat, KG and L items), each product once, every quantity > 0 at its unit's precision |
+| Copra create / update | `lot_id` required only when the input (dehusked coconut) tracks lots — with the seeded data it is pooled, so none is sent |
+| Production run responses | `labour_rate`, `labour_cost`; each output's `labour_cost`; `raw_material_pending_backflush` (true for a chipping run that took no husk) |
+| Delivery create / update | Each line accepts **`backflush_quantity`** — the raw husks used. **Required (> 0, whole NOS)** for a chipping output, refused for any other product |
+| Delivery responses | Each line returns `backflush: {product, quantity, cost}` or `null`; `cost_of_goods_sold` includes the backflushed cost |
+| Supplier payment / customer receipt create | **`payment_method` is required**: `CASH`, `CHEQUE` or `BANK_TRANSFER`. A cheque also requires `cheque_number`, `cheque_date` (`YYYY-MM-DD`) and `cheque_bank`. Cash must use a CASH-kind account, cheque/transfer a BANK-kind one (422 otherwise) |
+| Payment / receipt responses | `payment_method` (enum, `null` on documents recorded before methods existed) and `cheque: {number, date, bank}` or `null` |
+
+**Why this stays v1.** Most of it is additive. The removal of chipping's input and the newly
+required `labour_rate`, `backflush_quantity` and `payment_method` would break an installed
+client — but no client exists yet (the Flutter app is not built), and the change is a change of
+business rule, not of API shape: the old requests describe operations the factory no longer
+performs. Once an app is in use, a change like this would be released as `/api/v2` (§2).

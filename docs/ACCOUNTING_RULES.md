@@ -5,7 +5,9 @@
 > balance. Phase 2 connected it to inventory behind a cutover date. Phase 3 added accounts
 > payable, Phase 4 accounts receivable, Phase 5 cash and bank management. Phase 6 added the
 > financial statements (profit and loss, balance sheet) and the management reports — every
-> one derived from posted ledgers, none stored. See §13-§28.
+> one derived from posted ledgers, none stored. See §13-§28. The husk rework added payment
+> methods with cheque details (§29) and production labour plus raw-material backflushing
+> (§30).
 >
 > **Not built:** tax, payroll, bank reconciliation, year-end closing, cash flow statement,
 > report export. See §10.
@@ -120,7 +122,8 @@ separate case costs nothing and prevents a class of misreporting.
 
 **Two kinds of account refuse manual posting:**
 
-- **Control accounts** — Trade Receivables, Trade Payables and the six inventory accounts.
+- **Control accounts** — Trade Receivables, Trade Payables, the seven inventory accounts
+  (1310-1370) and 6310 Production Labour Absorbed (§30).
   They are reconciled from a subsidiary ledger, and a hand-written line would put the
   control account and its subsidiary out of step with nothing to explain the difference.
   When AP, AR and inventory accounting arrive, their **system actions** will post here: an
@@ -176,7 +179,7 @@ through the codebase.
 ## 10. Not implemented — do not begin without instruction
 
 Credit notes · sales returns and allowances · customer advances and deposits · supplier
-advances · production expense accounting · VAT/SVAT · payroll · bank reconciliation ·
+advances · production expense accounting (beyond dehusking labour, §30) · VAT/SVAT · payroll · bank reconciliation ·
 cash flow statement · report export (PDF/Excel) · year-end closing · loans · fixed assets ·
 depreciation.
 
@@ -243,7 +246,8 @@ corrected afterwards.
 | --- | --- |
 | **Goods receipt** posted | `Dr` product inventory · `Cr` Goods Received Not Invoiced |
 | **Delivery** posted | `Dr` product cost of sales · `Cr` product inventory |
-| **Production** posted | `Dr` output inventory · `Cr` input inventory |
+| **Production** posted | `Dr` output inventory · `Cr` input inventory · `Cr` 6310 Production Labour Absorbed for any labour (§30). A run that moves no value — husk chipping — writes **no journal** |
+| **Delivery** backflushing raw material | additionally `Dr` the **delivered product's** cost of sales · `Cr` the raw material's inventory (§30) |
 | **Warehouse transfer** | **No journal.** The company owns the same product, valued the same, in the same account, before and after. Quantity, value and the weighted average are all unchanged, so there is nothing to record. |
 | Any **reversal** | The original journal reversed exactly, through `ReverseJournalEntry`. |
 
@@ -254,12 +258,15 @@ GRN          Dr 1310 Whole Coconut Inventory   1,025,000
 Delivery     Dr 5110 Coconut COGS                205,000
                  Cr 1310 Whole Coconut Inventory   205,000
 
-Dehusking    Dr 1320 Dehusked Coconut Inventory  261,375
-             Dr 1330 Raw Husk Inventory            46,125
+Dehusking    Dr 1320 Dehusked Coconut Inventory  307,500
+             Dr 1330 Raw Husk Inventory             7,500     ← labour, 3,000 × 2.50
                  Cr 1310 Whole Coconut Inventory   307,500
+                 Cr 6310 Production Labour Absorbed  7,500
 
-Chipping     Dr 1340 Husk Chips Inventory         40,000
-                 Cr 1330 Raw Husk Inventory        40,000
+Chipping     (no journal — no husk is consumed; chips enter at zero, cost pending)
+
+Chip sale    Dr 5130 Husk Chip COGS                2,418.75  ← 180 husks backflushed
+                 Cr 1330 Raw Husk Inventory          2,418.75
 
 Copra        Dr 1350 Copra Inventory              75,000
              Dr 1360 Raw Shell Inventory          25,000
@@ -267,11 +274,12 @@ Copra        Dr 1350 Copra Inventory              75,000
 ```
 
 **Every amount is the inventory ledger's authoritative `total_cost`** (§8). Finance never
-recalculates anything: not the landed-cost allocation, and not the 85/15, 30/30/40 or 75/25
-production splits. Those decided the inventory valuation upstream; the books record what the
+recalculates anything: not the landed-cost allocation, not the production splits, not the
+labour, not a backflushed cost. Those decided the inventory valuation upstream; the books record what the
 ledger already holds, which is why debits and credits agree to the last decimal.
 
-Where several products map to one account — the three chip grades all use 1340 — the journal
+Where several products map to one account — the three chip grades and their litre items all
+use 1340 — the journal
 keeps **separate lines with product descriptions** rather than aggregating. The totals are
 identical either way; the separate lines are traceable.
 
@@ -305,7 +313,22 @@ in purchasing, sales, production or inventory knows an account code.
 | `revenue_account_id` | an active **REVENUE** account (configured now, unused until sales invoicing) |
 | GRNI (in settings) | an active **LIABILITY** account |
 
-The eight seeded products are mapped by `ProductAccountMappingSeeder`. **A product created by
+The thirteen seeded products are mapped by `ProductAccountMappingSeeder`:
+
+| Products | Inventory | COGS | Revenue |
+| --- | --- | --- | --- |
+| `COCONUT` | 1310 | 5110 | 4110 |
+| `DEHUSKED-COCONUT` | 1320 | 5120 | 4120 |
+| `RAW-HUSK` | 1330 | 5160 | 4160 |
+| `HUSK-7C`, `HUSK-9C`, `HUSK-10C` and `HUSK-7C-L`, `HUSK-9C-L`, `HUSK-10C-L` | 1340 | 5130 | 4130 |
+| `COCOPEAT`, `COCOPEAT-L` | **1370 Cocopeat Inventory** | **5170 Cocopeat COGS** | **4170 Cocopeat Sales** |
+| `COPRA` | 1350 | 5140 | 4140 |
+| `RAW-SHELL` | 1360 | 5150 | 4150 |
+
+A litre stock item is the same grade measured another way, so it shares its grade's
+accounts. Cocopeat is its own product with its own accounts, so its profit reports
+separately. The seeder also points `accounting_settings.production_labour_account_id` at
+6310. **A product created by
 hand is deliberately left unmapped.** Once accounting is switched on, moving its stock is
 **refused** — a wrong account written permanently into the books is worse than a failed
 posting — and it appears as *Unmapped* in Accounting Setup.
@@ -490,7 +513,9 @@ A delivery line may be invoiced only when **all** of these hold:
 
 1. the delivery is **POSTED** (not draft, cancelled or reversed);
 2. it belongs to the customer being invoiced;
-3. it carries a **posted operational journal** from Phase 2, not itself reversed;
+3. it carries a **posted operational journal** from Phase 2, not itself reversed — or it was
+   posted under accounting with a **total cost of zero**, so there was nothing to journal
+   (`SalesBillingReconciliationService::isBillable()`);
 4. it has a **remaining** uninvoiced amount.
 
 Condition 3 rules out a delivery from **before the accounting cutover**. Such a delivery moved
@@ -906,3 +931,87 @@ to make a report tidy destroys the audit trail.
 | 6 | PDF / Excel export | No established export mechanism exists; screens came first. |
 | 7 | Comparative periods (this period vs last) | Not requested. |
 
+## 29. Payment methods — cash, cheque, bank transfer
+
+Supplier payments and customer receipts record **how** the money moved:
+`payment_method` = `CASH`, `CHEQUE` or `BANK_TRANSFER`. A cheque also records
+`cheque_number`, `cheque_date` and `cheque_bank`; for any other method those are stored NULL,
+because details typed for cash would describe a cheque that does not exist.
+
+| Method | Must go through |
+| --- | --- |
+| `CASH` | a configured cash/bank account of kind **CASH** (the till) |
+| `CHEQUE` | a configured cash/bank account of kind **BANK** |
+| `BANK_TRANSFER` | a configured cash/bank account of kind **BANK** |
+
+Checked in the form request for a clear message and **again at posting**
+(`AccountingPolicy::assertMethodFitsAccount()` and `assertChequeDetails()`), on top of the
+existing configured-account rule (§22). The journal is unchanged: `Dr Trade Payables / Cr
+Cash or Bank` for a payment, `Dr Cash or Bank / Cr Trade Receivables` for a receipt.
+
+**Credit is not a payment method.** Buying or selling on credit is an invoice left
+outstanding; it is settled later — in full or in parts — by payments or receipts allocated
+to it, exactly as before (§18, §21). The invoice screens show **Total / Paid (Received) /
+Outstanding**, and a **Record payment** button opens a payment or receipt pre-filled with that
+invoice and its outstanding amount.
+
+**Cheques: details only.** There is no cheque status (received / deposited / cleared /
+bounced) and no "Cheques in Hand" clearing account: the money posts straight to the chosen
+bank account, exactly as a transfer does. A bounced cheque is handled today by **reversing**
+the receipt or payment — remembering that a reversal is an audit correction (§19), so the
+document is marked as never having happened.
+
+`TBD` — a proper cheque lifecycle: a clearing account, deposit and clearance postings, and a
+bounce that re-opens the invoice as a commercial event.
+
+Documents recorded before payment methods existed have a NULL method; nothing is invented
+for them. New documents require one.
+
+## 30. Production labour and backflushing
+
+### Dehusking labour
+
+Dehusking gives the dehusked coconut the **whole** coconut value and the raw husk **none** of
+it; the husk's cost is the run's labour — quantity × the per-coconut rate the operator
+confirms (`BUSINESS_RULES.md` §18). The labour is recorded as:
+
+```
+Dr 1330 Raw Husk Inventory               labour
+    Cr 6310 Production Labour Absorbed   labour
+```
+
+6310 is an **EXPENSE-type contra account**: wages are still paid by expense voucher to 6300
+Wages and Salaries, and the labour sitting in unsold husk stock offsets them until that stock
+is sold (when it reaches cost of sales through the backflush below). It is a **control
+account** — only a sourced system journal reaches it — and is configured as
+`accounting_settings.production_labour_account_id`, never written as a code in posting
+logic. **Production creates no cash movement and no payable.**
+
+### Zero-value lines
+
+A journal line is a debit or a credit, never neither, so zero-value lines are left out — a
+zero labour rate writes no 6310 line. A run that moves no value at all writes **no journal**:
+husk chipping (version 2) consumes nothing and its outputs enter at zero.
+
+### Backflushing at delivery
+
+Chips and cocopeat reach stock with their raw husk cost pending. Their delivery states the
+raw husks used, and posting issues them from the pool (`BACKFLUSH_ISSUE`) at the weighted
+average, inside the delivery's own transaction. The delivery journal gains:
+
+```
+Dr <delivered product's> COGS (e.g. 5130 Husk Chip COGS, 5170 Cocopeat COGS)
+    Cr <raw material's> inventory (1330 Raw Husk Inventory)
+```
+
+The cost lands in the **delivered product's** cost of sales — it is part of what that product
+cost to sell — not in raw husk COGS. The delivery line's `cost_of_goods_sold` includes it, so
+operational profitability and the P&L agree on it. Reversing the delivery reverses the journal
+exactly.
+
+### Reconciliation
+
+Inventory-to-GL stays exact per account: 1330 holds the pooled husk's ledger value (purchases
++ labour − backflushed), and 1340 / 1370 hold the chips' and cocopeat's ledger value — zero
+for stock whose husk cost is still pending. A delivery posted under accounting whose total
+cost is zero writes no journal and **is still billable** (§20).

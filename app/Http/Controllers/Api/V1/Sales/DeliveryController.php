@@ -37,6 +37,7 @@ class DeliveryController extends Controller
         'lines.product.primaryUom:id,code',
         'lines.product.secondaryUom:id,code',
         'lines.lot:id,lot_number',
+        'lines.backflushProduct:id,code,name',
         'inventoryTransaction:id,reference',
         'reversalInventoryTransaction:id,reference',
         'createdBy:id,name',

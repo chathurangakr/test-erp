@@ -351,7 +351,7 @@ const selectClass =
                             <InputError :message="form.errors[`lines.${index}.unit_price`]" />
                         </div>
 
-                        <div class="grid gap-1.5 sm:col-span-2">
+                        <div v-if="productFor(line.product_id)?.tracks_lots !== false" class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`grn-lot-${index}`" class="text-xs">{{ t('Supplier lot') }}</Label>
                             <Input :id="`grn-lot-${index}`" v-model="line.supplier_lot_number" />
                         </div>

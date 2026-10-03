@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Sales;
 
 use App\Enums\PricingBasis;
+use App\Http\Requests\Sales\Concerns\ValidatesBackflush;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * A delivery may be raised against an approved sales order or directly.
@@ -16,6 +18,8 @@ use Illuminate\Validation\Rule;
  */
 class UpdateDeliveryRequest extends FormRequest
 {
+    use ValidatesBackflush;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -39,6 +43,8 @@ class UpdateDeliveryRequest extends FormRequest
             'lines.*.secondary_quantity' => ['nullable', 'numeric', 'min:0'],
             'lines.*.pricing_basis' => ['required', Rule::enum(PricingBasis::class)],
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            // Raw material used, for products that backflush it — see ValidatesBackflush.
+            'lines.*.backflush_quantity' => ['nullable', 'numeric'],
         ];
     }
 
@@ -51,5 +57,10 @@ class UpdateDeliveryRequest extends FormRequest
             'lines.required' => __('A delivery must have at least one line.'),
             'lines.*.quantity.gt' => __('The delivered quantity must be greater than zero.'),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->validateBackflush($validator));
     }
 }

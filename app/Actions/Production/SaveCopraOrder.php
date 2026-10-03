@@ -101,7 +101,8 @@ class SaveCopraOrder
 
         $order->inputs()->create([
             'product_id' => $recipe->input_product_id,
-            'lot_id' => $data['lot_id'],
+            // Pooled dehusked coconut has no lot to name (docs/INVENTORY_RULES.md §15).
+            'lot_id' => $data['lot_id'] ?? null,
             'quantity' => $processed,
             'unit_cost' => null,
             'total_cost' => null,

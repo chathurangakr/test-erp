@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Production;
 
+use App\Actions\Accounting\UpdateAccountingSettings;
 use App\Actions\Inventory\CreateInventoryLot;
 use App\Actions\Inventory\PostInventoryTransaction;
 use App\Actions\Production\CancelProduction;
@@ -13,6 +14,7 @@ use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
+use App\Models\FiscalPeriod;
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
 use App\Models\JournalEntry;
@@ -25,7 +27,8 @@ use App\Models\ProductionRecipe;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
-use Database\Seeders\ProductionRecipeSeeder;
+use Database\Seeders\ChartOfAccountsSeeder;
+use Database\Seeders\ProductAccountMappingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -71,7 +74,7 @@ class DehuskingTest extends TestCase
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
     }
 
     private function stock(): StockQueryService
@@ -99,10 +102,15 @@ class DehuskingTest extends TestCase
         ]);
     }
 
+    /**
+     * A draft dehusking order. The labour rate defaults to zero, so tests about the coconut
+     * value see it unmixed with labour; the labour tests set their own rate.
+     */
     private function draftOrder(string $quantity, ?InventoryLot $lot = null, array $attributes = [], ?Product $product = null): ProductionOrder
     {
         $order = ProductionOrder::factory()->create(array_merge([
             'warehouse_id' => $this->main->id,
+            'labour_rate' => '0.000000',
         ], $attributes));
 
         ProductionInput::factory()->create([
@@ -228,14 +236,15 @@ class DehuskingTest extends TestCase
         $posted = $this->runProduction($this->draftOrder('1000.000', $lot));
         $outputs = $posted->outputs->keyBy('product_id');
 
-        // The worked example: 102,500 split 85 / 15.
-        $this->assertSame('85.000000', $outputs[$this->dehusked->id]->allocation_percent);
-        $this->assertSame('87125.000000', $outputs[$this->dehusked->id]->allocated_cost);
-        $this->assertSame('87.125000', $outputs[$this->dehusked->id]->unit_cost);
+        // Recipe version 2: the dehusked coconut carries the whole 102,500; the raw husk
+        // carries none of the coconut value (only labour, which is zero here).
+        $this->assertSame('100.000000', $outputs[$this->dehusked->id]->allocation_percent);
+        $this->assertSame('102500.000000', $outputs[$this->dehusked->id]->allocated_cost);
+        $this->assertSame('102.500000', $outputs[$this->dehusked->id]->unit_cost);
 
-        $this->assertSame('15.000000', $outputs[$this->husk->id]->allocation_percent);
-        $this->assertSame('15375.000000', $outputs[$this->husk->id]->allocated_cost);
-        $this->assertSame('15.375000', $outputs[$this->husk->id]->unit_cost);
+        $this->assertSame('0.000000', $outputs[$this->husk->id]->allocation_percent);
+        $this->assertSame('0.000000', $outputs[$this->husk->id]->allocated_cost);
+        $this->assertSame('0.000000', $outputs[$this->husk->id]->unit_cost);
     }
 
     #[Test]
@@ -270,11 +279,11 @@ class DehuskingTest extends TestCase
     #[Test]
     public function allocated_costs_sum_exactly_even_when_the_split_does_not_divide_evenly(): void
     {
-        // A consumed value that 85/15 cannot split cleanly.
+        // A consumed value and a labour rate that do not divide cleanly.
         $lot = $this->lotFor($this->coconut);
         $this->receive('1000.000', '33.333333', $lot);
 
-        $posted = $this->runProduction($this->draftOrder('7.000', $lot));
+        $posted = $this->runProduction($this->draftOrder('7.000', $lot, ['labour_rate' => '1.333333']));
 
         $consumed = $posted->inputs->first()->total_cost;
         $allocated = $posted->outputs->reduce(
@@ -282,8 +291,9 @@ class DehuskingTest extends TestCase
             '0.000000',
         );
 
-        // The final output absorbs the remainder, so this is exact whatever the numbers.
-        $this->assertSame($consumed, $allocated);
+        // Outputs = consumed value + labour, exactly, whatever the numbers.
+        $this->assertSame('9.333331', $posted->labour_cost);
+        $this->assertSame(bcadd($consumed, $posted->labour_cost, 6), $allocated);
     }
 
     #[Test]
@@ -619,7 +629,7 @@ class DehuskingTest extends TestCase
         $lot = $this->lotFor($this->coconut);
         $this->receive('10000.000', '100.000000', $lot);
 
-        $posted = $this->runProduction($this->draftOrder('1000.000', $lot));
+        $posted = $this->runProduction($this->draftOrder('1000.000', $lot, ['labour_rate' => '3.000000']));
 
         // Move the coconut average well away from the original 100.
         $secondLot = $this->lotFor($this->coconut);
@@ -633,9 +643,10 @@ class DehuskingTest extends TestCase
         // Coconut returns at the 100 it left at, not the drifted average.
         $this->assertSame('100.000000', $consumptionReversal->lines->first()->unit_cost);
 
-        // Outputs leave at the costs they were produced at.
+        // Outputs leave at the costs they were produced at: dehusked at the coconut's 100,
+        // husk at the labour of 3.
         $costs = $outputReversal->lines->pluck('unit_cost')->sort()->values()->all();
-        $this->assertSame(['15.000000', '85.000000'], $costs);
+        $this->assertSame(['3.000000', '100.000000'], $costs);
     }
 
     #[Test]
@@ -747,6 +758,216 @@ class DehuskingTest extends TestCase
         app(CancelProduction::class)->handle($posted);
     }
 
+    // ------------------------------------------------------------- labour
+
+    #[Test]
+    public function dehusking_labour_becomes_the_raw_husk_cost_and_value_is_conserved(): void
+    {
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('10000.000', '102.500000', $lot);
+
+        $posted = $this->runProduction($this->draftOrder('1000.000', $lot, ['labour_rate' => '3.000000']));
+        $outputs = $posted->outputs->keyBy('product_id');
+
+        // Dehusked coconut: the whole coconut value, and no labour.
+        $this->assertSame('102500.000000', $outputs[$this->dehusked->id]->allocated_cost);
+        $this->assertNull($outputs[$this->dehusked->id]->labour_cost);
+
+        // Raw husk: none of the coconut value — only 1,000 x 3 of labour.
+        $this->assertSame('3000.000000', $outputs[$this->husk->id]->allocated_cost);
+        $this->assertSame('3000.000000', $outputs[$this->husk->id]->labour_cost);
+        $this->assertSame('3.000000', $outputs[$this->husk->id]->unit_cost);
+
+        $this->assertSame('3.000000', $posted->labour_rate);
+        $this->assertSame('3000.000000', $posted->labour_cost);
+
+        // Input value + labour = output value, exactly — on the order and in the ledger.
+        $this->assertSame('102500.000000', $posted->inputValue());
+        $this->assertSame('105500.000000', $posted->outputValue());
+        $this->assertSame('922500.000000', $this->stock()->valueForProduct($this->coconut->id));
+        $this->assertSame('102500.000000', $this->stock()->valueForProduct($this->dehusked->id));
+        $this->assertSame('3000.000000', $this->stock()->valueForProduct($this->husk->id));
+
+        // The recipe version the run used is recorded.
+        $this->assertSame(ProductionRecipe::forType(ProductionType::Dehusking)->id, $posted->production_recipe_id);
+    }
+
+    #[Test]
+    public function a_zero_labour_rate_is_accepted_and_leaves_the_husk_at_no_cost(): void
+    {
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('1000.000', '100.000000', $lot);
+
+        $posted = $this->runProduction($this->draftOrder('100.000', $lot, ['labour_rate' => '0.000000']));
+
+        $this->assertSame('0.000000', $posted->labour_cost);
+        $this->assertSame('100.000', $this->stock()->quantityForProduct($this->husk->id));
+        $this->assertSame('0.000000', $this->stock()->valueForProduct($this->husk->id));
+        $this->assertSame('10000.000000', $this->stock()->valueForProduct($this->dehusked->id));
+    }
+
+    #[Test]
+    public function a_missing_labour_rate_is_refused_at_posting_and_nothing_moves(): void
+    {
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('1000.000', '100.000000', $lot);
+
+        $order = $this->draftOrder('100.000', $lot, ['labour_rate' => null]);
+
+        try {
+            $this->runProduction($order);
+            $this->fail('Expected a missing labour rate to be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('labour_rate', $e->errors());
+        }
+
+        $this->assertSame(1, InventoryTransaction::count());
+        $this->assertSame('1000.000', $this->stock()->quantityForProduct($this->coconut->id));
+        $this->assertSame(ProductionStatus::Draft, $order->fresh()->status);
+    }
+
+    #[Test]
+    public function reversal_removes_the_labour_value_with_the_outputs(): void
+    {
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('10000.000', '102.500000', $lot);
+
+        $posted = $this->runProduction($this->draftOrder('1000.000', $lot, ['labour_rate' => '3.000000']));
+        app(ReverseProduction::class)->handle($posted);
+
+        $this->assertSame('10000.000', $this->stock()->quantityForProduct($this->coconut->id));
+        $this->assertSame('1025000.000000', $this->stock()->valueForProduct($this->coconut->id));
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($this->husk->id));
+        $this->assertSame('0.000000', $this->stock()->valueForProduct($this->husk->id));
+        $this->assertSame('0.000000', $this->stock()->valueForProduct($this->dehusked->id));
+    }
+
+    private function enableAccounting(): void
+    {
+        $this->seed(ChartOfAccountsSeeder::class);
+        $this->seed(ProductAccountMappingSeeder::class);
+        FiscalPeriod::factory()->create(['name' => 'September 2026', 'start_date' => '2026-09-01', 'end_date' => '2026-09-30']);
+        app(UpdateAccountingSettings::class)->handle(['operational_accounting_start_date' => '2026-09-01']);
+    }
+
+    /**
+     * @return array<string, array{debit: string, credit: string}>
+     */
+    private function journalByAccount(ProductionOrder $order): array
+    {
+        $journal = JournalEntry::query()
+            ->where('source_type', ProductionOrder::class)
+            ->where('source_id', $order->id)
+            ->whereNull('reversal_of_id')
+            ->firstOrFail();
+
+        return $journal->lines()->with('account')->get()
+            ->mapWithKeys(fn (JournalEntryLine $line): array => [
+                $line->account->code => ['debit' => $line->debit, 'credit' => $line->credit],
+            ])->all();
+    }
+
+    #[Test]
+    public function the_production_journal_credits_the_labour_absorbed_account(): void
+    {
+        $this->enableAccounting();
+
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('10000.000', '102.500000', $lot);
+
+        $posted = $this->runProduction($this->draftOrder('1000.000', $lot, ['labour_rate' => '3.000000']));
+        $lines = $this->journalByAccount($posted);
+
+        // Dr dehusked 102,500 + Dr husk 3,000 = Cr coconut 102,500 + Cr labour absorbed 3,000.
+        $this->assertSame(['debit' => '102500.000000', 'credit' => '0.000000'], $lines['1320']);
+        $this->assertSame(['debit' => '3000.000000', 'credit' => '0.000000'], $lines['1330']);
+        $this->assertSame(['debit' => '0.000000', 'credit' => '102500.000000'], $lines['1310']);
+        $this->assertSame(['debit' => '0.000000', 'credit' => '3000.000000'], $lines['6310']);
+        $this->assertCount(4, $lines);
+    }
+
+    #[Test]
+    public function a_zero_labour_run_journals_no_zero_value_lines(): void
+    {
+        $this->enableAccounting();
+
+        $lot = $this->lotFor($this->coconut);
+        $this->receive('1000.000', '100.000000', $lot);
+
+        $posted = $this->runProduction($this->draftOrder('100.000', $lot, ['labour_rate' => '0.000000']));
+        $lines = $this->journalByAccount($posted);
+
+        // No husk debit and no labour credit: a journal line is a debit or a credit, never neither.
+        $this->assertSame(['1310', '1320'], collect($lines)->keys()->map(fn ($code): string => (string) $code)->sort()->values()->all());
+    }
+
+    // ------------------------------------------------------------- pooled (lot-free) stock
+
+    private function poolAll(): void
+    {
+        foreach ([$this->coconut, $this->dehusked, $this->husk] as $product) {
+            $product->update(['tracks_lots' => false]);
+        }
+    }
+
+    private function receivePooled(string $quantity, string $unitCost): void
+    {
+        app(PostInventoryTransaction::class)->handle(InventoryTransactionType::PurchaseReceipt, [
+            new PendingInventoryLine(
+                productId: $this->coconut->id,
+                warehouseId: $this->main->id,
+                direction: InventoryDirection::In,
+                quantity: $quantity,
+                unitCost: $unitCost,
+            ),
+        ]);
+    }
+
+    #[Test]
+    public function pooled_coconut_is_dehusked_without_a_lot_and_its_outputs_get_no_lot(): void
+    {
+        $this->poolAll();
+        $this->receivePooled('1000.000', '100.000000');
+
+        $lotsBefore = InventoryLot::count();
+        $posted = $this->runProduction($this->draftOrder('100.000', null, ['labour_rate' => '2.000000']));
+
+        $this->assertSame(ProductionStatus::Posted, $posted->status);
+        $this->assertSame($lotsBefore, InventoryLot::count());
+        $this->assertNull($posted->inputs->first()->lot_id);
+
+        foreach ($posted->outputs as $output) {
+            $this->assertNull($output->lot_id);
+        }
+
+        foreach ($posted->outputTransaction->lines as $line) {
+            $this->assertNull($line->lot_id);
+        }
+
+        $this->assertSame('900.000', $this->stock()->quantityForProduct($this->coconut->id));
+        $this->assertSame('100.000', $this->stock()->quantityForProduct($this->husk->id));
+        $this->assertSame('200.000000', $this->stock()->valueForProduct($this->husk->id));
+    }
+
+    #[Test]
+    public function a_lot_chosen_for_pooled_coconut_is_refused(): void
+    {
+        $this->poolAll();
+        $this->receivePooled('1000.000', '100.000000');
+
+        $order = $this->draftOrder('100.000', $this->lotFor($this->coconut));
+
+        try {
+            $this->runProduction($order);
+            $this->fail('Expected a lot on pooled coconut to be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('inputs.0.lot_id', $e->errors());
+        }
+
+        $this->assertSame(1, InventoryTransaction::count());
+        $this->assertSame(ProductionStatus::Draft, $order->fresh()->status);
+    }
+
     // ------------------------------------------------------------- scope guards
 
     #[Test]
@@ -772,8 +993,9 @@ class DehuskingTest extends TestCase
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
 
-        // No labour, electricity, machine or overhead columns on the production tables.
-        foreach (['labour_cost', 'electricity_cost', 'machine_cost', 'overhead_cost', 'fuel_cost'] as $column) {
+        // Dehusking labour is recorded on the run itself (labour_cost); no electricity,
+        // machine, fuel or overhead cost exists on the production tables.
+        foreach (['electricity_cost', 'machine_cost', 'overhead_cost', 'fuel_cost'] as $column) {
             $this->assertFalse(Schema::hasColumn('production_orders', $column));
             $this->assertFalse(Schema::hasColumn('production_outputs', $column));
         }

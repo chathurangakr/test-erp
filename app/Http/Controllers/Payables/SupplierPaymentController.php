@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Payables;
 
 use App\Actions\Payables\SaveSupplierPayment;
+use App\Enums\PaymentMethod;
 use App\Enums\SupplierPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payables\StoreSupplierPaymentRequest;
@@ -72,6 +73,9 @@ class SupplierPaymentController extends Controller
             // Only accounts the factory has configured as cash or bank. Being an asset
             // account is not enough — see AccountingPolicy::assertCashBankAccount().
             'paymentAccounts' => $this->cashBankOptions(),
+            'paymentMethods' => PaymentMethod::options(),
+            // "Record payment" from an invoice pre-selects that invoice.
+            'invoiceId' => $request->integer('invoice_id') ?: null,
             'supplierId' => $supplierId,
             'outstandingInvoices' => $supplier === null ? [] : $this->outstandingFor($supplier),
             'currency' => config('accounting.base_currency'),
@@ -146,6 +150,7 @@ class SupplierPaymentController extends Controller
                 'code' => $configuration->account?->code,
                 'name' => $configuration->display_name,
                 'kind' => $configuration->account_kind->label(),
+                'account_kind' => $configuration->account_kind->value,
             ])
             ->values()
             ->all();
@@ -167,6 +172,8 @@ class SupplierPaymentController extends Controller
                 : $payment->paymentAccount->code.' — '.$payment->paymentAccount->name,
             'reference' => $payment->reference,
             'amount' => $payment->amount,
+            'payment_method' => $payment->payment_method?->value,
+            'payment_method_label' => $payment->payment_method?->label(),
             'allocated' => $payment->allocatedTotal(),
             'status' => $payment->status->value,
             'status_label' => $payment->status->label(),
@@ -180,6 +187,9 @@ class SupplierPaymentController extends Controller
     {
         return array_merge($this->summarise($payment), [
             'notes' => $payment->notes,
+            'cheque_number' => $payment->cheque_number,
+            'cheque_date' => $payment->cheque_date?->toDateString(),
+            'cheque_bank' => $payment->cheque_bank,
             'created_by' => $payment->createdBy?->name,
             'posted_by' => $payment->postedBy?->name,
             'posted_at' => BusinessClock::display($payment->posted_at),

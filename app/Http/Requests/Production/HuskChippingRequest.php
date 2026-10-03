@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Production;
 
 use App\Enums\ProductionType;
+use App\Models\Product;
 use App\Models\ProductionRecipe;
 use App\Support\DecimalMath;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -14,16 +15,18 @@ use Illuminate\Validation\Validator;
 /**
  * Shared rules for creating and editing a draft husk chipping order.
  *
- * Unlike dehusking, the output quantities ARE submitted: chipping yields genuinely vary, so
- * the operator weighs the 7C, 9C and 10C actually produced and enters those figures. There
- * is no husk-to-KG conversion anywhere for them to be derived from.
+ * A chipping run takes NO raw husk at production — the husk is backflushed when the outputs
+ * are delivered — so there is no input, no lot and no husk quantity here. A submitted
+ * `lot_id` or `quantity` is refused, not ignored: a client still sending them believes husk
+ * is being consumed, and must learn otherwise.
  *
- * What is still NOT accepted is any cost figure. Costs come from the ledger at posting time
- * and are shared using the recipe's configured percentages.
+ * The operator records what the batch produced as flexible rows: any product the recipe
+ * allows (7C / 9C / 10C / Cocopeat, by weight or by volume — each unit its own stock item),
+ * each with a positive measured quantity in that product's own unit. A grade not produced is
+ * simply left out; zero rows are refused. There is NO conversion from husks to KG or litres.
  *
- * Waste is optional and informational — it creates no inventory. Its measurement basis is
- * unconfirmed (docs/BUSINESS_RULES.md §19 TBD-1), so the unit is chosen from the UOM master
- * rather than assumed.
+ * No cost figure is ever accepted. Waste is optional and informational — it creates no
+ * inventory, and its unit is chosen from the UOM master rather than assumed.
  */
 abstract class HuskChippingRequest extends FormRequest
 {
@@ -35,12 +38,12 @@ abstract class HuskChippingRequest extends FormRequest
         return [
             'production_date' => ['required', 'date'],
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
-            'lot_id' => ['required', 'integer', Rule::exists('inventory_lots', 'id')],
-            'quantity' => ['required', 'numeric', 'gt:0'],
+            'lot_id' => ['prohibited'],
+            'quantity' => ['prohibited'],
 
             'outputs' => ['required', 'array', 'min:1'],
-            'outputs.*.product_id' => ['required', 'integer', Rule::in($this->recipeOutputIds()->all())],
-            'outputs.*.quantity' => ['required', 'numeric', 'min:0'],
+            'outputs.*.product_id' => ['required', 'integer', 'distinct', Rule::in($this->recipeOutputIds()->all())],
+            'outputs.*.quantity' => ['required', 'numeric', 'gt:0'],
 
             'waste_quantity' => ['nullable', 'numeric', 'min:0'],
             'waste_uom_id' => [
@@ -60,10 +63,14 @@ abstract class HuskChippingRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'lot_id.required' => __('Select the raw husk lot being processed, so the output lots remain traceable.'),
-            'quantity.gt' => __('The quantity to process must be greater than zero.'),
-            'outputs.*.quantity.min' => __('An output quantity cannot be negative.'),
-            'outputs.*.quantity.required' => __('Enter the measured weight, or 0 if this grade was not produced.'),
+            'lot_id.prohibited' => __('Husk chipping takes no raw husk at production — it is deducted when the goods are delivered — so no lot can be chosen.'),
+            'quantity.prohibited' => __('Husk chipping takes no raw husk at production — it is deducted when the goods are delivered — so no husk quantity can be entered.'),
+            'outputs.required' => __('Add at least one output with its measured quantity.'),
+            'outputs.min' => __('Add at least one output with its measured quantity.'),
+            'outputs.*.product_id.distinct' => __('Each output product may appear only once.'),
+            'outputs.*.product_id.in' => __('That product is not an output of husk chipping.'),
+            'outputs.*.quantity.required' => __('Enter the measured quantity.'),
+            'outputs.*.quantity.gt' => __('Every output row needs a quantity greater than zero. Remove rows that produced nothing.'),
             'waste_uom_id.required_with' => __('Choose the unit the waste was measured in.'),
         ];
     }
@@ -71,37 +78,35 @@ abstract class HuskChippingRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            /** @var array<int, array{product_id?: mixed, quantity?: mixed}> $outputs */
             $outputs = $this->input('outputs', []);
 
-            if (! is_array($outputs) || $outputs === []) {
+            if (! is_array($outputs)) {
                 return;
             }
 
-            $submitted = collect($outputs)->pluck('product_id')->map(fn ($id): int => (int) $id);
+            $products = Product::query()
+                ->with('primaryUom')
+                ->whereIn('id', collect($outputs)->pluck('product_id')->filter()->map(fn ($id): int => (int) $id))
+                ->get()
+                ->keyBy('id');
 
-            // Every grade must be accounted for, even a grade this batch did not produce —
-            // an explicit 0 is a measurement, a missing line is an omission.
-            $missing = $this->recipeOutputIds()->diff($submitted);
+            // Each quantity is in its product's own unit, at that unit's precision.
+            foreach ($outputs as $index => $output) {
+                $product = $products->get((int) ($output['product_id'] ?? 0));
+                $quantity = $output['quantity'] ?? null;
 
-            if ($missing->isNotEmpty()) {
-                $validator->errors()->add('outputs', __('Enter a measured weight for every output grade.'));
-            }
+                if ($product === null || ! is_numeric($quantity)) {
+                    continue;
+                }
 
-            if ($submitted->duplicates()->isNotEmpty()) {
-                $validator->errors()->add('outputs', __('Each output grade may appear only once.'));
-            }
+                $places = (int) $product->primaryUom->decimal_places;
 
-            $anyPositive = collect($outputs)->contains(
-                fn (array $output): bool => is_numeric($output['quantity'] ?? null)
-                    && DecimalMath::isPositive(DecimalMath::of((string) $output['quantity'])),
-            );
-
-            if (! $anyPositive) {
-                $validator->errors()->add(
-                    'outputs',
-                    __('At least one output must have a measured quantity greater than zero.'),
-                );
+                if (DecimalMath::decimalPlaces(DecimalMath::of((string) $quantity)) > $places) {
+                    $validator->errors()->add("outputs.{$index}.quantity", __(':uom allows at most :places decimal place(s).', [
+                        'uom' => $product->primaryUom->code,
+                        'places' => $places,
+                    ]));
+                }
             }
         });
     }

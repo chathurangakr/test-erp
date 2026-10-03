@@ -497,6 +497,56 @@ remembered per person.
 
 ---
 
+## Phase 19 — Husk production, costing, units, payments and lot-free operations ✅ COMPLETE
+
+- [x] **Dehusking labour:** recipe version 2 gives dehusked coconut 100% of the coconut value and
+      raw husk the run's labour (quantity × operator-confirmed rate per coconut, pre-filled from
+      `default_labour_rate`, NULL until the owner gives a figure). Output = input + labour exactly;
+      journal `Dr 1320/1330 · Cr 1310 · Cr 6310 Production Labour Absorbed` (contra-expense — no
+      cash, no payable)
+- [x] **Husk chipping backflushed at delivery:** recipe version 2 (`input_consumption =
+      AT_DELIVERY`) takes no raw husk; flexible output rows (7C / 9C / 10C / Cocopeat, KG or L)
+      enter stock at zero value with no journal ("raw husk material cost pending backflush")
+- [x] **Backflush:** a delivery line of a chipping output states "Raw Husks Used"; posting issues
+      them from the pooled husk in a separate `BACKFLUSH_ISSUE` transaction at the weighted average,
+      adds the cost to the line's COGS (`Dr 5130/5170 · Cr 1330`), all in one database transaction;
+      insufficient husk refuses the whole delivery; reversal returns the husks at original cost
+- [x] **Recipe versioning:** several versions per type, exactly one active; version 1 (85/15,
+      30/30/40) deactivated and kept for history; each run records the version it used; a draft
+      made under the old chipping method is refused at posting
+- [x] **Pooled (lot-free) stock** via `products.tracks_lots`: coconut, dehusked coconut, raw husk,
+      chips and cocopeat have no lots on GRN, production, delivery, simple mode or the API; copra
+      and shell keep lots; the engine refuses new stock into a pooled product's lot
+- [x] **One-time lot consolidation:** `php artisan inventory:consolidate-pooled-lots --user=email`
+      (`--dry-run`, `--force`) writes one value-neutral `LOT_CONSOLIDATION` transaction; old lots
+      keep their history
+- [x] **Unit `L` and litre stock items** `HUSK-7C-L`, `HUSK-9C-L`, `HUSK-10C-L`, `COCOPEAT-L`;
+      **Cocopeat** (`COCOPEAT`, KG) with its own accounts 1370 / 5170 / 4170; no KG↔L conversion
+- [x] **Payment methods** on supplier payments and customer receipts — cash, cheque (number, date,
+      bank) or bank transfer; cash only through a cash account, cheque/transfer only through a bank
+      account (request and posting); "Record payment" from invoice screens, pre-filled
+- [x] Screens, simple mode (labour step, "what was made" step, "Raw husks used" on dispatch), the
+      mobile API resources and Sinhala translations updated; no new permissions
+- [x] **5 forward migrations:** `add_lot_tracking_to_products_table`,
+      `version_production_recipes_and_record_labour`, `add_raw_material_backflush_to_deliveries`,
+      `add_payment_method_to_supplier_payments_and_customer_receipts`,
+      `add_production_labour_account_to_accounting_settings`
+- [x] Tests: the production, sales, finance, API and kiosk suites rewritten for the new rules;
+      `FactoryWorkflowIntegrationTest` re-derived (`END_TO_END_VALIDATION.md` §3-§8); new
+      `HuskProductionWorkflowTest`, `DeliveryBackflushTest`, `PooledStockTest`,
+      `PaymentMethodTest`. Full suite: 1,089 tests passing
+
+**Decided with the owner:** litre items for 7C, 9C, 10C and Cocopeat; Cocopeat on its own accounts;
+cheque details only (no status lifecycle); old lot balances moved into the pool by a one-time
+recorded movement.
+
+**Open:** the standard dehusking labour rate; cheque lifecycle and clearing account; whether unsold
+chips should show an estimated husk value; whether copra and shell should also be pooled. Chips
+costed under version 1 already carry husk cost — stating husks on their delivery would count it
+twice (development test data only).
+
+---
+
 ## Cross-cutting standing rules
 
 | Rule | Source |
@@ -506,6 +556,9 @@ remembered per person.
 | Posted inventory is immutable; correct by reversal | `INVENTORY_RULES.md` §10, §12 |
 | Decimal-safe arithmetic via `DecimalMath` (BCMath) | `INVENTORY_RULES.md` §8 |
 | Inactive products: issue out yes, receive new stock no | `INVENTORY_RULES.md` §14 |
+| Pooled products carry no lots; lots follow `tracks_lots`, never a code | `INVENTORY_RULES.md` §15 |
+| KG and L are separate stock items; no unit conversion exists | `INVENTORY_RULES.md` §16 |
+| Chipping husk is backflushed at delivery, atomically with the sale | `BUSINESS_RULES.md` §19 |
 | Landed cost allocated by material value, never quantity | `BUSINESS_RULES.md` §13 |
 | Calculated costs are never accepted from a request | `BUSINESS_RULES.md` §13 |
 | Debits = Credits on every journal | `ACCOUNTING_RULES.md` §2 |
@@ -521,7 +574,9 @@ remembered per person.
 ## Consolidated open questions
 
 Resolved decisions are recorded in `BUSINESS_REQUIREMENTS.md` §6; remaining questions in
-§7. **No question currently blocks Phase 2 or Phase 3** — both may proceed when instructed.
+§7. **No open question blocks current work.**
 
-The remaining questions cluster around Finance integration (Phase 10): chart of accounts, currency, tax,
-and joint-product cost allocation. These do not block inventory or production work.
+The remaining questions cluster around costing and finance: the standard dehusking labour rate,
+the permanent joint-product method for copra / shell, other production expenses (electricity,
+fuel, machine, overhead), an estimated value for unsold chips, the cheque lifecycle, tax and
+multi-currency — plus whether copra and shell should become pooled stock.

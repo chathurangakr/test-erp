@@ -79,7 +79,12 @@ export type DeliveryLineRow = {
     unit_price: string;
     sales_value: string;
     inventory_unit_cost: string | null;
+    /** Includes backflush_cost. */
     cost_of_goods_sold: string | null;
+    backflush_quantity: string | null;
+    backflush_cost: string | null;
+    backflush_code: string | null;
+    backflush_uom: string | null;
     gross_profit: string | null;
     gross_margin: string | null;
 };
@@ -95,6 +100,8 @@ export type DeliveryDetail = DeliveryRow & {
     reversed_at: string | null;
     inventory_reference: string | null;
     reversal_reference: string | null;
+    backflush_reference: string | null;
+    backflush_reversal_reference: string | null;
     can_post: boolean;
     can_reverse: boolean;
     can_edit: boolean;
@@ -108,6 +115,10 @@ export type SalesProductOption = {
     name: string;
     uom: string | null;
     secondary_uom: string | null;
+    /** False for pooled stock: no lot is chosen. */
+    tracks_lots?: boolean;
+    /** The raw material a delivery of this product deducts (husk chipping outputs). */
+    backflush?: { code: string; name: string; uom: string | null } | null;
     is_active?: boolean;
 };
 

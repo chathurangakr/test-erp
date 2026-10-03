@@ -90,7 +90,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <!-- Value conservation -->
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid gap-3 sm:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Coconut consumed') }}</p>
                 <p class="mt-1 font-mono text-lg">
@@ -101,6 +101,13 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Input value') }}</p>
                 <p class="mt-1 font-mono text-lg">{{ order.input_value ?? '—' }}</p>
+            </div>
+            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Labour') }}</p>
+                <p class="mt-1 font-mono text-lg">{{ order.labour_cost ?? '—' }}</p>
+                <p v-if="order.labour_rate" class="text-muted-foreground text-xs">
+                    {{ t(':rate per coconut', { rate: order.labour_rate }) }}
+                </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
@@ -183,7 +190,12 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-4 py-3 text-right font-mono">
                             {{ Number(output.allocation_percent).toFixed(2) }}%
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ output.allocated_cost }}</td>
+                        <td class="px-4 py-3 text-right font-mono">
+                            {{ output.allocated_cost }}
+                            <span v-if="output.labour_cost" class="text-muted-foreground block text-xs">
+                                {{ t('incl. labour :amount', { amount: output.labour_cost }) }}
+                            </span>
+                        </td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ output.unit_cost }}</td>
                     </tr>
                 </tbody>
@@ -245,7 +257,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            {{ t('Dehusking increases the physical item count — one coconut becomes two things — but total inventory value is unchanged: the allocated output costs sum exactly to the value consumed. No labour, electricity or overhead cost is added; that comes in a later costing phase.') }}
+            {{ t('Dehusking increases the physical item count — one coconut becomes two things. The dehusked coconut carries the whole coconut value; the raw husk carries the dehusking labour. So output value = input value + labour, exactly. No electricity or overhead cost is added.') }}
         </p>
     </div>
 </template>

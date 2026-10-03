@@ -82,6 +82,9 @@ class KioskOptions
 
         $lots = InventoryLot::query()->whereIn('id', $lotBalances->pluck('lot_id')->unique()->all())->get()->keyBy('id');
 
+        // Products whose dispatch backflushes a raw material — staff then type how much.
+        $backflush = ProductionRecipe::backflushInputsByOutput();
+
         return Product::query()->whereIn('id', $balances->pluck('product_id')->unique()->all())
             ->with(['primaryUom:id,code,decimal_places', 'secondaryUom:id,code,decimal_places'])->orderBy('name')->get()
             ->map(fn (Product $p): array => $this->product($p) + [
@@ -89,7 +92,9 @@ class KioskOptions
                     'warehouse_id' => (int) $row->warehouse_id,
                     'quantity' => DecimalMath::quantity((string) $row->quantity),
                 ])->values()->all(),
-                'lots' => $this->lotCards($lotBalances, $lots->where('product_id', $p->id)),
+                // Pooled stock has no lots to choose (docs/INVENTORY_RULES.md §15).
+                'lots' => $p->tracksLots() ? $this->lotCards($lotBalances, $lots->where('product_id', $p->id)) : [],
+                'backflush' => $backflush->has($p->id) ? $this->product($backflush->get($p->id)) : null,
             ])->all();
     }
 
@@ -110,7 +115,15 @@ class KioskOptions
 
         return [
             'input' => $this->product($recipe->inputProduct),
-            'lots' => $this->lotCards($lotBalances, $lots),
+            // No lots for a pooled input; none at all for a run that takes no input now.
+            'lots' => $recipe->inputProduct->tracksLots() && ! $recipe->consumesInputAtDelivery()
+                ? $this->lotCards($lotBalances, $lots)
+                : [],
+            'consumes_input' => ! $recipe->consumesInputAtDelivery(),
+            'input_tracks_lots' => $recipe->inputProduct->tracksLots(),
+            'labour' => $recipe->labourOutput() === null ? null : [
+                'default_rate' => $recipe->default_labour_rate,
+            ],
             'outputs' => $recipe->outputs->map(fn (ProductionRecipeOutput $output): array => $this->product($output->product) + [
                 // Derived outputs are calculated by the server and must never be typed.
                 'derived' => $output->derivesQuantity(),

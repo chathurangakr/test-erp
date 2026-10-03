@@ -28,12 +28,15 @@ class ProductionOrder extends Model
     protected $fillable = [
         'production_number',
         'production_type',
+        'production_recipe_id',
         'production_date',
         'warehouse_id',
         'status',
         'notes',
         'waste_quantity',
         'waste_uom_id',
+        'labour_rate',
+        'labour_cost',
         'inventory_transaction_id',
         'output_inventory_transaction_id',
         'reversal_inventory_transaction_id',
@@ -52,6 +55,8 @@ class ProductionOrder extends Model
             'status' => ProductionStatus::class,
             'production_date' => 'date',
             'waste_quantity' => 'decimal:3',
+            'labour_rate' => 'decimal:6',
+            'labour_cost' => 'decimal:6',
             'posted_at' => 'datetime',
             'reversed_at' => 'datetime',
         ];
@@ -227,5 +232,16 @@ class ProductionOrder extends Model
         }
 
         $query->where('production_number', 'like', "%{$term}%");
+    }
+
+    /**
+     * The recipe version this run was entered and posted under. Null for runs that predate
+     * recipe versioning.
+     *
+     * @return BelongsTo<ProductionRecipe, $this>
+     */
+    public function recipe(): BelongsTo
+    {
+        return $this->belongsTo(ProductionRecipe::class, 'production_recipe_id');
     }
 }

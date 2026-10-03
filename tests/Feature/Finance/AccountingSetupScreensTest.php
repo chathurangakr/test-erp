@@ -14,7 +14,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -60,7 +59,7 @@ class AccountingSetupScreensTest extends TestCase
             'primary_uom_id' => $nos->id,
         ]);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
     }
@@ -97,7 +96,7 @@ class AccountingSetupScreensTest extends TestCase
                 ->where('settings.cutover_locked', false)
                 ->where('referenceAccounts.trade_payables.code', '2110')
                 ->where('referenceAccounts.trade_receivables.code', '1210')
-                ->has('products', 9)
+                ->has('products', 14)
                 // Only the QA product.
                 ->where('unmappedCount', 1));
     }

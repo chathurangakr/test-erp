@@ -83,8 +83,27 @@ const { t } = useT();
                 <p class="mt-1 font-mono text-lg">{{ payment.allocated }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs font-medium">{{ t('Reference') }}</p>
-                <p class="mt-1 text-lg">{{ payment.reference ?? '—' }}</p>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Paid by') }}</p>
+                <p class="mt-1 text-lg">{{ payment.payment_method_label ?? '—' }}</p>
+                <p v-if="payment.reference" class="text-muted-foreground text-xs">{{ t('Reference') }}: {{ payment.reference }}</p>
+            </div>
+        </div>
+
+        <div
+            v-if="payment.cheque_number"
+            class="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-xl border p-4 sm:grid-cols-3"
+        >
+            <div>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cheque number') }}</p>
+                <p class="mt-1 font-mono">{{ payment.cheque_number }}</p>
+            </div>
+            <div>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cheque date') }}</p>
+                <p class="mt-1">{{ payment.cheque_date }}</p>
+            </div>
+            <div>
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Cheque bank') }}</p>
+                <p class="mt-1">{{ payment.cheque_bank }}</p>
             </div>
         </div>
 

@@ -17,7 +17,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
-use Database\Seeders\ProductionRecipeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -72,7 +71,7 @@ class KioskTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
         $this->supplier = Supplier::factory()->create();
         $this->customer = Customer::factory()->create();
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
 
         $this->worker = User::factory()->admin()->create(['name' => 'Floor Worker']);
     }
@@ -238,30 +237,31 @@ class KioskTest extends TestCase
     {
         $this->receiveCoconuts();
 
-        // Dehusking: only the count is sent; outputs are derived 1:1:1 by the server.
+        // Dehusking: the count and the labour rate are sent; outputs are derived 1:1:1.
         $this->actingAs($this->worker)->post(route('kiosk.dehusking.store'), [
             'warehouse_id' => $this->main->id,
             'lot_id' => $this->lotOf($this->coconut)->id,
             'quantity' => '400',
+            'labour_rate' => '3',
         ])->assertSessionHasNoErrors();
 
         $this->assertSame('600.000', $this->stock($this->coconut));
         $this->assertSame('400.000', $this->stock($this->husk));
+        // The husk carries the labour (400 x 3), not coconut value.
+        $this->assertSame('1200.000000', app(StockQueryService::class)->valueForProduct($this->husk->id));
 
-        // Husk chipping: the operator's measured weights are kept exactly.
+        // Husk chipping: only the measured outputs are sent; no husk leaves stock here.
         $this->actingAs($this->worker)->post(route('kiosk.husk-chipping.store'), [
             'warehouse_id' => $this->main->id,
-            'lot_id' => $this->lotOf($this->husk)->id,
-            'quantity' => '400',
             'outputs' => [
                 ['product_id' => $this->chips['HUSK-7C']->id, 'quantity' => '60.125'],
-                ['product_id' => $this->chips['HUSK-9C']->id, 'quantity' => '0'],
                 ['product_id' => $this->chips['HUSK-10C']->id, 'quantity' => '90.500'],
             ],
         ])->assertSessionHasNoErrors();
 
         $this->assertSame('60.125', $this->stock($this->chips['HUSK-7C']));
         $this->assertSame('0.000', $this->stock($this->chips['HUSK-9C']));
+        $this->assertSame('400.000', $this->stock($this->husk), 'Raw husk is backflushed at delivery, not here.');
 
         // Copra: copra KG and shell KG measured; the shell COUNT is derived, never typed.
         $dehusked = Product::where('code', 'DEHUSKED-COCONUT')->firstOrFail();
@@ -287,8 +287,8 @@ class KioskTest extends TestCase
     {
         $this->receiveCoconuts();
         $this->actingAs($this->worker)->post(route('kiosk.dehusking.store'), [
-            'warehouse_id' => $this->main->id, 'lot_id' => $this->lotOf($this->coconut)->id, 'quantity' => '100',
-        ]);
+            'warehouse_id' => $this->main->id, 'lot_id' => $this->lotOf($this->coconut)->id, 'quantity' => '100', 'labour_rate' => '3',
+        ])->assertSessionHasNoErrors();
 
         $this->actingAs($this->worker)->post(route('kiosk.copra.store'), [
             'warehouse_id' => $this->main->id,

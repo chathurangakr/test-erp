@@ -19,6 +19,10 @@ enum InventoryTransactionType: string
     case AdjustmentIn = 'ADJUSTMENT_IN';
     case AdjustmentOut = 'ADJUSTMENT_OUT';
     case Reversal = 'REVERSAL';
+    /** Raw material issued when a delivery is posted, because production deferred it. */
+    case BackflushIssue = 'BACKFLUSH_ISSUE';
+    /** Moves a pooled product's old lot balances into its lot-free stock. Value-neutral. */
+    case LotConsolidation = 'LOT_CONSOLIDATION';
 
     /**
      * The display name, in the reader's language. Never save it — see App\Support\RecordText.
@@ -35,6 +39,8 @@ enum InventoryTransactionType: string
             self::AdjustmentIn => 'Adjustment in',
             self::AdjustmentOut => 'Adjustment out',
             self::Reversal => 'Reversal',
+            self::BackflushIssue => 'Raw material backflush',
+            self::LotConsolidation => 'Lot consolidation',
         });
     }
 

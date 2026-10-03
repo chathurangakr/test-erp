@@ -19,7 +19,8 @@ use Illuminate\Validation\ValidationException;
  *     stock. If either has already been sold or processed onward, the inventory engine's
  *     negative-stock guard rejects it and the whole reversal rolls back. This is the
  *     required behaviour: you cannot un-produce goods that have already left.
- *  2. then the CONSUMPTION — putting the whole coconut back IN.
+ *  2. then the CONSUMPTION — putting the whole coconut back IN. A husk chipping run has no
+ *     consumption to undo: its raw husk never left stock (it is backflushed at delivery).
  *
  * Both reversals reuse the original lines' unit costs, so value returns exactly as it left
  * rather than at whatever the weighted averages have drifted to since
@@ -64,7 +65,11 @@ class ReverseProduction
             $consumption = $locked->consumptionTransaction()->first();
             $output = $locked->outputTransaction()->first();
 
-            if ($consumption === null || $output === null) {
+            // A run that consumed at production must have both halves; a run that defers its
+            // input to delivery (husk chipping) has only the output.
+            $consumptionMissing = $consumption === null && $locked->inventory_transaction_id !== null;
+
+            if ($output === null || $consumptionMissing) {
                 throw ValidationException::withMessages([
                     'status' => __('Production order :reference has no inventory transactions to reverse.', [
                         'reference' => $locked->production_number,
@@ -80,7 +85,7 @@ class ReverseProduction
                 'posted_by' => $userId ?? auth()->id(),
             ]);
 
-            $consumptionReversal = $this->reverseInventory->handle($consumption, [
+            $consumptionReversal = $consumption === null ? null : $this->reverseInventory->handle($consumption, [
                 'notes' => RecordText::of('Reversal of production :reference input', [
                     'reference' => $locked->production_number,
                 ]),
@@ -91,7 +96,7 @@ class ReverseProduction
 
             $locked->forceFill([
                 'status' => ProductionStatus::Reversed,
-                'reversal_inventory_transaction_id' => $consumptionReversal->getKey(),
+                'reversal_inventory_transaction_id' => $consumptionReversal?->getKey(),
                 'output_reversal_transaction_id' => $outputReversal->getKey(),
                 'reversed_at' => now(),
                 'reversed_by' => $userId ?? auth()->id(),

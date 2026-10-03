@@ -3,6 +3,7 @@
 namespace App\Services\Accounting;
 
 use App\Enums\AccountType;
+use App\Enums\PaymentMethod;
 use App\Models\Account;
 use App\Models\AccountingSetting;
 use App\Models\CashBankAccount;
@@ -148,6 +149,29 @@ class AccountingPolicy
     }
 
     /**
+     * Production Labour Absorbed — credited when a run's labour becomes inventory cost.
+     *
+     * An EXPENSE account carrying a credit: a contra-expense. Wages are still paid by expense
+     * voucher to the wages account; the labour sitting in unsold stock offsets them until it
+     * is sold. Production never creates cash movements or payables. A control account, so
+     * only a sourced (system) journal may reach it.
+     */
+    public function productionLabourAccount(): Account
+    {
+        $account = AccountingSetting::current()?->productionLabourAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'production_labour_account_id' => __('No Production Labour Absorbed account is configured. Set one in Accounting Setup before posting production labour.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Expense, __('Production Labour Absorbed'));
+
+        return $account;
+    }
+
+    /**
      * The revenue account a product's sales are recognised in.
      */
     public function revenueAccountFor(Product $product): Account
@@ -161,9 +185,11 @@ class AccountingPolicy
      * Being an asset account is no longer enough: it must be one the factory has actually
      * configured as cash or a bank account. See assertCashBankAccount().
      */
-    public function assertReceiptAccount(Account $account): void
+    public function assertReceiptAccount(Account $account, ?PaymentMethod $method = null): void
     {
-        $this->assertCashBankAccount($account, 'receipt_account_id', __('a customer receipt'));
+        $configuration = $this->assertCashBankAccount($account, 'receipt_account_id', __('a customer receipt'));
+
+        $this->assertMethodFitsAccount($method, $configuration, 'receipt_account_id');
     }
 
     /**
@@ -200,9 +226,49 @@ class AccountingPolicy
      * Being an asset account is no longer enough: it must be one the factory has actually
      * configured as cash or a bank account. See assertCashBankAccount().
      */
-    public function assertPaymentAccount(Account $account): void
+    public function assertPaymentAccount(Account $account, ?PaymentMethod $method = null): void
     {
-        $this->assertCashBankAccount($account, 'payment_account_id', __('a supplier payment'));
+        $configuration = $this->assertCashBankAccount($account, 'payment_account_id', __('a supplier payment'));
+
+        $this->assertMethodFitsAccount($method, $configuration, 'payment_account_id');
+    }
+
+    /**
+     * Cash moves through a till; a cheque or a bank transfer moves through a bank account.
+     *
+     * A document recorded before payment methods existed has none, and nothing is invented
+     * for it. See docs/ACCOUNTING_RULES.md §29.
+     */
+    public function assertMethodFitsAccount(?PaymentMethod $method, CashBankAccount $configuration, string $field): void
+    {
+        if ($method === null || $configuration->account_kind === $method->accountKind()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => __(':method must go through a :kind account; :name is a :actual account.', [
+                'method' => $method->label(),
+                'kind' => $method->accountKind()->label(),
+                'name' => $configuration->display_name,
+                'actual' => $configuration->account_kind->label(),
+            ]),
+        ]);
+    }
+
+    /**
+     * A cheque is recorded with its number, date and bank — nothing less.
+     */
+    public function assertChequeDetails(?PaymentMethod $method, ?string $number, mixed $date, ?string $bank): void
+    {
+        if ($method?->requiresChequeDetails() !== true) {
+            return;
+        }
+
+        if (blank($number) || blank($date) || blank($bank)) {
+            throw ValidationException::withMessages([
+                'cheque_number' => __('A cheque needs its number, date and bank.'),
+            ]);
+        }
     }
 
     /**

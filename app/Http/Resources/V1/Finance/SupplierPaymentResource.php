@@ -29,6 +29,12 @@ class SupplierPaymentResource extends ApiResource
             'reference' => $this->reference,
             'notes' => $this->notes,
             'amount' => $this->money($this->amount),
+            'payment_method' => $this->payment_method === null ? null : $this->enum($this->payment_method),
+            'cheque' => $this->cheque_number === null ? null : [
+                'number' => $this->cheque_number,
+                'date' => $this->date($this->cheque_date),
+                'bank' => $this->cheque_bank,
+            ],
             'allocated' => $this->whenLoaded('allocations', fn () => $this->allocatedTotal()),
             'actions' => [
                 'can_post' => $this->status->canPost(),

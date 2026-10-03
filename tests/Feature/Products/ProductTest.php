@@ -210,20 +210,27 @@ class ProductTest extends TestCase
         $this->seed(UnitOfMeasureSeeder::class);
         $this->seed(ProductSeeder::class);
 
+        // code => [primary, secondary, tracks lots]. A grade measured by weight AND by volume
+        // is two stock items, so KG and litre balances can never mix.
         $expected = [
-            'COCONUT' => ['NOS', null],
-            'DEHUSKED-COCONUT' => ['NOS', null],
-            'RAW-HUSK' => ['NOS', null],
-            'COPRA' => ['KG', null],
-            'HUSK-7C' => ['KG', null],
-            'HUSK-9C' => ['KG', null],
-            'HUSK-10C' => ['KG', null],
-            'RAW-SHELL' => ['NOS', 'KG'],
+            'COCONUT' => ['NOS', null, false],
+            'DEHUSKED-COCONUT' => ['NOS', null, false],
+            'RAW-HUSK' => ['NOS', null, false],
+            'COPRA' => ['KG', null, true],
+            'HUSK-7C' => ['KG', null, false],
+            'HUSK-9C' => ['KG', null, false],
+            'HUSK-10C' => ['KG', null, false],
+            'COCOPEAT' => ['KG', null, false],
+            'HUSK-7C-L' => ['L', null, false],
+            'HUSK-9C-L' => ['L', null, false],
+            'HUSK-10C-L' => ['L', null, false],
+            'COCOPEAT-L' => ['L', null, false],
+            'RAW-SHELL' => ['NOS', 'KG', true],
         ];
 
         $this->assertSame(count($expected), Product::count());
 
-        foreach ($expected as $code => [$primary, $secondary]) {
+        foreach ($expected as $code => [$primary, $secondary, $tracksLots]) {
             $product = Product::with(['primaryUom', 'secondaryUom'])
                 ->where('code', $code)
                 ->first();
@@ -231,6 +238,7 @@ class ProductTest extends TestCase
             $this->assertNotNull($product, "Seeded product [{$code}] is missing.");
             $this->assertSame($primary, $product->primaryUom->code);
             $this->assertSame($secondary, $product->secondaryUom?->code);
+            $this->assertSame($tracksLots, $product->tracksLots(), "Lot policy of [{$code}].");
             $this->assertTrue($product->is_active);
         }
 
@@ -240,14 +248,14 @@ class ProductTest extends TestCase
     }
 
     #[Test]
-    public function the_unit_of_measure_master_contains_only_nos_and_kg(): void
+    public function the_unit_of_measure_master_contains_only_nos_kg_and_litre(): void
     {
         $this->seed(UnitOfMeasureSeeder::class);
 
-        // The business uses exactly two units: NOS for countable items, KG for weight.
-        // "Qty" is UI wording for a NOS count and must not become a separate unit.
+        // NOS for countable items, KG for weight, L for volume — and nothing converts between
+        // them. "Qty" is UI wording for a NOS count and must not become a separate unit.
         $this->assertSame(
-            ['KG', 'NOS'],
+            ['KG', 'L', 'NOS'],
             UnitOfMeasure::query()->orderBy('code')->pluck('code')->all(),
         );
 

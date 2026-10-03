@@ -5,14 +5,9 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useT } from '@/lib/i18n';
-import type {
-    HuskChippingFormValues,
-    HuskChippingRecipeInfo,
-    OptionRef,
-    ProductionLotOption,
-} from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { useT } from '@/lib/i18n';
+import type { HuskChippingFormValues, HuskChippingRecipeInfo, OptionRef } from '@/types';
 
 const { t } = useT();
 
@@ -22,7 +17,6 @@ const props = defineProps<{
     submitLabel: string;
     cancelHref: string;
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
     recipe: HuskChippingRecipeInfo;
     wasteUoms: OptionRef[];
     inputStock: string;
@@ -31,110 +25,57 @@ const props = defineProps<{
 
 const today = businessToday();
 
-/** One row per grade, pre-filled from the draft being edited. */
-function initialOutputs(): { product_id: number; quantity: string }[] {
-    return props.recipe.outputs.map((output) => ({
-        product_id: output.product_id,
-        quantity:
-            props.initial?.outputs?.find((o) => o.product_id === output.product_id)?.quantity ??
-            '',
+type Row = { product_id: string; quantity: string };
+
+/** The draft's rows, or one empty row to start with. */
+function initialRows(): Row[] {
+    const rows = (props.initial?.outputs ?? []).map((o) => ({
+        product_id: String(o.product_id),
+        quantity: o.quantity ?? '',
     }));
+
+    return rows.length > 0 ? rows : [{ product_id: '', quantity: '' }];
 }
 
 const form = useForm({
     production_date: props.initial?.production_date ?? today,
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
-    lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
-    quantity: props.initial?.quantity ?? '',
-    outputs: initialOutputs(),
+    outputs: initialRows(),
     waste_quantity: props.initial?.waste_quantity ?? '',
     waste_uom_id: props.initial?.waste_uom_id ? String(props.initial.waste_uom_id) : '',
     notes: props.initial?.notes ?? '',
 });
 
-/** Husk lots holding stock in the chosen warehouse. */
-const availableLots = computed(() => {
-    if (!form.warehouse_id) {
-        return [];
-    }
-
-    return props.lots.filter((lot) =>
-        lot.warehouses.some((w) => String(w.warehouse_id) === form.warehouse_id),
-    );
-});
-
-const selectedLotQuantity = computed(() => {
-    const lot = props.lots.find((l) => String(l.id) === form.lot_id);
-
-    return (
-        lot?.warehouses.find((w) => String(w.warehouse_id) === form.warehouse_id)?.quantity ?? null
-    );
-});
-
-const inputQuantity = computed(() => {
-    const parsed = Number(form.quantity);
-
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-});
-
-const exceedsLot = computed(() => {
-    const available = Number(selectedLotQuantity.value ?? 0);
-
-    return inputQuantity.value > 0 && available > 0 && inputQuantity.value > available;
-});
-
-function measured(productId: number): number {
-    const parsed = Number(form.outputs.find((o) => o.product_id === productId)?.quantity);
-
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+function product(productId: string) {
+    return props.recipe.outputs.find((o) => String(o.product_id) === productId);
 }
 
-const totalMeasured = computed(() =>
-    props.recipe.outputs.reduce((sum, output) => sum + measured(output.product_id), 0),
-);
+/** Each product once: a row offers what the other rows have not taken. */
+function choicesFor(index: number) {
+    const taken = form.outputs.filter((_, i) => i !== index).map((row) => row.product_id);
 
-const nothingProduced = computed(() => totalMeasured.value <= 0);
+    return props.recipe.outputs.filter((o) => !taken.includes(String(o.product_id)));
+}
 
-/**
- * The cost share each grade would receive.
- *
- * Only grades this batch actually produced take a share, so their configured percentages
- * are renormalised — exactly what the server does when posting. This is a preview of the
- * split, not of the money: the value itself is unknown until the ledger prices the husk.
- */
-const allocationPreview = computed(() => {
-    const producing = props.recipe.outputs.filter((o) => measured(o.product_id) > 0);
-    const percentTotal = producing.reduce((sum, o) => sum + Number(o.allocation_percent), 0);
+const canAdd = computed(() => form.outputs.length < props.recipe.outputs.length);
 
-    return props.recipe.outputs.map((output) => {
-        const produced = measured(output.product_id) > 0;
+function addRow(): void {
+    form.outputs.push({ product_id: '', quantity: '' });
+}
 
-        return {
-            ...output,
-            produced,
-            effective_percent:
-                produced && percentTotal > 0
-                    ? ((Number(output.allocation_percent) / percentTotal) * 100).toFixed(4)
-                    : '0.0000',
-        };
-    });
-});
+function removeRow(index: number): void {
+    form.outputs.splice(index, 1);
+}
 
-const redistributed = computed(
-    () =>
-        !nothingProduced.value &&
-        props.recipe.outputs.some((o) => measured(o.product_id) <= 0),
-);
-
-function outputError(index: number): string | undefined {
-    return (
-        (form.errors as Record<string, string | undefined>)[`outputs.${index}.quantity`] ??
-        undefined
-    );
+function rowError(index: number, field: 'product_id' | 'quantity'): string | undefined {
+    return (form.errors as Record<string, string | undefined>)[`outputs.${index}.${field}`];
 }
 
 function submit(): void {
-    form.submit(props.method, props.action, { preserveScroll: true });
+    form.transform((data) => ({
+        ...data,
+        outputs: data.outputs.map((row) => ({ product_id: Number(row.product_id) || null, quantity: row.quantity })),
+    })).submit(props.method, props.action, { preserveScroll: true });
 }
 
 const selectClass =
@@ -167,137 +108,93 @@ const selectClass =
             </div>
         </section>
 
-        <section class="space-y-4">
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="text-sm font-medium">{{ t('Input — :code', { code: recipe.input_code }) }}</h3>
-                <p class="text-muted-foreground text-xs">
-                    {{ t('Company stock on hand:') }}
-                    <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
-                </p>
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div class="grid gap-2">
-                    <Label for="lot_id">{{ t('Raw husk lot') }} <span class="text-destructive">*</span></Label>
-                    <select
-                        id="lot_id"
-                        v-model="form.lot_id"
-                        required
-                        :disabled="!form.warehouse_id"
-                        :class="selectClass"
-                    >
-                        <option value="" disabled>
-                            {{ form.warehouse_id ? 'Select a lot…' : 'Choose a warehouse first' }}
-                        </option>
-                        <option v-for="lot in availableLots" :key="lot.id" :value="String(lot.id)">
-                            {{ lot.lot_number }}
-                        </option>
-                    </select>
-                    <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
-                        {{ t('Available in this lot:') }}
-                        <span class="font-mono">{{ selectedLotQuantity }}</span>
-                        {{ recipe.input_uom }}
-                    </p>
-                    <InputError :message="form.errors.lot_id" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="quantity">
-                        {{ t('Husk to process (:uom)', { uom: recipe.input_uom ?? '' }) }}
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <Input id="quantity" v-model="form.quantity" type="number" step="1" min="0" required />
-                    <p v-if="exceedsLot" class="text-destructive text-xs">
-                        {{ t('This exceeds the :quantity available in the selected lot.', { quantity: selectedLotQuantity ?? '' }) }}
-                    </p>
-                    <InputError :message="form.errors.quantity" />
-                </div>
-            </div>
-        </section>
-
-        <!-- Measured outputs — the operator types these -->
-        <section class="space-y-4">
-            <h3 class="text-sm font-medium">{{ t('Measured output weights') }}</h3>
-
-            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm">
-                {{ t('Weigh each grade and enter what the scale says. Chipping yields vary from batch to batch, so nothing here is calculated from the husk count — there is no husk-to-kilogram conversion in the system. Enter') }} <strong>0</strong> {{ t('for a grade this batch did not produce.') }}
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-3">
-                <div v-for="(output, index) in recipe.outputs" :key="output.product_id" class="grid gap-2">
-                    <Label :for="`output-${output.product_id}`">
-                        {{ output.code }} ({{ output.uom }})
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <Input
-                        :id="`output-${output.product_id}`"
-                        v-model="form.outputs[index].quantity"
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        required
-                    />
-                    <p class="text-muted-foreground text-xs">{{ output.name }}</p>
-                    <InputError :message="outputError(index)" />
-                </div>
-            </div>
-
-            <InputError :message="form.errors.outputs" />
-
-            <p v-if="nothingProduced" class="text-destructive text-xs">
-                {{ t('At least one grade must have a weight greater than zero.') }}
+        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+            <p class="font-medium">{{ t('Raw husk is not deducted here.') }}</p>
+            <p class="mt-1">
+                {{ t('Raw husks are taken from stock when the chips or cocopeat are delivered — the delivery asks how many husks were used. Until then these outputs carry no husk cost: raw husk material cost pending backflush.') }}
             </p>
-            <p v-else class="text-muted-foreground text-xs">
-                {{ t('Total measured output:') }}
-                <span class="font-mono">{{ totalMeasured.toFixed(3) }}</span> {{ t('KG') }}
+            <p class="mt-1 text-xs">
+                {{ t('Raw husk in stock now:') }}
+                <span class="font-mono">{{ inputStock }}</span> {{ recipe.input_uom }}
             </p>
-        </section>
+        </div>
 
-        <!-- Cost share preview -->
         <section class="space-y-4">
-            <h3 class="text-sm font-medium">{{ t('Cost allocation') }}</h3>
+            <h3 class="text-sm font-medium">{{ t('What was produced') }}</h3>
+            <p class="text-muted-foreground text-xs">
+                {{ t('Add a row for each product made and enter what was measured. Litres and kilograms are separate stock — choose the line that matches how you measured. Leave out anything not produced.') }}
+            </p>
 
             <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Grade') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Measured') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Configured share') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Share applied') }}</th>
+                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
+                            <th class="w-48 px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
+                            <th class="w-20 px-4 py-3 font-medium">{{ t('Unit') }}</th>
+                            <th class="w-24 px-4 py-3" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in allocationPreview"
-                            :key="row.product_id"
-                            class="border-sidebar-border/70 dark:border-sidebar-border border-t"
-                            :class="{ 'text-muted-foreground': !row.produced }"
+                            v-for="(row, index) in form.outputs"
+                            :key="index"
+                            class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top"
                         >
                             <td class="px-4 py-3">
-                                <span class="font-mono text-xs">{{ row.code }}</span>
-                                <span class="text-muted-foreground block text-xs">{{ row.name }}</span>
+                                <select
+                                    :id="`output-product-${index}`"
+                                    v-model="row.product_id"
+                                    required
+                                    :class="selectClass"
+                                    :aria-label="t('Product')"
+                                >
+                                    <option value="" disabled>{{ t('Select a product…') }}</option>
+                                    <option v-for="o in choicesFor(index)" :key="o.product_id" :value="String(o.product_id)">
+                                        {{ o.name }} — {{ o.uom }}
+                                    </option>
+                                </select>
+                                <InputError :message="rowError(index, 'product_id')" />
                             </td>
-                            <td class="px-4 py-3 text-right font-mono">
-                                {{ measured(row.product_id).toFixed(3) }} {{ row.uom }}
+                            <td class="px-4 py-3">
+                                <Input
+                                    :id="`output-quantity-${index}`"
+                                    v-model="row.quantity"
+                                    type="number"
+                                    :step="product(row.product_id)?.decimals === 0 ? '1' : '0.001'"
+                                    min="0"
+                                    required
+                                    class="text-right"
+                                    :aria-label="t('Quantity')"
+                                />
+                                <InputError :message="rowError(index, 'quantity')" />
                             </td>
-                            <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(row.allocation_percent).toFixed(2) }}%
+                            <td class="text-muted-foreground px-4 py-3 pt-5 font-mono text-xs">
+                                {{ product(row.product_id)?.uom ?? '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">
-                                {{ Number(row.effective_percent).toFixed(2) }}%
+                            <td class="px-4 py-3 text-right">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    :disabled="form.outputs.length === 1"
+                                    @click="removeRow(index)"
+                                >
+                                    {{ t('Remove') }}
+                                </Button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <p v-if="redistributed" class="text-muted-foreground text-xs">
-                {{ t('A grade with no weight takes no cost and gets no lot, so its share is spread over the grades that were produced — which is why the applied shares differ from the configured ones.') }}
-            </p>
+            <Button type="button" variant="outline" size="sm" :disabled="!canAdd" @click="addRow">
+                {{ t('Add output') }}
+            </Button>
+            <InputError :message="form.errors.outputs" />
 
             <p class="text-muted-foreground text-xs">
-                {{ t('The consumed husk value is divided between the grades in these proportions, so chipping neither creates nor destroys inventory value. The money itself is calculated when you post, from the weighted average cost in the ledger at that moment.') }}
+                {{ t('Nothing here is calculated from a husk count — there is no husk-to-kilogram or husk-to-litre conversion in the system.') }}
             </p>
         </section>
 
@@ -325,7 +222,7 @@ const selectClass =
             </div>
 
             <p class="text-muted-foreground text-xs">
-                {{ t('Waste is recorded for information only. It creates no stock, no lot and no product, and it takes no cost — the whole consumed value stays with the saleable grades. Leave it blank if it was not measured.') }}
+                {{ t('Waste is recorded for information only. It creates no stock, no lot and no product, and it takes no cost. Leave it blank if it was not measured.') }}
             </p>
         </section>
 

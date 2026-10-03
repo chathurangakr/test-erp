@@ -36,6 +36,8 @@ class Delivery extends Model
         'status',
         'inventory_transaction_id',
         'reversal_inventory_transaction_id',
+        'backflush_inventory_transaction_id',
+        'backflush_reversal_transaction_id',
         'posted_by',
         'posted_at',
         'reversed_by',
@@ -71,6 +73,7 @@ class Delivery extends Model
             $allowed = [
                 'status',
                 'reversal_inventory_transaction_id',
+                'backflush_reversal_transaction_id',
                 'reversed_at',
                 'reversed_by',
                 'updated_at',
@@ -140,6 +143,24 @@ class Delivery extends Model
     public function reversalInventoryTransaction(): BelongsTo
     {
         return $this->belongsTo(InventoryTransaction::class, 'reversal_inventory_transaction_id');
+    }
+
+    /**
+     * The raw material this delivery backflushed, if any of its lines needed it.
+     *
+     * @return BelongsTo<InventoryTransaction, $this>
+     */
+    public function backflushTransaction(): BelongsTo
+    {
+        return $this->belongsTo(InventoryTransaction::class, 'backflush_inventory_transaction_id');
+    }
+
+    /**
+     * @return BelongsTo<InventoryTransaction, $this>
+     */
+    public function backflushReversalTransaction(): BelongsTo
+    {
+        return $this->belongsTo(InventoryTransaction::class, 'backflush_reversal_transaction_id');
     }
 
     /**

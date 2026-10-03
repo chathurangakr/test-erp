@@ -77,6 +77,11 @@ class SaveDelivery
                     // Cost is unknown until stock actually moves.
                     'inventory_unit_cost' => null,
                     'cost_of_goods_sold' => null,
+                    // The raw material the goods used, for products that backflush one.
+                    // Product and cost are settled by PostDelivery from the recipe and ledger.
+                    'backflush_quantity' => ($line['backflush_quantity'] ?? null) === null || $line['backflush_quantity'] === ''
+                        ? null
+                        : DecimalMath::quantity(DecimalMath::of((string) $line['backflush_quantity'])),
                 ]);
             }
 

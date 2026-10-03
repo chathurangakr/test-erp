@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Payables;
 
+use App\Http\Requests\Concerns\ValidatesPaymentMethod;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Creating a DRAFT supplier payment.
@@ -14,6 +16,8 @@ use Illuminate\Validation\Rule;
  */
 class StoreSupplierPaymentRequest extends FormRequest
 {
+    use ValidatesPaymentMethod;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -30,7 +34,7 @@ class StoreSupplierPaymentRequest extends FormRequest
             'allocations' => ['required', 'array', 'min:1'],
             'allocations.*.supplier_invoice_id' => ['required', 'integer', Rule::exists('supplier_invoices', 'id')],
             'allocations.*.amount' => ['required', 'numeric', 'gt:0'],
-        ];
+        ] + $this->paymentMethodRules();
     }
 
     /**
@@ -38,8 +42,13 @@ class StoreSupplierPaymentRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
+        return $this->paymentMethodMessages() + [
             'allocations.min' => __('A payment must be allocated to at least one invoice. Payments on account are not supported.'),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->validateMethodAgainstAccount($validator, 'payment_account_id'));
     }
 }

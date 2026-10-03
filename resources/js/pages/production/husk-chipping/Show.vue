@@ -86,14 +86,24 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
         </div>
 
         <div
-            v-if="order.status === 'DRAFT'"
+            v-if="order.pending_backflush"
+            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+        >
+            <p class="font-medium">{{ t('Raw husk material cost pending backflush') }}</p>
+            <p class="mt-1">
+                {{ t('This run took no raw husk from stock. The husks are deducted — and their cost added to the cost of goods sold — when these outputs are delivered.') }}
+            </p>
+        </div>
+
+        <div
+            v-if="order.status === 'DRAFT' && !order.pending_backflush"
             class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border border-dashed p-4 text-sm"
         >
             {{ t('This production run is a') }} <strong>{{ t('draft') }}</strong> {{ t('— no husk has been consumed and no chip stock exists. The weights below are what the operator measured; costs appear once it is posted, because the inventory cost is determined by the ledger at that moment.') }}
         </div>
 
-        <!-- Value conservation -->
-        <div class="grid gap-3 sm:grid-cols-4">
+        <!-- Value conservation (runs recorded under the old method, which consumed husk) -->
+        <div v-if="order.input" class="grid gap-3 sm:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Husk consumed') }}</p>
                 <p class="mt-1 font-mono text-lg">
@@ -105,7 +115,6 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Chips produced') }}</p>
                 <p class="mt-1 font-mono text-lg">
                     {{ order.output_quantity }}
-                    <span class="text-muted-foreground text-sm">{{ t('KG') }}</span>
                 </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
@@ -115,6 +124,17 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ order.output_value ?? '—' }}</p>
+            </div>
+        </div>
+
+        <div v-else class="grid gap-3 sm:grid-cols-2">
+            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Output') }}</p>
+                <p class="mt-1 font-mono text-lg">{{ order.output_quantity }}</p>
+            </div>
+            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs font-medium">{{ t('Raw husk material cost') }}</p>
+                <p class="mt-1 text-lg">{{ t('Pending backflush') }}</p>
             </div>
         </div>
 
@@ -165,7 +185,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                         <th class="px-4 py-3 font-medium">{{ t('Lot produced') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Measured') }}</th>
                         <th class="px-4 py-3 font-medium">{{ t('UOM') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Cost share') }}</th>
+                        <th v-if="order.input" class="px-4 py-3 text-right font-medium">{{ t('Cost share') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Allocated cost') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Unit cost') }}</th>
                     </tr>
@@ -190,7 +210,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ output.quantity }}</td>
                         <td class="text-muted-foreground px-4 py-3">{{ output.uom }}</td>
-                        <td class="px-4 py-3 text-right font-mono">
+                        <td v-if="order.input" class="px-4 py-3 text-right font-mono">
                             {{ Number(output.allocation_percent).toFixed(2) }}%
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ output.allocated_cost ?? '—' }}</td>
@@ -200,7 +220,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
             </table>
         </div>
 
-        <p v-if="order.status === 'POSTED' && skipped().length" class="text-muted-foreground max-w-3xl text-xs">
+        <p v-if="order.input && order.status === 'POSTED' && skipped().length" class="text-muted-foreground max-w-3xl text-xs">
             {{ t('This batch produced no') }}
             <span v-for="(o, i) in skipped()" :key="o.id" class="font-mono">
                 {{ o.product_code }}<span v-if="i < skipped().length - 1">, </span>
@@ -215,7 +235,7 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 {{ order.waste_quantity ? `${order.waste_quantity} ${order.waste_uom ?? ''}` : 'Not recorded' }}
             </p>
             <p class="text-muted-foreground mt-3 max-w-3xl text-xs">
-                {{ t('Waste is information only. It creates no stock, no lot and no product, and it carries no cost — the whole consumed husk value stays with the saleable grades. If the factory later starts selling dust or another by-product, it can be promoted to a real inventory product then.') }}
+                {{ t('Waste is recorded for information only. It creates no stock, no lot and no product, and it takes no cost. Leave it blank if it was not measured.') }}
             </p>
         </div>
 
@@ -273,8 +293,11 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
             </dl>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p v-if="order.input" class="text-muted-foreground max-w-3xl text-xs">
             {{ t('Husk is counted in NOS and chips are weighed in KG, so the quantities above are not comparable — and nothing in the system converts one into the other. What is conserved is value: the allocated chip costs sum exactly to the husk value consumed. No labour, electricity or overhead cost is added; that comes in a later costing phase.') }}
+        </p>
+        <p v-else class="text-muted-foreground max-w-3xl text-xs">
+            {{ t('Nothing here is calculated from a husk count — there is no husk-to-kilogram or husk-to-litre conversion in the system.') }}
         </p>
     </div>
 </template>

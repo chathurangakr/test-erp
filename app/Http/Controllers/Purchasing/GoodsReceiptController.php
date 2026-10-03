@@ -156,13 +156,15 @@ class GoodsReceiptController extends Controller
                 ->where('is_active', true)
                 ->with(['primaryUom:id,code', 'secondaryUom:id,code'])
                 ->orderBy('code')
-                ->get(['id', 'code', 'name', 'primary_uom_id', 'secondary_uom_id'])
+                ->get(['id', 'code', 'name', 'primary_uom_id', 'secondary_uom_id', 'tracks_lots'])
                 ->map(fn (Product $product): array => [
                     'id' => $product->id,
                     'code' => $product->code,
                     'name' => $product->name,
                     'uom' => $product->primaryUom?->code,
                     'secondary_uom' => $product->secondaryUom?->code,
+                    // Pooled products get no lot, so their screen asks for no lot details.
+                    'tracks_lots' => $product->tracksLots(),
                 ]),
             // Only open orders can be received against.
             'purchaseOrders' => PurchaseOrder::query()

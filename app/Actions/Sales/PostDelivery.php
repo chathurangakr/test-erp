@@ -11,6 +11,9 @@ use App\Enums\InventoryTransactionType;
 use App\Models\Delivery;
 use App\Models\DeliveryLine;
 use App\Models\InventoryLot;
+use App\Models\InventoryTransaction;
+use App\Models\Product;
+use App\Models\ProductionRecipe;
 use App\Models\SalesOrderLine;
 use App\Services\Inventory\StockQueryService;
 use App\Services\Sales\SalesOrderStatusUpdater;
@@ -30,12 +33,22 @@ use Illuminate\Validation\ValidationException;
  *
  *   sales_value         = selling quantity x unit_price   (selling quantity per pricing basis)
  *   inventory_unit_cost = whatever weighted average the LEDGER used — never a typed value
- *   cost_of_goods_sold  = PRIMARY quantity x inventory_unit_cost
+ *   backflush_cost      = what the LEDGER charged for the raw material backflushed, if any
+ *   cost_of_goods_sold  = PRIMARY quantity x inventory_unit_cost + backflush_cost
+ *
+ * BACKFLUSHING. A product made by a recipe that defers its input to delivery (husk chipping)
+ * entered stock with its raw-material cost pending. Its delivery line therefore carries the
+ * raw material used — "Raw husks used" — and posting issues that material from stock in a
+ * separate BACKFLUSH_ISSUE transaction, at its weighted average, adding the cost to the
+ * line's cost of goods sold. It happens inside the same database transaction as the sale, so
+ * if the raw material is short the WHOLE delivery fails: never chips gone without their husk,
+ * never husk gone without the sale. Which lines need it is read from the recipe, never from a
+ * product code.
  *
  * Selling price never influences the weighted average cost: the engine costs OUT lines
  * itself and refuses a caller-supplied price.
  *
- * See docs/BUSINESS_RULES.md §16.
+ * See docs/BUSINESS_RULES.md §16 and §19.
  */
 class PostDelivery
 {
@@ -67,6 +80,7 @@ class PostDelivery
 
             $this->validateLines($locked, $lines);
             $this->validateSalesOrder($locked, $lines);
+            $backflushInputs = $this->resolveBackflush($lines);
 
             $pendingLines = [];
 
@@ -103,6 +117,10 @@ class PostDelivery
             // source of truth for inventory cost.
             $ledgerLines = $transaction->lines->values();
 
+            // Then the raw material the delivered goods used, if any line defers it.
+            $backflush = $this->postBackflush($locked, $lines, $backflushInputs, $userId);
+            $backflushCosts = $backflush['costs'];
+
             foreach ($lines as $index => $line) {
                 $ledgerLine = $ledgerLines[$index] ?? null;
 
@@ -113,15 +131,20 @@ class PostDelivery
                 }
 
                 $unitCost = DecimalMath::cost(DecimalMath::of($ledgerLine->unit_cost));
+                $backflushCost = $backflushCosts[$index] ?? null;
+
+                // Cost follows the PRIMARY quantity, because that is what left stock — even
+                // when the line is priced per KG. Backflushed raw material is added on top.
+                $goodsCost = DecimalMath::cost(DecimalMath::mul(DecimalMath::of($line->quantity), $unitCost));
 
                 $line->forceFill([
                     'sales_value' => $this->salesValueFor($line),
                     'inventory_unit_cost' => $unitCost,
-                    // Cost follows the PRIMARY quantity, because that is what left stock —
-                    // even when the line is priced per KG.
-                    'cost_of_goods_sold' => DecimalMath::cost(
-                        DecimalMath::mul(DecimalMath::of($line->quantity), $unitCost)
-                    ),
+                    'backflush_product_id' => isset($backflushInputs[$index]) ? $backflushInputs[$index]->id : null,
+                    'backflush_cost' => $backflushCost,
+                    'cost_of_goods_sold' => $backflushCost === null
+                        ? $goodsCost
+                        : DecimalMath::cost(DecimalMath::add($goodsCost, $backflushCost)),
                 ])->save();
             }
 
@@ -130,17 +153,141 @@ class PostDelivery
             $locked->forceFill([
                 'status' => DeliveryStatus::Posted,
                 'inventory_transaction_id' => $transaction->getKey(),
+                'backflush_inventory_transaction_id' => $backflush['transaction']?->getKey(),
                 'posted_by' => $userId ?? auth()->id(),
                 'posted_at' => now(),
             ])->save();
 
-            // Dr cost of sales, Cr inventory — the physical issue only. Revenue and
-            // receivables belong to the sales invoice, which is a later phase, so the
+            // Dr cost of sales, Cr inventory — the physical issue only, including any raw
+            // material backflushed. Revenue and receivables belong to the sales invoice, so the
             // selling price does not appear in this journal at all.
-            $this->accounting->forDelivery($locked, $transaction, $userId);
+            $this->accounting->forDelivery($locked, $transaction, $userId, $backflush['transaction']);
 
             return $locked->refresh()->load(['lines', 'inventoryTransaction']);
         });
+    }
+
+    /**
+     * Which lines backflush a raw material, and which one: index => raw material product.
+     *
+     * A line's product is an output of an active recipe that defers its input to delivery →
+     * the operator must state the positive quantity of that input used. Any other line must
+     * state none.
+     *
+     * @param  Collection<int, DeliveryLine>  $lines
+     * @return array<int, Product>
+     */
+    private function resolveBackflush(Collection $lines): array
+    {
+        $inputs = [];
+
+        foreach ($lines->values() as $index => $line) {
+            $field = "lines.{$index}.backflush_quantity";
+            $recipe = ProductionRecipe::backflushingFor($line->product_id);
+            $quantity = $line->backflush_quantity === null ? null : DecimalMath::of($line->backflush_quantity);
+
+            if ($recipe === null) {
+                if ($quantity !== null) {
+                    throw ValidationException::withMessages([
+                        $field => __('Product :product uses no raw material at delivery, so no raw material quantity can be entered.', [
+                            'product' => $line->product?->code ?? __('unknown'),
+                        ]),
+                    ]);
+                }
+
+                continue;
+            }
+
+            $input = $recipe->inputProduct;
+
+            if ($quantity === null || ! DecimalMath::isPositive($quantity)) {
+                throw ValidationException::withMessages([
+                    $field => __('Enter how many :input were used to make the :product delivered.', [
+                        'input' => $input->name,
+                        'product' => $line->product?->code ?? __('goods'),
+                    ]),
+                ]);
+            }
+
+            // A backflush cannot ask anyone to pick a lot, so its raw material must be pooled.
+            if ($input->tracksLots()) {
+                throw ValidationException::withMessages([
+                    $field => __('Raw material :product is kept in lots and cannot be backflushed. It must be pooled stock.', [
+                        'product' => $input->code,
+                    ]),
+                ]);
+            }
+
+            $inputs[$index] = $input;
+        }
+
+        return $inputs;
+    }
+
+    /**
+     * Issue the backflushed raw material, valued by the engine at its weighted average.
+     *
+     * The engine's negative-stock guard applies as for any issue; its errors are re-keyed to
+     * the delivery line they belong to, so the operator sees them beside "Raw husks used".
+     *
+     * @param  Collection<int, DeliveryLine>  $lines
+     * @param  array<int, Product>  $inputs
+     * @return array{transaction: InventoryTransaction|null, costs: array<int, string>}
+     */
+    private function postBackflush(Delivery $delivery, Collection $lines, array $inputs, ?int $userId): array
+    {
+        if ($inputs === []) {
+            return ['transaction' => null, 'costs' => []];
+        }
+
+        $lines = $lines->values();
+        $pending = [];
+        $lineIndexes = [];
+
+        foreach ($inputs as $index => $input) {
+            $pending[] = new PendingInventoryLine(
+                productId: $input->id,
+                warehouseId: $delivery->warehouse_id,
+                direction: InventoryDirection::Out,
+                quantity: DecimalMath::of($lines[$index]->backflush_quantity),
+            );
+            $lineIndexes[] = $index;
+        }
+
+        try {
+            $transaction = $this->postInventory->handle(
+                InventoryTransactionType::BackflushIssue,
+                $pending,
+                [
+                    'transaction_date' => $delivery->delivery_date,
+                    'source_type' => Delivery::class,
+                    'source_id' => $delivery->getKey(),
+                    'notes' => RecordText::of('Raw material backflushed by delivery :reference', [
+                        'reference' => $delivery->delivery_number,
+                    ]),
+                    'posted_by' => $userId ?? auth()->id(),
+                ],
+            );
+        } catch (ValidationException $exception) {
+            $messages = [];
+
+            foreach ($exception->errors() as $key => $errors) {
+                $mapped = preg_match('/^lines\.(\d+)\./', $key, $match) === 1 && isset($lineIndexes[(int) $match[1]])
+                    ? 'lines.'.$lineIndexes[(int) $match[1]].'.backflush_quantity'
+                    : $key;
+                $messages[$mapped] = $errors;
+            }
+
+            throw ValidationException::withMessages($messages);
+        }
+
+        $costs = [];
+
+        foreach ($transaction->lines->values() as $position => $ledgerLine) {
+            $costs[$lineIndexes[$position]] = DecimalMath::cost(DecimalMath::of($ledgerLine->total_cost));
+        }
+
+        return ['transaction' => $transaction, 'costs' => $costs];
     }
 
     /**
@@ -255,6 +402,19 @@ class PostDelivery
      */
     private function validateLot(Delivery $delivery, DeliveryLine $line, string $field): void
     {
+        // Pooled stock has no lots to choose from (docs/INVENTORY_RULES.md §15).
+        if (! $line->product->tracksLots()) {
+            if ($line->lot_id !== null) {
+                throw ValidationException::withMessages([
+                    $field.'.lot_id' => __(':product is kept as one pooled stock without lots, so no lot can be chosen.', [
+                        'product' => $line->product->code,
+                    ]),
+                ]);
+            }
+
+            return;
+        }
+
         if ($line->lot_id !== null) {
             $lot = InventoryLot::query()->whereKey($line->lot_id)->first();
 

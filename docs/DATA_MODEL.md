@@ -23,9 +23,11 @@
 | --- | --- | --- | --- |
 | `NOS` | Numbers | `0` | Countable physical items; cannot be fractional |
 | `KG` | Kilogram | `3` | Weight, recorded to the gram |
+| `L` | Litre | `3` | Volume, for husk products measured by the litre |
 
-**There are exactly two units of measure.** `NOS` for countable items, `KG` for weight.
-See decision **D-1** below.
+**There are three units of measure.** `NOS` for countable items, `KG` for weight, `L` for
+volume. **No conversion exists between any two of them.** See decisions **D-1** and **I-5**
+and `INVENTORY_RULES.md` §16.
 
 ### 1.2 `products`
 
@@ -37,6 +39,7 @@ See decision **D-1** below.
 | `description` | text, **nullable** | |
 | `primary_uom_id` | FK → `units_of_measure.id`, **required** | `restrictOnDelete` |
 | `secondary_uom_id` | FK → `units_of_measure.id`, **nullable** | `restrictOnDelete` |
+| `tracks_lots` | boolean, default `true` | `false` = one pooled stock, no lots anywhere — decision **I-5** |
 | `is_active` | boolean, default `true` | |
 | `created_at` / `updated_at` | timestamps | |
 
@@ -52,16 +55,24 @@ See `INVENTORY_RULES.md` §1–2.
 
 **Seeded products**
 
-| Code | Name | Primary UOM | Secondary UOM |
-| --- | --- | --- | --- |
-| `COCONUT` | Whole Coconut | `NOS` | — |
-| `DEHUSKED-COCONUT` | Dehusked Coconut | `NOS` | — |
-| `RAW-HUSK` | Raw Coconut Husk | `NOS` | — |
-| `COPRA` | Copra | `KG` | — |
-| `HUSK-7C` | 7C | `KG` | — |
-| `HUSK-9C` | 9C | `KG` | — |
-| `HUSK-10C` | 10C | `KG` | — |
-| `RAW-SHELL` | Raw Coconut Shell | `NOS` | `KG` |
+| Code | Name | Primary UOM | Secondary UOM | Lots |
+| --- | --- | --- | --- | --- |
+| `COCONUT` | Whole Coconut | `NOS` | — | pooled |
+| `DEHUSKED-COCONUT` | Dehusked Coconut | `NOS` | — | pooled |
+| `RAW-HUSK` | Raw Coconut Husk | `NOS` | — | pooled |
+| `COPRA` | Copra | `KG` | — | lots |
+| `HUSK-7C` | 7C | `KG` | — | pooled |
+| `HUSK-9C` | 9C | `KG` | — | pooled |
+| `HUSK-10C` | 10C | `KG` | — | pooled |
+| `COCOPEAT` | Cocopeat | `KG` | — | pooled |
+| `HUSK-7C-L` | 7C (L) | `L` | — | pooled |
+| `HUSK-9C-L` | 9C (L) | `L` | — | pooled |
+| `HUSK-10C-L` | 10C (L) | `L` | — | pooled |
+| `COCOPEAT-L` | Cocopeat (L) | `L` | — | pooled |
+| `RAW-SHELL` | Raw Coconut Shell | `NOS` | `KG` | lots |
+
+A grade measured both by weight and by volume is **two stock items** (`HUSK-7C` in KG,
+`HUSK-7C-L` in L) with separate balances — never a conversion.
 
 Products are **seeded, never hard-coded in application logic**.
 
@@ -326,13 +337,16 @@ An intention to sell. Reserves nothing and creates **no inventory movement**.
 | `status` | string(30) | `App\Enums\DeliveryStatus` — DRAFT / POSTED / REVERSED / CANCELLED |
 | `inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | the `SALES_ISSUE` it created |
 | `reversal_inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | its reversal, if any |
+| `backflush_inventory_transaction_id` | FK → `inventory_transactions.id`, nullable | the `BACKFLUSH_ISSUE` of raw material, if any line needed one — decision **S-5** |
+| `backflush_reversal_transaction_id` | FK → `inventory_transactions.id`, nullable | its reversal, if any |
 | `posted_by` / `posted_at` | FK users / datetime, nullable | |
 | `reversed_by` / `reversed_at` | FK users / datetime, nullable | |
 | `created_by` | FK → `users.id`, nullable | |
 | `created_at` / `updated_at` | timestamps | |
 
 **Immutable once posted.** The model throws on update unless the change is confined to the
-reversal audit fields, and refuses deletion of anything but a draft.
+reversal audit fields (including `backflush_reversal_transaction_id`), and refuses deletion
+of anything but a draft.
 
 ### 1.16 `delivery_lines`
 
@@ -342,14 +356,17 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | `delivery_id` | FK → `deliveries.id` | `cascadeOnDelete` |
 | `sales_order_line_id` | FK → `sales_order_lines.id`, nullable | `restrictOnDelete` |
 | `product_id` | FK → `products.id` | `restrictOnDelete` |
-| `lot_id` | FK → `inventory_lots.id`, nullable | required where lotted stock exists |
+| `lot_id` | FK → `inventory_lots.id`, nullable | required where lotted stock exists; refused for pooled stock |
 | `quantity` | **`decimal(20,3)`** | what leaves stock |
 | `secondary_quantity` | **`decimal(20,3)`**, nullable | |
 | `pricing_basis` | string(20) | which quantity revenue follows |
 | `unit_price` | **`decimal(20,6)`** | commercial price |
 | `sales_value` | **`decimal(20,6)`** | priced quantity × unit price |
 | `inventory_unit_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
-| `cost_of_goods_sold` | **`decimal(20,6)`**, **nullable** | primary quantity × inventory unit cost |
+| `cost_of_goods_sold` | **`decimal(20,6)`**, **nullable** | primary quantity × inventory unit cost **+ `backflush_cost`** |
+| `backflush_product_id` | FK → `products.id`, nullable | the raw material this line backflushed — set at posting from the recipe |
+| `backflush_quantity` | **`decimal(20,3)`**, nullable | "Raw husks used" — required for a chipping output, refused otherwise |
+| `backflush_cost` | **`decimal(20,6)`**, nullable | what the ledger charged for it, read back at posting |
 | `created_at` / `updated_at` | timestamps | |
 
 Both cost columns stay `null` until the delivery is posted — a draft has no cost because no
@@ -368,10 +385,13 @@ else in the application except the seeder.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | bigint unsigned, PK | |
-| `production_type` | string(30), **unique** | `App\Enums\ProductionType` |
+| `production_type` | string(30) | `App\Enums\ProductionType` |
+| `version` | unsigned smallint, default `1` | **unique with `production_type`** — decision **P-14** |
 | `input_product_id` | FK → `products.id` | `restrictOnDelete` |
+| `input_consumption` | string(30), default `AT_PRODUCTION` | `App\Enums\InputConsumption` — `AT_DELIVERY` = backflushed by the delivery |
+| `default_labour_rate` | **`decimal(20,6)`**, nullable | pre-fills the labour rate per input unit; NULL until the factory states one |
 | `notes` | text, nullable | |
-| `is_active` | boolean, default `true` | |
+| `is_active` | boolean, default `true` | exactly one active version per type |
 
 `production_recipe_outputs`
 
@@ -382,23 +402,22 @@ else in the application except the seeder.
 | `product_id` | FK → `products.id` | `restrictOnDelete`; unique per recipe |
 | `output_ratio` | **`decimal(20,6)`**, **nullable**, default `1` | units of output per unit of input. `NULL` = **no fixed ratio; the operator measures the output** — see decision **P-6** |
 | `requires_secondary_quantity` | boolean, default `false` | this output must also be **measured in its secondary unit** — see decision **P-9** |
-| `allocation_percent` | **`decimal(9,6)`** | share of consumed value; **must total exactly 100** |
+| `allocation_percent` | **`decimal(9,6)`** | share of consumed value; **must total exactly 100** (not checked for an `AT_DELIVERY` recipe, which shares nothing) |
+| `absorbs_labour` | boolean, default `false` | this output carries the run's labour as its cost; at most one per recipe |
 | `sort_order` | unsigned smallint | |
 
-**Seeded recipe — DEHUSKING**
+**Seeded recipe — DEHUSKING (version 2; version 1 = 85 / 15, inactive)**
 
-| Input | Output | Ratio | Allocation |
+| Input | Output | Ratio | Allocation | Labour |
+| --- | --- | --- | --- | --- |
+| `COCONUT` | `DEHUSKED-COCONUT` | 1.000000 | **100%** | — |
+| `COCONUT` | `RAW-HUSK` | 1.000000 | **0%** | **absorbs labour** |
+
+**Seeded recipe — HUSK_CHIPPING (version 2, `AT_DELIVERY`; version 1 = consumed at production, 30 / 30 / 40, inactive)**
+
+| Input | Outputs | Ratio | Allocation |
 | --- | --- | --- | --- |
-| `COCONUT` | `DEHUSKED-COCONUT` | 1.000000 | **85%** |
-| `COCONUT` | `RAW-HUSK` | 1.000000 | **15%** |
-
-**Seeded recipe — HUSK_CHIPPING**
-
-| Input | Output | Ratio | Allocation |
-| --- | --- | --- | --- |
-| `RAW-HUSK` | `HUSK-7C` | **`NULL`** — operator-entered | **30%** |
-| `RAW-HUSK` | `HUSK-9C` | **`NULL`** — operator-entered | **30%** |
-| `RAW-HUSK` | `HUSK-10C` | **`NULL`** — operator-entered | **40%** |
+| `RAW-HUSK` (backflushed at delivery) | `HUSK-7C`, `HUSK-9C`, `HUSK-10C`, `COCOPEAT`, `HUSK-7C-L`, `HUSK-9C-L`, `HUSK-10C-L`, `COCOPEAT-L` | **`NULL`** — operator-entered | **0%** — nothing is shared |
 
 **Seeded recipe — COPRA**
 
@@ -411,7 +430,7 @@ Copra is the first recipe that mixes both kinds of output in one row set: the sh
 is derived while its *weight*, and the copra weight, are measured. That is why
 `output_ratio` is per output and nullable rather than a property of the production type.
 
-The percentages are **provisional** pending the factory's costing policy. See
+The copra percentages are **provisional** pending the factory's costing policy. See
 `BUSINESS_RULES.md` §18, §19 and §20.
 
 ### 1.18 `production_orders`
@@ -427,7 +446,10 @@ The percentages are **provisional** pending the factory's costing policy. See
 | `notes` | text, nullable | |
 | `waste_quantity` | **`decimal(20,3)`**, nullable | informational only — creates **no** inventory, lot or cost |
 | `waste_uom_id` | FK → `units_of_measure.id`, nullable | required when waste is recorded; the real UOM master, never an invented unit |
-| `inventory_transaction_id` | FK, nullable | the `PRODUCTION_CONSUMPTION` |
+| `production_recipe_id` | FK → `production_recipes.id`, nullable | the recipe version posted under; NULL for runs before versioning |
+| `labour_rate` | **`decimal(20,6)`**, nullable | operator's labour rate per input unit (dehusking) |
+| `labour_cost` | **`decimal(20,6)`**, nullable | quantity × rate, calculated at posting |
+| `inventory_transaction_id` | FK, nullable | the `PRODUCTION_CONSUMPTION`; NULL for a chipping run, which consumes nothing |
 | `output_inventory_transaction_id` | FK, nullable | the `PRODUCTION_OUTPUT` |
 | `reversal_inventory_transaction_id` | FK, nullable | reversal of the consumption |
 | `output_reversal_transaction_id` | FK, nullable | reversal of the output |
@@ -447,7 +469,7 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | --- | --- | --- |
 | `production_order_id` | FK, `cascadeOnDelete` | |
 | `product_id` | FK → `products.id` | |
-| `lot_id` | FK → `inventory_lots.id`, nullable | **required for every implemented production type** — traceability |
+| `lot_id` | FK → `inventory_lots.id`, nullable | required for a lot-tracked input; refused for pooled input. A chipping run has **no input row** |
 | `quantity` | **`decimal(20,3)`** | |
 | `unit_cost` / `total_cost` | **`decimal(20,6)`**, **nullable** | read back from the ledger at posting |
 
@@ -461,11 +483,12 @@ reversal audit fields, and refuses deletion of anything but a draft.
 | `quantity` | **`decimal(20,3)`** | derived from the recipe ratio, or **measured by the operator** where the ratio is `NULL` |
 | `secondary_quantity` | **`decimal(20,3)`**, **nullable** | the operator's measurement in the product's secondary unit — raw shell KG. **Never a conversion of `quantity`** |
 | `allocation_percent` | **`decimal(9,6)`** | the share **actually applied**, snapshotted — `0` for a grade that produced nothing |
-| `allocated_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; sums **exactly** to the consumed value once posted |
+| `allocated_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; once posted: share of consumed value **+ labour**, summing exactly to consumed value + labour. `0` for chipping (cost pending backflush) |
+| `labour_cost` | **`decimal(20,6)`**, nullable | the part of `allocated_cost` that is labour |
 | `unit_cost` | **`decimal(20,6)`**, **nullable** | `NULL` on a draft; allocated cost / **primary** quantity once posted |
 
-No labour, electricity, machine, fuel, drying or overhead columns exist anywhere — a test
-asserts their absence.
+No electricity, machine, fuel, drying or overhead columns exist anywhere. Labour is the one
+production cost recorded — decision **P-14**.
 
 ### 1.20 `fiscal_periods`
 
@@ -538,6 +561,7 @@ A single row of configuration.
 | --- | --- | --- |
 | `operational_accounting_start_date` | date, **nullable** | The **cutover**. NULL means operational accounting is not switched on. **Never seeded** — see decision **A-5** |
 | `grni_account_id` | FK → `accounts.id`, nullable | Goods Received Not Invoiced |
+| `production_labour_account_id` | FK → `accounts.id`, nullable | Production Labour Absorbed (6310), credited when labour becomes inventory — `ACCOUNTING_RULES.md` §30 |
 | `updated_by` | FK users, nullable | |
 
 ### 1.25 `product_account_mappings`
@@ -593,6 +617,8 @@ lines**: VAT/SVAT is not modelled.
 | `payment_date` | date | |
 | `payment_account_id` | FK → `accounts.id` | The cash or bank account paid from |
 | `amount` | **`decimal(20,6)`** | |
+| `payment_method` | string(20), nullable | `CASH` / `CHEQUE` / `BANK_TRANSFER` — decision **C-4**; NULL only on documents before it existed |
+| `cheque_number` / `cheque_date` / `cheque_bank` | string(50) / date / string(150), nullable | a cheque's details; NULL unless the method is `CHEQUE` |
 | `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
 | `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
 
@@ -647,6 +673,8 @@ explicitly because the generated name would exceed MariaDB's 64-character limit.
 | `receipt_account_id` | FK → `accounts.id` | The cash or bank account received into |
 | `reference` | string(100), nullable | Cheque or transfer number |
 | `amount` | **`decimal(20,6)`** | |
+| `payment_method` | string(20), nullable | `CASH` / `CHEQUE` / `BANK_TRANSFER` — decision **C-4** |
+| `cheque_number` / `cheque_date` / `cheque_bank` | string(50) / date / string(150), nullable | a cheque's details; NULL unless the method is `CHEQUE` |
 | `status` | string(30) | DRAFT / POSTED / REVERSED / CANCELLED |
 | `journal_entry_id` / `reversal_journal_entry_id` | FK, nullable | |
 
@@ -733,7 +761,7 @@ The business may describe shell sales as "Qty" or "KG" in the user interface, bu
 **Implementation:** migration `2026_09_12_190500_replace_qty_unit_of_measure_with_nos`
 repoints any product using `QTY` to `NOS` and then removes `QTY` if nothing references it.
 It is idempotent and a no-op on a fresh database. An automated test asserts the unit master
-contains exactly `NOS` and `KG`.
+contains exactly `NOS`, `KG` and — since the husk rework — `L` (litre).
 
 ### D-2 — the "one default warehouse" rule is enforced in code, not by a constraint
 
@@ -805,6 +833,9 @@ fixed conversion exists.
 
 ### S-2 — a lot must be chosen whenever lotted stock exists
 
+Applies to **lot-tracked** products only. A pooled product (decision **I-5**) takes no lot,
+and a lot chosen for it is refused.
+
 `lot_id` is required if the product holds any lot with positive stock in the warehouse;
 `null` is accepted only where no lot does. This prevents the system silently assuming a lot,
 and avoids the confusing "unlotted bucket is empty" error that a naive null would produce.
@@ -819,7 +850,8 @@ The ledger records one transaction type per transaction, and production involves
 `PRODUCTION_CONSUMPTION` for the input and `PRODUCTION_OUTPUT` for the outputs. Forcing
 both into a single transaction would mislabel half the lines, so the order carries a link
 to each, plus a reversal link for each. All four are written inside one database
-transaction, so atomicity is unchanged.
+transaction, so atomicity is unchanged. A husk chipping run (recipe version 2) consumes
+nothing, so its consumption link and that link's reversal stay NULL.
 
 ### P-4 — output quantities and costs are never accepted from a request
 
@@ -828,6 +860,9 @@ request binds neither, and a test submits bogus output quantities and costs to p
 are ignored. This keeps the 1:1:1 rule and the valuation impossible to subvert from the UI.
 
 ### P-5 — the 85 / 15 allocation is configuration, and provisional
+
+> **Superseded for dehusking by P-14** (recipe version 2: dehusked coconut 100%, raw husk 0% +
+> labour). The principle stands for copra's 75 / 25.
 
 Stored in `production_recipe_outputs`, validated to total exactly 100%, and referenced only
 through the recipe. The factory has not finalised its joint-product costing policy; when it
@@ -849,6 +884,9 @@ number invites use, and one careless multiplication would put a fabricated weigh
 ledger.
 
 ### P-7 — a grade that produced nothing takes no value, and its share is redistributed
+
+> Applies to recipes that consume at production (copra; chipping version 1 runs). Chipping
+> version 2 shares no value at all — its rows are only what was produced, each positive.
 
 Inventory value must sit on stock. A grade with zero quantity has none, so giving it a share
 would strand value on a line with no lot behind it. Instead the producing grades'
@@ -1239,6 +1277,57 @@ English through `App\Support\RecordText`, independent of the screen language.
 
 **Why:** a stored description that followed each poster's language would split one kind of record
 across two languages, breaking reports, searches and audits. Translation belongs to display.
+
+### I-5 — `products.tracks_lots`: pooled stock is master data
+
+A boolean on the product, default `true`. `false` makes the product ONE pooled stock: its new
+movements carry `lot_id = NULL`, goods receipts create no lot, and every lot field disappears
+from its screens. Set by `ProductSeeder` for coconut, dehusked coconut, raw husk, the chip
+grades, cocopeat and the litre items; copra and shell keep lots. The engine refuses stock IN
+to a lot of a pooled product except by `REVERSAL` or `LOT_CONSOLIDATION`. Old lots keep their
+history; `inventory:consolidate-pooled-lots` moves their balances into the pool once,
+value-neutrally. A flag rather than a hidden "pool lot" because the engine already handles
+unlotted stock, and a pool lot would need its own negative-stock bucket and migration of old
+lot balances anyway. See `INVENTORY_RULES.md` §15-§16.
+
+### P-14 — recipes are versioned; labour is a fact of the run
+
+`production_recipes.production_type` is no longer unique: `(production_type, version)` is.
+Exactly one version per type is active (the seeder deactivates the others); superseded
+versions are kept, never deleted, and a run records the version it posted under in
+`production_orders.production_recipe_id`. Posted runs keep the figures they stored, so a
+recipe change never rewrites history.
+
+`input_consumption` says when the input leaves stock — `AT_PRODUCTION` (dehusking, copra) or
+`AT_DELIVERY` (husk chipping, backflushed by the delivery: decision **S-5**).
+
+Labour lives on the run, not on a cost table: the operator confirms `labour_rate` (pre-filled
+from `default_labour_rate`), posting calculates `labour_cost = quantity × rate`, and the
+output flagged `absorbs_labour` carries it (`production_outputs.labour_cost`, included in its
+`allocated_cost`). Output value = consumed value + labour, exactly. A missing rate is refused
+at posting; zero is accepted.
+
+### S-5 — backflush is recorded on the delivery line
+
+A delivery of a product made by an `AT_DELIVERY` recipe states the raw material used in
+`delivery_lines.backflush_quantity`. Posting issues it in a separate `BACKFLUSH_ISSUE`
+transaction (`deliveries.backflush_inventory_transaction_id`) inside the same database
+transaction as the `SALES_ISSUE`, and stores on the line the product backflushed and the
+cost the ledger charged (`backflush_product_id`, `backflush_cost`); `cost_of_goods_sold`
+includes it. A separate transaction, rather than extra lines on the `SALES_ISSUE`, keeps the
+one-ledger-line-per-delivery-line correspondence that posting relies on, and gives the
+journal its own source for the raw material. Reversing the delivery reverses both
+(`backflush_reversal_transaction_id`, on the immutability allow-list).
+
+### C-4 — the payment method is recorded on the money document
+
+`supplier_payments` and `customer_receipts` carry `payment_method` (`CASH`, `CHEQUE`,
+`BANK_TRANSFER`) and, for a cheque only, `cheque_number`, `cheque_date`, `cheque_bank`.
+"Credit" is not a method — it is an invoice left outstanding. Cash must go through a
+`CASH`-kind cash/bank account and a cheque or transfer through a `BANK`-kind one. There is no
+cheque status column and no clearing account (`ACCOUNTING_RULES.md` §29). The method is
+nullable only so documents recorded before it existed need nothing invented; new documents
+require it.
 
 ## 3. Not yet designed — required future shape
 

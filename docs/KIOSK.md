@@ -17,10 +17,10 @@ That setting only chooses the start page — it grants nothing.
 | Tile | What staff do | What the system does |
 | --- | --- | --- |
 | Receive goods | Supplier → store → product → count (+ weight if weighed too) → price each → optional transport / loading cost | Saves **and posts** the goods receipt: landed cost, final unit cost, lot, stock |
-| Dispatch | Customer → store → product → **batch** → count (+ weight) → by count / by weight (dual-unit products only) → price → optional vehicle no. | Saves **and posts** the delivery: stock out at weighted-average cost, COGS |
-| Dehusking | Store → coconut batch → how many | Derives the 1:1:1 outputs from the recipe and posts |
-| Husk chipping | Store → husk batch → how many → weight of each grade (0 for a grade not made) | Keeps the measured weights exactly and posts |
-| Copra | Store → dehusked batch → how many → copra KG → shell KG | Derives the shell count, keeps both weights, posts |
+| Dispatch | Customer → store → product → **batch** (lot-tracked products only) → count (+ weight) → by count / by weight (dual-unit products only) → **raw husks used** (chips and cocopeat only) → price → optional vehicle no. | Saves **and posts** the delivery: stock out at weighted-average cost, COGS; for chips/cocopeat the raw husks are taken from the pool and their cost added to COGS |
+| Dehusking | Store → how many → **labour per coconut** (pre-filled from the recipe's default, editable) | Derives the 1:1:1 outputs from the recipe, gives the raw husk the labour as its cost, and posts |
+| Husk chipping | Store → **tap what was made** (7C / 9C / 10C / Cocopeat, KG and litre items listed separately) → the amount of each one tapped | Keeps the measured amounts exactly and posts. **No husk is taken** — the screen says it is deducted at dispatch |
+| Copra | Store → how many → copra KG → shell KG | Derives the shell count, keeps both weights, posts |
 | Check stock | — | Quantities per product and store, from the inventory ledger. No money. |
 
 After Done, a green result screen shows the **posted** document's number and what the system
@@ -40,6 +40,11 @@ actually recorded — for production, the outputs it calculated.
 - **Staff type prices** on receipts and dispatches (owner's decision). The cost of goods leaving
   is never typed — the inventory engine values it.
 - **A batch must always be tapped** where the product is held in batches; it is never assumed.
+  Pooled stock (coconut, dehusked coconut, raw husk, chips, cocopeat — `products.tracks_lots`
+  false) has no batch, so that step is skipped (`INVENTORY_RULES.md` §15).
+- **Raw husks used** is asked only for a product whose recipe defers its raw material to
+  delivery — read from the recipe, never a product code — and must be more than zero. Not
+  enough husk in the store refuses the whole dispatch.
 - **What is typed vs calculated comes from the recipe**, never from a product code: derived
   outputs are shown as "calculated by the system" and are never sent.
 - **The date is always today in Sri Lanka** (`BusinessClock`). Whatever date a client sends is

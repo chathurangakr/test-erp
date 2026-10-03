@@ -32,7 +32,6 @@ use App\Services\Accounting\AccountsReceivableService;
 use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -74,7 +73,7 @@ class PayablesReceivablesApiTest extends TestCase
         $this->customer = Customer::factory()->create(['code' => 'CUS-001', 'credit_days' => 30]);
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(CashBankAccountSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
@@ -273,8 +272,13 @@ class PayablesReceivablesApiTest extends TestCase
             'payment_date' => '2026-09-20',
             'payment_account_id' => $this->account('1120')->id,
             'amount' => '500000',
+            'payment_method' => 'BANK_TRANSFER',
             'allocations' => [['supplier_invoice_id' => $invoiceId, 'amount' => '500000']],
-        ])->assertCreated()->assertJsonPath('data.allocated', '500000.000000')->json('data.id');
+        ])->assertCreated()
+            ->assertJsonPath('data.allocated', '500000.000000')
+            ->assertJsonPath('data.payment_method.value', 'BANK_TRANSFER')
+            ->assertJsonPath('data.cheque', null)
+            ->json('data.id');
 
         $this->postJson(route('api.v1.supplier-payments.post', $paymentId))
             ->assertOk()
@@ -300,6 +304,7 @@ class PayablesReceivablesApiTest extends TestCase
             'payment_date' => '2026-09-20',
             'payment_account_id' => $this->account('1120')->id,
             'amount' => '100000',
+            'payment_method' => 'BANK_TRANSFER',
             'allocations' => [['supplier_invoice_id' => $invoiceId, 'amount' => '100000']],
         ])->json('data.id');
         $this->postJson(route('api.v1.supplier-payments.post', $paymentId))->assertOk();
@@ -325,6 +330,7 @@ class PayablesReceivablesApiTest extends TestCase
             'payment_date' => '2026-09-20',
             'payment_account_id' => $this->account('1400')->id,
             'amount' => '100000',
+            'payment_method' => 'BANK_TRANSFER',
             'allocations' => [['supplier_invoice_id' => $invoiceId, 'amount' => '100000']],
         ])->assertCreated()->json('data.id');
 
@@ -386,8 +392,18 @@ class PayablesReceivablesApiTest extends TestCase
             'receipt_date' => '2026-09-20',
             'receipt_account_id' => $this->account('1120')->id,
             'amount' => '100000',
+            'payment_method' => 'CHEQUE',
+            'cheque_number' => '558812',
+            'cheque_date' => '2026-09-19',
+            'cheque_bank' => 'Bank of Ceylon',
             'allocations' => [['sales_invoice_id' => $invoiceId, 'amount' => '100000']],
-        ])->assertCreated()->assertJsonPath('data.amount', '100000.000000')->json('data.id');
+        ])->assertCreated()
+            ->assertJsonPath('data.amount', '100000.000000')
+            ->assertJsonPath('data.payment_method.value', 'CHEQUE')
+            ->assertJsonPath('data.cheque.number', '558812')
+            ->assertJsonPath('data.cheque.date', '2026-09-19')
+            ->assertJsonPath('data.cheque.bank', 'Bank of Ceylon')
+            ->json('data.id');
 
         $this->postJson(route('api.v1.customer-receipts.post', $receiptId))
             ->assertOk()

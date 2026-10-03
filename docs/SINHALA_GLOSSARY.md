@@ -7,7 +7,7 @@ See `docs/LOCALISATION.md`.
 **Style:** plain, everyday Sinhala for factory and office staff — short, not archaic. Accounting
 and technical terms are **Sinhala with the English term in brackets**, e.g.
 "ලැබිය යුතු ගිණුම් (Accounts Receivable)". **Never translate:** product codes, document numbers
-(GRN-…, PO-…), unit codes (NOS, KG), currency (LKR / Rs.), email addresses, numbers.
+(GRN-…, PO-…), unit codes (NOS, KG, L), currency (LKR / Rs.), email addresses, numbers.
 
 **A native speaker at the factory should review this list.** Correct a word here and in
 `lang/si.json` together.
@@ -24,6 +24,8 @@ and technical terms are **Sinhala with the English term in brackets**, e.g.
 | Stock · Stock on hand · Stock ledger | තොගය · පවතින තොගය · තොග ලේඛනය |
 | Unit of measure (UOM) · Primary · Secondary | මිනුම් ඒකකය (UOM) · ප්‍රධාන ඒකකය · දෙවන ඒකකය |
 | Quantity · Weight | ප්‍රමාණය · බර |
+| Litre | L — a unit code, never translated (KG and L stock never mix) |
+| Pooled stock (no lots) | එක්කාසු තොගය |
 | Price · Unit price | මිල · ඒකක මිල |
 | Cost · Unit cost | පිරිවැය · ඒකක පිරිවැය |
 | Weighted average cost (WAC) | භාරිත සාමාන්‍ය පිරිවැය (WAC) |
@@ -48,6 +50,10 @@ and technical terms are **Sinhala with the English term in brackets**, e.g.
 | Production · Dehusking · Husk chipping · Copra | නිෂ්පාදනය · ලෙලි ගැසීම · කොහු කැපීම · කොප්පරා |
 | Whole coconut · Dehusked coconut · Raw husk | සම්පූර්ණ පොල් · ලෙලි ගැසූ පොල් · අමු ලෙලි |
 | Coconut shell · Husk chips · Waste | පොල්කටු · කොහු කෑලි · අපද්‍රව්‍ය |
+| Cocopeat | කොකෝපීට් |
+| Labour (cost) · Labour per coconut | කම්කරු ගාස්තුව · පොල් ගෙඩියකට කම්කරු ගාස්තුව |
+| Backflush (raw material taken at delivery) | පසු-අඩු කිරීම (Backflush) |
+| Raw husks used | භාවිතා කළ අමු ලෙලි |
 | Input · Output · Recipe | යෙදවුම · නිමැවුම · ක්‍රමවේදය (Recipe) |
 | Cost of goods sold (COGS) | විකුණූ භාණ්ඩවල පිරිවැය (COGS) |
 | Gross profit · Margin · Sales value | දළ ලාභය · ලාභ අනුපාතය · විකුණුම් වටිනාකම |
@@ -124,6 +130,10 @@ and technical terms are **Sinhala with the English term in brackets**, e.g.
 | Cash / bank book · Cash / bank position | මුදල් / බැංකු පොත · මුදල් / බැංකු තත්ත්වය |
 | Money in · Money out · Payee | ලැබුණු මුදල් · ගෙවූ මුදල් · ලබන්නා |
 | Expense voucher · Fund transfer | වියදම් වවුචරය · අරමුදල් මාරුව |
+| Paid by · Cheque · Bank transfer | ගෙවූ ආකාරය · චෙක්පත · බැංකු මාරුව |
+| Cheque number · Cheque date · Cheque bank | චෙක්පත් අංකය · චෙක්පත් දිනය · චෙක්පතේ බැංකුව |
+| Record payment | ගෙවීම සටහන් කරන්න |
+| Production Labour Absorbed | නිෂ්පාදන කම්කරු පිරිවැය අවශෝෂණය (Production Labour Absorbed) |
 | From account · To account | ගිණුමෙන් · ගිණුමට |
 | Profit & loss · Balance sheet | ලාභ අලාභ (P&L) · ශේෂ පත්‍රය (Balance Sheet) |
 | Inventory valuation · Inventory vs GL | තොග තක්සේරුව · තොග සහ ලෙජරය (Inventory vs GL) |

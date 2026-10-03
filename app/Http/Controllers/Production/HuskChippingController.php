@@ -8,7 +8,6 @@ use App\Enums\ProductionType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Production\StoreHuskChippingRequest;
 use App\Http\Requests\Production\UpdateHuskChippingRequest;
-use App\Models\InventoryLot;
 use App\Models\ProductionOrder;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
@@ -52,7 +51,7 @@ class HuskChippingController extends Controller
 
         $orders = ProductionOrder::query()
             ->where('production_type', ProductionType::HuskChipping)
-            ->with(['warehouse:id,code', 'inputs', 'outputs.product:id,code'])
+            ->with(['warehouse:id,code', 'inputs', 'outputs.product:id,code,primary_uom_id', 'outputs.product.primaryUom:id,code'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($warehouseId, fn (Builder $q, int $id) => $q->where('warehouse_id', $id))
@@ -117,8 +116,7 @@ class HuskChippingController extends Controller
     {
         $this->saveOrder->assertEditable($huskChipping);
 
-        $huskChipping->load(['inputs', 'outputs']);
-        $input = $huskChipping->inputs->first();
+        $huskChipping->load('outputs');
 
         return Inertia::render('production/husk-chipping/Edit', array_merge($this->formOptions(), [
             'order' => [
@@ -126,8 +124,6 @@ class HuskChippingController extends Controller
                 'production_number' => $huskChipping->production_number,
                 'production_date' => $huskChipping->production_date?->toDateString(),
                 'warehouse_id' => $huskChipping->warehouse_id,
-                'lot_id' => $input?->lot_id,
-                'quantity' => $input?->quantity,
                 'waste_quantity' => $huskChipping->waste_quantity,
                 'waste_uom_id' => $huskChipping->waste_uom_id,
                 'notes' => $huskChipping->notes,
@@ -150,8 +146,10 @@ class HuskChippingController extends Controller
     }
 
     /**
-     * Everything the form needs: the husk lots holding stock, the grades to weigh, and the
-     * configured cost shares so the allocation can be previewed.
+     * Everything the form needs: the products a run may produce, each in its own unit.
+     *
+     * No husk lot and no husk quantity: chipping takes no raw husk at production — the husk is
+     * backflushed when the outputs are delivered. The raw husk pool is shown for information.
      *
      * @return array<string, mixed>
      */
@@ -160,28 +158,8 @@ class HuskChippingController extends Controller
         $recipe = $this->saveOrder->recipe();
         $inputProduct = $recipe->inputProduct;
 
-        $balances = $this->stock->balancesByLot()
-            ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
-
-        $lots = InventoryLot::query()
-            ->where('product_id', $inputProduct->id)
-            ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
-            ->orderByDesc('id')
-            ->get(['id', 'lot_number', 'product_id'])
-            ->map(fn (InventoryLot $lot): array => [
-                'id' => $lot->id,
-                'lot_number' => $lot->lot_number,
-                'warehouses' => $balances->where('lot_id', $lot->id)
-                    ->map(fn (object $row): array => [
-                        'warehouse_id' => $row->warehouse_id,
-                        'quantity' => $row->quantity,
-                    ])->values(),
-            ])
-            ->values();
-
         return [
             'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'lots' => $lots,
             'recipe' => [
                 'input_code' => $inputProduct->code,
                 'input_name' => $inputProduct->name,
@@ -191,9 +169,7 @@ class HuskChippingController extends Controller
                     'code' => $output->product?->code,
                     'name' => $output->product?->name,
                     'uom' => $output->product?->primaryUom?->code,
-                    // Always null for chipping: there is no husk-to-KG conversion.
-                    'ratio' => $output->output_ratio,
-                    'allocation_percent' => $output->allocation_percent,
+                    'decimals' => (int) ($output->product?->primaryUom?->decimal_places ?? 0),
                 ])->values(),
             ],
             // Waste is informational, and its measurement basis is still unconfirmed, so the
@@ -216,10 +192,15 @@ class HuskChippingController extends Controller
             'status' => $order->status->value,
             'status_label' => $order->status->label(),
             'input_quantity' => $order->inputQuantity(),
-            'output_quantity' => DecimalMath::quantity($order->outputs->reduce(
-                fn (string $carry, $output): string => DecimalMath::add($carry, DecimalMath::of($output->quantity)),
-                DecimalMath::zero(),
-            )),
+            // Totalled per unit, never across units: KG and litres are different stock and
+            // nothing converts one into the other.
+            'output_quantity' => $order->outputs
+                ->groupBy(fn ($output): string => (string) $output->product?->primaryUom?->code)
+                ->map(fn ($outputs, string $uom): string => DecimalMath::quantity($outputs->reduce(
+                    fn (string $carry, $output): string => DecimalMath::add($carry, DecimalMath::of($output->quantity)),
+                    DecimalMath::zero(),
+                )).' '.$uom)
+                ->implode(' · '),
             'waste_quantity' => $order->waste_quantity,
             // Values exist only once the ledger has priced the consumption.
             'input_value' => $order->status->reachedInventory() ? $order->inputValue() : null,
@@ -256,6 +237,8 @@ class HuskChippingController extends Controller
                 'unit_cost' => $input->unit_cost,
                 'total_cost' => $input->total_cost,
             ],
+            // A run that took no raw husk: its outputs' material cost arrives at delivery.
+            'pending_backflush' => $input === null,
             'outputs' => $order->outputs->map(fn ($output): array => [
                 'id' => $output->id,
                 'product_code' => $output->product?->code,

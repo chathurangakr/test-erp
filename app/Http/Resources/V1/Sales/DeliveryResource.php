@@ -75,7 +75,14 @@ class DeliveryResource extends ApiResource
                 'unit_price' => $this->money($line->unit_price),
                 'sales_value' => $this->money($line->sales_value),
                 'inventory_unit_cost' => $costed ? $this->money($line->inventory_unit_cost) : null,
+                // Includes backflush_cost: the full cost of what this line sold.
                 'cost_of_goods_sold' => $costed ? $this->money($line->cost_of_goods_sold) : null,
+                // Raw material used by the goods delivered (husk chipping outputs).
+                'backflush' => $line->backflush_quantity === null ? null : [
+                    'product' => $this->ref($line->relationLoaded('backflushProduct') ? $line->backflushProduct : null),
+                    'quantity' => $this->quantity($line->backflush_quantity),
+                    'cost' => $costed ? $this->money($line->backflush_cost) : null,
+                ],
                 'gross_profit' => $costed ? $line->grossProfit() : null,
                 'gross_margin_percent' => $costed ? $line->grossMarginPercent() : null,
             ])->values()),

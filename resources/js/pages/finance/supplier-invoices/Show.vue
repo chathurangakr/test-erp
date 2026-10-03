@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { index as journalsIndex } from '@/routes/journals';
 import { index } from '@/routes/supplier-invoices';
-import { index as paymentsIndex } from '@/routes/supplier-payments';
+import { create as paymentCreate, index as paymentsIndex } from '@/routes/supplier-payments';
 import type { SupplierInvoiceDetail } from '@/types';
 import { useT } from '@/lib/i18n';
 
@@ -45,6 +45,14 @@ const { t } = useT();
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
+                <Button
+                    v-if="(invoice.status === 'POSTED' || invoice.status === 'PARTIALLY_PAID') && Number(invoice.outstanding) > 0 && can('finance.ap.payment_create')"
+                    as-child
+                >
+                    <Link :href="paymentCreate({ query: { supplier_id: invoice.supplier_id, invoice_id: invoice.id } }).url">
+                        {{ t('Record payment') }}
+                    </Link>
+                </Button>
                 <Button v-if="invoice.can_edit && can('finance.ap.invoice_create')" variant="outline" as-child>
                     <Link :href="`${index().url}/${invoice.id}/edit`">
                         <Pencil class="size-4" />

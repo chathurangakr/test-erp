@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Receivables;
 
 use App\Actions\Receivables\SaveCustomerReceipt;
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreCustomerReceiptRequest;
 use App\Models\CashBankAccount;
@@ -72,6 +73,9 @@ class CustomerReceiptController extends Controller
             // Only accounts the factory has configured as cash or bank. Being an asset
             // account is not enough — see AccountingPolicy::assertCashBankAccount().
             'receiptAccounts' => $this->cashBankOptions(),
+            'paymentMethods' => PaymentMethod::options(),
+            // "Record payment" from an invoice pre-selects that invoice.
+            'invoiceId' => $request->integer('invoice_id') ?: null,
             'customerId' => $customerId,
             'outstandingInvoices' => $customer === null ? [] : $this->outstandingFor($customer),
             'currency' => config('accounting.base_currency'),
@@ -124,6 +128,7 @@ class CustomerReceiptController extends Controller
                 'code' => $configuration->account?->code,
                 'name' => $configuration->display_name,
                 'kind' => $configuration->account_kind->label(),
+                'account_kind' => $configuration->account_kind->value,
             ])
             ->values()
             ->all();
@@ -167,6 +172,8 @@ class CustomerReceiptController extends Controller
                 : $receipt->receiptAccount->code.' — '.$receipt->receiptAccount->name,
             'reference' => $receipt->reference,
             'amount' => $receipt->amount,
+            'payment_method' => $receipt->payment_method?->value,
+            'payment_method_label' => $receipt->payment_method?->label(),
             'allocated' => $receipt->allocatedTotal(),
             'status' => $receipt->status->value,
             'status_label' => $receipt->status->label(),
@@ -180,6 +187,9 @@ class CustomerReceiptController extends Controller
     {
         return array_merge($this->summarise($receipt), [
             'notes' => $receipt->notes,
+            'cheque_number' => $receipt->cheque_number,
+            'cheque_date' => $receipt->cheque_date?->toDateString(),
+            'cheque_bank' => $receipt->cheque_bank,
             'created_by' => $receipt->createdBy?->name,
             'posted_by' => $receipt->postedBy?->name,
             'posted_at' => BusinessClock::display($receipt->posted_at),

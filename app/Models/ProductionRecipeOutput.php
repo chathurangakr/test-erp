@@ -23,6 +23,7 @@ class ProductionRecipeOutput extends Model
         'output_ratio',
         'requires_secondary_quantity',
         'allocation_percent',
+        'absorbs_labour',
         'sort_order',
     ];
 
@@ -32,6 +33,7 @@ class ProductionRecipeOutput extends Model
             'output_ratio' => 'decimal:6',
             'requires_secondary_quantity' => 'boolean',
             'allocation_percent' => 'decimal:6',
+            'absorbs_labour' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

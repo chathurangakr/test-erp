@@ -13,10 +13,11 @@ use Illuminate\Validation\ValidationException;
 /**
  * Creates a draft husk chipping order, or replaces the contents of an existing draft.
  *
- * The one implementation behind both the website and the API. The input product comes from
- * the recipe; the chip weights are the operator's measured figures, stored exactly as
- * entered — there is no husk-to-KG conversion anywhere. Waste is information only. Costs
- * stay null until PostHuskChippingProduction prices the batch. Only a DRAFT may be edited.
+ * The one implementation behind both the website and the API. A chipping run records only
+ * its outputs — the operator's measured rows, stored exactly as entered, each in its own
+ * product's unit. No raw husk is recorded or consumed here: it is backflushed when the
+ * outputs are delivered. There is no husk-to-KG or husk-to-litre conversion anywhere. Waste
+ * is information only. Only a DRAFT may be edited.
  */
 class SaveHuskChippingOrder
 {
@@ -31,9 +32,10 @@ class SaveHuskChippingOrder
             $this->assertEditable($order);
         }
 
-        $recipe = $this->recipe();
+        // Refuses early when no chipping recipe is configured.
+        $this->recipe();
 
-        return DB::transaction(function () use ($order, $data, $recipe, $userId): ProductionOrder {
+        return DB::transaction(function () use ($order, $data, $userId): ProductionOrder {
             $waste = $this->wasteQuantity($data);
 
             $header = [
@@ -54,13 +56,13 @@ class SaveHuskChippingOrder
             } else {
                 $order->update($header);
 
-                // Safe only because the order is still a draft — nothing has been consumed and
-                // no output lot exists.
+                // Safe only because the order is still a draft — no stock has moved and no
+                // output lot exists. Any input line left by the old chipping method goes too.
                 $order->inputs()->delete();
                 $order->outputs()->delete();
             }
 
-            $this->writeLines($order, $data, $recipe);
+            $this->writeLines($order, $data);
 
             return $order->refresh();
         });
@@ -92,30 +94,18 @@ class SaveHuskChippingOrder
     }
 
     /**
-     * Writes the draft's input and its operator-entered outputs.
+     * Writes the operator-entered output rows. Costs are settled at posting.
      *
      * @param  array<string, mixed>  $data
      */
-    private function writeLines(ProductionOrder $order, array $data, ProductionRecipe $recipe): void
+    private function writeLines(ProductionOrder $order, array $data): void
     {
-        $order->inputs()->create([
-            'product_id' => $recipe->input_product_id,
-            'lot_id' => $data['lot_id'],
-            'quantity' => DecimalMath::quantity(DecimalMath::of($data['quantity'])),
-            'unit_cost' => null,
-            'total_cost' => null,
-        ]);
-
-        $percentages = $recipe->outputs->pluck('allocation_percent', 'product_id');
-
         foreach ($data['outputs'] as $output) {
             $order->outputs()->create([
                 'product_id' => $output['product_id'],
                 'lot_id' => null,
                 'quantity' => DecimalMath::quantity(DecimalMath::of((string) $output['quantity'])),
-                // The configured share, recorded for reference. Posting replaces it with the
-                // share actually used, which differs when a grade produced nothing.
-                'allocation_percent' => $percentages->get((int) $output['product_id']),
+                'allocation_percent' => DecimalMath::round('0', 6),
                 'allocated_cost' => null,
                 'unit_cost' => null,
             ]);

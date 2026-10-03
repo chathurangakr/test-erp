@@ -32,6 +32,9 @@ Output:  N  Dehusked Coconut  (NOS)
 
 This is the **only** confirmed fixed-ratio conversion in the system.
 
+**Costing:** the dehusked coconut carries the whole coconut value; the raw husk carries the
+dehusking **labour** (quantity × labour rate per coconut). See §18.
+
 - `TBD` — Can dehusking produce a partial or failed result (input consumed without full
   output)? Not confirmed; assume 1:1:1 until told otherwise.
 
@@ -47,23 +50,31 @@ This is the **only** confirmed fixed-ratio conversion in the system.
 - Enters inventory from **two sources**:
   1. Internal coconut dehusking
   2. Direct purchase from a supplier
-- Is processed through **husk chipping**.
+- Is processed through **husk chipping** — but chipping does **not** take it out of stock.
+  The raw husks a batch used are **backflushed** (issued) when the chips or cocopeat are
+  **delivered** (§19).
+- Is **one pooled stock** with no lots (§32). Purchased and dehusked husk share one weighted
+  average.
 
 ## 5. Husk Chipping
 
 ```
-Input:   Raw Husk            (NOS)
-Output:  7C                  (KG)
-         9C                  (KG)
-         10C                 (KG)
+Input:   Raw Husk            (NOS)   ← backflushed at DELIVERY, not taken at chipping
+Output:  7C · 9C · 10C       (KG or L — separate stock items)
+         Cocopeat            (KG or L — separate stock items)
          waste / loss        (recorded, NOT stocked)
 ```
 
 **Confirmed rules**
 
-- **Actual production output weights must be entered by the operator.**
-- **There is NO fixed conversion from husks (NOS) to KG.** The system must never
-  calculate output weight from input quantity.
+- **Actual production output quantities must be entered by the operator**, as flexible rows
+  (any of the allowed products, each positive, each once).
+- **Chipping takes no raw husk.** The delivery of the outputs states "Raw Husks Used" and
+  takes them from stock at their weighted average into cost of goods sold (§19).
+- **KG and litres never mix.** A product measured both ways is two stock items, e.g. `HUSK-7C`
+  (KG) and `HUSK-7C-L` (L). There is no KG↔L conversion.
+- **There is NO fixed conversion from husks (NOS) to KG or litres.** The system must never
+  calculate an output quantity from a husk count.
 - **Waste / loss is recorded as production waste and does NOT create inventory.** ✅ DECIDED
 
 **Waste treatment (Version 1)** — ✅ **DECIDED**
@@ -107,6 +118,11 @@ Output:  Copra               (KG)
 ## 8. Costing
 
 - **Intended inventory costing method: Weighted Average Cost.**
+- **Dehusking labour is costed** (§18): it becomes the raw husk's cost, credited to the
+  `6310 Production Labour Absorbed` contra-expense. Electricity, fuel, machine and overhead
+  costs are still not costed.
+- **Husk chipping is backflushed** (§19): its outputs enter stock at zero value and the husk
+  cost reaches cost of goods sold when they are delivered.
 - Production / joint-product cost allocation will later support a **configurable**
   allocation method, such as market value / NRV.
 - **Do not implement detailed finance or cost allocation yet.**
@@ -125,7 +141,7 @@ Output:  Copra               (KG)
 | Process | Input | Output | Ratio |
 | --- | --- | --- | --- |
 | Dehusking | Whole Coconut (NOS) | Dehusked Coconut (NOS) + Raw Husk (NOS) | **Fixed 1:1:1** |
-| Husk chipping | Raw Husk (NOS) | 7C, 9C, 10C (KG) + waste (not stocked) | **Operator-entered, no fixed ratio** |
+| Husk chipping | Raw Husk (NOS), **backflushed at delivery** | 7C, 9C, 10C, Cocopeat (KG or L) + waste (not stocked) | **Operator-entered, no fixed ratio; no KG↔L conversion** |
 | Copra production | Dehusked Coconut (NOS) | Copra (KG) + Raw Shell (NOS + KG) | **Shell count 1:1; all weights operator-entered** |
 
 ## 11. Purchasing — purchase order lifecycle
@@ -276,6 +292,10 @@ request does not accept them.
 
 ## 14. Purchasing — lot creation
 
+- **A pooled product gets no lot** (§32): its stock joins the lot-free pool, traced to the
+  receipt through the ledger's source. Any supplier lot number typed stays on the receipt line
+  as information, and the screen does not ask for one. The rest of this section applies to
+  lot-tracked products (copra, raw shell, and any product added later that tracks lots).
 - Posting a goods receipt creates **one inventory lot per line**, unless the line
   deliberately references an existing lot.
 - The internal lot number comes from the existing lot service: `LOT-YYYYMMDD-000001`.
@@ -359,7 +379,8 @@ back** the cost the ledger actually used:
 ```
 sales_value         = selling quantity x unit_price
 inventory_unit_cost = the weighted average the LEDGER used
-cost_of_goods_sold  = PRIMARY quantity x inventory_unit_cost
+backflush_cost      = what the LEDGER charged for raw husk backflushed (chips, cocopeat — §19)
+cost_of_goods_sold  = PRIMARY quantity x inventory_unit_cost + backflush_cost
 gross_profit        = sales_value - cost_of_goods_sold
 gross_margin %      = gross_profit / sales_value x 100      (0 when sales value is 0)
 ```
@@ -393,7 +414,11 @@ cannot inflate inventory valuation.
 
 ### Lot selection
 
-A lot must be **explicitly chosen** whenever the product holds any lotted stock in the
+**Pooled products have no lot to choose** (§32): the screen shows no lot picker and a lot
+submitted for one is refused. Stock still sitting in an old lot of a pooled product is issued
+from the warehouse total.
+
+For **lot-tracked** products, a lot must be **explicitly chosen** whenever the product holds any lotted stock in the
 warehouse — the system never silently assumes one. `null` is accepted only where no lot
 holds stock (unlotted opening balances or adjustments). Where exactly one lot is eligible
 the UI preselects it, but posting still validates it.
@@ -438,9 +463,8 @@ the secondary quantity is informational, exactly as in `INVENTORY_RULES.md` §7.
 
 ## 18. Production — dehusking
 
-**Dehusking and husk chipping are implemented** (§19). Copra production is declared in
-`ProductionType` so the architecture is shaped for it, but it is not postable: its shell
-weight rules are unresolved. `ProductionType::isImplemented()` enforces that.
+**All three production types are implemented** — dehusking (here), husk chipping (§19) and
+copra (§20) — on one shared production engine.
 
 ### The 1:1:1 rule
 
@@ -486,249 +510,236 @@ type per transaction:
 
 | Transaction | Lines |
 | --- | --- |
-| `PRODUCTION_CONSUMPTION` | Whole Coconut **OUT**, from the selected lot |
-| `PRODUCTION_OUTPUT` | Dehusked Coconut **IN** and Raw Husk **IN**, each into a new lot |
+| `PRODUCTION_CONSUMPTION` | Whole Coconut **OUT** |
+| `PRODUCTION_OUTPUT` | Dehusked Coconut **IN** and Raw Husk **IN** |
 
 Both are written inside **one database transaction**. Any failure leaves no consumed stock,
-no output stock, no lots and no posted order.
+no output stock and no posted order. The run records the recipe version it used
+(`production_recipe_id`).
 
-### Lot traceability
+### Lots — pooled stock, no lot selection ✅ **CONFIRMED**
 
-The input lot must be **explicitly selected** — without it the output could not be traced
-back to the coconut it came from.
-
-Posting creates a **new lot for each output**, each recording the production order as its
-source and naming the consumed lot in its notes. The chain is therefore complete in both
-directions:
-
-```
-Supplier → Coconut GRN → Coconut Lot → Dehusking run → Dehusked Lot
-                                                      → Raw Husk Lot
-```
-
-### Value conservation — the important rule
-
-Dehusking **increases the physical item count**: one coconut becomes two things. This must
-never be read as inventory value doubling.
+Whole coconut, dehusked coconut and raw husk are **pooled** products (`tracks_lots = false`,
+§32): each is **one stock** per warehouse with no lots. The operator chooses **no lot**, a lot
+submitted for pooled coconut is refused, and the outputs receive **no lot**. Traceability is
+to the production order itself, through its consumption and output ledger transactions:
 
 ```
-Before:  1,000 Coconut                    Rs.102,500
-After:   1,000 Dehusked Coconut  85%      Rs. 87,125
-       + 1,000 Raw Husk          15%      Rs. 15,375
-                                          ──────────
-                                          Rs.102,500   ← unchanged
+Supplier → Coconut GRN → (pooled coconut) → Dehusking run → (pooled dehusked coconut)
+                                                          → (pooled raw husk)
 ```
 
-Unit costs become Rs.87.125 and Rs.15.375 respectively.
+Historic lots created before pooling keep their full history (§32).
 
-**Quantity doubles across product types; money does not.** The consumed value is whatever
-the ledger charged at the weighted average in force, read back after the consumption is
-posted — never recomputed by the production code.
+### Costing — coconut value to dehusked coconut, labour to raw husk ✅ **CONFIRMED** (recipe version 2)
 
-### Cost allocation — configurable, currently 85 / 15
+The dehusked coconut carries **100%** of the consumed coconut value. The raw husk carries
+**none** of it (0%). Instead the raw husk's cost is the run's **labour**:
 
-Joint-product costing has **not been finalised by the factory**. Version 1 therefore uses a
-**fixed percentage** split, stored as configuration in `production_recipes` /
-`production_recipe_outputs`:
+```
+labour cost = quantity dehusked × labour rate per coconut
+```
 
-| Output | Share |
-| --- | --- |
-| Dehusked Coconut | **85%** |
-| Raw Husk | **15%** |
+The **labour rate per coconut is entered (confirmed) by the operator on every run**,
+pre-filled from the recipe's `default_labour_rate`. **Zero is accepted** — it is a deliberate
+answer, and the husk then carries no cost. A run whose rate is missing is refused at posting.
 
-**These numbers are provisional and are expected to change.** They live in the seeder and
-nowhere else — changing the factory's costing policy is a data change, not a code change.
+**Worked example** — 100 coconuts at Rs.50, labour Rs.3.00 per coconut:
 
-**Percentages must total exactly 100.** A recipe that does not is refused at posting time,
-because it would create or destroy inventory value on every run.
+```
+Consumed:   100 Whole Coconut @ Rs.50.00          Rs.5,000
+Labour:     100 × Rs.3.00                         Rs.  300
+Produced:   100 Dehusked Coconut   100%           Rs.5,000   Rs.50.00 each
+          + 100 Raw Husk           labour         Rs.  300   Rs. 3.00 each
+                                                  ────────
+                                                  Rs.5,300   = input + labour, exactly
+```
 
-**Rounding:** shares are computed to six decimals for every output except the last, which
-receives `consumed value − everything already allocated`. The allocated costs therefore sum
-**exactly** to the consumed value whatever the percentages are. (As elsewhere, the ledger
-stores a *unit* cost at six decimals, so ledger value can differ by at most
-`quantity × 0.0000005` per line — see §13.)
+**Value is conserved exactly: output value = consumed value + labour.** The consumed value is
+whatever the ledger charged at the weighted average in force, read back after the consumption
+posts — never recomputed. The allocator shares the consumed value (100 / 0, the last output
+absorbing any rounding remainder) and the labour is then added, whole, to the output the
+recipe marks `absorbs_labour`. Which output carries labour is recipe configuration, never a
+product code.
 
-### No production expenses yet
+> `TBD` — the factory's standard labour rate. `default_labour_rate` is **NULL** until the
+> owner gives a figure; until then the operator types the rate on each run.
 
-Labour, electricity, machine, fuel and overhead costs are **deliberately excluded**. For
-this phase, total input inventory value equals total output inventory value exactly. Those
-costs arrive in a later costing phase, and a test asserts no such columns or tables exist.
+### Accounting for the labour ✅ **CONFIRMED**
+
+Once operational accounting applies (§22):
+
+```
+Dr 1320 Dehusked Coconut Inventory     5,000
+Dr 1330 Raw Husk Inventory               300
+    Cr 1310 Whole Coconut Inventory          5,000
+    Cr 6310 Production Labour Absorbed         300
+```
+
+`6310 Production Labour Absorbed` is a **contra-expense** (an expense account carrying a
+credit), configured in `accounting_settings.production_labour_account_id`. Wages are still
+paid by **expense voucher** to `6300 Wages and Salaries`; the labour sitting in unsold husk
+offsets them until that husk is sold. **Production never creates a cash movement or a
+payable.** Zero-value lines are left out, so a zero-labour run writes no 1330 or 6310 line.
+
+### What is not costed
+
+Electricity, machine, fuel and overhead costs are still **excluded**. Labour is the only
+cost production adds.
+
+### Version 1 — superseded, kept for history
+
+Recipe version 1 split the coconut value **85 / 15** between dehusked coconut and raw husk
+and carried no labour. It is **deactivated, never deleted**; runs posted under it keep the
+figures they stored. Exactly one recipe version per production type is active.
 
 ### Reversal
 
 Reversal undoes both halves, **outputs first**:
 
 1. the `PRODUCTION_OUTPUT` is reversed, taking the dehusked coconut and husk back out of
-   stock;
+   stock — at their original values, **labour included**;
 2. the `PRODUCTION_CONSUMPTION` is reversed, putting the whole coconut back.
 
-Both reuse their original unit costs, so value returns exactly as it left.
+The run's journal is reversed exactly, so the 6310 credit is cancelled too.
 
-**Reversal is refused if the output has already been consumed** — sold, or processed
-onward — because the stock is no longer there to remove. Reversing the outputs first means
-that rejection happens before any coconut is restored, and the whole operation rolls back
-regardless. Produce 1,000, sell 500, attempt to reverse: **rejected**.
+**Reversal is refused if the output has already been consumed** — sold, processed onward or
+backflushed — because the stock is no longer there to remove. Reversing the outputs first
+means that rejection happens before any coconut is restored, and the whole operation rolls
+back regardless.
 
 Double reversal is prohibited, and the original run is never deleted or altered.
 
 ---
 
-## 19. Production — husk chipping
+## 19. Production — husk chipping (backflushed at delivery)
 
-Husk chipping shares the whole production engine with dehusking — the same order, the same
-two ledger transactions, the same reversal and cancellation actions, the same recipe tables.
+Husk chipping shares the production engine with dehusking and copra — the same order, the
+same output transaction, the same reversal and cancellation actions, the same recipe tables.
 There is **no second production engine**.
 
-What differs is one thing, and it changes a lot: **the yields are measured, not derived.**
+**Chipping takes NO raw husk out of stock.** The factory cannot say, run by run, how many
+husks a batch used — it knows that when the goods are sold. The recipe (version 2) therefore
+records `input_consumption = AT_DELIVERY`: the raw husk is **backflushed** by the delivery
+that sells the outputs. ✅ **CONFIRMED**
 
-### The operator enters the actual weights
+### What a chipping run records
 
-```
-Input:   2,000 Raw Husk   (NOS)
-Output:    150.500 kg  7C     ← weighed
-           205.250 kg  9C     ← weighed
-           281.750 kg 10C     ← weighed
-           waste / loss       ← recorded, NOT stocked
-```
+The operator records what the batch produced as **flexible rows** — product, quantity, unit:
 
-**There is no fixed conversion from husks to kilograms, and there must never be one.**
-Chipping yields vary with the husk itself, the moisture and the machine, so a standard
-"1 husk = X kg" figure would be fiction — and fiction in a costing path becomes a wrong
-stock value on every single run.
-
-This is enforced structurally, not by convention. `production_recipe_outputs.output_ratio`
-is **nullable**, and every husk chipping output has it set to `NULL`:
-
-| Type | `output_ratio` | Meaning |
-| --- | --- | --- |
-| Dehusking | `1.000000` | Derive the output quantity from the input |
-| Husk chipping | `NULL` | **No ratio exists.** The operator measures the output |
-
-`ProductionType::hasFixedOutputRatio()` is false for chipping and
-`hasOperatorEnteredOutputs()` is true. There is no number anywhere for a weight to be
-derived from, so deriving one is impossible rather than merely discouraged.
-
-**The two quantities are not comparable.** Husk is counted in `NOS`; chips are weighed in
-`KG`. The system never converts between them, and no screen implies that it does.
-
-### Which weights are accepted
+| Allowed output | Unit |
+| --- | --- |
+| 7C (`HUSK-7C`) · 9C (`HUSK-9C`) · 10C (`HUSK-10C`) · Cocopeat (`COCOPEAT`) | `KG` |
+| 7C (`HUSK-7C-L`) · 9C (`HUSK-9C-L`) · 10C (`HUSK-10C-L`) · Cocopeat (`COCOPEAT-L`) | `L` |
 
 | Rule | Detail |
 | --- | --- |
-| Zero for one grade | **Allowed.** A batch that produced no 9C records `0` for 9C |
-| Zero for every grade | **Refused.** There would be nothing to carry the consumed value |
-| Negative | **Refused**, in the form request and again at posting |
-| A grade left out | **Refused.** An explicit `0` is a measurement; a missing line is an omission |
+| At least one row | **Required** |
+| Each row | A **positive** measured quantity, at its unit's precision |
+| Zero rows | **Refused** — a product not produced is simply left out |
+| Same product twice | **Refused** |
 | A product outside the recipe | **Refused** |
+| A husk lot or husk quantity | **Refused** — chipping takes no husk |
+
+**KG and litres are separate stock items** (§32). 50 KG of 7C and 100 L of 7C are two
+balances that never merge or net off. **There is no conversion from husks to KG or litres,
+and none between KG and litres — and there must never be one.** The recipe's `output_ratio`
+is `NULL` for every chipping output, so no number exists to derive one from.
+
+### Inventory posting — outputs only, at zero value
+
+Posting writes **one** `PRODUCTION_OUTPUT` transaction: every output **IN** at **zero cost**
+(`allocated_cost` 0, `unit_cost` 0, share 0%). No `PRODUCTION_CONSUMPTION` is written and raw
+husk stock does not change. Nothing of value moved, so **no journal is written**, even after
+the accounting cutover.
+
+The screens call this **"Raw husk material cost pending backflush"**: the chips and cocopeat
+are in stock, but their husk cost is still sitting in Raw Husk inventory until a delivery
+takes it.
+
+Outputs are pooled products (§32), so no lot is created for them.
+
+### Backflush at delivery ✅ **CONFIRMED**
+
+A delivery line for a chipping output must state **"Raw Husks Used"** — how many raw husks
+went into the goods on that line: **greater than zero, whole `NOS`**. Any other product must
+state none. Which products need it is read from the active recipe (its outputs), **never
+from a product code**.
+
+Posting the delivery, **inside the same database transaction**:
+
+1. issues the goods (`SALES_ISSUE`) at their own weighted average — zero for chips made
+   under this method;
+2. issues the stated raw husks from the **pooled raw husk in the delivery's warehouse**, in a
+   separate `BACKFLUSH_ISSUE` transaction, valued by the engine at the raw husk **weighted
+   average** in force;
+3. stores on the line `backflush_product_id`, `backflush_quantity` and `backflush_cost` (read
+   back from the ledger, never recomputed), and
+
+```
+cost_of_goods_sold = goods issue cost + backflush_cost
+```
+
+**If the warehouse does not hold enough raw husk, the whole delivery is refused** — no goods
+leave, no husk leaves, no journal, the delivery stays a draft. The error appears beside "Raw
+Husks Used".
+
+**Journal** (once accounting applies): the husk cost lands in the **delivered product's** cost
+of sales, not raw husk's:
+
+```
+Dr 5130 Husk Chip COGS  (or 5170 Cocopeat COGS)     backflush_cost
+    Cr 1330 Raw Husk Inventory                           backflush_cost
+```
+
+**Reversing the delivery returns the husks** at their **original** cost (not the current
+average), alongside the goods, and the journal is reversed exactly.
+
+### Worked example
+
+```
+Raw husk pool:  500 bought @ Rs.12 = Rs.6,000
+              + 100 from dehusking (labour Rs.3) = Rs.300
+              = 600 husks, Rs.6,300, average Rs.10.50
+
+Chipping run:   7C 40 KG · 7C 100 L · Cocopeat 100 L    ← zero value; husk pool still 600
+
+Delivery:       20 KG of 7C @ Rs.300, Raw Husks Used 180
+                sales value      Rs.6,000
+                husk cost        180 × 10.50 = Rs.1,890  → cost of goods sold
+                gross profit     Rs.4,110
+Husk pool:      600 − 180 = 420 husks, Rs.4,410, still Rs.10.50
+```
+
+### Consequences worth knowing
+
+- **Chip and cocopeat stock shows zero value until it is sold.** Their husk value stays in Raw
+  Husk inventory meanwhile. This is inherent to backflushing, not an error.
+  > `TBD` — whether the owner wants an *estimated* value shown on unsold chips.
+- **Chips costed under the old method (version 1) already carry husk cost.** Stating husks on
+  a delivery of such stock would count the husk twice. On the development database this is
+  test data only.
 
 ### Waste is information only
 
-Waste and loss are recorded on the production order as `waste_quantity` + `waste_uom_id`
-and go no further. They create:
+Unchanged: `waste_quantity` + `waste_uom_id` on the order, both optional. **No inventory line,
+no lot, no `DUST` product, no cost.**
 
-- **no inventory line** — nothing enters or leaves stock;
-- **no lot**;
-- **no product** — there is deliberately **no `DUST` product**;
-- **no cost** — waste takes none of the consumed value.
+> `TBD-1` — the measurement basis for chipping waste (weight, husk count, or estimate).
 
-Both fields are **optional**, because the factory has not confirmed how (or whether) waste
-is measured. When it is recorded, the unit is chosen from the real UOM master rather than
-invented, so no physically incorrect unit can be stored.
+### Version 1 — superseded, kept for history
 
-> `TBD-1` — the measurement basis for chipping waste (weight, husk count, or estimate), and
-> whether it should later carry an allocated cost. Until the factory confirms this, the
-> field records what was measured and asserts nothing about what it means.
-
-### Value conservation
-
-The consumed husk value is shared across the grades and **sums exactly**:
-
-```
-Consumed:  2,000 Raw Husk @ Rs.20.000000        Rs.40,000
-Produced:    150 kg  7C    30%                  Rs.12,000   Rs.80.000000 / kg
-             200 kg  9C    30%                  Rs.12,000   Rs.60.000000 / kg
-             280 kg 10C    40%                  Rs.16,000   Rs.57.142857 / kg
-                                                ─────────
-                                                Rs.40,000   ← unchanged
-```
-
-The consumed value is read back from the ledger after the consumption posts — never
-recomputed — so it is always the weighted average actually charged.
-
-No labour, electricity, machine, packaging or overhead cost is added. Total input inventory
-value equals total output inventory value exactly, and a test asserts that no such columns
-or tables exist.
-
-### Cost allocation — configurable, currently 30 / 30 / 40
-
-| Output | Share |
-| --- | --- |
-| 7C | **30%** |
-| 9C | **30%** |
-| 10C | **40%** |
-
-**These numbers are provisional and are expected to change.** They live in
-`production_recipe_outputs.allocation_percent`, seeded by `ProductionRecipeSeeder`, and
-nowhere else. Changing the factory's costing policy is a data change, not a code change.
-
-**Percentages must total exactly 100**, or the recipe is refused at posting time.
-
-### Zero-output redistribution
-
-A grade that was not produced has no stock for value to sit on, so it must take none. The
-shares of the grades that *were* produced are renormalised to total 100% again:
-
-```
-Configured:  7C 30    9C 30    10C 40
-Produced:    7C ✓     9C 0     10C ✓
-
-Applied:     7C = 30 / (30 + 40) = 42.857143%
-             10C = 40 / (30 + 40) = 57.142857%
-             9C  = nothing, and no lot is created for it
-```
-
-On Rs.40,000 consumed that is Rs.17,142.857143 to 7C and Rs.22,857.142857 to 10C — still
-exactly Rs.40,000.
-
-The **share actually applied** is what gets stored on the output line, so a historic run can
-always be explained: `allocated cost = consumed value × stored share` holds for every line,
-including the zero one.
-
-**Rounding:** as everywhere, the last participating output receives
-`consumed value − everything already allocated`, so the allocation sums exactly — and those
-exact figures now reach the inventory ledger unchanged, because `total_cost` is
-authoritative (`INVENTORY_RULES.md` §8.1). Ledger input value equals ledger output value to
-the last decimal.
-
-This logic lives in `App\Services\Production\ProductionCostAllocator`, which **both**
-production types use, so value conservation is guaranteed in exactly one place.
-
-### Lots and traceability
-
-The raw husk lot must be **explicitly selected**. Posting creates a **new lot for each grade
-that was actually produced** — and none for a grade that measured zero:
-
-```
-Supplier → Husk GRN → Raw Husk Lot ─┬─▶ Chipping run ─┬─▶ 7C Lot
-Dehusking → Raw Husk Lot  ──────────┘                 ├─▶ 9C Lot
-                                                      └─▶ 10C Lot
-```
-
-Each chip lot records the production order as its source and names the consumed husk lot in
-its notes, so stock traces in both directions.
+Version 1 consumed the husk at production (with a chosen husk lot) and split its value
+**30 / 30 / 40** across 7C / 9C / 10C. It is **deactivated, never deleted**, and runs posted
+under it keep their consumption, allocation and lots. A **draft** entered under the old
+method still carries a husk input line; posting it now is **refused** ("cancel it and record
+the run again") rather than silently reinterpreted.
 
 ### Reversal
 
-Reversal uses the **same** `ReverseProduction` action as dehusking: the `PRODUCTION_OUTPUT`
-is reversed first, then the `PRODUCTION_CONSUMPTION`, both at their original unit costs.
-
-**If any one grade has been consumed — sold or processed onward — the entire reversal is
-refused.** There is no partial reversal: reversing the outputs first means the rejection
-happens before any husk is restored, and the whole operation rolls back regardless. Sell
-100 kg of the 7C and the run can no longer be reversed, even though the 9C and 10C are
-untouched.
-
-Double reversal is prohibited, and the original run is never deleted or altered.
+Reversal uses the same `ReverseProduction` action. A version 2 run has **only an output** to
+reverse; raw husk is untouched. **If any output has been issued, the entire reversal is
+refused.** Double reversal is prohibited, and the run is never deleted or altered.
 
 ## 20. Production — copra and raw coconut shell
 
@@ -741,7 +752,7 @@ What is new is that its two outputs behave **differently from each other**. Dehu
 derives every output; chipping measures every output. Copra does both at once:
 
 ```
-Input:   1,000 Dehusked Coconut  (NOS)   ← chosen lot, chosen warehouse
+Input:   1,000 Dehusked Coconut  (NOS)   ← pooled stock (no lot), chosen warehouse
 
 Output:    190.500 kg  Copra             ← MEASURED by the operator
          1,000     NOS Raw Shell         ← DERIVED, one shell per coconut
@@ -891,22 +902,24 @@ For version 1 the system **does not model this at all**:
 
 ### Lots and traceability
 
-The dehusked coconut lot must be **explicitly selected**. Posting creates a **new lot for
-each output**, each recording the copra run as its source and naming the consumed lot in its
-notes:
+Dehusked coconut is **pooled** (§32), so **no input lot is chosen** (one submitted is
+refused). Copra and raw shell **still track lots**: posting creates a **new lot for each
+output**, each recording the copra run as its source:
 
 ```
 Supplier
    └─▶ Whole Coconut GRN
-          └─▶ Whole Coconut Lot
-                 └─▶ Dehusking run
-                        └─▶ Dehusked Coconut Lot
-                               └─▶ Copra run ─┬─▶ Copra Lot
-                                              └─▶ Raw Shell Lot
+          └─▶ (pooled coconut) ─▶ Dehusking run
+                                     └─▶ (pooled dehusked coconut)
+                                            └─▶ Copra run ─┬─▶ Copra Lot
+                                                           └─▶ Raw Shell Lot
 ```
 
-Stock traces in both directions: forward from a supplier's delivery to the shell sold, and
-backward from a shell lot to the coconut it came from.
+Copra and shell lots trace forward to the deliveries that sold them; backward, the copra run
+and the dehusking run link to the receipts through their ledger transactions.
+
+> `TBD` — whether copra and raw shell should also become pooled stock. The owner listed only
+> the coconut and husk products for lot-free operation, so copra and shell keep their lots.
 
 ### Inventory posting
 
@@ -914,7 +927,7 @@ Two transactions, one database transaction:
 
 | Transaction | Lines |
 | --- | --- |
-| `PRODUCTION_CONSUMPTION` | Dehusked Coconut **OUT** — selected quantity, warehouse and lot |
+| `PRODUCTION_CONSUMPTION` | Dehusked Coconut **OUT** — selected quantity and warehouse |
 | `PRODUCTION_OUTPUT` | Copra **IN** — measured KG, new lot |
 | | Raw Shell **IN** — derived NOS *and* measured KG, new lot |
 
@@ -963,13 +976,16 @@ sets and a seeder never invents. While it is unset nothing changes; on or after 
 | --- | --- |
 | Goods receipt | Dr product inventory / Cr Goods Received Not Invoiced |
 | Delivery | Dr product cost of sales / Cr product inventory |
-| Production | Dr output inventory / Cr input inventory |
+| Production | Dr output inventory / Cr input inventory (+ Cr 6310 for dehusking labour) |
+| Husk chipping | **none** — zero-value outputs, nothing consumed |
+| Delivery backflushing raw husk | Dr the delivered product's cost of sales / Cr 1330 Raw Husk Inventory |
+| Lot consolidation | **none** — same product, same value, same account |
 | Warehouse transfer | **none** — same product, same value, same account |
 | Any reversal | the original journal reversed exactly |
 
 - **Every amount is the inventory ledger's authoritative `total_cost`.** Finance recalculates
-  nothing — not the landed-cost allocation, not the 85/15, 30/30/40 or 75/25 production
-  splits. It records what the ledger already holds, which is why debits and credits agree
+  nothing — not the landed-cost allocation, not the production splits (100/0 + labour,
+  75/25), not the backflushed husk. It records what the ledger already holds, which is why debits and credits agree
   exactly and a control account reconciles to stock.
 - **A delivery recognises no revenue.** It is a physical issue. Revenue and the receivable
   belong to the sales invoice — see §24. Until a delivery is invoiced its cost of sales has
@@ -1098,7 +1114,11 @@ Fund transfer       Dr Destination Cash/Bank  Cr Source Cash/Bank
   is a debit, money out a credit, and the closing balance always equals the general ledger.
 - **Whether cash may go negative, and whether banks may overdraw, is `TBD`** — see
   `docs/ACCOUNTING_RULES.md` §23. Nothing currently prevents it, and no policy was invented.
-- **No bank reconciliation, no cheque lifecycle, no VAT, no foreign currency.**
+- **Every supplier payment and customer receipt says how the money moved** — cash, cheque or
+  bank transfer (§32). Cash must go through a cash account; a cheque or a transfer through a
+  bank account. A cheque records its number, date and bank.
+- **No bank reconciliation, no cheque lifecycle (deposited / cleared / bounced), no VAT, no
+  foreign currency.**
 
 Full detail in `docs/ACCOUNTING_RULES.md` §22-§23.
 
@@ -1203,7 +1223,11 @@ Full detail in `docs/API_V1.md`.
   role may post it; anyone else does not see the tile.
 - **Staff type the prices** when receiving and dispatching; the cost of goods leaving is always
   calculated by the system.
-- **The batch must be chosen** whenever stock is held in batches.
+- **The batch must be chosen** only for lot-tracked stock (copra, shell). Pooled stock —
+  coconut, dehusked coconut, husk, chips, cocopeat — has no batch to choose.
+- **Dehusking asks for the labour per coconut**, pre-filled from the recipe's default.
+- **Husk chipping asks what was made** (tap the products, then measure each). It takes no husk.
+- **Dispatching chips or cocopeat asks "Raw husks used"**; they are taken from husk stock then.
 - **Everything is dated today.** Back-dated work is done in the full ERP.
 - **If something is wrong (not enough stock, wrong batch) nothing is saved at all.**
 
@@ -1220,3 +1244,68 @@ Full detail in `docs/KIOSK.md`.
 
 Full detail in `docs/LOCALISATION.md`.
 
+## 32. Pooled stock, units and payment methods — owner's decisions (Phase 19)
+
+### Pooled (lot-free) stock ✅ **CONFIRMED**
+
+`products.tracks_lots` decides whether a product keeps lots. **False** makes it **one pooled
+stock** per warehouse: movements carry no lot and no screen asks for one.
+
+| Pooled (no lots) | Lot-tracked |
+| --- | --- |
+| Whole Coconut, Dehusked Coconut, Raw Husk, 7C / 9C / 10C (KG and L), Cocopeat (KG and L) | Copra, Raw Shell, and new products by default |
+
+- The flag is **master data** (set by `ProductSeeder`), never a product code in logic.
+- The inventory engine refuses **new stock into a lot** of a pooled product. Old lots may still
+  be drawn down, and a reversal may put stock back exactly where it came from.
+- **Historic lots are never edited or deleted.** Their balances are moved into the pool **once,
+  on purpose**, by a recorded, value-neutral `LOT_CONSOLIDATION` transaction — quantity, value
+  and weighted average unchanged, no journal:
+
+  ```
+  php artisan inventory:consolidate-pooled-lots --dry-run          # show what would move
+  php artisan inventory:consolidate-pooled-lots --user=owner@example.com
+  ```
+
+  It is safe to re-run: with nothing left in lots it writes nothing.
+
+### Units — NOS, KG and L ✅ **CONFIRMED**
+
+`L` (Litre, 3 decimals) joins `NOS` and `KG`. **No conversion exists between any two units.**
+A husk product measured both by weight and by volume is **two stock items**, one per unit:
+
+| Product | KG item | Litre item | Accounts (inventory / COGS / revenue) |
+| --- | --- | --- | --- |
+| 7C | `HUSK-7C` | `HUSK-7C-L` | 1340 / 5130 / 4130 |
+| 9C | `HUSK-9C` | `HUSK-9C-L` | 1340 / 5130 / 4130 |
+| 10C | `HUSK-10C` | `HUSK-10C-L` | 1340 / 5130 / 4130 |
+| Cocopeat | `COCOPEAT` | `COCOPEAT-L` | **1370 / 5170 / 4170** (its own accounts) |
+
+Each item has its own stock and its own weighted average, so 50 KG of 7C and 100 L of 7C
+never merge, net off or share a cost.
+
+### Payment methods ✅ **CONFIRMED**
+
+| Method | Goes through | Records |
+| --- | --- | --- |
+| Cash | a **cash** account | — |
+| Cheque | a **bank** account | cheque number, date, bank |
+| Bank transfer | a **bank** account | — |
+
+- **"Credit" is not a payment method.** Buying or selling on credit is an invoice left
+  outstanding; payments and receipts settle it later, **in full or in parts**.
+- Invoice screens show **Total / Paid / Outstanding** and offer **Record payment**, which opens a
+  payment or receipt pre-filled for that invoice.
+- Cheque details are **recorded only**: the money posts straight to the chosen bank account.
+  > `TBD` — cheque status tracking (received / deposited / cleared / bounced) with a clearing
+  > account. Until then a bounced cheque is handled by reversing the receipt.
+- Documents recorded before payment methods existed have none; nothing is invented for them.
+
+### Open items
+
+| # | Item |
+| --- | --- |
+| 1 | The factory's standard dehusking labour rate (recipe default is NULL) |
+| 2 | Cheque lifecycle and clearing account |
+| 3 | Whether unsold chips / cocopeat should show an estimated husk value |
+| 4 | Whether copra and raw shell should also become pooled stock |

@@ -174,6 +174,7 @@ class SalesInvoiceController extends Controller
         return [
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number,
+            'customer_id' => $invoice->customer_id,
             'customer_code' => $invoice->customer?->code,
             'customer_name' => $invoice->customer?->name,
             'invoice_date' => $invoice->invoice_date?->toDateString(),

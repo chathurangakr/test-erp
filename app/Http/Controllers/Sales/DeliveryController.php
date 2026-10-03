@@ -13,6 +13,7 @@ use App\Models\Customer;
 use App\Models\Delivery;
 use App\Models\InventoryLot;
 use App\Models\Product;
+use App\Models\ProductionRecipe;
 use App\Models\SalesOrder;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
@@ -94,7 +95,11 @@ class DeliveryController extends Controller
             'lines.product.primaryUom:id,code',
             'lines.product.secondaryUom:id,code',
             'lines.lot:id,lot_number',
+            'lines.backflushProduct:id,code,name,primary_uom_id',
+            'lines.backflushProduct.primaryUom:id,code',
             'inventoryTransaction:id,reference',
+            'backflushTransaction:id,reference',
+            'backflushReversalTransaction:id,reference',
             'reversalInventoryTransaction:id,reference',
             'postedBy:id,name',
             'createdBy:id,name',
@@ -131,6 +136,7 @@ class DeliveryController extends Controller
                     'secondary_quantity' => $line->secondary_quantity,
                     'pricing_basis' => $line->pricing_basis->value,
                     'unit_price' => $line->unit_price,
+                    'backflush_quantity' => $line->backflush_quantity,
                 ])->values(),
             ],
         ]));
@@ -154,7 +160,9 @@ class DeliveryController extends Controller
         $lotBalances = $this->stock->balancesByLot()
             ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
 
+        // Pooled products have no lots to choose from (docs/INVENTORY_RULES.md §15).
         $lots = InventoryLot::query()
+            ->whereHas('product', fn ($query) => $query->where('tracks_lots', true))
             ->whereIn('id', $lotBalances->pluck('lot_id')->unique()->all())
             ->get(['id', 'lot_number', 'product_id'])
             ->map(function (InventoryLot $lot) use ($lotBalances): array {
@@ -172,19 +180,28 @@ class DeliveryController extends Controller
             })
             ->values();
 
+        // Products whose delivery backflushes a raw material, and which one.
+        $backflush = ProductionRecipe::backflushInputsByOutput();
+
         return [
             'customers' => Customer::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'products' => Product::query()
                 ->with(['primaryUom:id,code', 'secondaryUom:id,code'])
                 ->orderBy('code')
-                ->get(['id', 'code', 'name', 'primary_uom_id', 'secondary_uom_id', 'is_active'])
+                ->get(['id', 'code', 'name', 'primary_uom_id', 'secondary_uom_id', 'tracks_lots', 'is_active'])
                 ->map(fn (Product $product): array => [
                     'id' => $product->id,
                     'code' => $product->code,
                     'name' => $product->name,
                     'uom' => $product->primaryUom?->code,
                     'secondary_uom' => $product->secondaryUom?->code,
+                    'tracks_lots' => $product->tracksLots(),
+                    'backflush' => $backflush->has($product->id) ? [
+                        'code' => $backflush->get($product->id)->code,
+                        'name' => $backflush->get($product->id)->name,
+                        'uom' => $backflush->get($product->id)->primaryUom?->code,
+                    ] : null,
                     'is_active' => $product->is_active,
                 ]),
             'lots' => $lots,
@@ -262,6 +279,8 @@ class DeliveryController extends Controller
             'reversed_at' => BusinessClock::display($delivery->reversed_at),
             'inventory_reference' => $delivery->inventoryTransaction?->reference,
             'reversal_reference' => $delivery->reversalInventoryTransaction?->reference,
+            'backflush_reference' => $delivery->backflushTransaction?->reference,
+            'backflush_reversal_reference' => $delivery->backflushReversalTransaction?->reference,
             'can_post' => $delivery->status->canPost(),
             'can_reverse' => $delivery->status->canReverse() && ! $delivery->isReversed(),
             'can_edit' => $delivery->status->isEditable(),
@@ -280,6 +299,10 @@ class DeliveryController extends Controller
                 'sales_value' => $line->sales_value,
                 'inventory_unit_cost' => $line->inventory_unit_cost,
                 'cost_of_goods_sold' => $line->cost_of_goods_sold,
+                'backflush_quantity' => $line->backflush_quantity,
+                'backflush_cost' => $line->backflush_cost,
+                'backflush_code' => $line->backflushProduct?->code,
+                'backflush_uom' => $line->backflushProduct?->primaryUom?->code,
                 'gross_profit' => $line->grossProfit(),
                 'gross_margin' => $line->grossMarginPercent(),
             ])->values(),

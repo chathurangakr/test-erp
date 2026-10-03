@@ -52,6 +52,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['1340', 'Husk Chips Inventory', AccountType::Asset, false, true],
         ['1350', 'Copra Inventory', AccountType::Asset, false, true],
         ['1360', 'Raw Shell Inventory', AccountType::Asset, false, true],
+        ['1370', 'Cocopeat Inventory', AccountType::Asset, false, true],
 
         ['1400', 'Other Current Assets', AccountType::Asset, false, false],
         ['1500', 'Property, Plant and Equipment', AccountType::Asset, false, false],
@@ -80,6 +81,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['4140', 'Copra Sales', AccountType::Revenue, false, false],
         ['4150', 'Raw Shell Sales', AccountType::Revenue, false, false],
         ['4160', 'Raw Husk Sales', AccountType::Revenue, false, false],
+        ['4170', 'Cocopeat Sales', AccountType::Revenue, false, false],
 
         // --------------------------------------------------------- cost of sales
         ['5000', 'Cost of Sales', AccountType::CostOfSales, true, false],
@@ -90,12 +92,17 @@ class ChartOfAccountsSeeder extends Seeder
         ['5140', 'Copra COGS', AccountType::CostOfSales, false, false],
         ['5150', 'Raw Shell COGS', AccountType::CostOfSales, false, false],
         ['5160', 'Raw Husk COGS', AccountType::CostOfSales, false, false],
+        ['5170', 'Cocopeat COGS', AccountType::CostOfSales, false, false],
 
         // ---------------------------------------------------- operating expenses
         ['6000', 'Operating Expenses', AccountType::Expense, true, false],
         ['6100', 'Transport Expense', AccountType::Expense, false, false],
         ['6200', 'Loading and Handling Expense', AccountType::Expense, false, false],
         ['6300', 'Wages and Salaries', AccountType::Expense, false, false],
+        // A contra-expense: credited when production labour is absorbed into inventory cost
+        // (dehusking labour becomes raw-husk cost). The system's to post, so a control
+        // account. Its credit balance offsets wages paid until that stock is sold.
+        ['6310', 'Production Labour Absorbed', AccountType::Expense, false, true],
         ['6400', 'Electricity', AccountType::Expense, false, false],
         ['6500', 'Fuel', AccountType::Expense, false, false],
         ['6600', 'Repairs and Maintenance', AccountType::Expense, false, false],

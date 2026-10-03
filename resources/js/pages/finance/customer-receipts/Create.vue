@@ -7,13 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/customer-receipts';
-import type { AccountOption, OptionRef, OutstandingSalesInvoice } from '@/types';
+import PaymentMethodFields from '@/components/finance/PaymentMethodFields.vue';
+import type { AccountOption, OptionRef, PaymentMethodOption, OutstandingSalesInvoice } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     customers: OptionRef[];
     receiptAccounts: AccountOption[];
+    paymentMethods: PaymentMethodOption[];
+    invoiceId: number | null;
     customerId: number | null;
     outstandingInvoices: OutstandingSalesInvoice[];
     currency: string;
@@ -35,12 +38,17 @@ const form = useForm({
     customer_id: props.customerId,
     receipt_date: today,
     receipt_account_id: '' as string | number,
+    payment_method: '',
+    cheque_number: '',
+    cheque_date: '',
+    cheque_bank: '',
     reference: '',
     notes: '',
     amount: '',
     allocations: props.outstandingInvoices.map((invoice) => ({
-        customer_invoice_id: invoice.id,
-        amount: '',
+        sales_invoice_id: invoice.id,
+        // "Record payment" from an invoice pre-fills that invoice with what it still owes.
+        amount: invoice.id === props.invoiceId ? invoice.outstanding : '',
     })),
 });
 
@@ -49,6 +57,27 @@ function amountOf(value: string): number {
 
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
+
+if (props.invoiceId !== null) {
+    form.amount = props.outstandingInvoices.find((invoice) => invoice.id === props.invoiceId)?.outstanding ?? '';
+}
+
+/** Cash goes through a till; a cheque or a transfer through a bank account. */
+const methodKind = computed(
+    () => props.paymentMethods.find((m) => m.value === form.payment_method)?.account_kind ?? null,
+);
+
+const accountChoices = computed(() =>
+    methodKind.value === null
+        ? props.receiptAccounts
+        : props.receiptAccounts.filter((a) => a.account_kind === methodKind.value),
+);
+
+watch(methodKind, () => {
+    if (!accountChoices.value.some((a) => a.id === form.receipt_account_id)) {
+        form.receipt_account_id = accountChoices.value.length === 1 ? accountChoices.value[0].id : '';
+    }
+});
 
 const allocatedTotal = computed(() =>
     form.allocations.reduce((sum, allocation) => sum + amountOf(allocation.amount), 0),
@@ -72,6 +101,9 @@ function submit(): void {
         .transform((data) => ({
             ...data,
             customer_id: customerId.value === '' ? null : Number(customerId.value),
+            cheque_number: data.payment_method === 'CHEQUE' ? data.cheque_number : null,
+            cheque_date: data.payment_method === 'CHEQUE' ? data.cheque_date : null,
+            cheque_bank: data.payment_method === 'CHEQUE' ? data.cheque_bank : null,
             // Only the invoices actually being paid are sent.
             allocations: data.allocations.filter((allocation) => amountOf(allocation.amount) > 0),
         }))
@@ -116,7 +148,7 @@ const { t } = useT();
                     <Label for="receipt_account_id">{{ t('Received into') }} <span class="text-destructive">*</span></Label>
                     <select id="receipt_account_id" v-model="form.receipt_account_id" required :class="selectClass">
                         <option value="" disabled>{{ t('Cash or bank…') }}</option>
-                        <option v-for="a in receiptAccounts" :key="a.id" :value="a.id">
+                        <option v-for="a in accountChoices" :key="a.id" :value="a.id">
                             {{ a.code }} — {{ a.name }}
                         </option>
                     </select>
@@ -133,6 +165,17 @@ const { t } = useT();
                     <Label for="amount">{{ t('Receipt amount (:currency)', { currency }) }} <span class="text-destructive">*</span></Label>
                     <Input id="amount" v-model="form.amount" type="number" step="0.000001" min="0" required class="text-right" />
                     <InputError :message="form.errors.amount" />
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <PaymentMethodFields
+                        v-model:method="form.payment_method"
+                        v-model:cheque-number="form.cheque_number"
+                        v-model:cheque-date="form.cheque_date"
+                        v-model:cheque-bank="form.cheque_bank"
+                        :methods="paymentMethods"
+                        :errors="form.errors"
+                    />
                 </div>
 
                 <div class="grid gap-2 sm:col-span-2 lg:col-span-3">

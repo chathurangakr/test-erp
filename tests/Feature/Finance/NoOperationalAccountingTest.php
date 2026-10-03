@@ -33,7 +33,6 @@ use App\Models\Warehouse;
 use App\Services\Accounting\AccountingBalanceService;
 use App\Services\Inventory\StockQueryService;
 use Database\Seeders\ChartOfAccountsSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -87,7 +86,7 @@ class NoOperationalAccountingTest extends TestCase
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
     }
 
@@ -164,9 +163,12 @@ class NoOperationalAccountingTest extends TestCase
         $coconutLot = $this->lotFor('COCONUT');
         $this->receive('COCONUT', '5000.000', '100.000000', $coconutLot);
 
+        // With labour too: absorbing it into the raw husk still writes no journal before the
+        // cutover.
         $dehusking = ProductionOrder::factory()->create([
             'production_type' => ProductionType::Dehusking,
             'warehouse_id' => $this->main->id,
+            'labour_rate' => '2.500000',
         ]);
         ProductionInput::factory()->create([
             'production_order_id' => $dehusking->id,
@@ -176,20 +178,11 @@ class NoOperationalAccountingTest extends TestCase
         ]);
         $dehusking = app(PostDehuskingProduction::class)->handle($dehusking->refresh());
 
+        $this->assertSame('7500.000000', (string) $dehusking->labour_cost);
         $this->assertSame(0, JournalEntry::count(), 'Dehusking must not post a journal.');
 
-        // Husk chipping, from the husk dehusking just produced.
-        $huskLot = InventoryLot::findOrFail(
-            $dehusking->outputs->firstWhere('product_id', $this->product('RAW-HUSK')->id)->lot_id
-        );
-
+        // Husk chipping takes no husk at production — its raw husk is backflushed at delivery.
         $chipping = ProductionOrder::factory()->huskChipping()->create(['warehouse_id' => $this->main->id]);
-        ProductionInput::factory()->create([
-            'production_order_id' => $chipping->id,
-            'product_id' => $this->product('RAW-HUSK')->id,
-            'lot_id' => $huskLot->id,
-            'quantity' => '2000.000',
-        ]);
         foreach ([['HUSK-7C', '150.500'], ['HUSK-9C', '205.250'], ['HUSK-10C', '281.750']] as [$code, $quantity]) {
             ProductionOutput::factory()->create([
                 'production_order_id' => $chipping->id,
@@ -239,7 +232,7 @@ class NoOperationalAccountingTest extends TestCase
     #[Test]
     public function the_chart_of_accounts_exists_but_the_books_start_empty(): void
     {
-        $this->assertSame(49, Account::count());
+        $this->assertSame(53, Account::count());
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
         $this->assertSame(0, FiscalPeriod::count());
@@ -258,34 +251,40 @@ class NoOperationalAccountingTest extends TestCase
     #[Test]
     public function the_authoritative_inventory_total_cost_is_untouched_by_finance(): void
     {
-        $lot = $this->lotFor('RAW-HUSK');
-        $this->receive('RAW-HUSK', '2000.000', '20.000000', $lot);
+        $lot = $this->lotFor('DEHUSKED-COCONUT');
+        $this->receive('DEHUSKED-COCONUT', '2000.000', '20.000000', $lot);
 
-        $chipping = ProductionOrder::factory()->huskChipping()->create(['warehouse_id' => $this->main->id]);
+        $copra = ProductionOrder::factory()->copra()->create(['warehouse_id' => $this->main->id]);
         ProductionInput::factory()->create([
-            'production_order_id' => $chipping->id,
-            'product_id' => $this->product('RAW-HUSK')->id,
+            'production_order_id' => $copra->id,
+            'product_id' => $this->product('DEHUSKED-COCONUT')->id,
             'lot_id' => $lot->id,
             'quantity' => '2000.000',
         ]);
-        foreach ([['HUSK-7C', '150.000'], ['HUSK-9C', '200.000'], ['HUSK-10C', '280.000']] as [$code, $quantity]) {
-            ProductionOutput::factory()->create([
-                'production_order_id' => $chipping->id,
-                'product_id' => $this->product($code)->id,
-                'quantity' => $quantity,
-                'allocated_cost' => null,
-                'unit_cost' => null,
-            ]);
-        }
+        ProductionOutput::factory()->create([
+            'production_order_id' => $copra->id,
+            'product_id' => $this->product('COPRA')->id,
+            'quantity' => '280.000',
+            'allocated_cost' => null,
+            'unit_cost' => null,
+        ]);
+        ProductionOutput::factory()->create([
+            'production_order_id' => $copra->id,
+            'product_id' => $this->product('RAW-SHELL')->id,
+            'quantity' => '2000.000',
+            'secondary_quantity' => '850.000',
+            'allocated_cost' => null,
+            'unit_cost' => null,
+        ]);
 
-        $posted = app(PostHuskChippingProduction::class)->handle($chipping->refresh());
+        $posted = app(PostCopraProduction::class)->handle($copra->refresh());
 
-        // 16,000 over 280 KG: the rate repeats, the money does not. This is the figure
-        // Finance must post verbatim when integration arrives.
-        $line = $posted->outputTransaction->lines->firstWhere('product_id', $this->product('HUSK-10C')->id);
+        // 75% of 40,000 = 30,000 over 280 KG: the rate repeats, the money does not. This is
+        // the figure Finance must post verbatim.
+        $line = $posted->outputTransaction->lines->firstWhere('product_id', $this->product('COPRA')->id);
 
-        $this->assertSame('16000.000000', $line->total_cost);
-        $this->assertSame('57.142857', $line->unit_cost);
+        $this->assertSame('30000.000000', $line->total_cost);
+        $this->assertSame('107.142857', $line->unit_cost);
         $this->assertSame('40000.000000', $posted->consumptionTransaction->lines->first()->total_cost);
     }
 

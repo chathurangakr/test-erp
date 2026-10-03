@@ -192,7 +192,8 @@ class CopraController extends Controller
         $balances = $this->stock->balancesByLot()
             ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
 
-        $lots = InventoryLot::query()
+        // Pooled dehusked coconut has no lots to choose from (docs/INVENTORY_RULES.md §15).
+        $lots = ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
             ->where('product_id', $inputProduct->id)
             ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
             ->orderByDesc('id')
@@ -215,6 +216,7 @@ class CopraController extends Controller
                 'input_code' => $inputProduct->code,
                 'input_name' => $inputProduct->name,
                 'input_uom' => $inputProduct->primaryUom?->code,
+                'input_tracks_lots' => $inputProduct->tracksLots(),
                 'outputs' => $this->outputColumns(),
             ],
             'inputStock' => $this->stock->quantityForProduct($inputProduct->id),

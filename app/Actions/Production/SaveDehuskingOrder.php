@@ -16,7 +16,8 @@ use Illuminate\Validation\ValidationException;
  * The one implementation behind both the website and the API. A draft moves no stock. The
  * input product comes from the recipe, never from the request, and no output is written here:
  * output products, quantities and costs are all derived at posting by
- * PostDehuskingProduction. Only a DRAFT may be edited.
+ * PostDehuskingProduction. The labour rate per coconut is the operator's figure; the labour
+ * COST is calculated from it at posting. Only a DRAFT may be edited.
  */
 class SaveDehuskingOrder
 {
@@ -38,6 +39,9 @@ class SaveDehuskingOrder
                 'production_date' => $data['production_date'],
                 'warehouse_id' => $data['warehouse_id'],
                 'notes' => $data['notes'] ?? null,
+                'labour_rate' => ($data['labour_rate'] ?? null) === null
+                    ? null
+                    : DecimalMath::cost(DecimalMath::of((string) $data['labour_rate'])),
             ];
 
             if ($order === null) {
@@ -56,7 +60,8 @@ class SaveDehuskingOrder
 
             $order->inputs()->create([
                 'product_id' => $recipe->input_product_id,
-                'lot_id' => $data['lot_id'],
+                // Pooled coconut has no lot to name (docs/INVENTORY_RULES.md §15).
+                'lot_id' => $data['lot_id'] ?? null,
                 'quantity' => DecimalMath::quantity(DecimalMath::of($data['quantity'])),
                 'unit_cost' => null,
                 'total_cost' => null,

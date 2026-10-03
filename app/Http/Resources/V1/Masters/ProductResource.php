@@ -26,6 +26,8 @@ class ProductResource extends ApiResource
             'description' => $this->description,
             'primary_uom' => $this->ref($this->whenLoaded('primaryUom', fn () => $this->primaryUom, null)),
             'secondary_uom' => $this->ref($this->whenLoaded('secondaryUom', fn () => $this->secondaryUom, null)),
+            // False: one pooled stock with no lots (docs/INVENTORY_RULES.md §15).
+            'tracks_lots' => $this->tracksLots(),
             'is_active' => $this->is_active,
             'created_at' => $this->timestamp($this->created_at),
             'updated_at' => $this->timestamp($this->updated_at),

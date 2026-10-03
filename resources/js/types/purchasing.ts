@@ -104,6 +104,8 @@ export type ProductOption = {
     name: string;
     uom: string | null;
     secondary_uom?: string | null;
+    /** False for pooled stock: no lot is created, so no lot details are asked for. */
+    tracks_lots?: boolean;
 };
 
 export type PurchaseOrderOption = {

@@ -28,7 +28,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
@@ -92,7 +91,7 @@ class AuthoritativeCostTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
         $this->store = Warehouse::factory()->create(['code' => 'STORE']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
     }
 
     private function stock(): StockQueryService
@@ -181,26 +180,83 @@ class AuthoritativeCostTest extends TestCase
     // ------------------------------------------------------- production
 
     /**
-     * The specification's worked example: 40,000 split 30 / 30 / 40 over weights that make
-     * the per-KG rate repeat.
+     * The worked example: 40,000 of dehusked coconut split 75 / 25 between copra and shell,
+     * over a copra weight that makes the per-KG rate repeat. (Husk chipping used to carry this
+     * example; it no longer consumes anything at production, so there is no split to test.)
      */
-    private function postChippingExample(?InventoryLot $lot = null): ProductionOrder
+    private function postRepeatingRateExample(?InventoryLot $lot = null): ProductionOrder
     {
         if ($lot === null) {
-            $lot = $this->lotFor('RAW-HUSK');
-            $this->receive('RAW-HUSK', '2000.000', '20.000000', $lot);
+            $lot = $this->lotFor('DEHUSKED-COCONUT');
+            $this->receive('DEHUSKED-COCONUT', '2000.000', '20.000000', $lot);
         }
 
-        $order = ProductionOrder::factory()->huskChipping()->create(['warehouse_id' => $this->main->id]);
+        $order = ProductionOrder::factory()->copra()->create(['warehouse_id' => $this->main->id]);
 
         ProductionInput::factory()->create([
             'production_order_id' => $order->id,
-            'product_id' => $this->product('RAW-HUSK')->id,
+            'product_id' => $this->product('DEHUSKED-COCONUT')->id,
             'lot_id' => $lot->id,
             'quantity' => '2000.000',
         ]);
+        ProductionOutput::factory()->create([
+            'production_order_id' => $order->id,
+            'product_id' => $this->product('COPRA')->id,
+            'quantity' => '280.000',
+            'allocated_cost' => null,
+            'unit_cost' => null,
+        ]);
+        ProductionOutput::factory()->create([
+            'production_order_id' => $order->id,
+            'product_id' => $this->product('RAW-SHELL')->id,
+            'quantity' => '2000.000',
+            'secondary_quantity' => '850.000',
+            'allocated_cost' => null,
+            'unit_cost' => null,
+        ]);
 
-        foreach ([['HUSK-7C', '150.000'], ['HUSK-9C', '200.000'], ['HUSK-10C', '280.000']] as [$code, $quantity]) {
+        return app(PostCopraProduction::class)->handle($order->refresh());
+    }
+
+    #[Test]
+    public function a_repeating_unit_rate_does_not_erode_the_allocated_total(): void
+    {
+        $posted = $this->postRepeatingRateExample();
+
+        $copra = $posted->outputs->firstWhere('product_id', $this->product('COPRA')->id);
+        $ledger = $posted->outputTransaction->lines->firstWhere('product_id', $this->product('COPRA')->id);
+
+        // 30,000 / 280 = 107.142857142... The rate repeats; the money does not.
+        $this->assertSame('30000.000000', $copra->allocated_cost);
+        $this->assertSame('107.142857', $ledger->unit_cost);
+        $this->assertSame('30000.000000', $ledger->total_cost);
+
+        // Explicitly NOT the old reconstruction.
+        $this->assertNotSame(
+            DecimalMath::cost(DecimalMath::mul('280.000', '107.142857')),
+            $ledger->total_cost,
+        );
+        $this->assertSame('29999.999960', DecimalMath::cost(DecimalMath::mul('280.000', '107.142857')));
+
+        $this->assertSame('30000.000000', $this->stock()->valueForProduct($this->product('COPRA')->id));
+    }
+
+    #[Test]
+    public function the_repeating_rate_example_conserves_ledger_value_exactly(): void
+    {
+        $posted = $this->postRepeatingRateExample();
+
+        $this->assertSame('40000.000000', $posted->consumptionTransaction->lines->first()->total_cost);
+        $this->assertSame('40000.000000', $this->ledgerTotal($posted->outputTransaction));
+    }
+
+    #[Test]
+    public function husk_chipping_moves_no_value_at_production(): void
+    {
+        $this->receive('RAW-HUSK', '2000.000', '20.000000', $this->lotFor('RAW-HUSK'));
+
+        $order = ProductionOrder::factory()->huskChipping()->create(['warehouse_id' => $this->main->id]);
+        foreach ([['HUSK-7C', '150.000'], ['HUSK-10C', '280.000']] as [$code, $quantity]) {
             ProductionOutput::factory()->create([
                 'production_order_id' => $order->id,
                 'product_id' => $this->product($code)->id,
@@ -210,51 +266,27 @@ class AuthoritativeCostTest extends TestCase
             ]);
         }
 
-        return app(PostHuskChippingProduction::class)->handle($order->refresh());
-    }
+        $posted = app(PostHuskChippingProduction::class)->handle($order->refresh());
 
-    #[Test]
-    public function a_repeating_unit_rate_does_not_erode_the_allocated_total(): void
-    {
-        $posted = $this->postChippingExample();
-
-        $c10 = $posted->outputs->firstWhere('product_id', $this->product('HUSK-10C')->id);
-        $ledger = $posted->outputTransaction->lines->firstWhere('product_id', $this->product('HUSK-10C')->id);
-
-        // 16,000 / 280 = 57.142857142... The rate repeats; the money does not.
-        $this->assertSame('16000.000000', $c10->allocated_cost);
-        $this->assertSame('57.142857', $ledger->unit_cost);
-        $this->assertSame('16000.000000', $ledger->total_cost);
-
-        // Explicitly NOT the old reconstruction.
-        $this->assertNotSame(
-            DecimalMath::cost(DecimalMath::mul('280.000', '57.142857')),
-            $ledger->total_cost,
-        );
-        $this->assertSame('15999.999960', DecimalMath::cost(DecimalMath::mul('280.000', '57.142857')));
-
-        $this->assertSame('16000.000000', $this->stock()->valueForProduct($this->product('HUSK-10C')->id));
-    }
-
-    #[Test]
-    public function husk_chipping_conserves_ledger_value_exactly(): void
-    {
-        $posted = $this->postChippingExample();
-
-        $this->assertSame('40000.000000', $posted->consumptionTransaction->lines->first()->total_cost);
-        $this->assertSame('40000.000000', $this->ledgerTotal($posted->outputTransaction));
+        // The husk stays at its full value until a delivery backflushes it; the chips enter
+        // stock with their material cost pending — zero, not an invented figure.
+        $this->assertNull($posted->consumptionTransaction);
+        $this->assertSame('0.000000', $this->ledgerTotal($posted->outputTransaction));
+        $this->assertSame('40000.000000', $this->stock()->valueForProduct($this->product('RAW-HUSK')->id));
+        $this->assertSame('280.000', $this->stock()->quantityForProduct($this->product('HUSK-10C')->id));
     }
 
     #[Test]
     public function dehusking_conserves_ledger_value_exactly(): void
     {
         $lot = $this->lotFor('COCONUT');
-        // A cost that does not divide evenly by the 85 / 15 split.
         $this->receive('COCONUT', '3000.000', '102.505001', $lot);
 
+        // A labour rate whose total cannot be reproduced from a per-unit figure either way.
         $order = ProductionOrder::factory()->create([
             'production_type' => ProductionType::Dehusking,
             'warehouse_id' => $this->main->id,
+            'labour_rate' => '1.333333',
         ]);
         ProductionInput::factory()->create([
             'production_order_id' => $order->id,
@@ -268,7 +300,13 @@ class AuthoritativeCostTest extends TestCase
         $consumed = $posted->consumptionTransaction->lines->first()->total_cost;
 
         $this->assertSame('102505.001000', $consumed);
-        $this->assertSame($consumed, $this->ledgerTotal($posted->outputTransaction));
+        $this->assertSame('1333.333000', $posted->labour_cost);
+
+        // Consumed value + labour = output value, exactly: the dehusked coconut takes the
+        // whole coconut value and the raw husk takes the labour.
+        $this->assertSame('103838.334000', $this->ledgerTotal($posted->outputTransaction));
+        $this->assertSame('102505.001000', $posted->outputTransaction->lines->firstWhere('product_id', $this->product('DEHUSKED-COCONUT')->id)->total_cost);
+        $this->assertSame('1333.333000', $posted->outputTransaction->lines->firstWhere('product_id', $this->product('RAW-HUSK')->id)->total_cost);
     }
 
     #[Test]
@@ -326,7 +364,7 @@ class AuthoritativeCostTest extends TestCase
     #[Test]
     public function the_unit_cost_is_still_stored_to_six_decimals_and_represents_the_total(): void
     {
-        $posted = $this->postChippingExample();
+        $posted = $this->postRepeatingRateExample();
 
         foreach ($posted->outputTransaction->lines as $line) {
             // Still decimal(20,6): six places, no more and no fewer.
@@ -441,16 +479,16 @@ class AuthoritativeCostTest extends TestCase
     #[Test]
     public function depleting_a_production_output_leaves_no_residue_behind(): void
     {
-        $posted = $this->postChippingExample();
-        $c10 = $this->product('HUSK-10C');
-        $lot = InventoryLot::findOrFail($posted->outputs->firstWhere('product_id', $c10->id)->lot_id);
+        $posted = $this->postRepeatingRateExample();
+        $copra = $this->product('COPRA');
+        $lot = InventoryLot::findOrFail($posted->outputs->firstWhere('product_id', $copra->id)->lot_id);
 
-        $this->assertSame('16000.000000', $this->stock()->valueForProduct($c10->id));
+        $this->assertSame('30000.000000', $this->stock()->valueForProduct($copra->id));
 
-        $this->issue('HUSK-10C', '280.000', $lot);
+        $this->issue('COPRA', '280.000', $lot);
 
-        $this->assertSame('0.000', $this->stock()->quantityForProduct($c10->id));
-        $this->assertSame('0.000000', $this->stock()->valueForProduct($c10->id));
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($copra->id));
+        $this->assertSame('0.000000', $this->stock()->valueForProduct($copra->id));
     }
 
     // ------------------------------------------------------- transfer
@@ -537,24 +575,24 @@ class AuthoritativeCostTest extends TestCase
     #[Test]
     public function reversing_a_repeating_rate_production_output_restores_value_exactly(): void
     {
-        $huskId = $this->product('RAW-HUSK')->id;
+        $inputId = $this->product('DEHUSKED-COCONUT')->id;
 
-        $lot = $this->lotFor('RAW-HUSK');
-        $this->receive('RAW-HUSK', '2000.000', '20.000000', $lot);
+        $lot = $this->lotFor('DEHUSKED-COCONUT');
+        $this->receive('DEHUSKED-COCONUT', '2000.000', '20.000000', $lot);
 
-        $valueBefore = $this->stock()->valueForProduct($huskId);
+        $valueBefore = $this->stock()->valueForProduct($inputId);
 
-        $posted = $this->postChippingExample($lot);
+        $posted = $this->postRepeatingRateExample($lot);
 
-        $this->assertSame('0.000000', $this->stock()->valueForProduct($huskId));
+        $this->assertSame('0.000000', $this->stock()->valueForProduct($inputId));
 
         app(ReverseProduction::class)->handle($posted);
 
-        // The husk comes back at exactly what it left at, and no chip value lingers.
-        $this->assertSame('2000.000', $this->stock()->quantityForProduct($huskId));
-        $this->assertSame($valueBefore, $this->stock()->valueForProduct($huskId));
+        // The input comes back at exactly what it left at, and no output value lingers.
+        $this->assertSame('2000.000', $this->stock()->quantityForProduct($inputId));
+        $this->assertSame($valueBefore, $this->stock()->valueForProduct($inputId));
 
-        foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C'] as $code) {
+        foreach (['COPRA', 'RAW-SHELL'] as $code) {
             $this->assertSame('0.000', $this->stock()->quantityForProduct($this->product($code)->id));
             $this->assertSame('0.000000', $this->stock()->valueForProduct($this->product($code)->id));
         }

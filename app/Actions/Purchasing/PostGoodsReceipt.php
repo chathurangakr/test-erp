@@ -280,9 +280,25 @@ class PostGoodsReceipt
      *
      * A lot is created per line so traceability back to the delivery is preserved. An
      * explicitly referenced lot must belong to the same product.
+     *
+     * A POOLED product (tracks_lots = false) gets no lot at all: its stock joins the one
+     * lot-free pool, traceable to this receipt through the ledger's source. Any supplier lot
+     * number typed stays on the receipt line as information (docs/INVENTORY_RULES.md §15).
      */
     private function resolveLot(GoodsReceipt $receipt, GoodsReceiptLine $line): ?InventoryLot
     {
+        if (! $line->product->tracksLots()) {
+            if ($line->lot_id !== null) {
+                throw ValidationException::withMessages([
+                    'lines' => __(':product is kept as one pooled stock without lots, so no lot can be chosen.', [
+                        'product' => $line->product->code,
+                    ]),
+                ]);
+            }
+
+            return null;
+        }
+
         if ($line->lot_id !== null) {
             $lot = InventoryLot::query()->whereKey($line->lot_id)->first();
 

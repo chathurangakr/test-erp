@@ -18,6 +18,7 @@ use App\Actions\Sales\PostDelivery;
 use App\Actions\Sales\ReverseDelivery;
 use App\Enums\GoodsReceiptStatus;
 use App\Enums\JournalEntryStatus;
+use App\Enums\ProductionStatus;
 use App\Enums\ProductionType;
 use App\Models\Account;
 use App\Models\AccountingSetting;
@@ -45,7 +46,6 @@ use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
@@ -113,7 +113,7 @@ class InventoryAccountingTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
         $this->store = Warehouse::factory()->create(['code' => 'STORE']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
@@ -204,28 +204,35 @@ class InventoryAccountingTest extends TestCase
     }
 
     /**
+     * Husk chipping takes no input at production, so its input code, quantity and lot are
+     * ignored. Dehusking carries a labour rate (Rs. 2 per coconut unless stated).
+     *
      * @param  list<array{code: string, quantity: string, secondary?: string}>  $outputs
      */
     private function produce(
         ProductionType $type,
         string $inputCode,
         string $quantity,
-        int $lotId,
+        ?int $lotId,
         array $outputs = [],
         string $date = '2026-09-15',
+        string $labourRate = '2.000000',
     ): ProductionOrder {
         $order = ProductionOrder::factory()->create([
             'production_type' => $type,
             'warehouse_id' => $this->main->id,
             'production_date' => $date,
+            'labour_rate' => $type === ProductionType::Dehusking ? $labourRate : null,
         ]);
 
-        ProductionInput::factory()->create([
-            'production_order_id' => $order->id,
-            'product_id' => $this->product($inputCode)->id,
-            'lot_id' => $lotId,
-            'quantity' => $quantity,
-        ]);
+        if ($type !== ProductionType::HuskChipping) {
+            ProductionInput::factory()->create([
+                'production_order_id' => $order->id,
+                'product_id' => $this->product($inputCode)->id,
+                'lot_id' => $lotId,
+                'quantity' => $quantity,
+            ]);
+        }
 
         foreach ($outputs as $output) {
             ProductionOutput::factory()->create([
@@ -277,18 +284,31 @@ class InventoryAccountingTest extends TestCase
     #[Test]
     public function the_official_products_are_mapped_and_the_qa_product_is_not(): void
     {
-        $this->assertSame(8, ProductAccountMapping::count());
+        // The eight original products plus Cocopeat and the four litre stock items.
+        $this->assertSame(13, ProductAccountMapping::count());
 
         $coconut = $this->product('COCONUT')->accountMapping;
         $this->assertSame('1310', $coconut->inventoryAccount->code);
         $this->assertSame('5110', $coconut->cogsAccount->code);
         $this->assertSame('4110', $coconut->revenueAccount->code);
 
-        // The three chip grades share one set of accounts.
-        foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C'] as $code) {
-            $this->assertSame('1340', $this->product($code)->accountMapping->inventoryAccount->code);
-            $this->assertSame('5130', $this->product($code)->accountMapping->cogsAccount->code);
+        // The three chip grades share one set of accounts — by weight and by volume alike.
+        foreach (['HUSK-7C', 'HUSK-9C', 'HUSK-10C', 'HUSK-7C-L', 'HUSK-9C-L', 'HUSK-10C-L'] as $code) {
+            $mapping = Product::where('code', $code)->firstOrFail()->accountMapping;
+            $this->assertSame('1340', $mapping->inventoryAccount->code);
+            $this->assertSame('5130', $mapping->cogsAccount->code);
         }
+
+        // Cocopeat has its own accounts.
+        foreach (['COCOPEAT', 'COCOPEAT-L'] as $code) {
+            $mapping = Product::where('code', $code)->firstOrFail()->accountMapping;
+            $this->assertSame('1370', $mapping->inventoryAccount->code);
+            $this->assertSame('5170', $mapping->cogsAccount->code);
+            $this->assertSame('4170', $mapping->revenueAccount->code);
+        }
+
+        // Production labour is absorbed through configuration, never a code in the action.
+        $this->assertSame('6310', AccountingSetting::current()->productionLabourAccount->code);
 
         // A hand-created product gets no mapping — inventing one would put guessed figures
         // permanently into the books.
@@ -296,7 +316,7 @@ class InventoryAccountingTest extends TestCase
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->assertNull($qa->fresh()->accountMapping);
-        $this->assertSame(8, ProductAccountMapping::count());
+        $this->assertSame(13, ProductAccountMapping::count());
     }
 
     #[Test]
@@ -627,51 +647,72 @@ class InventoryAccountingTest extends TestCase
         );
         $lot = (int) $receipt->lines->first()->lot_id;
 
-        // 3,000 at 102.50 = 307,500, split 85 / 15.
+        // 3,000 at 102.50 = 307,500, all to the dehusked coconut; the raw husk carries the
+        // labour, 3,000 x Rs. 2 = 6,000, absorbed from production labour — no cash, no payable.
         $order = $this->produce(ProductionType::Dehusking, 'COCONUT', '3000.000', $lot);
 
         $journal = $this->journalFor($order);
         $this->assertNotNull($journal);
 
-        $this->assertSame('261375.000000', $this->amountOn($journal, '1320', 'debit'));
-        $this->assertSame('46125.000000', $this->amountOn($journal, '1330', 'debit'));
+        $this->assertSame('307500.000000', $this->amountOn($journal, '1320', 'debit'));
+        $this->assertSame('6000.000000', $this->amountOn($journal, '1330', 'debit'));
         $this->assertSame('307500.000000', $this->amountOn($journal, '1310', 'credit'));
+        $this->assertSame('6000.000000', $this->amountOn($journal, '6310', 'credit'));
+        $this->assertSame('0.000000', $this->amountOn($journal, '1110', 'credit'));
+        $this->assertSame('0.000000', $this->amountOn($journal, '2110', 'credit'));
 
-        $this->assertSame('307500.000000', $this->sideTotal($journal, 'debit'));
-        $this->assertSame('307500.000000', $this->sideTotal($journal, 'credit'));
+        $this->assertSame('313500.000000', $this->sideTotal($journal, 'debit'));
+        $this->assertSame('313500.000000', $this->sideTotal($journal, 'credit'));
     }
 
     /**
-     * The repeating-rate case: 16,000 over 280 KG is Rs.57.142857 per KG, which cannot be
-     * multiplied back. The books must carry the total, not the rate.
+     * The repeating-rate case: 75% of 40,000 over 280 KG of copra is Rs.107.142857 per KG,
+     * which cannot be multiplied back. The books must carry the total, not the rate.
      */
     #[Test]
-    public function husk_chipping_uses_the_authoritative_total_not_the_repeating_rate(): void
+    public function production_journals_use_the_authoritative_total_not_the_repeating_rate(): void
     {
         $this->enableAccounting();
 
-        $receipt = $this->receive([['code' => 'RAW-HUSK', 'quantity' => '2000.000', 'price' => '20.000000']]);
+        $receipt = $this->receive([['code' => 'DEHUSKED-COCONUT', 'quantity' => '2000.000', 'price' => '20.000000']]);
         $lot = (int) $receipt->lines->first()->lot_id;
 
-        $order = $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '2000.000', $lot, [
-            ['code' => 'HUSK-7C', 'quantity' => '150.000'],
-            ['code' => 'HUSK-9C', 'quantity' => '200.000'],
-            ['code' => 'HUSK-10C', 'quantity' => '280.000'],
+        $order = $this->produce(ProductionType::Copra, 'DEHUSKED-COCONUT', '2000.000', $lot, [
+            ['code' => 'COPRA', 'quantity' => '280.000'],
+            ['code' => 'RAW-SHELL', 'quantity' => '2000.000', 'secondary' => '850.000'],
         ]);
 
         $journal = $this->journalFor($order);
 
-        // All three grades map to 1340, so the account carries the whole 40,000 — across
-        // three separate, individually described lines.
-        $this->assertSame('40000.000000', $this->amountOn($journal, '1340', 'debit'));
-        $this->assertSame('40000.000000', $this->amountOn($journal, '1330', 'credit'));
-        $this->assertSame(3, $journal->lines->where('account_id', $this->account('1340')->id)->count());
-
+        $this->assertSame('40000.000000', $this->amountOn($journal, '1320', 'credit'));
         $this->assertSame($this->sideTotal($journal, 'debit'), $this->sideTotal($journal, 'credit'));
 
-        // Not 279.999999… of anything: the exact allocated figure reached the books.
-        $tenC = $journal->lines->firstWhere('description', 'Produced HUSK-10C');
-        $this->assertSame('16000.000000', $tenC->debit);
+        // Not 29,999.99996: the exact allocated figure reached the books.
+        $copra = $journal->lines->firstWhere('description', 'Produced COPRA');
+        $this->assertSame('30000.000000', $copra->debit);
+    }
+
+    /**
+     * Husk chipping takes no raw husk at production — the husk is backflushed when the
+     * outputs are delivered — so a run moves no value and writes no journal.
+     */
+    #[Test]
+    public function husk_chipping_writes_no_journal_because_it_moves_no_value(): void
+    {
+        $this->enableAccounting();
+
+        $this->receive([['code' => 'RAW-HUSK', 'quantity' => '2000.000', 'price' => '20.000000']]);
+
+        $order = $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '0', null, [
+            ['code' => 'HUSK-7C', 'quantity' => '150.000'],
+            ['code' => 'HUSK-10C', 'quantity' => '280.000'],
+        ]);
+
+        $this->assertSame(ProductionStatus::Posted, $order->status);
+        $this->assertNull($this->journalFor($order));
+        $this->assertSame('40000.000000', $this->balances()->netBalance($this->account('1330')->id));
+        $this->assertSame('0.000000', $this->balances()->netBalance($this->account('1340')->id));
+        $this->assertSame('280.000', $this->stock()->quantityForProduct($this->product('HUSK-10C')->id));
     }
 
     #[Test]
@@ -803,16 +844,18 @@ class InventoryAccountingTest extends TestCase
         $lot = (int) $receipt->lines->first()->lot_id;
         $dehusking = $this->produce(ProductionType::Dehusking, 'COCONUT', '3000.000', $lot);
 
+        $this->assertSame('6000.000000', $this->balances()->netBalance($this->account('1330')->id));
+
         app(ReverseProduction::class)->handle($dehusking);
 
         $this->assertSame('0.000000', $this->balances()->netBalance($this->account('1320')->id));
         $this->assertSame('0.000000', $this->balances()->netBalance($this->account('1330')->id));
+        $this->assertSame('0.000000', $this->balances()->netBalance($this->account('6310')->id));
         $this->assertSame('500000.000000', $this->balances()->netBalance($this->account('1310')->id));
 
-        // Husk chipping.
-        $huskReceipt = $this->receive([['code' => 'RAW-HUSK', 'quantity' => '2000.000', 'price' => '20.000000']]);
-        $huskLot = (int) $huskReceipt->lines->first()->lot_id;
-        $chipping = $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '2000.000', $huskLot, [
+        // Husk chipping: no journal to reverse; the zero-value chips simply leave again.
+        $this->receive([['code' => 'RAW-HUSK', 'quantity' => '2000.000', 'price' => '20.000000']]);
+        $chipping = $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '0', null, [
             ['code' => 'HUSK-7C', 'quantity' => '150.000'],
             ['code' => 'HUSK-9C', 'quantity' => '200.000'],
             ['code' => 'HUSK-10C', 'quantity' => '280.000'],
@@ -820,6 +863,8 @@ class InventoryAccountingTest extends TestCase
 
         app(ReverseProduction::class)->handle($chipping);
 
+        $this->assertSame(ProductionStatus::Reversed, $chipping->fresh()->status);
+        $this->assertSame('0.000', $this->stock()->quantityForProduct($this->product('HUSK-10C')->id));
         $this->assertSame('0.000000', $this->balances()->netBalance($this->account('1340')->id));
         $this->assertSame('40000.000000', $this->balances()->netBalance($this->account('1330')->id));
 
@@ -956,10 +1001,9 @@ class InventoryAccountingTest extends TestCase
         $this->deliver([['code' => 'COCONUT', 'quantity' => '2000.000', 'price' => '130.000000', 'lot' => $lot]]);
 
         $dehusking = $this->produce(ProductionType::Dehusking, 'COCONUT', '3000.000', $lot);
-        $huskLot = (int) $dehusking->outputs->firstWhere('product_id', $this->product('RAW-HUSK')->id)->lot_id;
         $dehuskedLot = (int) $dehusking->outputs->firstWhere('product_id', $this->product('DEHUSKED-COCONUT')->id)->lot_id;
 
-        $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '2000.000', $huskLot, [
+        $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '0', null, [
             ['code' => 'HUSK-7C', 'quantity' => '150.500'],
             ['code' => 'HUSK-9C', 'quantity' => '205.250'],
             ['code' => 'HUSK-10C', 'quantity' => '281.750'],
@@ -1026,10 +1070,9 @@ class InventoryAccountingTest extends TestCase
         $dehusking = $this->produce(ProductionType::Dehusking, 'COCONUT', '3000.000', $lot);
         $assertBalanced('dehusking');
 
-        $huskLot = (int) $dehusking->outputs->firstWhere('product_id', $this->product('RAW-HUSK')->id)->lot_id;
         $dehuskedLot = (int) $dehusking->outputs->firstWhere('product_id', $this->product('DEHUSKED-COCONUT')->id)->lot_id;
 
-        $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '2000.000', $huskLot, [
+        $this->produce(ProductionType::HuskChipping, 'RAW-HUSK', '0', null, [
             ['code' => 'HUSK-7C', 'quantity' => '150.500'],
             ['code' => 'HUSK-9C', 'quantity' => '205.250'],
             ['code' => 'HUSK-10C', 'quantity' => '281.750'],

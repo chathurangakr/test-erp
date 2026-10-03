@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\PaymentMethod;
 use App\Support\DecimalMath;
 use Database\Factories\CustomerReceiptFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,6 +33,10 @@ class CustomerReceipt extends Model
         'receipt_account_id',
         'reference',
         'amount',
+        'payment_method',
+        'cheque_number',
+        'cheque_date',
+        'cheque_bank',
         'status',
         'notes',
         'journal_entry_id',
@@ -47,6 +52,8 @@ class CustomerReceipt extends Model
     {
         return [
             'status' => CustomerReceiptStatus::class,
+            'payment_method' => PaymentMethod::class,
+            'cheque_date' => 'date',
             'receipt_date' => 'date',
             'amount' => 'decimal:6',
             'posted_at' => 'datetime',

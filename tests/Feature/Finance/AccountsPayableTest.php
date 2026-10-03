@@ -40,7 +40,6 @@ use App\Support\DecimalMath;
 use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -100,7 +99,7 @@ class AccountsPayableTest extends TestCase
         $this->transportSupplier = Supplier::factory()->create(['code' => 'SUP-TRANSPORT', 'name' => 'Transport Supplier']);
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         // Money may only move through a configured cash or bank account.
         $this->seed(CashBankAccountSeeder::class);

@@ -11,6 +11,7 @@ use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\CustomerReceiptStatus;
 use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
+use App\Enums\PaymentMethod;
 use App\Enums\SalesInvoiceStatus;
 use App\Models\Account;
 use App\Models\Customer;
@@ -27,7 +28,6 @@ use App\Models\Warehouse;
 use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia;
@@ -68,7 +68,7 @@ class AccountsReceivableScreensTest extends TestCase
         $this->customer = Customer::factory()->create(['code' => 'CUS-001', 'credit_days' => 30]);
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
-        $this->seed(ProductionRecipeSeeder::class);
+        $this->seedProductionRecipes();
         $this->seed(ChartOfAccountsSeeder::class);
         // Money may only move through a configured cash or bank account.
         $this->seed(CashBankAccountSeeder::class);
@@ -352,6 +352,10 @@ class AccountsReceivableScreensTest extends TestCase
             'receipt_account_id' => $this->account('1120')->id,
             'reference' => 'CHQ-2001',
             'amount' => '100000.000000',
+            'payment_method' => 'CHEQUE',
+            'cheque_number' => '2001',
+            'cheque_date' => '2026-09-20',
+            'cheque_bank' => 'Commercial Bank',
             'allocations' => [
                 ['sales_invoice_id' => $invoice->id, 'amount' => '100000.000000'],
             ],
@@ -359,6 +363,8 @@ class AccountsReceivableScreensTest extends TestCase
 
         $receipt = CustomerReceipt::firstOrFail();
         $this->assertMatchesRegularExpression('/^REC-\d{8}-\d{6}$/', $receipt->receipt_number);
+        $this->assertSame(PaymentMethod::Cheque, $receipt->payment_method);
+        $this->assertSame('2001', $receipt->cheque_number);
 
         $this->actingAs($user)
             ->patch(route('customer-receipts.post', $receipt))

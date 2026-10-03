@@ -8,7 +8,6 @@ use App\Data\Inventory\PendingInventoryLine;
 use App\Enums\InventoryDirection;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ProductionStatus;
-use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\ProductionOrder;
@@ -16,12 +15,15 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
-use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
+/**
+ * The husk chipping screens: flexible output rows, no raw husk input, and outputs that enter
+ * stock with their raw husk cost pending backflush.
+ */
 class HuskChippingScreensTest extends TestCase
 {
     use RefreshDatabase;
@@ -38,8 +40,6 @@ class HuskChippingScreensTest extends TestCase
 
     private Warehouse $main;
 
-    private InventoryLot $lot;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,27 +47,21 @@ class HuskChippingScreensTest extends TestCase
         $nos = UnitOfMeasure::factory()->create(['code' => 'NOS', 'decimal_places' => 0]);
         $this->kg = UnitOfMeasure::factory()->weight()->create(['code' => 'KG']);
 
-        Product::factory()->create(['code' => 'COCONUT', 'primary_uom_id' => $nos->id]);
-        Product::factory()->create(['code' => 'DEHUSKED-COCONUT', 'primary_uom_id' => $nos->id]);
-        Product::factory()->create(['code' => 'COPRA', 'primary_uom_id' => $this->kg->id]);
-        Product::factory()->create([
-            'code' => 'RAW-SHELL',
-            'primary_uom_id' => $nos->id,
-            'secondary_uom_id' => $this->kg->id,
-        ]);
-
         $this->husk = Product::factory()->create(['code' => 'RAW-HUSK', 'name' => 'Raw Coconut Husk', 'primary_uom_id' => $nos->id]);
         $this->c7 = Product::factory()->create(['code' => 'HUSK-7C', 'name' => '7C Husk Chips', 'primary_uom_id' => $this->kg->id]);
         $this->c9 = Product::factory()->create(['code' => 'HUSK-9C', 'name' => '9C Husk Chips', 'primary_uom_id' => $this->kg->id]);
         $this->c10 = Product::factory()->create(['code' => 'HUSK-10C', 'name' => '10C Husk Chips', 'primary_uom_id' => $this->kg->id]);
 
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
-        $this->seed(ProductionRecipeSeeder::class);
-
-        $this->lot = app(CreateInventoryLot::class)->handle($this->husk);
+        $this->seedProductionRecipes();
     }
 
-    private function receive(string $quantity, string $unitCost): void
+    private function product(string $code): Product
+    {
+        return Product::query()->where('code', $code)->firstOrFail();
+    }
+
+    private function receiveHusk(string $quantity, string $unitCost): void
     {
         app(PostInventoryTransaction::class)->handle(InventoryTransactionType::PurchaseReceipt, [
             new PendingInventoryLine(
@@ -75,29 +69,33 @@ class HuskChippingScreensTest extends TestCase
                 warehouseId: $this->main->id,
                 direction: InventoryDirection::In,
                 quantity: $quantity,
-                lotId: $this->lot->id,
+                lotId: app(CreateInventoryLot::class)->handle($this->husk)->id,
                 unitCost: $unitCost,
             ),
         ]);
     }
 
     /**
-     * @param  array<string, string>  $weights  7C, 9C, 10C
+     * @param  list<array<string, mixed>>|null  $outputs
+     * @param  array<string, mixed>  $extra
      * @return array<string, mixed>
      */
-    private function payload(array $weights = ['150.000', '200.000', '280.000'], array $extra = []): array
+    private function payload(?array $outputs = null, array $extra = []): array
     {
         return array_merge([
             'production_date' => now()->toDateString(),
             'warehouse_id' => $this->main->id,
-            'lot_id' => $this->lot->id,
-            'quantity' => '2000',
-            'outputs' => [
-                ['product_id' => $this->c7->id, 'quantity' => $weights[0]],
-                ['product_id' => $this->c9->id, 'quantity' => $weights[1]],
-                ['product_id' => $this->c10->id, 'quantity' => $weights[2]],
+            'outputs' => $outputs ?? [
+                ['product_id' => $this->c7->id, 'quantity' => '150.000'],
+                ['product_id' => $this->c9->id, 'quantity' => '200.000'],
+                ['product_id' => $this->c10->id, 'quantity' => '280.000'],
             ],
         ], $extra);
+    }
+
+    private function admin(): User
+    {
+        return User::factory()->admin()->create();
     }
 
     #[Test]
@@ -116,50 +114,59 @@ class HuskChippingScreensTest extends TestCase
     }
 
     #[Test]
-    public function an_authenticated_user_can_access_the_husk_chipping_screens(): void
+    public function a_user_without_the_production_permissions_is_refused(): void
     {
-        $user = User::factory()->admin()->create();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('husk-chipping.index'))->assertForbidden();
+        $this->actingAs($user)->get(route('husk-chipping.create'))->assertForbidden();
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload())->assertForbidden();
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function an_authorised_user_can_access_the_husk_chipping_screens(): void
+    {
+        $user = $this->admin();
 
         $this->actingAs($user)->get(route('husk-chipping.index'))->assertOk();
         $this->actingAs($user)->get(route('husk-chipping.create'))->assertOk();
     }
 
     #[Test]
-    public function the_create_screen_offers_the_grades_to_weigh_and_no_conversion(): void
+    public function the_create_screen_offers_every_output_in_its_own_unit_and_no_husk_lot(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
+        $this->receiveHusk('6000', '19.500000');
 
-        $this->actingAs($user)
+        $this->actingAs($this->admin())
             ->get(route('husk-chipping.create'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('production/husk-chipping/Create')
                 ->where('recipe.input_code', 'RAW-HUSK')
                 ->where('recipe.input_uom', 'NOS')
-                ->has('recipe.outputs', 3)
+                ->has('recipe.outputs', 8)
+                ->where('recipe.outputs.0.product_id', $this->c7->id)
                 ->where('recipe.outputs.0.code', 'HUSK-7C')
                 ->where('recipe.outputs.0.uom', 'KG')
-                // Null ratio: there is nothing to derive a weight from.
-                ->where('recipe.outputs.0.ratio', null)
-                ->where('recipe.outputs.0.allocation_percent', '30.000000')
-                ->where('recipe.outputs.1.ratio', null)
-                ->where('recipe.outputs.1.allocation_percent', '30.000000')
-                ->where('recipe.outputs.2.code', 'HUSK-10C')
-                ->where('recipe.outputs.2.ratio', null)
-                ->where('recipe.outputs.2.allocation_percent', '40.000000')
+                ->where('recipe.outputs.0.decimals', 3)
+                ->where('recipe.outputs.3.code', 'COCOPEAT')
+                ->where('recipe.outputs.7.code', 'COCOPEAT-L')
+                ->where('recipe.outputs.7.uom', 'L')
+                // The raw husk pool is shown for information only.
+                ->where('inputStock', '6000.000')
                 // Waste units come from the UOM master, not from an invented unit.
-                ->has('wasteUoms', 2)
-                ->has('lots', 1));
+                ->has('wasteUoms', 3)
+                ->missing('lots'));
     }
 
     #[Test]
-    public function a_draft_created_through_the_screen_moves_no_stock(): void
+    public function a_draft_created_through_the_screen_has_no_input_and_moves_no_stock(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
+        $this->receiveHusk('6000', '19.500000');
 
-        $this->actingAs($user)
+        $this->actingAs($this->admin())
             ->post(route('husk-chipping.store'), $this->payload())
             ->assertSessionHasNoErrors();
 
@@ -167,11 +174,7 @@ class HuskChippingScreensTest extends TestCase
 
         $this->assertMatchesRegularExpression('/^PRD-\d{8}-\d{6}$/', $order->production_number);
         $this->assertSame(ProductionStatus::Draft, $order->status);
-
-        // The input product came from the recipe, not the request.
-        $this->assertSame($this->husk->id, $order->inputs()->first()->product_id);
-
-        // The measured weights were stored exactly as typed.
+        $this->assertSame(0, $order->inputs()->count());
         $this->assertSame(
             ['150.000', '200.000', '280.000'],
             $order->outputs()->orderBy('id')->pluck('quantity')->all(),
@@ -179,24 +182,97 @@ class HuskChippingScreensTest extends TestCase
 
         // Only the purchase receipt exists.
         $this->assertSame(1, InventoryTransaction::count());
-        $this->assertSame('6000.000', app(StockQueryService::class)->quantityForProduct($this->husk->id));
+    }
+
+    #[Test]
+    public function a_husk_lot_or_husk_quantity_is_refused(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('husk-chipping.store'), $this->payload(extra: ['lot_id' => 1, 'quantity' => '2000']))
+            ->assertSessionHasErrors(['lot_id', 'quantity']);
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function a_run_may_record_any_subset_of_outputs_in_kilograms_or_litres(): void
+    {
+        $this->actingAs($this->admin())->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '40.000'],
+            ['product_id' => $this->product('COCOPEAT-L')->id, 'quantity' => '100.000'],
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(2, ProductionOrder::firstOrFail()->outputs()->count());
+    }
+
+    #[Test]
+    public function at_least_one_output_row_is_required(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('husk-chipping.store'), $this->payload([]))
+            ->assertSessionHasErrors('outputs');
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function a_zero_or_negative_row_is_refused(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '40.000'],
+            ['product_id' => $this->c9->id, 'quantity' => '0'],
+        ]))->assertSessionHasErrors('outputs.1.quantity');
+
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '-1.000'],
+        ]))->assertSessionHasErrors('outputs.0.quantity');
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function a_product_may_appear_only_once(): void
+    {
+        $this->actingAs($this->admin())->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '40.000'],
+            ['product_id' => $this->c7->id, 'quantity' => '10.000'],
+        ]))->assertSessionHasErrors('outputs.1.product_id');
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function a_product_outside_the_recipe_is_refused_by_the_screen(): void
+    {
+        $this->actingAs($this->admin())->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '150.000'],
+            ['product_id' => $this->husk->id, 'quantity' => '280.000'],
+        ]))->assertSessionHasErrors('outputs.1.product_id');
+
+        $this->assertSame(0, ProductionOrder::count());
+    }
+
+    #[Test]
+    public function a_quantity_is_checked_against_its_own_units_precision(): void
+    {
+        $this->actingAs($this->admin())->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '1.2345'],
+        ]))->assertSessionHasErrors('outputs.0.quantity');
+
+        $this->assertSame(0, ProductionOrder::count());
     }
 
     #[Test]
     public function the_screen_never_accepts_a_cost(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
+        $user = $this->admin();
 
-        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
-            'unit_cost' => '0.000001',
-            'total_cost' => '1.000000',
-            'outputs' => [
-                ['product_id' => $this->c7->id, 'quantity' => '150.000', 'allocated_cost' => '999999.000000'],
-                ['product_id' => $this->c9->id, 'quantity' => '200.000', 'unit_cost' => '1.000000'],
-                ['product_id' => $this->c10->id, 'quantity' => '280.000'],
-            ],
-        ]))->assertSessionHasNoErrors();
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '150.000', 'allocated_cost' => '999999.000000'],
+            ['product_id' => $this->c9->id, 'quantity' => '200.000', 'unit_cost' => '1.000000'],
+        ], ['unit_cost' => '0.000001', 'total_cost' => '1.000000']))->assertSessionHasNoErrors();
 
         $order = ProductionOrder::firstOrFail();
 
@@ -205,92 +281,21 @@ class HuskChippingScreensTest extends TestCase
             $this->assertNull($output->unit_cost);
         }
 
-        $this->assertNull($order->inputs()->first()->unit_cost);
-        $this->assertNull($order->inputs()->first()->total_cost);
+        $this->actingAs($user)->patch(route('husk-chipping.post', $order))->assertSessionHasNoErrors();
 
-        $this->actingAs($user)->patch(route('husk-chipping.post', $order));
-
-        // Costs came from the ledger, not from the request.
-        $posted = $order->fresh(['inputs', 'outputs']);
-        $this->assertSame('39000.000000', $posted->inputValue());
-        $this->assertSame('39000.000000', $posted->outputValue());
-    }
-
-    #[Test]
-    public function a_grade_may_be_zero_but_not_every_grade(): void
-    {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
-
-        $this->actingAs($user)
-            ->post(route('husk-chipping.store'), $this->payload(['100.000', '0', '200.000']))
-            ->assertSessionHasNoErrors();
-
-        $this->actingAs($user)
-            ->post(route('husk-chipping.store'), $this->payload(['0', '0', '0']))
-            ->assertSessionHasErrors('outputs');
-
-        $this->assertSame(1, ProductionOrder::count());
-    }
-
-    #[Test]
-    public function a_negative_weight_is_refused_by_the_screen(): void
-    {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
-
-        $this->actingAs($user)
-            ->post(route('husk-chipping.store'), $this->payload(['-1.000', '200.000', '280.000']))
-            ->assertSessionHasErrors('outputs.0.quantity');
-
-        $this->assertSame(0, ProductionOrder::count());
-    }
-
-    #[Test]
-    public function every_grade_must_be_accounted_for(): void
-    {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
-
-        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
-            'outputs' => [
-                ['product_id' => $this->c7->id, 'quantity' => '150.000'],
-                ['product_id' => $this->c9->id, 'quantity' => '200.000'],
-            ],
-        ]))->assertSessionHasErrors('outputs');
-
-        $this->assertSame(0, ProductionOrder::count());
-    }
-
-    #[Test]
-    public function a_product_outside_the_recipe_is_refused_by_the_screen(): void
-    {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
-
-        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
-            'outputs' => [
-                ['product_id' => $this->c7->id, 'quantity' => '150.000'],
-                ['product_id' => $this->c9->id, 'quantity' => '200.000'],
-                ['product_id' => $this->husk->id, 'quantity' => '280.000'],
-            ],
-        ]))->assertSessionHasErrors('outputs.2.product_id');
-
-        $this->assertSame(0, ProductionOrder::count());
+        // The outputs carry no value until the delivery backflushes the raw husk.
+        $this->assertSame('0.000000', $order->fresh(['outputs'])->outputValue());
     }
 
     #[Test]
     public function waste_is_optional_but_needs_a_unit_when_given(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '19.500000');
+        $user = $this->admin();
 
-        // Without a unit.
         $this->actingAs($user)
             ->post(route('husk-chipping.store'), $this->payload(extra: ['waste_quantity' => '42.500']))
             ->assertSessionHasErrors('waste_uom_id');
 
-        // With one.
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload(extra: [
             'waste_quantity' => '42.500',
             'waste_uom_id' => $this->kg->id,
@@ -299,17 +304,14 @@ class HuskChippingScreensTest extends TestCase
         $order = ProductionOrder::firstOrFail();
         $this->assertSame('42.500', $order->waste_quantity);
         $this->assertSame($this->kg->id, $order->waste_uom_id);
-
-        // And it created nothing in inventory.
-        $this->assertSame(1, InventoryTransaction::count());
-        $this->assertSame(1, InventoryLot::count());
+        $this->assertSame(0, InventoryTransaction::count());
     }
 
     #[Test]
-    public function posting_through_the_screen_converts_stock_and_conserves_value(): void
+    public function posting_through_the_screen_adds_the_outputs_and_takes_no_raw_husk(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '20.000000');
+        $user = $this->admin();
+        $this->receiveHusk('6000', '20.000000');
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
         $order = ProductionOrder::firstOrFail();
@@ -320,23 +322,21 @@ class HuskChippingScreensTest extends TestCase
 
         $stock = app(StockQueryService::class);
 
-        $this->assertSame('4000.000', $stock->quantityForProduct($this->husk->id));
+        $this->assertSame('6000.000', $stock->quantityForProduct($this->husk->id));
+        $this->assertSame('120000.000000', $stock->valueForProduct($this->husk->id));
         $this->assertSame('150.000', $stock->quantityForProduct($this->c7->id));
         $this->assertSame('200.000', $stock->quantityForProduct($this->c9->id));
         $this->assertSame('280.000', $stock->quantityForProduct($this->c10->id));
 
-        $posted = $order->fresh(['inputs', 'outputs']);
+        $posted = $order->fresh();
         $this->assertSame(ProductionStatus::Posted, $posted->status);
         $this->assertSame($user->id, $posted->posted_by);
-        $this->assertSame('40000.000000', $posted->inputValue());
-        $this->assertSame('40000.000000', $posted->outputValue());
     }
 
     #[Test]
-    public function the_show_screen_hides_costs_until_the_run_is_posted(): void
+    public function the_show_screen_marks_the_raw_husk_cost_as_pending_backflush(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '20.000000');
+        $user = $this->admin();
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
         $order = ProductionOrder::firstOrFail();
@@ -348,9 +348,10 @@ class HuskChippingScreensTest extends TestCase
                 ->component('production/husk-chipping/Show')
                 ->where('order.status', 'DRAFT')
                 ->where('order.can_post', true)
-                ->where('order.input_value', null)
+                ->where('order.input', null)
+                ->where('order.pending_backflush', true)
                 ->where('order.output_value', null)
-                ->where('order.output_quantity', '630.000')
+                ->where('order.output_quantity', '630.000 KG')
                 ->has('order.outputs', 3)
                 ->where('order.outputs.0.allocated_cost', null)
                 ->where('order.outputs.0.lot_number', null));
@@ -362,22 +363,36 @@ class HuskChippingScreensTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('order.status', 'POSTED')
-                ->where('order.input_value', '40000.000000')
-                ->where('order.output_value', '40000.000000')
-                ->where('order.input.unit_cost', '20.000000')
-                ->where('order.outputs.0.allocated_cost', '12000.000000')
-                ->where('order.outputs.0.unit_cost', '80.000000')
-                ->where('order.outputs.1.allocated_cost', '12000.000000')
-                ->where('order.outputs.1.unit_cost', '60.000000')
-                ->where('order.outputs.2.allocated_cost', '16000.000000')
-                ->where('order.outputs.2.unit_cost', '57.142857'));
+                ->where('order.pending_backflush', true)
+                ->where('order.consumption_reference', null)
+                ->where('order.output_value', '0.000000')
+                ->where('order.outputs.0.allocated_cost', '0.000000')
+                ->where('order.outputs.0.unit_cost', '0.000000')
+                // The factory-made grade tracks lots, so it got one.
+                ->whereNot('order.outputs.0.lot_number', null));
+    }
+
+    #[Test]
+    public function output_totals_are_shown_per_unit_never_across_units(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload([
+            ['product_id' => $this->c7->id, 'quantity' => '40.000'],
+            ['product_id' => $this->product('COCOPEAT-L')->id, 'quantity' => '100.000'],
+        ]));
+
+        $this->actingAs($user)
+            ->get(route('husk-chipping.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('orders.data.0.output_quantity', '40.000 KG · 100.000 L'));
     }
 
     #[Test]
     public function a_draft_can_be_reweighed_through_the_screen(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '20.000000');
+        $user = $this->admin();
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
         $order = ProductionOrder::firstOrFail();
@@ -388,26 +403,27 @@ class HuskChippingScreensTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('production/husk-chipping/Edit')
                 ->has('order.outputs', 3)
-                ->where('order.outputs.0.quantity', '150.000'));
+                ->where('order.outputs.0.quantity', '150.000')
+                ->missing('order.lot_id')
+                ->missing('order.quantity')
+                ->missing('lots'));
 
         $this->actingAs($user)->put(route('husk-chipping.update', $order), $this->payload([
-            '111.000', '0', '333.000',
+            ['product_id' => $this->c7->id, 'quantity' => '111.000'],
+            ['product_id' => $this->product('COCOPEAT')->id, 'quantity' => '33.000'],
         ]))->assertSessionHasNoErrors();
 
         $this->assertSame(
-            ['111.000', '0.000', '333.000'],
+            ['111.000', '33.000'],
             $order->fresh()->outputs()->orderBy('id')->pluck('quantity')->all(),
         );
-
-        // Still a draft — nothing moved.
-        $this->assertSame(1, InventoryTransaction::count());
+        $this->assertSame(0, InventoryTransaction::count());
     }
 
     #[Test]
     public function a_posted_run_cannot_be_edited_through_the_screen(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '20.000000');
+        $user = $this->admin();
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
         $order = ProductionOrder::firstOrFail();
@@ -419,17 +435,35 @@ class HuskChippingScreensTest extends TestCase
             ->assertSessionHasErrors('status');
 
         $this->actingAs($user)
-            ->put(route('husk-chipping.update', $order), $this->payload(['1.000', '1.000', '1.000']))
+            ->put(route('husk-chipping.update', $order), $this->payload([
+                ['product_id' => $this->c7->id, 'quantity' => '1.000'],
+            ]))
             ->assertSessionHasErrors('status');
 
         $this->assertSame('150.000', $order->fresh()->outputs()->orderBy('id')->first()->quantity);
     }
 
     #[Test]
+    public function a_posted_run_can_be_reversed_through_the_screen(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
+        $order = ProductionOrder::firstOrFail();
+        $this->actingAs($user)->patch(route('husk-chipping.post', $order));
+
+        $this->actingAs($user)
+            ->patch(route('husk-chipping.reverse', $order))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(ProductionStatus::Reversed, $order->fresh()->status);
+        $this->assertSame('0.000', app(StockQueryService::class)->quantityForProduct($this->c7->id));
+    }
+
+    #[Test]
     public function the_index_screen_lists_only_husk_chipping_runs(): void
     {
-        $user = User::factory()->admin()->create();
-        $this->receive('6000.000', '20.000000');
+        $user = $this->admin();
 
         $this->actingAs($user)->post(route('husk-chipping.store'), $this->payload());
 
@@ -442,8 +476,9 @@ class HuskChippingScreensTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('production/husk-chipping/Index')
                 ->has('orders.data', 1)
-                ->where('orders.data.0.input_quantity', '2000.000')
-                ->where('orders.data.0.output_quantity', '630.000'));
+                // No raw husk is taken by a chipping run.
+                ->where('orders.data.0.input_quantity', '0.000')
+                ->where('orders.data.0.output_quantity', '630.000 KG'));
     }
 
     #[Test]
