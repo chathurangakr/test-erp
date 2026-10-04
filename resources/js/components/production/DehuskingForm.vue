@@ -37,7 +37,10 @@ const form = useForm({
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
     lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
     quantity: props.initial?.quantity ?? '',
-    labour_rate: props.initial?.labour_rate ?? props.recipe.default_labour_rate ?? '',
+    // "4.000000" from the server shows as "4".
+    labour_rate: (props.initial?.labour_rate ?? props.recipe.default_labour_rate ?? '')
+        .replace(/(\.\d*?)0+$/, '$1')
+        .replace(/\.$/, ''),
     notes: props.initial?.notes ?? '',
 });
 

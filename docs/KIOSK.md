@@ -45,6 +45,11 @@ actually recorded — for production, the outputs it calculated.
 - **Raw husks used** is asked only for a product whose recipe defers its raw material to
   delivery — read from the recipe, never a product code — and must be more than zero. Not
   enough husk in the store refuses the whole dispatch.
+- **Touch screen or keyboard — both work.** Every button is a large touch target. With a
+  keyboard: digits, `.` (or `,`) type into the number pad, Backspace deletes one digit, Esc or
+  Delete clears it, and **Enter is Next**. Enter is deliberately **not** Done — on the final
+  check screen the person presses Done itself (tap it, or Tab to it and press Enter), so a quick
+  double Enter can never post an entry nobody has checked.
 - **What is typed vs calculated comes from the recipe**, never from a product code: derived
   outputs are shown as "calculated by the system" and are never sent.
 - **The date is always today in Sri Lanka** (`BusinessClock`). Whatever date a client sends is

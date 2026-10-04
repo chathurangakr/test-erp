@@ -58,7 +58,8 @@ const form = useForm({
     warehouse_id: (props.warehouses.find((w) => w.is_default) ?? props.warehouses[0])?.id ?? null,
     lot_id: null as number | null,
     quantity: '',
-    labour_rate: props.recipe.labour?.default_rate ?? '',
+    // "4.000000" from the server becomes "4", so the keypad can still type into it.
+    labour_rate: (props.recipe.labour?.default_rate ?? '').replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, ''),
 });
 
 /** Measured values keyed "productId:field". */

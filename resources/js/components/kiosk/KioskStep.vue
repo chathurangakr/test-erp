@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle } from '@lucide/vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import { useKioskText } from '@/kiosk/text';
 
 /**
  * One question per screen, with big Back and Next (or Done) buttons at the bottom.
+ *
+ * With a keyboard, Enter is Next. It is deliberately NOT Done: on the final check screen the
+ * person presses Done itself (tap, or Tab to it and Enter), so a quick double Enter can never
+ * post an entry nobody has checked.
  */
-withDefaults(
+const props = withDefaults(
     defineProps<{
         title: string;
         step: number;
@@ -18,9 +23,28 @@ withDefaults(
     { canNext: true, final: false, busy: false, hint: null },
 );
 
-defineEmits<{ back: []; next: [] }>();
+const emit = defineEmits<{ back: []; next: [] }>();
 
 const { t } = useKioskText();
+
+function onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+
+    // A focused button or link handles Enter itself; don't press Next as well.
+    if (event.key !== 'Enter' || event.repeat || target?.closest('button, a, textarea, select')) {
+        return;
+    }
+
+    if (props.final || !props.canNext || props.busy) {
+        return;
+    }
+
+    event.preventDefault();
+    emit('next');
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>

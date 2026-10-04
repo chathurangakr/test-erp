@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Delete } from '@lucide/vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import { plainNumber, useKioskText } from '@/kiosk/text';
 
 /**
- * A large on-screen keypad for counts, weights and prices.
+ * A large on-screen keypad for counts, weights and prices — tapped on a touch screen, or typed
+ * on a keyboard: digits, "." (or ","), Backspace to delete one, Esc or Delete to clear.
  *
  * The value stays a plain string of digits (e.g. "208.75") and is sent to the server exactly
  * as typed — never through a floating-point number.
@@ -48,6 +50,32 @@ function clear(): void {
 }
 
 const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+/** Keyboard typing, unless the person is typing into a real text field. */
+function onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+
+    if (event.ctrlKey || event.metaKey || event.altKey || target?.closest('input, textarea, select')) {
+        return;
+    }
+
+    if (/^[0-9]$/.test(event.key)) {
+        press(event.key);
+    } else if (event.key === '.' || event.key === ',') {
+        press('.');
+    } else if (event.key === 'Backspace') {
+        backspace();
+    } else if (event.key === 'Escape' || event.key === 'Delete') {
+        clear();
+    } else {
+        return;
+    }
+
+    event.preventDefault();
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
