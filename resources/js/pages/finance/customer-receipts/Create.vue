@@ -11,6 +11,7 @@ import PaymentMethodFields from '@/components/finance/PaymentMethodFields.vue';
 import type { AccountOption, OptionRef, PaymentMethodOption, OutstandingSalesInvoice } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 const props = defineProps<{
     customers: OptionRef[];
@@ -48,7 +49,7 @@ const form = useForm({
     allocations: props.outstandingInvoices.map((invoice) => ({
         sales_invoice_id: invoice.id,
         // "Record payment" from an invoice pre-fills that invoice with what it still owes.
-        amount: invoice.id === props.invoiceId ? invoice.outstanding : '',
+        amount: invoice.id === props.invoiceId ? moneyInput(invoice.outstanding) : '',
     })),
 });
 
@@ -59,7 +60,7 @@ function amountOf(value: string): number {
 }
 
 if (props.invoiceId !== null) {
-    form.amount = props.outstandingInvoices.find((invoice) => invoice.id === props.invoiceId)?.outstanding ?? '';
+    form.amount = moneyInput(props.outstandingInvoices.find((invoice) => invoice.id === props.invoiceId)?.outstanding);
 }
 
 /** Cash goes through a till; a cheque or a transfer through a bank account. */
@@ -89,11 +90,7 @@ const canPost = computed(() => receiptTotal.value > 0 && Math.abs(difference.val
 
 /** Fill an allocation with whatever that invoice still owes. */
 function payInFull(index: number): void {
-    form.allocations[index].amount = props.outstandingInvoices[index].outstanding;
-}
-
-function money(value: number): string {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+    form.allocations[index].amount = moneyInput(props.outstandingInvoices[index].outstanding);
 }
 
 function submit(): void {
@@ -163,7 +160,7 @@ const { t } = useT();
 
                 <div class="grid gap-2">
                     <Label for="amount">{{ t('Receipt amount (:currency)', { currency }) }} <span class="text-destructive">*</span></Label>
-                    <Input id="amount" v-model="form.amount" type="number" step="0.000001" min="0" required class="text-right" />
+                    <Input id="amount" v-model="form.amount" type="number" step="0.01" min="0" required class="text-right" />
                     <InputError :message="form.errors.amount" />
                 </div>
 
@@ -219,15 +216,15 @@ const { t } = useT();
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">{{ invoice.due_date }}</td>
-                                <td class="px-4 py-3 text-right font-mono">{{ invoice.total }}</td>
-                                <td class="px-4 py-3 text-right font-mono">{{ invoice.received }}</td>
-                                <td class="px-4 py-3 text-right font-mono">{{ invoice.outstanding }}</td>
+                                <td class="px-4 py-3 text-right font-mono">{{ money(invoice.total) }}</td>
+                                <td class="px-4 py-3 text-right font-mono">{{ money(invoice.received) }}</td>
+                                <td class="px-4 py-3 text-right font-mono">{{ money(invoice.outstanding) }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2">
                                         <Input
                                             v-model="form.allocations[index].amount"
                                             type="number"
-                                            step="0.000001"
+                                            step="0.01"
                                             min="0"
                                             class="text-right"
                                         />

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Payables;
 
 use App\Enums\SupplierInvoiceLineType;
 use App\Models\SupplierInvoice;
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -61,7 +62,7 @@ abstract class SupplierInvoiceRequest extends FormRequest
             'lines.*.goods_receipt_id' => ['nullable', 'integer', Rule::exists('goods_receipts', 'id')],
             'lines.*.debit_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', true)],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
-            'lines.*.amount' => ['required', 'numeric', 'gt:0'],
+            'lines.*.amount' => ['required', 'numeric', new Money, 'gt:0'],
         ];
     }
 

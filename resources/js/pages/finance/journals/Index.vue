@@ -9,6 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalRow, Paginated, StatusOption } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     entries: Paginated<JournalRow>;
@@ -134,8 +135,8 @@ const { t } = useT();
                             <td class="px-4 py-3">
                                 <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                             </td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.debit_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.credit_total }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.debit_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.credit_total) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -157,8 +158,8 @@ const { t } = useT();
                     </div>
                     <p class="mt-2 text-sm">{{ row.description }}</p>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt class="font-medium">{{ t('Debit') }}</dt><dd class="font-mono">{{ row.debit_total }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Credit') }}</dt><dd class="font-mono">{{ row.credit_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Debit') }}</dt><dd class="font-mono">{{ money(row.debit_total) }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Credit') }}</dt><dd class="font-mono">{{ money(row.credit_total) }}</dd></div>
                     </dl>
                 </Link>
             </div>

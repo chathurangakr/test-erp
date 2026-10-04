@@ -10,6 +10,7 @@ import { index } from '@/routes/purchase-orders';
 import { index as grnIndex } from '@/routes/goods-receipts';
 import type { PurchaseOrderDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ order: PurchaseOrderDetail }>();
 
@@ -83,7 +84,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Material value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ order.material_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(order.material_total) }}</p>
             </div>
         </div>
 
@@ -149,8 +150,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-4 py-3 text-right font-mono">{{ line.quantity }}</td>
                         <td class="px-4 py-3 text-right font-mono">{{ line.received_quantity }}</td>
                         <td class="px-4 py-3 text-right font-mono">{{ line.outstanding_quantity }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ line.unit_price }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ line.line_total }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(line.unit_price) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(line.line_total) }}</td>
                     </tr>
                 </tbody>
             </table>

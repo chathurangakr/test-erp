@@ -6,6 +6,7 @@ import { index } from '@/routes/general-ledger';
 import { index as journalsIndex } from '@/routes/journals';
 import type { AccountOption, GeneralLedgerReport } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     accounts: AccountOption[];
@@ -117,7 +118,7 @@ const { t } = useT();
                     <tbody>
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border text-muted-foreground border-t">
                             <td class="px-4 py-3" colspan="6">{{ t('Opening balance') }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ ledger.opening_balance }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(ledger.opening_balance) }}</td>
                         </tr>
                         <tr
                             v-for="row in ledger.rows"
@@ -133,20 +134,20 @@ const { t } = useT();
                             <td class="px-4 py-3">{{ row.description }}</td>
                             <td class="text-muted-foreground px-4 py-3 text-xs">{{ row.source }}</td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(row.debit) > 0 ? row.debit : '—' }}
+                                {{ Number(row.debit) > 0 ? money(row.debit) : '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(row.credit) > 0 ? row.credit : '—' }}
+                                {{ Number(row.credit) > 0 ? money(row.credit) : '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ row.running_balance }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.running_balance) }}</td>
                         </tr>
                     </tbody>
                     <tfoot class="bg-muted/30">
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                             <td class="px-4 py-3 font-medium" colspan="4">{{ t('Totals') }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ ledger.debit_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ ledger.credit_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ ledger.closing_balance }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(ledger.debit_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(ledger.credit_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(ledger.closing_balance) }}</td>
                         </tr>
                     </tfoot>
                 </table>

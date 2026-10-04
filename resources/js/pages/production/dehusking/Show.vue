@@ -11,6 +11,7 @@ import { index } from '@/routes/dehusking';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { DehuskingDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -100,18 +101,18 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Input value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ order.input_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(order.input_value) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Labour') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ order.labour_cost ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(order.labour_cost) }}</p>
                 <p v-if="order.labour_rate" class="text-muted-foreground text-xs">
-                    {{ t(':rate per coconut', { rate: order.labour_rate }) }}
+                    {{ t(':rate per coconut', { rate: money(order.labour_rate) }) }}
                 </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ order.output_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(order.output_value) }}</p>
             </div>
         </div>
 
@@ -143,11 +144,11 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Weighted avg cost') }}</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ order.input.unit_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(order.input.unit_cost) }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Value consumed') }}</dt>
-                    <dd class="mt-1 font-mono text-sm font-medium">{{ order.input.total_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm font-medium">{{ money(order.input.total_cost) }}</dd>
                 </div>
             </dl>
         </div>
@@ -191,12 +192,12 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             {{ Number(output.allocation_percent).toFixed(2) }}%
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ output.allocated_cost }}
+                            {{ money(output.allocated_cost) }}
                             <span v-if="output.labour_cost" class="text-muted-foreground block text-xs">
-                                {{ t('incl. labour :amount', { amount: output.labour_cost }) }}
+                                {{ t('incl. labour :amount', { amount: money(output.labour_cost) }) }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ output.unit_cost }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(output.unit_cost) }}</td>
                     </tr>
                 </tbody>
             </table>

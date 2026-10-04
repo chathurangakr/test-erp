@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import type { OptionRef, ProductOption, PurchaseOrderOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 type LineInput = {
     product_id: string;
@@ -72,9 +73,9 @@ const form = useForm({
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
     receipt_date: props.initial?.receipt_date ?? today,
     supplier_delivery_reference: props.initial?.supplier_delivery_reference ?? '',
-    transport_cost: props.initial?.transport_cost ?? '0',
-    loading_cost: props.initial?.loading_cost ?? '0',
-    other_cost: props.initial?.other_cost ?? '0',
+    transport_cost: moneyInput(props.initial?.transport_cost) || '0',
+    loading_cost: moneyInput(props.initial?.loading_cost) || '0',
+    other_cost: moneyInput(props.initial?.other_cost) || '0',
     notes: props.initial?.notes ?? '',
     lines: (props.initial?.lines ?? []).map(
         (line): LineInput => ({
@@ -84,7 +85,7 @@ const form = useForm({
                 : '',
             quantity: line.quantity,
             secondary_quantity: line.secondary_quantity ?? '',
-            unit_price: line.unit_price,
+            unit_price: moneyInput(line.unit_price),
             supplier_lot_number: line.supplier_lot_number ?? '',
         }),
     ),
@@ -124,7 +125,7 @@ watch(
                 purchase_order_line_id: String(line.id),
                 quantity: line.outstanding_quantity,
                 secondary_quantity: '',
-                unit_price: line.unit_price,
+                unit_price: moneyInput(line.unit_price),
                 supplier_lot_number: '',
             }));
         }
@@ -344,7 +345,7 @@ const selectClass =
                                 :id="`grn-price-${index}`"
                                 v-model="line.unit_price"
                                 type="number"
-                                step="0.000001"
+                                step="0.01"
                                 min="0"
                                 required
                             />
@@ -362,12 +363,12 @@ const selectClass =
                             >
                                 <span>
                                     {{ t('Material:') }}
-                                    <span class="font-mono">{{ materialFor(line).toFixed(2) }}</span>
+                                    <span class="font-mono">{{ money(materialFor(line)) }}</span>
                                     · {{ t('Landed share:') }}
-                                    <span class="font-mono">{{ allocatedFor(line).toFixed(2) }}</span>
+                                    <span class="font-mono">{{ money(allocatedFor(line)) }}</span>
                                     · {{ t('Final unit cost:') }}
                                     <span class="text-foreground font-mono font-medium">
-                                        {{ finalUnitCostFor(line) }}
+                                        {{ money(finalUnitCostFor(line)) }}
                                     </span>
                                 </span>
                                 <Button
@@ -412,15 +413,15 @@ const selectClass =
             >
                 <p>
                     {{ t('Material total:') }}
-                    <span class="ml-1 font-mono font-medium">{{ materialTotal.toFixed(2) }}</span>
+                    <span class="ml-1 font-mono font-medium">{{ money(materialTotal) }}</span>
                 </p>
                 <p>
                     {{ t('Landed costs:') }}
-                    <span class="ml-1 font-mono font-medium">{{ landedTotal.toFixed(2) }}</span>
+                    <span class="ml-1 font-mono font-medium">{{ money(landedTotal) }}</span>
                 </p>
                 <p>
                     {{ t('Grand landed cost:') }}
-                    <span class="ml-1 font-mono font-medium">{{ grandTotal.toFixed(2) }}</span>
+                    <span class="ml-1 font-mono font-medium">{{ money(grandTotal) }}</span>
                 </p>
             </div>
 

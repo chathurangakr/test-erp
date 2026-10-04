@@ -4,6 +4,7 @@ namespace App\Http\Requests\Production;
 
 use App\Enums\ProductionType;
 use App\Http\Requests\Production\Concerns\ValidatesInputLot;
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,7 @@ class StoreDehuskingRequest extends FormRequest
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
             'lot_id' => $this->inputLotRules(ProductionType::Dehusking),
             'quantity' => ['required', 'numeric', 'gt:0'],
-            'labour_rate' => ['required', 'numeric', 'min:0', 'decimal:0,6'],
+            'labour_rate' => ['required', 'numeric', 'min:0', new Money],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
     }

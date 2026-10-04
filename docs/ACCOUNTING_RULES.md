@@ -1015,3 +1015,29 @@ Inventory-to-GL stays exact per account: 1330 holds the pooled husk's ledger val
 + labour − backflushed), and 1340 / 1370 hold the chips' and cocopeat's ledger value — zero
 for stock whose husk cost is still pending. A delivery posted under accounting whose total
 cost is zero writes no journal and **is still billable** (§20).
+
+---
+
+## 31. Money is rupees and cents — ✅ **CONFIRMED**
+
+Owner's decision (2026-10-04): **money has two decimal places**, on screen and when typed.
+
+- **Typed money** — prices, landed costs, payment and receipt amounts, allocations, invoice
+  lines, voucher lines, fund transfers, journal debits/credits, credit limits and the labour
+  rate — accepts at most `config('accounting.money_decimals')` (**2**) significant decimals
+  (`App\Rules\Money`). Trailing zeros are fine (the API sends money as six-decimal strings);
+  a fraction of a cent is refused. The same rule serves the website, simple mode and the API.
+- **Amounts owed between the factory and others are rounded to the cent, half up**
+  (`DecimalMath::money()`): a delivery line's `sales_value`, a goods receipt line's
+  `material_cost`, and purchase / sales order line totals. A KG quantity (three decimals) times a
+  price would otherwise leave fractions of a cent that no payment could ever clear from a
+  receivable or from GRNI.
+- **Inventory costs are NOT rounded.** Weighted averages, unit costs, cost of goods sold,
+  allocated production costs and their journals keep the full six-decimal scale, so stock and
+  the ledger stay exact (§8). Labour cost is NOS × a cents rate, so it is whole cents anyway.
+- **Screens show every amount to two decimals** with thousands separators
+  (`resources/js/lib/money.ts`, rounding the decimal string itself — display only). A report
+  total may therefore differ by a cent from the sum of its rounded lines; the stored figures are
+  exact.
+- Stored columns stay `decimal(20,6)`; nothing about storage changed and no migration was needed.
+

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Cash;
 
 use App\Enums\AccountType;
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -48,7 +49,7 @@ abstract class ExpenseVoucherRequest extends FormRequest
                     ->where('allow_manual_posting', 1),
             ],
             'lines.*.description' => ['nullable', 'string', 'max:255'],
-            'lines.*.amount' => ['required', 'numeric', 'gt:0'],
+            'lines.*.amount' => ['required', 'numeric', new Money, 'gt:0'],
         ];
     }
 

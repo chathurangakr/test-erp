@@ -8,6 +8,7 @@ import { useT } from '@/lib/i18n';
 import { show as deliveryShow } from '@/routes/deliveries';
 import { productProfitability, profitLoss } from '@/routes/reports';
 import type { OptionRef, ProductProfitabilityReport } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     report: ProductProfitabilityReport;
@@ -93,11 +94,11 @@ const selectClass =
         <div class="grid gap-3 sm:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Sales value (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.sales_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.sales_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Cost of goods sold') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.cogs_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.cogs_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
@@ -105,7 +106,7 @@ const selectClass =
                     class="mt-1 font-mono text-lg font-medium"
                     :class="Number(report.gross_profit_total) < 0 ? 'text-destructive' : ''"
                 >
-                    {{ report.gross_profit_total }}
+                    {{ money(report.gross_profit_total) }}
                 </p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
@@ -165,13 +166,13 @@ const selectClass =
                             </template>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.sales_value }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.cost_of_goods_sold }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.sales_value) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.cost_of_goods_sold) }}</td>
                         <td
                             class="px-4 py-3 text-right font-mono font-medium"
                             :class="Number(row.gross_profit) < 0 ? 'text-destructive' : ''"
                         >
-                            {{ row.gross_profit }}
+                            {{ money(row.gross_profit) }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">{{ row.gross_margin_percent }}%</td>
                         <td class="px-4 py-3 text-right">{{ row.delivery_count }}</td>

@@ -7,6 +7,7 @@ import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
 import type { InventoryValuationReport, OptionRef } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     report: InventoryValuationReport;
@@ -65,7 +66,7 @@ const selectClass =
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total value (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ report.value_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(report.value_total) }}</p>
             </div>
         </section>
 
@@ -111,8 +112,8 @@ const selectClass =
                             </template>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.weighted_average_cost }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ row.value }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.weighted_average_cost) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.value) }}</td>
                         <td class="px-4 py-3">
                             <Link
                                 v-if="row.inventory_account_id"

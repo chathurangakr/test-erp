@@ -10,6 +10,7 @@ import { index as invoicesIndex } from '@/routes/supplier-invoices';
 import { index } from '@/routes/supplier-payments';
 import type { SupplierPaymentDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{ payment: SupplierPaymentDetail; currency: string }>();
 
@@ -76,11 +77,11 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Amount (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ payment.amount }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(payment.amount) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Allocated') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ payment.allocated }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(payment.allocated) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Paid by') }}</p>
@@ -138,7 +139,7 @@ const { t } = useT();
                         </td>
                         <td class="px-4 py-3">{{ allocation.due_date }}</td>
                         <td class="px-4 py-3">{{ allocation.invoice_status }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ allocation.amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(allocation.amount) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -180,10 +181,10 @@ const { t } = useT();
                             <span class="text-muted-foreground block text-xs">{{ line.account_name }}</span>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.debit) > 0 ? line.debit : '—' }}
+                            {{ Number(line.debit) > 0 ? money(line.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.credit) > 0 ? line.credit : '—' }}
+                            {{ Number(line.credit) > 0 ? money(line.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>

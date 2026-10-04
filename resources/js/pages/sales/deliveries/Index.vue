@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
 import type { OptionRef, Paginated, DeliveryRow, StatusOption } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -120,9 +121,9 @@ const controlClass =
                             <td class="px-4 py-3">{{ row.warehouse_code }}</td>
                             <td class="px-4 py-3">{{ row.delivery_date }}</td>
                             <td class="px-4 py-3"><Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge></td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.sales_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.cogs_total ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ row.gross_profit ?? '—' }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.sales_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.cogs_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.gross_profit) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -139,9 +140,9 @@ const controlClass =
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ row.delivery_date }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Sales') }}</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
-                        <div><dt class="font-medium">{{ t('COGS') }}</dt><dd class="font-mono">{{ row.cogs_total ?? '—' }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Profit') }}</dt><dd class="font-mono">{{ row.gross_profit ?? '—' }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Sales') }}</dt><dd class="font-mono">{{ money(row.sales_total) }}</dd></div>
+                        <div><dt class="font-medium">{{ t('COGS') }}</dt><dd class="font-mono">{{ money(row.cogs_total) }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Profit') }}</dt><dd class="font-mono">{{ money(row.gross_profit) }}</dd></div>
                     </dl>
                 </Link>
             </div>

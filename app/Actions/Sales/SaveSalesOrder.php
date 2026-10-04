@@ -71,7 +71,7 @@ class SaveSalesOrder
                     'secondary_quantity' => $secondary,
                     'pricing_basis' => $basis,
                     'unit_price' => $price,
-                    'line_total' => DecimalMath::cost(DecimalMath::mul($sellingQuantity, $price)),
+                    'line_total' => DecimalMath::money(DecimalMath::mul($sellingQuantity, $price)),
                     'delivered_quantity' => '0.000',
                 ]);
             }

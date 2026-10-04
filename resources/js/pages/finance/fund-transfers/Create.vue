@@ -75,7 +75,7 @@ const selectClass =
                         id="amount"
                         v-model="form.amount"
                         type="number"
-                        step="0.000001"
+                        step="0.01"
                         min="0"
                         required
                         class="text-right"

@@ -16,6 +16,7 @@ import {
 } from '@/routes/reports';
 import type { AgingSummary, FinanceDashboardSummary } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     summary: FinanceDashboardSummary;
@@ -73,19 +74,19 @@ const positionCards = computed(() => [
     {
         label: t('Cash + bank'),
         value: props.summary.position.cash_and_bank,
-        note: t('Cash :cash · Bank :bank', { cash: props.summary.position.cash_total, bank: props.summary.position.bank_total }),
+        note: t('Cash :cash · Bank :bank', { cash: money(props.summary.position.cash_total), bank: money(props.summary.position.bank_total) }),
         href: cashBankPosition({ query: { as_of: asOf.value } }),
     },
     {
         label: t('Accounts receivable'),
         value: props.summary.position.receivables,
-        note: t(':amount overdue', { amount: props.summary.receivables.overdue }),
+        note: t(':amount overdue', { amount: money(props.summary.receivables.overdue) }),
         href: arAgingIndex({ query: { as_of: asOf.value } }),
     },
     {
         label: t('Accounts payable'),
         value: props.summary.position.payables,
-        note: t(':amount overdue', { amount: props.summary.payables.overdue }),
+        note: t(':amount overdue', { amount: money(props.summary.payables.overdue) }),
         href: apAgingIndex({ query: { as_of: asOf.value } }),
     },
     {
@@ -177,7 +178,7 @@ const selectClass =
                         class="mt-1 font-mono text-lg"
                         :class="[card.emphasis ? 'font-medium' : '', Number(card.value) < 0 ? 'text-destructive' : '']"
                     >
-                        {{ card.value }}
+                        {{ money(card.value) }}
                     </p>
                     <p v-if="card.note" class="text-muted-foreground mt-1 text-xs">{{ card.note }}</p>
                 </div>
@@ -200,7 +201,7 @@ const selectClass =
                 >
                     <p class="text-muted-foreground text-xs font-medium">{{ card.label }}</p>
                     <p class="mt-1 font-mono text-lg" :class="Number(card.value) < 0 ? 'text-destructive' : ''">
-                        {{ card.value }}
+                        {{ money(card.value) }}
                     </p>
                     <p class="text-muted-foreground mt-1 text-xs">{{ card.note }}</p>
                 </Link>
@@ -225,15 +226,15 @@ const selectClass =
                             class="border-sidebar-border/70 dark:border-sidebar-border border-t first:border-t-0"
                         >
                             <td class="px-4 py-2">{{ bucket.label }}</td>
-                            <td class="px-4 py-2 text-right font-mono">{{ table.aging[bucket.key] }}</td>
+                            <td class="px-4 py-2 text-right font-mono">{{ money(table.aging[bucket.key]) }}</td>
                         </tr>
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                             <td class="px-4 py-2 font-medium">{{ t('Overdue') }}</td>
-                            <td class="px-4 py-2 text-right font-mono font-medium">{{ table.aging.overdue }}</td>
+                            <td class="px-4 py-2 text-right font-mono font-medium">{{ money(table.aging.overdue) }}</td>
                         </tr>
                         <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
                             <td class="px-4 py-3 font-medium">{{ t('Total') }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ table.aging.total }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(table.aging.total) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -262,7 +263,7 @@ const selectClass =
                                 <span class="font-mono text-xs">{{ p.product_code }}</span>
                                 <span class="text-muted-foreground block text-xs">{{ t(':percent% margin', { percent: p.gross_margin_percent }) }}</span>
                             </td>
-                            <td class="px-4 py-2 text-right font-mono">{{ p.sales_value }}</td>
+                            <td class="px-4 py-2 text-right font-mono">{{ money(p.sales_value) }}</td>
                         </tr>
                         <tr v-if="summary.top_products.length === 0">
                             <td colspan="2" class="text-muted-foreground px-4 py-6 text-center">{{ t('No posted deliveries.') }}</td>
@@ -291,7 +292,7 @@ const selectClass =
                                 <span class="font-mono text-xs">{{ row.code }}</span>
                                 <span class="text-muted-foreground block text-xs">{{ row.name }}</span>
                             </td>
-                            <td class="px-4 py-2 text-right font-mono">{{ row.outstanding }}</td>
+                            <td class="px-4 py-2 text-right font-mono">{{ money(row.outstanding) }}</td>
                         </tr>
                         <tr v-if="list.rows.length === 0">
                             <td colspan="2" class="text-muted-foreground px-4 py-6 text-center">{{ list.empty }}</td>

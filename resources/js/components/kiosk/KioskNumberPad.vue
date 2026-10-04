@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Delete } from '@lucide/vue';
-import { onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { money } from '@/lib/money';
 import { plainNumber, useKioskText } from '@/kiosk/text';
 
 /**
@@ -51,6 +52,29 @@ function clear(): void {
 
 const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
+/**
+ * What the big display shows. Money pads (2 decimals) show rupees and cents — "4" as "4.00",
+ * "1250" as "1,250.00" — except while a fraction is being typed ("4." or "4.5" stays as typed
+ * until it is complete). The value itself is never changed by this.
+ */
+const shown = computed(() => {
+    const value = props.modelValue;
+
+    if (value === '') {
+        return props.decimals === 2 ? '0.00' : '0';
+    }
+
+    if (value.endsWith('.')) {
+        return value;
+    }
+
+    if (props.decimals === 2) {
+        return money(value);
+    }
+
+    return plainNumber(value);
+});
+
 /** Keyboard typing, unless the person is typing into a real text field. */
 function onKeydown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
@@ -83,7 +107,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         <p class="text-lg font-medium">{{ label }}</p>
 
         <div class="bg-background border-sidebar-border/70 flex min-h-20 items-center justify-end rounded-2xl border-2 px-5 font-mono text-4xl font-semibold tabular-nums">
-            {{ modelValue === '' ? '0' : modelValue.endsWith('.') ? modelValue : plainNumber(modelValue) }}
+            {{ shown }}
         </div>
 
         <div class="grid grid-cols-3 gap-2">

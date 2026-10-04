@@ -102,6 +102,16 @@ final class DecimalMath
         return self::round($value, self::COST_SCALE);
     }
 
+    /**
+     * An amount of money people pay or are billed — rounded half up to the configured cents
+     * (`accounting.money_decimals`), then held at the cost scale like every stored amount.
+     * Inventory costs never go through this; they keep the full cost scale.
+     */
+    public static function money(string $value): string
+    {
+        return self::cost(self::round($value, (int) config('accounting.money_decimals', 2)));
+    }
+
     public static function zero(int $scale = self::SCALE): string
     {
         return number_format(0, $scale, '.', '');

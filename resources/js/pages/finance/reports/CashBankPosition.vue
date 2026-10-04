@@ -9,6 +9,7 @@ import { useT } from '@/lib/i18n';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { cashBankPosition } from '@/routes/reports';
 import type { CashBankAccountRow, CashBankSummary } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     summary: CashBankSummary;
@@ -71,15 +72,15 @@ function bookUrl(row: CashBankAccountRow): string {
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total cash (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ summary.cash_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(summary.cash_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total bank (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ summary.bank_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(summary.bank_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Cash + bank (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ summary.combined_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(summary.combined_total) }}</p>
             </div>
         </div>
 
@@ -121,7 +122,7 @@ function bookUrl(row: CashBankAccountRow): string {
                             class="px-4 py-3 text-right font-mono"
                             :class="Number(row.balance) < 0 ? 'text-destructive' : ''"
                         >
-                            {{ row.balance }}
+                            {{ money(row.balance) }}
                         </td>
                     </tr>
                     <tr v-if="group.rows.length === 0">
@@ -131,7 +132,7 @@ function bookUrl(row: CashBankAccountRow): string {
                     </tr>
                     <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td colspan="3" class="px-4 py-3 font-medium">{{ t(group.totalLabel) }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ group.total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(group.total) }}</td>
                     </tr>
                 </tbody>
             </table>

@@ -9,6 +9,7 @@ import { index } from '@/routes/cash-bank-book';
 import { index as journalsIndex } from '@/routes/journals';
 import type { CashBankBook } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     accounts: { id: number; display_name: string; account_code: string | null; kind_label: string }[];
@@ -88,19 +89,19 @@ const selectClass =
             <div class="grid gap-3 sm:grid-cols-4">
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Opening (:currency)', { currency }) }}</p>
-                    <p class="mt-1 font-mono text-lg">{{ report.opening_balance }}</p>
+                    <p class="mt-1 font-mono text-lg">{{ money(report.opening_balance) }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Money in') }}</p>
-                    <p class="mt-1 font-mono text-lg">{{ report.money_in_total }}</p>
+                    <p class="mt-1 font-mono text-lg">{{ money(report.money_in_total) }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Money out') }}</p>
-                    <p class="mt-1 font-mono text-lg">{{ report.money_out_total }}</p>
+                    <p class="mt-1 font-mono text-lg">{{ money(report.money_out_total) }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Closing') }}</p>
-                    <p class="mt-1 font-mono text-lg font-medium">{{ report.closing_balance }}</p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ money(report.closing_balance) }}</p>
                 </div>
             </div>
 
@@ -111,7 +112,7 @@ const selectClass =
                 <span>
                     {{ t('General ledger balance for') }}
                     <span class="font-mono text-xs">{{ selected.account_code }}</span>
-                    <span class="ml-2 font-mono font-medium">{{ ledger.balance }}</span>
+                    <span class="ml-2 font-mono font-medium">{{ money(ledger.balance) }}</span>
                 </span>
                 <Badge :variant="ledger.reconciles ? 'default' : 'destructive'">
                     {{ ledger.reconciles ? t('Reconciles exactly') : t('Does not reconcile') }}
@@ -154,12 +155,12 @@ const selectClass =
                             </td>
                             <td class="px-4 py-3">{{ row.description ?? '—' }}</td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(row.money_in) > 0 ? row.money_in : '—' }}
+                                {{ Number(row.money_in) > 0 ? money(row.money_in) : '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ Number(row.money_out) > 0 ? row.money_out : '—' }}
+                                {{ Number(row.money_out) > 0 ? money(row.money_out) : '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ row.running_balance }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.running_balance) }}</td>
                         </tr>
                         <tr v-if="report.rows.length === 0">
                             <td colspan="7" class="text-muted-foreground px-4 py-8 text-center">

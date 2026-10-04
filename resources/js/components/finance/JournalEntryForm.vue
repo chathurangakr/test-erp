@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import type { AccountOption, JournalFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -36,8 +37,8 @@ const form = useForm({
         ? props.initial.lines.map((line) => ({
               account_id: line.account_id,
               description: line.description ?? '',
-              debit: Number(line.debit) > 0 ? line.debit : '',
-              credit: Number(line.credit) > 0 ? line.credit : '',
+              debit: Number(line.debit) > 0 ? moneyInput(line.debit) : '',
+              credit: Number(line.credit) > 0 ? moneyInput(line.credit) : '',
           }))
         : [blankLine(), blankLine()]) as Line[],
 });
@@ -87,9 +88,6 @@ const periodFor = computed(() =>
     ),
 );
 
-function money(value: number): string {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-}
 
 function lineError(index: number, field: 'account_id' | 'debit' | 'credit'): string | undefined {
     return (form.errors as Record<string, string | undefined>)[`lines.${index}.${field}`];
@@ -171,7 +169,7 @@ const { t } = useT();
                                 <Input
                                     v-model="line.debit"
                                     type="number"
-                                    step="0.000001"
+                                    step="0.01"
                                     min="0"
                                     class="text-right"
                                     @input="onDebitInput(index)"
@@ -182,7 +180,7 @@ const { t } = useT();
                                 <Input
                                     v-model="line.credit"
                                     type="number"
-                                    step="0.000001"
+                                    step="0.01"
                                     min="0"
                                     class="text-right"
                                     @input="onCreditInput(index)"

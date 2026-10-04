@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { money, moneyInput } from '@/lib/money';
 
 const { t } = useT();
 
@@ -37,10 +38,8 @@ const form = useForm({
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
     lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
     quantity: props.initial?.quantity ?? '',
-    // "4.000000" from the server shows as "4".
-    labour_rate: (props.initial?.labour_rate ?? props.recipe.default_labour_rate ?? '')
-        .replace(/(\.\d*?)0+$/, '$1')
-        .replace(/\.$/, ''),
+    // "4.000000" from the server shows as "4.00": rupees and cents.
+    labour_rate: moneyInput(props.initial?.labour_rate ?? props.recipe.default_labour_rate),
     notes: props.initial?.notes ?? '',
 });
 
@@ -50,7 +49,7 @@ const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
 const labourCost = computed(() => {
     const rate = Number(form.labour_rate);
 
-    return Number.isFinite(rate) && rate >= 0 ? (inputQuantity.value * rate).toFixed(2) : '0.00';
+    return Number.isFinite(rate) && rate >= 0 ? money(inputQuantity.value * rate) : money(0);
 });
 
 /** Lots holding coconut in the chosen warehouse. */

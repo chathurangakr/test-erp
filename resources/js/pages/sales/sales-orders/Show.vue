@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index } from '@/routes/sales-orders';
 import type { SalesOrderDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -85,7 +86,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Sales total') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ order.sales_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(order.sales_total) }}</p>
             </div>
         </div>
 
@@ -155,8 +156,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-3 py-3">
                             {{ line.pricing_basis === 'SECONDARY' ? line.secondary_uom : line.uom }}
                         </td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.unit_price }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.line_total }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.unit_price) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.line_total) }}</td>
                         <td class="px-3 py-3 text-right font-mono">{{ line.delivered_quantity }}</td>
                         <td class="px-3 py-3 text-right font-mono">{{ line.outstanding_quantity }}</td>
                     </tr>

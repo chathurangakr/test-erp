@@ -9,6 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-invoices';
 import type { OptionRef, Paginated, StatusOption, SupplierInvoiceRow } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     invoices: Paginated<SupplierInvoiceRow>;
@@ -151,9 +152,9 @@ const { t } = useT();
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.total }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.paid }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ row.outstanding }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.paid) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.outstanding) }}</td>
                     </tr>
                 </tbody>
             </table>

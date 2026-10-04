@@ -12,6 +12,7 @@ import type {
     TransactionTypeOption,
 } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     lines: Paginated<LedgerRow>;
@@ -211,10 +212,10 @@ const controlClass =
                                 }}
                             </td>
                             <td class="px-3 py-3 text-right font-mono">
-                                {{ line.unit_cost }}
+                                {{ money(line.unit_cost) }}
                             </td>
                             <td class="px-3 py-3 text-right font-mono">
-                                {{ line.total_cost }}
+                                {{ money(line.total_cost) }}
                             </td>
                             <td class="text-muted-foreground px-3 py-3">
                                 {{ line.user ?? '—' }}
@@ -261,7 +262,7 @@ const controlClass =
                         </div>
                         <div>
                             <dt class="text-muted-foreground font-medium">{{ t('Unit cost') }}</dt>
-                            <dd class="font-mono">{{ line.unit_cost }}</dd>
+                            <dd class="font-mono">{{ money(line.unit_cost) }}</dd>
                         </div>
                         <div v-if="line.lot_number">
                             <dt class="text-muted-foreground font-medium">{{ t('Lot') }}</dt>
@@ -269,7 +270,7 @@ const controlClass =
                         </div>
                         <div>
                             <dt class="text-muted-foreground font-medium">{{ t('Total cost') }}</dt>
-                            <dd class="font-mono">{{ line.total_cost }}</dd>
+                            <dd class="font-mono">{{ money(line.total_cost) }}</dd>
                         </div>
                     </dl>
                 </div>

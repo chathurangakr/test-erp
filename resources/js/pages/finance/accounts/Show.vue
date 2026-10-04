@@ -9,6 +9,7 @@ import { useT } from '@/lib/i18n';
 import { index } from '@/routes/accounts';
 import { index as ledgerIndex } from '@/routes/general-ledger';
 import type { AccountDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ account: AccountDetail; currency: string }>();
 
@@ -50,17 +51,17 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total debits') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ account.debit_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(account.debit_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total credits') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ account.credit_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(account.credit_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">
                     {{ t('Balance (:balance normal, :currency)', { balance: account.normal_balance_label, currency }) }}
                 </p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ account.balance }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(account.balance) }}</p>
             </div>
         </div>
 

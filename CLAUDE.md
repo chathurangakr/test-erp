@@ -323,6 +323,12 @@ The inventory engine exists and is tested. These rules are permanent:
   deletion outright. No destroy route exists anywhere in Finance.
 - **Base currency is configuration**, in `config/accounting.php` — never the literal "LKR"
   in business logic. Multi-currency is TBD.
+- **Money is rupees and cents** (`accounting.money_decimals` = 2). Typed money uses the
+  `App\Rules\Money` rule (fractions of a cent refused, trailing zeros fine); amounts owed —
+  delivery `sales_value`, goods receipt `material_cost`, order line totals — round half up with
+  `DecimalMath::money()`; screens show money with `money()` from `@/lib/money`. **Inventory
+  costs are never rounded to cents** — they keep the six-decimal scale. See
+  `docs/ACCOUNTING_RULES.md` §31.
 - **When Finance later posts inventory values it must use the authoritative `total_cost`**,
   never `quantity × rounded unit cost`. The accounting scale is `decimal(20,6)` to match the
   ledger exactly. See `docs/ACCOUNTING_RULES.md` §8.

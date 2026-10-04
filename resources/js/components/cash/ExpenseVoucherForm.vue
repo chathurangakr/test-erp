@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import type { CashBankAccountOption, OptionRef } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 type VoucherLine = {
     expense_account_id: number | string;
@@ -52,7 +53,7 @@ const form = useForm({
             ? props.initial.lines.map((line) => ({
                   expense_account_id: line.expense_account_id,
                   description: line.description ?? '',
-                  amount: line.amount,
+                  amount: moneyInput(line.amount),
               }))
             : [{ expense_account_id: '' as string | number, description: '', amount: '' }],
 });
@@ -75,9 +76,6 @@ function removeLine(index: number): void {
     }
 }
 
-function money(value: number): string {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-}
 
 function submit(): void {
     form.transform((data) => ({
@@ -180,7 +178,7 @@ const selectClass =
                                 <Input
                                     v-model="line.amount"
                                     type="number"
-                                    step="0.000001"
+                                    step="0.01"
                                     min="0"
                                     required
                                     class="text-right"

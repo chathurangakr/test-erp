@@ -131,6 +131,7 @@ returned. The 404 message deliberately names no model.
 | --- | --- | --- |
 | Quantity | **string**, 3 decimals | `"10000.000"` |
 | Money / cost | **string**, 6 decimals | `"102.500000"`, `"1025000.000000"` |
+| Money **sent** (prices, amounts, labour rate) | number or string, **at most 2 significant decimals** — trailing zeros are fine, so `"102.500000"` is accepted and `"102.505"` is refused with 422 | `"1250.50"` |
 | Percentage | string | `"21.15"` |
 | Calendar date | `YYYY-MM-DD` | `"2026-09-15"` |
 | Timestamp | ISO 8601, **UTC**, `Z` suffix | `"2026-09-26T16:25:39Z"` |

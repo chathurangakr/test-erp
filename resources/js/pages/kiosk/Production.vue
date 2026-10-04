@@ -12,6 +12,7 @@ import { home } from '@/routes/kiosk';
 import { store as storeCopra } from '@/routes/kiosk/copra';
 import { store as storeDehusking } from '@/routes/kiosk/dehusking';
 import { store as storeHuskChipping } from '@/routes/kiosk/husk-chipping';
+import { money, moneyInput } from '@/lib/money';
 
 /**
  * Dehusking, husk chipping and copra — one screen, driven by the recipe the server sends.
@@ -58,8 +59,8 @@ const form = useForm({
     warehouse_id: (props.warehouses.find((w) => w.is_default) ?? props.warehouses[0])?.id ?? null,
     lot_id: null as number | null,
     quantity: '',
-    // "4.000000" from the server becomes "4", so the keypad can still type into it.
-    labour_rate: (props.recipe.labour?.default_rate ?? '').replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, ''),
+    // "4.000000" from the server becomes "4.00": rupees and cents.
+    labour_rate: moneyInput(props.recipe.labour?.default_rate),
 });
 
 /** Measured values keyed "productId:field". */
@@ -282,7 +283,7 @@ function submit(): void {
                 </p>
                 <p v-else class="text-muted-foreground mt-2 text-base">{{ t('prod.huskLater') }}</p>
                 <p v-if="recipe.labour" class="mt-1">
-                    {{ t('prod.labour') }}: <span class="font-mono tabular-nums">{{ plainNumber(form.labour_rate) }}</span>
+                    {{ t('prod.labour') }}: <span class="font-mono tabular-nums">Rs. {{ money(form.labour_rate) }}</span>
                 </p>
                 <p v-if="chosenLot" class="text-muted-foreground font-mono text-sm">{{ chosenLot.lot_number }}</p>
                 <ul class="mt-3 flex flex-col gap-2">

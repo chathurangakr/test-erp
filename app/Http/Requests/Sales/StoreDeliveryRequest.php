@@ -4,6 +4,7 @@ namespace App\Http\Requests\Sales;
 
 use App\Enums\PricingBasis;
 use App\Http\Requests\Sales\Concerns\ValidatesBackflush;
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,7 +43,7 @@ class StoreDeliveryRequest extends FormRequest
             'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
             'lines.*.secondary_quantity' => ['nullable', 'numeric', 'min:0'],
             'lines.*.pricing_basis' => ['required', Rule::enum(PricingBasis::class)],
-            'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'lines.*.unit_price' => ['required', 'numeric', new Money, 'min:0'],
             // Raw material used, for products that backflush it — see ValidatesBackflush.
             'lines.*.backflush_quantity' => ['nullable', 'numeric'],
         ];

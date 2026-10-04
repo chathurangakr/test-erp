@@ -9,6 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ entry: JournalDetail; currency: string }>();
 
@@ -132,18 +133,18 @@ const { t } = useT();
                         </td>
                         <td class="text-muted-foreground px-4 py-3 text-xs">{{ line.description ?? '—' }}</td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.debit) > 0 ? line.debit : '—' }}
+                            {{ Number(line.debit) > 0 ? money(line.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.credit) > 0 ? line.credit : '—' }}
+                            {{ Number(line.credit) > 0 ? money(line.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium" colspan="2">{{ t('Totals (:currency)', { currency }) }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ entry.debit_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ entry.credit_total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(entry.debit_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(entry.credit_total) }}</td>
                     </tr>
                 </tfoot>
             </table>

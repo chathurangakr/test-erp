@@ -10,6 +10,7 @@ import { plainNumber, useKioskText } from '@/kiosk/text';
 import type { KioskParty, KioskStockedProduct, KioskStore } from '@/kiosk/types';
 import { home } from '@/routes/kiosk';
 import { store as storeDispatch } from '@/routes/kiosk/dispatch';
+import { money } from '@/lib/money';
 
 /**
  * Dispatch — goods leaving to a customer. Done posts the delivery at once.
@@ -306,7 +307,7 @@ function submit(): void {
                     <p class="font-mono text-lg tabular-nums">
                         {{ plainNumber(line.quantity) }} {{ productOf(line.product_id)?.uom }}
                         <template v-if="line.secondary_quantity">· {{ plainNumber(line.secondary_quantity) }} {{ productOf(line.product_id)?.secondary_uom }}</template>
-                        · Rs. {{ plainNumber(line.unit_price) }} / {{ priceUnit(line) }}
+                        · Rs. {{ money(line.unit_price) }} / {{ priceUnit(line) }}
                     </p>
                     <p v-if="line.lot_id" class="text-muted-foreground font-mono text-sm">{{ lotOf(line) }}</p>
                     <p v-if="line.backflush_quantity" class="text-muted-foreground text-base">
@@ -344,7 +345,7 @@ function submit(): void {
                         <strong>{{ productOf(line.product_id)?.name }}</strong>:
                         <span class="font-mono tabular-nums">{{ plainNumber(line.quantity) }} {{ productOf(line.product_id)?.uom }}</span>
                         <span v-if="line.secondary_quantity" class="font-mono tabular-nums"> · {{ plainNumber(line.secondary_quantity) }} {{ productOf(line.product_id)?.secondary_uom }}</span>
-                        · Rs. {{ plainNumber(line.unit_price) }} / {{ priceUnit(line) }}
+                        · Rs. {{ money(line.unit_price) }} / {{ priceUnit(line) }}
                         <span v-if="line.backflush_quantity" class="text-muted-foreground block text-base">
                             {{ t('dispatch.husks', { uom: productOf(line.product_id)?.backflush?.uom ?? '' }) }}: {{ plainNumber(line.backflush_quantity) }}
                         </span>

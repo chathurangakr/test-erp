@@ -10,6 +10,7 @@ import { index } from '@/routes/goods-receipts';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { GoodsReceiptDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ receipt: GoodsReceiptDetail }>();
 
@@ -96,15 +97,15 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Material value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ receipt.material_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(receipt.material_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Landed costs') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ receipt.landed_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(receipt.landed_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total purchase cost') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ receipt.grand_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(receipt.grand_total) }}</p>
             </div>
         </div>
 
@@ -130,7 +131,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Transport / Loading / Other') }}</dt>
                     <dd class="mt-1 font-mono text-sm">
-                        {{ receipt.transport_cost }} / {{ receipt.loading_cost }} / {{ receipt.other_cost }}
+                        {{ money(receipt.transport_cost) }} / {{ money(receipt.loading_cost) }} / {{ money(receipt.other_cost) }}
                     </dd>
                 </div>
                 <div>
@@ -190,10 +191,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-3 py-3 text-right font-mono">
                             {{ line.secondary_quantity ? `${line.secondary_quantity} ${line.secondary_uom ?? ''}` : '—' }}
                         </td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.unit_price }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.material_cost ?? '—' }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.allocated_landed_cost ?? '—' }}</td>
-                        <td class="px-3 py-3 text-right font-mono font-medium">{{ line.final_unit_cost ?? '—' }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.unit_price) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.material_cost) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.allocated_landed_cost) }}</td>
+                        <td class="px-3 py-3 text-right font-mono font-medium">{{ money(line.final_unit_cost) }}</td>
                         <td class="px-3 py-3">
                             <span class="font-mono text-xs">{{ line.lot_number ?? '—' }}</span>
                             <span v-if="line.supplier_lot_number" class="text-muted-foreground block text-xs">

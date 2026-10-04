@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { DeliveryDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -92,15 +93,15 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Sales value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ delivery.sales_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(delivery.sales_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Cost of goods sold') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ delivery.cogs_total ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(delivery.cogs_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ delivery.gross_profit ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(delivery.gross_profit) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Gross margin') }}</p>
@@ -203,7 +204,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             <span v-if="line.backflush_quantity" class="mt-1 block text-xs text-amber-700 dark:text-amber-300">
                                 {{ t('Raw husks used: :quantity :uom', { quantity: line.backflush_quantity, uom: line.backflush_uom ?? '' }) }}
                                 <template v-if="line.backflush_cost !== null">
-                                    · {{ t('husk cost :amount', { amount: line.backflush_cost }) }}
+                                    · {{ t('husk cost :amount', { amount: money(line.backflush_cost) }) }}
                                 </template>
                             </span>
                         </td>
@@ -218,11 +219,11 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                         <td class="px-3 py-3">
                             {{ line.pricing_basis === 'SECONDARY' ? line.secondary_uom : line.uom }}
                         </td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.unit_price }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.sales_value }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.inventory_unit_cost ?? '—' }}</td>
-                        <td class="px-3 py-3 text-right font-mono">{{ line.cost_of_goods_sold ?? '—' }}</td>
-                        <td class="px-3 py-3 text-right font-mono font-medium">{{ line.gross_profit ?? '—' }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.unit_price) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.sales_value) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.inventory_unit_cost) }}</td>
+                        <td class="px-3 py-3 text-right font-mono">{{ money(line.cost_of_goods_sold) }}</td>
+                        <td class="px-3 py-3 text-right font-mono font-medium">{{ money(line.gross_profit) }}</td>
                         <td class="px-3 py-3 text-right font-mono">
                             {{ line.gross_margin !== null ? `${line.gross_margin}%` : '—' }}
                         </td>

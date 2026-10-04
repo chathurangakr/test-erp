@@ -73,7 +73,7 @@ class SaveDelivery
                     'pricing_basis' => $basis,
                     'unit_price' => $price,
                     // Provisional until posting recalculates it authoritatively.
-                    'sales_value' => DecimalMath::cost(DecimalMath::mul($sellingQuantity, $price)),
+                    'sales_value' => DecimalMath::money(DecimalMath::mul($sellingQuantity, $price)),
                     // Cost is unknown until stock actually moves.
                     'inventory_unit_cost' => null,
                     'cost_of_goods_sold' => null,

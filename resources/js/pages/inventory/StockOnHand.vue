@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { index as stockIndex } from '@/routes/inventory/stock';
 import type { OptionRef, StockRow } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     rows: StockRow[];
@@ -54,8 +55,7 @@ const selectClass =
 /** Totals are a convenience only — the ledger remains the source of truth. */
 const totalValue = computed(() =>
     props.rows
-        .reduce((carry, row) => carry + Number(row.value), 0)
-        .toFixed(2),
+        .reduce((carry, row) => carry + Number(row.value), 0),
 );
 </script>
 
@@ -171,10 +171,10 @@ const totalValue = computed(() =>
                                 {{ row.secondary_uom ?? '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ row.unit_cost }}
+                                {{ money(row.unit_cost) }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono">
-                                {{ row.value }}
+                                {{ money(row.value) }}
                             </td>
                         </tr>
                     </tbody>
@@ -184,7 +184,7 @@ const totalValue = computed(() =>
                                 {{ t('Total value') }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-medium">
-                                {{ totalValue }}
+                                {{ money(totalValue) }}
                             </td>
                         </tr>
                     </tfoot>
@@ -225,11 +225,11 @@ const totalValue = computed(() =>
                         </div>
                         <div>
                             <dt class="text-muted-foreground font-medium">{{ t('Avg cost') }}</dt>
-                            <dd class="font-mono">{{ row.unit_cost }}</dd>
+                            <dd class="font-mono">{{ money(row.unit_cost) }}</dd>
                         </div>
                         <div>
                             <dt class="text-muted-foreground font-medium">{{ t('Value') }}</dt>
-                            <dd class="font-mono">{{ row.value }}</dd>
+                            <dd class="font-mono">{{ money(row.value) }}</dd>
                         </div>
                     </dl>
                 </div>

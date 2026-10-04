@@ -6,6 +6,7 @@ import { index as accountsIndex } from '@/routes/accounts';
 import { index } from '@/routes/trial-balance';
 import type { TrialBalanceReport } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     report: TrialBalanceReport;
@@ -104,18 +105,18 @@ const { t } = useT();
                         <td class="px-4 py-3">{{ row.name }}</td>
                         <td class="text-muted-foreground px-4 py-3 text-xs">{{ row.type_label }}</td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(row.debit) > 0 ? row.debit : '—' }}
+                            {{ Number(row.debit) > 0 ? money(row.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(row.credit) > 0 ? row.credit : '—' }}
+                            {{ Number(row.credit) > 0 ? money(row.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium" colspan="3">{{ t('Totals') }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.debit_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.credit_total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.debit_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.credit_total) }}</td>
                     </tr>
                 </tfoot>
             </table>

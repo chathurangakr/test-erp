@@ -1720,5 +1720,6 @@
     "goods": "භාණ්ඩ",
     "husk cost :amount": "ලෙලි පිරිවැය :amount",
     "incl. labour :amount": "කම්කරු ගාස්තුව :amount ඇතුළුව",
-    "reversed by :reference": ":reference මගින් ආපසු හැරවූ"
+    "reversed by :reference": ":reference මගින් ආපසු හැරවූ",
+    "Enter an amount with at most :places decimal places (rupees and cents).": "දශමස්ථාන :places කට වඩා නොමැති මුදලක් ඇතුළත් කරන්න (රුපියල් සහ ශත)."
 }

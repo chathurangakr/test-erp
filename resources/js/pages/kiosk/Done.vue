@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import type { KioskTextKey } from '@/kiosk/text';
 import { plainNumber, useKioskText } from '@/kiosk/text';
 import { copra, dehusking, dispatch, home, huskChipping, receive } from '@/routes/kiosk';
+import { money } from '@/lib/money';
 
 /**
  * The green "Saved!" screen, built from the POSTED document — so what staff see is what the
@@ -71,7 +72,7 @@ const again = computed(
                         </span>
                     </p>
                     <p v-if="line.lot" class="text-muted-foreground font-mono text-sm">{{ line.lot }}</p>
-                    <p v-if="line.amount" class="text-muted-foreground">Rs. {{ plainNumber(line.amount) }}</p>
+                    <p v-if="line.amount" class="text-muted-foreground">Rs. {{ money(line.amount) }}</p>
                 </li>
             </ul>
         </div>

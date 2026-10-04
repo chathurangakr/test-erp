@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Payables;
 
 use App\Http\Requests\Concerns\ValidatesPaymentMethod;
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,11 +30,11 @@ class StoreSupplierPaymentRequest extends FormRequest
             'payment_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('is_active', true)],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', new Money, 'gt:0'],
 
             'allocations' => ['required', 'array', 'min:1'],
             'allocations.*.supplier_invoice_id' => ['required', 'integer', Rule::exists('supplier_invoices', 'id')],
-            'allocations.*.amount' => ['required', 'numeric', 'gt:0'],
+            'allocations.*.amount' => ['required', 'numeric', new Money, 'gt:0'],
         ] + $this->paymentMethodRules();
     }
 

@@ -32,6 +32,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Money people type, pay and are billed
+    |--------------------------------------------------------------------------
+    |
+    | Rupees and cents: prices, payments, invoice amounts and the labour rate are typed
+    | to at most this many decimals, and amounts owed between the factory and others —
+    | a delivery's sales value, a goods receipt's material cost — are rounded to it
+    | (half up), so every bill can be settled exactly. Inventory COSTS keep the full
+    | `scale` above; screens show every amount to this many places.
+    |
+    */
+
+    'money_decimals' => 2,
+
+    /*
+    |--------------------------------------------------------------------------
     | Journal numbering
     |--------------------------------------------------------------------------
     */

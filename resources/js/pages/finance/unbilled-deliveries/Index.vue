@@ -7,6 +7,7 @@ import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index } from '@/routes/unbilled-deliveries';
 import type { UnbilledDeliveryReport } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{
     report: UnbilledDeliveryReport;
@@ -42,15 +43,15 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Delivered value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.value_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.value_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Invoiced') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.billed_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.billed_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Still unbilled') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ report.remaining_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(report.remaining_total) }}</p>
             </div>
         </div>
 
@@ -94,9 +95,9 @@ const { t } = useT();
                             <span class="text-muted-foreground block text-xs">{{ row.customer_name }}</span>
                         </td>
                         <td class="px-4 py-3">{{ row.delivery_date }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.sales_value }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.billed_amount }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ row.remaining_amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.sales_value) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.billed_amount) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.remaining_amount) }}</td>
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(row.status)">{{ t(label(row.status)) }}</Badge>
                         </td>
@@ -105,9 +106,9 @@ const { t } = useT();
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium" colspan="3">{{ t('Totals') }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.value_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.billed_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.remaining_total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.value_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.billed_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.remaining_total) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>

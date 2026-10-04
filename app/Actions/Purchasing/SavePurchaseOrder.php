@@ -60,7 +60,7 @@ class SavePurchaseOrder
                     'product_id' => $line['product_id'],
                     'quantity' => $quantity,
                     'unit_price' => $price,
-                    'line_total' => DecimalMath::cost(DecimalMath::mul($quantity, $price)),
+                    'line_total' => DecimalMath::money(DecimalMath::mul($quantity, $price)),
                     'received_quantity' => '0.000',
                 ]);
             }

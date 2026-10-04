@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/sales-orders';
 import type { OptionRef, Paginated, SalesOrderRow, StatusOption } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -117,7 +118,7 @@ const controlClass =
                             <td class="px-4 py-3">{{ row.warehouse_code }}</td>
                             <td class="px-4 py-3">{{ row.order_date }}</td>
                             <td class="px-4 py-3"><Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge></td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.sales_total }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.sales_total) }}</td>
                             <td class="px-4 py-3 text-right font-mono text-xs">{{ row.delivered_quantity }} / {{ row.ordered_quantity }}</td>
                         </tr>
                     </tbody>
@@ -135,7 +136,7 @@ const controlClass =
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ row.order_date }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Total') }}</dt><dd class="font-mono">{{ row.sales_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Total') }}</dt><dd class="font-mono">{{ money(row.sales_total) }}</dd></div>
                         <div><dt class="font-medium">{{ t('Delivered') }}</dt><dd class="font-mono">{{ row.delivered_quantity }} / {{ row.ordered_quantity }}</dd></div>
                         <div><dt class="font-medium">{{ t('Remaining') }}</dt><dd class="font-mono">{{ row.remaining_quantity }}</dd></div>
                     </dl>

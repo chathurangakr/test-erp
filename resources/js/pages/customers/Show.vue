@@ -13,6 +13,7 @@ import { index as invoicesIndex } from '@/routes/sales-invoices';
 import { index as receiptsIndex } from '@/routes/customer-receipts';
 import type { Customer, CustomerReceivablesSummary } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{
     customer: Customer;
@@ -124,7 +125,7 @@ const { t } = useT();
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Credit limit') }}</dt>
-                    <dd class="mt-1 text-sm">{{ customer.credit_limit }}</dd>
+                    <dd class="mt-1 text-sm">{{ money(customer.credit_limit) }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Credit days') }}</dt>
@@ -154,7 +155,7 @@ const { t } = useT();
                 <h3 class="text-sm font-medium">{{ t('Sales history') }}</h3>
                 <p class="text-sm">
                     {{ t('Delivered value:') }}
-                    <span class="ml-1 font-mono font-medium">{{ salesHistory.delivered_value }}</span>
+                    <span class="ml-1 font-mono font-medium">{{ money(salesHistory.delivered_value) }}</span>
                 </p>
             </div>
 
@@ -229,7 +230,7 @@ const { t } = useT();
                     <p class="text-muted-foreground text-xs font-medium">
                         {{ t('Outstanding (:currency)', { currency: receivables.currency }) }}
                     </p>
-                    <p class="mt-1 font-mono text-lg font-medium">{{ receivables.outstanding }}</p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ money(receivables.outstanding) }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Overdue') }}</p>
@@ -257,7 +258,7 @@ const { t } = useT();
                         <span class="text-muted-foreground text-xs">
                             {{ invoice.invoice_date }} · {{ invoice.status_label }}
                         </span>
-                        <span class="font-mono text-xs">{{ invoice.outstanding }}</span>
+                        <span class="font-mono text-xs">{{ money(invoice.outstanding) }}</span>
                     </li>
                 </ul>
             </div>
@@ -277,7 +278,7 @@ const { t } = useT();
                         <span class="text-muted-foreground text-xs">
                             {{ receipt.receipt_date }} · {{ receipt.status_label }}
                         </span>
-                        <span class="font-mono text-xs">{{ receipt.amount }}</span>
+                        <span class="font-mono text-xs">{{ money(receipt.amount) }}</span>
                     </li>
                 </ul>
             </div>

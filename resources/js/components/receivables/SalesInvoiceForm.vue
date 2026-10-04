@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import type { BillableDeliveryLine, OptionRef, SalesInvoiceFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -50,7 +51,7 @@ const form = useForm({
         delivery_line_id: line.delivery_line_id,
         description: '',
         amount:
-            props.initial?.lines?.find((l) => l.delivery_line_id === line.delivery_line_id)?.amount ?? '',
+            moneyInput(props.initial?.lines?.find((l) => l.delivery_line_id === line.delivery_line_id)?.amount),
     })),
 });
 
@@ -76,16 +77,13 @@ const total = computed(() => form.lines.reduce((sum, line) => sum + amountOf(lin
 
 /** Bill everything still outstanding on that delivered line. */
 function billInFull(index: number): void {
-    form.lines[index].amount = props.billableLines[index].remaining_amount;
+    form.lines[index].amount = moneyInput(props.billableLines[index].remaining_amount);
 }
 
 function exceedsRemaining(index: number): boolean {
     return amountOf(form.lines[index].amount) > Number(props.billableLines[index].remaining_amount);
 }
 
-function money(value: number): string {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-}
 
 function submit(): void {
     form
@@ -181,15 +179,15 @@ const { t } = useT();
                                 <span class="text-muted-foreground block text-xs">{{ line.product_name }}</span>
                             </td>
                             <td class="px-4 py-3">{{ line.delivery_date }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ line.original_value }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ line.billed_amount }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ line.remaining_amount }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(line.original_value) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(line.billed_amount) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(line.remaining_amount) }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <Input
                                         v-model="form.lines[index].amount"
                                         type="number"
-                                        step="0.000001"
+                                        step="0.01"
                                         min="0"
                                         class="text-right"
                                     />

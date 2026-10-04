@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import { index } from '@/routes/ar-aging';
 import type { ArAgingReport, ControlAccountCheck } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     report: ArAgingReport;
@@ -82,23 +83,23 @@ const { t } = useT();
                             <span class="font-mono text-xs">{{ row.customer_code }}</span>
                             <span class="text-muted-foreground block text-xs">{{ row.customer_name }}</span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.current }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.days_1_30 }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.days_31_60 }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.days_61_90 }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.days_90_plus }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ row.total }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.current) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.days_1_30) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.days_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.days_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.days_90_plus) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.total) }}</td>
                     </tr>
                 </tbody>
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium">{{ t('Totals') }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.current }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_1_30 }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_31_60 }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_61_90 }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.days_90_plus }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.totals.total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.current) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.days_1_30) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.days_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.days_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.days_90_plus) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.totals.total) }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -106,8 +107,8 @@ const { t } = useT();
 
         <div v-if="control" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 text-sm">
             <span class="font-medium">{{ control.code }} {{ control.name }}</span>
-            carries <span class="font-mono">{{ control.balance }}</span> in the general ledger, against
-            an aging total of <span class="font-mono">{{ report.totals.total }}</span> —
+            carries <span class="font-mono">{{ money(control.balance) }}</span> in the general ledger, against
+            an aging total of <span class="font-mono">{{ money(report.totals.total) }}</span> —
             <span :class="control.reconciles ? '' : 'text-destructive font-medium'">
                 {{ control.reconciles ? 'reconciled' : 'not reconciled' }}
             </span>.

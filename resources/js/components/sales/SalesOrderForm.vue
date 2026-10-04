@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 import type { OptionRef, SalesProductOption, StatusOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { money, moneyInput } from '@/lib/money';
 
 const { t } = useT();
 
@@ -71,7 +72,7 @@ const form = useForm({
             quantity: line.quantity,
             secondary_quantity: line.secondary_quantity ?? '',
             pricing_basis: line.pricing_basis,
-            unit_price: line.unit_price,
+            unit_price: moneyInput(line.unit_price),
         }),
     ),
 });
@@ -250,7 +251,7 @@ const selectClass =
 
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`so-price-${index}`" class="text-xs">{{ t('Unit price') }}</Label>
-                            <Input :id="`so-price-${index}`" v-model="line.unit_price" type="number" step="0.000001" min="0" required />
+                            <Input :id="`so-price-${index}`" v-model="line.unit_price" type="number" step="0.01" min="0" required />
                             <InputError :message="form.errors[`lines.${index}.unit_price`]" />
                         </div>
 
@@ -265,7 +266,7 @@ const selectClass =
                                             : productFor(line.product_id)?.uom
                                     }}
                                     · {{ t('Line total:') }}
-                                    <span class="text-foreground font-mono font-medium">{{ lineTotal(line) }}</span>
+                                    <span class="text-foreground font-mono font-medium">{{ money(lineTotal(line)) }}</span>
                                 </span>
                                 <Button
                                     type="button"
@@ -286,7 +287,7 @@ const selectClass =
             <div class="flex justify-end">
                 <p class="text-sm">
                     {{ t('Order total:') }}
-                    <span class="ml-2 font-mono font-medium">{{ salesTotal }}</span>
+                    <span class="ml-2 font-mono font-medium">{{ money(salesTotal) }}</span>
                 </p>
             </div>
         </section>

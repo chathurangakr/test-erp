@@ -10,6 +10,7 @@ import { index } from '@/routes/fund-transfers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { FundTransferDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ transfer: FundTransferDetail; currency: string }>();
 
@@ -90,7 +91,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
 
                 <div class="sm:text-right">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Amount (:currency)', { currency }) }}</p>
-                    <p class="mt-1 font-mono text-lg font-medium">{{ props.transfer.amount }}</p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ money(props.transfer.amount) }}</p>
                 </div>
             </div>
         </div>
@@ -131,10 +132,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             <span class="text-muted-foreground block text-xs">{{ line.account_name }}</span>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.debit) > 0 ? line.debit : '—' }}
+                            {{ Number(line.debit) > 0 ? money(line.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.credit) > 0 ? line.credit : '—' }}
+                            {{ Number(line.credit) > 0 ? money(line.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>

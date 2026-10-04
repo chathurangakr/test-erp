@@ -11,6 +11,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/customers';
 import type { Paginated, Customer, ProductFilters } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     customers: Paginated<Customer>;
@@ -162,7 +163,7 @@ const { t } = useT();
                             <td class="text-muted-foreground px-4 py-3">{{ customer.contact_person ?? '—' }}</td>
                             <td class="text-muted-foreground px-4 py-3">{{ customer.phone ?? '—' }}</td>
                             <td class="text-muted-foreground px-4 py-3">{{ customer.city ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ customer.credit_limit }}</td>
+                            <td class="px-4 py-3">{{ money(customer.credit_limit) }}</td>
                             <td class="px-4 py-3">
                                 <Badge :variant="customer.is_active ? 'default' : 'secondary'">
                                     {{ customer.is_active ? t('Active') : t('Inactive') }}
@@ -226,7 +227,7 @@ const { t } = useT();
                         </div>
                         <div>
                             <dt class="font-medium">{{ t('Credit limit') }}</dt>
-                            <dd>{{ customer.credit_limit }}</dd>
+                            <dd>{{ money(customer.credit_limit) }}</dd>
                         </div>
                     </dl>
 

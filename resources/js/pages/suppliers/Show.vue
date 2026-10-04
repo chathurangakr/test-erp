@@ -13,6 +13,7 @@ import { index as invoicesIndex } from '@/routes/supplier-invoices';
 import { index as paymentsIndex } from '@/routes/supplier-payments';
 import type { Supplier, SupplierPayablesSummary } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{
     supplier: Supplier;
@@ -153,7 +154,7 @@ const { t } = useT();
                 <p class="text-sm">
                     {{ t('Total received value:') }}
                     <span class="ml-1 font-mono font-medium">
-                        {{ purchaseHistory.total_received_value }}
+                        {{ money(purchaseHistory.total_received_value) }}
                     </span>
                 </p>
             </div>
@@ -229,7 +230,7 @@ const { t } = useT();
                     <p class="text-muted-foreground text-xs font-medium">
                         {{ t('Outstanding (:currency)', { currency: payables.currency }) }}
                     </p>
-                    <p class="mt-1 font-mono text-lg font-medium">{{ payables.outstanding }}</p>
+                    <p class="mt-1 font-mono text-lg font-medium">{{ money(payables.outstanding) }}</p>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Overdue') }}</p>
@@ -257,7 +258,7 @@ const { t } = useT();
                         <span class="text-muted-foreground text-xs">
                             {{ invoice.invoice_date }} · {{ invoice.status_label }}
                         </span>
-                        <span class="font-mono text-xs">{{ invoice.outstanding }}</span>
+                        <span class="font-mono text-xs">{{ money(invoice.outstanding) }}</span>
                     </li>
                 </ul>
             </div>
@@ -277,7 +278,7 @@ const { t } = useT();
                         <span class="text-muted-foreground text-xs">
                             {{ payment.payment_date }} · {{ payment.status_label }}
                         </span>
-                        <span class="font-mono text-xs">{{ payment.amount }}</span>
+                        <span class="font-mono text-xs">{{ money(payment.amount) }}</span>
                     </li>
                 </ul>
             </div>

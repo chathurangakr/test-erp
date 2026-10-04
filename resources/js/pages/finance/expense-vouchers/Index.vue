@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, ExpenseVoucherRow, Paginated } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     vouchers: Paginated<ExpenseVoucherRow>;
@@ -100,7 +101,7 @@ const selectClass =
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(voucher.status)">{{ voucher.status_label }}</Badge>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ voucher.total }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(voucher.total) }}</td>
                     </tr>
                     <tr v-if="vouchers.data.length === 0">
                         <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">

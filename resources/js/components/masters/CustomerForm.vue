@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Customer } from '@/types';
 import { useT } from '@/lib/i18n';
+import { moneyInput } from '@/lib/money';
 
 defineProps<{
     action: Record<string, unknown>;
@@ -62,7 +63,7 @@ const { t } = useT();
                         type="number"
                         min="0"
                         step="0.01"
-                        :default-value="customer?.credit_limit ?? '0.00'"
+                        :default-value="moneyInput(customer?.credit_limit) || '0.00'"
                         required
                     />
                     <p class="text-muted-foreground text-xs">{{ t('Agreed limit. Not an outstanding balance.') }}</p>

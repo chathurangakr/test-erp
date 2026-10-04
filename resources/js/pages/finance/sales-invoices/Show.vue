@@ -12,6 +12,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import { index } from '@/routes/sales-invoices';
 import type { SalesInvoiceDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{ invoice: SalesInvoiceDetail; currency: string }>();
 
@@ -97,15 +98,15 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-4">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ invoice.total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(invoice.total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Received') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ invoice.received }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(invoice.received) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Outstanding') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ invoice.outstanding }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(invoice.outstanding) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Due') }}</p>
@@ -148,8 +149,8 @@ const { t } = useT();
                             <span class="text-muted-foreground block text-xs">{{ line.product_name }}</span>
                         </td>
                         <td class="px-4 py-3">{{ line.delivery_date }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ line.delivered_value ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ line.amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(line.delivered_value) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(line.amount) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -191,10 +192,10 @@ const { t } = useT();
                             <span class="text-muted-foreground block text-xs">{{ line.account_name }}</span>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.debit) > 0 ? line.debit : '—' }}
+                            {{ Number(line.debit) > 0 ? money(line.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.credit) > 0 ? line.credit : '—' }}
+                            {{ Number(line.credit) > 0 ? money(line.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>
@@ -235,7 +236,7 @@ const { t } = useT();
                         </td>
                         <td class="px-4 py-3">{{ receipt.receipt_date }}</td>
                         <td class="px-4 py-3">{{ receipt.status_label }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ receipt.amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(receipt.amount) }}</td>
                     </tr>
                 </tbody>
             </table>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Accounting;
 
+use App\Rules\Money;
 use App\Support\DecimalMath;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,8 +34,8 @@ abstract class JournalEntryRequest extends FormRequest
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('is_active', true)],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
-            'lines.*.debit' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.debit' => ['nullable', 'numeric', new Money, 'min:0'],
+            'lines.*.credit' => ['nullable', 'numeric', new Money, 'min:0'],
         ];
     }
 

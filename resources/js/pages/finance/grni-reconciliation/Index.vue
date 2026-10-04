@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { index } from '@/routes/grni-reconciliation';
 import type { ControlAccountCheck, GrniReconciliationReport } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 defineProps<{
     report: GrniReconciliationReport;
@@ -47,15 +48,15 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Accrued on receipt') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.original_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.original_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Invoiced by suppliers') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.matched_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.matched_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Still uninvoiced') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ report.remaining_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(report.remaining_total) }}</p>
             </div>
         </div>
 
@@ -94,9 +95,9 @@ const { t } = useT();
                             <span class="font-mono text-xs">{{ row.supplier_code }}</span>
                             <span class="text-muted-foreground block text-xs">{{ row.supplier_name }}</span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.original_accrual }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.matched_amount }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ row.remaining_amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.original_accrual) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.matched_amount) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(row.remaining_amount) }}</td>
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(row.status)">{{ t(label(row.status)) }}</Badge>
                         </td>
@@ -105,9 +106,9 @@ const { t } = useT();
                 <tfoot class="bg-muted/30">
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium" colspan="3">{{ t('Totals') }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.original_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.matched_total }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ report.remaining_total }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.original_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.matched_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(report.remaining_total) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>

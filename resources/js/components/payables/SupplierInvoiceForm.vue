@@ -15,6 +15,7 @@ import type {
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 const props = defineProps<{
     method: 'post' | 'put';
@@ -55,7 +56,7 @@ const form = useForm({
               goods_receipt_id: line.goods_receipt_id,
               debit_account_id: line.debit_account_id,
               description: line.description ?? '',
-              amount: line.amount,
+              amount: moneyInput(line.amount),
           }))
         : [blankLine()]) as Line[],
 });
@@ -93,7 +94,7 @@ function onReceiptChange(index: number): void {
     const receipt = receiptFor(line);
 
     if (receipt && line.amount === '') {
-        line.amount = receipt.remaining_amount;
+        line.amount = moneyInput(receipt.remaining_amount);
     }
 }
 
@@ -116,9 +117,6 @@ function exceedsRemaining(line: Line): boolean {
     return receipt !== undefined && amount(line.amount) > Number(receipt.remaining_amount);
 }
 
-function money(value: number): string {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-}
 
 function lineError(index: number, field: string): string | undefined {
     return (form.errors as Record<string, string | undefined>)[`lines.${index}.${field}`];
@@ -220,7 +218,7 @@ const { t } = useT();
                                 >
                                     <option :value="null" disabled>{{ t('Select a receipt…') }}</option>
                                     <option v-for="r in goodsReceipts" :key="r.id" :value="r.id">
-                                        {{ t(':number — :amount uninvoiced', { number: r.grn_number, amount: r.remaining_amount }) }}
+                                        {{ t(':number — :amount uninvoiced', { number: r.grn_number, amount: money(r.remaining_amount) }) }}
                                     </option>
                                 </select>
                                 <InputError :message="lineError(index, 'goods_receipt_id')" />
@@ -257,7 +255,7 @@ const { t } = useT();
                                     :id="`amount-${index}`"
                                     v-model="line.amount"
                                     type="number"
-                                    step="0.000001"
+                                    step="0.01"
                                     min="0"
                                     required
                                     class="text-right"
@@ -286,11 +284,11 @@ const { t } = useT();
                         </div>
                         <div>
                             <span class="font-medium">{{ t('Already invoiced') }}</span>
-                            <span class="block font-mono">{{ receiptFor(line)?.matched_amount }}</span>
+                            <span class="block font-mono">{{ money(receiptFor(line)?.matched_amount) }}</span>
                         </div>
                         <div>
                             <span class="font-medium">{{ t('Remaining') }}</span>
-                            <span class="block font-mono">{{ receiptFor(line)?.remaining_amount }}</span>
+                            <span class="block font-mono">{{ money(receiptFor(line)?.remaining_amount) }}</span>
                         </div>
                     </div>
 

@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/fund-transfers';
 import type { FundTransferRow, Paginated } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     transfers: Paginated<FundTransferRow>;
@@ -102,7 +103,7 @@ const selectClass =
                         <td class="px-4 py-3">
                             <Badge :variant="badgeVariant(transfer.status)">{{ transfer.status_label }}</Badge>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ transfer.amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(transfer.amount) }}</td>
                     </tr>
                     <tr v-if="transfers.data.length === 0">
                         <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">{{ t('No fund transfers yet.') }}</td>

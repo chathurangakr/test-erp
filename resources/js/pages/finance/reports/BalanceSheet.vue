@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { balanceSheet, profitLoss } from '@/routes/reports';
 import type { BalanceSheetStatement, ProfitLossStatement } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     statement: BalanceSheetStatement;
@@ -79,7 +80,7 @@ watch(asOf, () => {
                                 {{ row.name }}
                             </Link>
                         </td>
-                        <td class="px-4 py-2 text-right font-mono">{{ row.amount }}</td>
+                        <td class="px-4 py-2 text-right font-mono">{{ money(row.amount) }}</td>
                     </tr>
 
                     <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
@@ -91,12 +92,12 @@ watch(asOf, () => {
                                 {{ t('Computed from unclosed profit — not posted to any account') }}
                             </span>
                         </td>
-                        <td class="px-4 py-2 text-right font-mono">{{ statement.current_earnings }}</td>
+                        <td class="px-4 py-2 text-right font-mono">{{ money(statement.current_earnings) }}</td>
                     </tr>
 
                     <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
                         <td class="px-4 py-3 font-medium">{{ t('Total equity') }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ statement.total_equity }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(statement.total_equity) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -106,11 +107,11 @@ watch(asOf, () => {
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Liabilities + equity (:currency)', { currency }) }}</p>
-                    <p class="mt-1 font-mono text-xl font-medium">{{ statement.liabilities_and_equity }}</p>
+                    <p class="mt-1 font-mono text-xl font-medium">{{ money(statement.liabilities_and_equity) }}</p>
                 </div>
                 <div>
                     <p class="text-muted-foreground text-xs font-medium">{{ t('Total assets') }}</p>
-                    <p class="mt-1 font-mono text-xl font-medium">{{ statement.assets.total }}</p>
+                    <p class="mt-1 font-mono text-xl font-medium">{{ money(statement.assets.total) }}</p>
                 </div>
                 <Badge :variant="statement.balanced ? 'default' : 'destructive'">
                     {{ statement.balanced ? t('Balanced') : t('Out by :difference', { difference: statement.difference }) }}
@@ -123,7 +124,7 @@ watch(asOf, () => {
             <dl class="mt-4 grid gap-6 sm:grid-cols-2">
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Current earnings (computed)') }}</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ statement.current_earnings }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(statement.current_earnings) }}</dd>
                     <dd class="text-muted-foreground mt-1 text-xs">
                         {{
                             t('Revenue :revenue less cost of sales :cost less expenses :expenses.', {
@@ -138,7 +139,7 @@ watch(asOf, () => {
                     <dt class="text-muted-foreground text-sm font-medium">
                         {{ retainedEarnings.code }} {{ retainedEarnings.name }} {{ t('(actual ledger balance)') }}
                     </dt>
-                    <dd class="mt-1 font-mono text-sm">{{ retainedEarnings.balance }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(retainedEarnings.balance) }}</dd>
                     <dd class="text-muted-foreground mt-1 text-xs">
                         {{ t('Only what has genuinely been posted to it.') }}
                     </dd>

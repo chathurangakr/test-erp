@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import type { OptionRef, ProductOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
+import { money, moneyInput } from '@/lib/money';
 
 type LineInput = {
     product_id: string;
@@ -50,7 +51,7 @@ const form = useForm({
         (line): LineInput => ({
             product_id: String(line.product_id),
             quantity: line.quantity,
-            unit_price: line.unit_price,
+            unit_price: moneyInput(line.unit_price),
         }),
     ),
 });
@@ -201,7 +202,7 @@ const selectClass =
                                 :id="`line-price-${index}`"
                                 v-model="line.unit_price"
                                 type="number"
-                                step="0.000001"
+                                step="0.01"
                                 min="0"
                                 required
                             />
@@ -211,7 +212,7 @@ const selectClass =
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label class="text-xs">{{ t('Line total') }}</Label>
                             <p class="h-9 px-1 py-2 text-right font-mono text-sm">
-                                {{ lineTotal(line) }}
+                                {{ money(lineTotal(line)) }}
                             </p>
                         </div>
 
@@ -234,7 +235,7 @@ const selectClass =
             <div class="flex justify-end">
                 <p class="text-sm">
                     {{ t('Order total:') }}
-                    <span class="ml-2 font-mono font-medium">{{ materialTotal }}</span>
+                    <span class="ml-2 font-mono font-medium">{{ money(materialTotal) }}</span>
                 </p>
             </div>
         </section>

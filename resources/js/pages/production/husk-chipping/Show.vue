@@ -11,6 +11,7 @@ import { index } from '@/routes/husk-chipping';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { HuskChippingDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -119,11 +120,11 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Input value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ order.input_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(order.input_value) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ order.output_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(order.output_value) }}</p>
             </div>
         </div>
 
@@ -164,11 +165,11 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Weighted avg cost') }}</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ order.input.unit_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(order.input.unit_cost) }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Value consumed') }}</dt>
-                    <dd class="mt-1 font-mono text-sm font-medium">{{ order.input.total_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm font-medium">{{ money(order.input.total_cost) }}</dd>
                 </div>
             </dl>
         </div>
@@ -213,8 +214,8 @@ const skipped = () => props.order.outputs.filter((o) => Number(o.quantity) <= 0)
                         <td v-if="order.input" class="px-4 py-3 text-right font-mono">
                             {{ Number(output.allocation_percent).toFixed(2) }}%
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ output.allocated_cost ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ output.unit_cost ?? '—' }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(output.allocated_cost) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(output.unit_cost) }}</td>
                     </tr>
                 </tbody>
             </table>

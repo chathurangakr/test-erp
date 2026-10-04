@@ -59,7 +59,10 @@ class LandedCostAllocator
         $materialTotal = DecimalMath::zero();
 
         foreach ($lines as $line) {
-            $material = DecimalMath::cost(
+            // What the supplier bills, so it is money: rounded to the cent. A quantity with
+            // three decimals times a price would otherwise leave fractions of a cent that no
+            // invoice could ever clear from GRNI.
+            $material = DecimalMath::money(
                 DecimalMath::mul(DecimalMath::of($line['quantity']), DecimalMath::of($line['unit_price']))
             );
 

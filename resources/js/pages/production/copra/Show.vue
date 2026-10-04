@@ -11,6 +11,7 @@ import { index } from '@/routes/copra';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { CopraDetail } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -101,11 +102,11 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Input value') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ order.input_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(order.input_value) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Output value') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ order.output_value ?? '—' }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(order.output_value) }}</p>
             </div>
         </div>
 
@@ -135,11 +136,11 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Weighted avg cost') }}</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ order.input.unit_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(order.input.unit_cost) }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Value consumed') }}</dt>
-                    <dd class="mt-1 font-mono text-sm font-medium">{{ order.input.total_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm font-medium">{{ money(order.input.total_cost) }}</dd>
                 </div>
             </dl>
         </div>
@@ -183,20 +184,20 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">{{ t('Allocated cost') }}</dt>
-                    <dd class="mt-1 font-mono text-sm">{{ output.allocated_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(output.allocated_cost) }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground text-sm font-medium">
                         {{ t('Inventory cost / :uom', { uom: output.uom ?? '' }) }}
                     </dt>
-                    <dd class="mt-1 font-mono text-sm font-medium">{{ output.unit_cost ?? '—' }}</dd>
+                    <dd class="mt-1 font-mono text-sm font-medium">{{ money(output.unit_cost) }}</dd>
                 </div>
                 <div v-if="output.informational_secondary_unit_cost !== null">
                     <dt class="text-muted-foreground text-sm font-medium">
                         {{ t('Cost / :uom (informational)', { uom: output.secondary_uom ?? '' }) }}
                     </dt>
                     <dd class="text-muted-foreground mt-1 font-mono text-sm">
-                        {{ output.informational_secondary_unit_cost }}
+                        {{ money(output.informational_secondary_unit_cost) }}
                     </dd>
                 </div>
             </dl>

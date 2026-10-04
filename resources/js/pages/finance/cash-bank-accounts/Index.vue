@@ -8,6 +8,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { create, edit, index } from '@/routes/cash-bank-accounts';
 import type { CashBankSummary } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     summary: CashBankSummary;
@@ -54,15 +55,15 @@ function toggleInactive(): void {
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total cash (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ summary.cash_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(summary.cash_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total bank') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ summary.bank_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(summary.bank_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Combined') }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ summary.combined_total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(summary.combined_total) }}</p>
             </div>
         </div>
 
@@ -110,7 +111,7 @@ function toggleInactive(): void {
                                 {{ row.is_active ? t('Active') : t('Inactive') }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.balance }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.balance) }}</td>
                         <td class="px-4 py-3 text-right">
                             <Button v-if="can('finance.cash.accounts_manage')" variant="ghost" size="sm" as-child>
                                 <Link :href="edit(row.id)">{{ t('Edit') }}</Link>

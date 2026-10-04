@@ -6,6 +6,7 @@ import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
 import type { InventoryGlReconciliationReport } from '@/types';
+import { money } from '@/lib/money';
 
 defineProps<{ report: InventoryGlReconciliationReport; currency: string }>();
 
@@ -45,11 +46,11 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Inventory ledger (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.inventory_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.inventory_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('General ledger') }}</p>
-                <p class="mt-1 font-mono text-lg">{{ report.gl_total }}</p>
+                <p class="mt-1 font-mono text-lg">{{ money(report.gl_total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Difference') }}</p>
@@ -57,7 +58,7 @@ const { t } = useT();
                     class="mt-1 font-mono text-lg font-medium"
                     :class="Number(report.difference_total) !== 0 ? 'text-destructive' : ''"
                 >
-                    {{ report.difference_total }}
+                    {{ money(report.difference_total) }}
                 </p>
             </div>
         </div>
@@ -90,13 +91,13 @@ const { t } = useT();
                             <span class="text-muted-foreground block text-xs">{{ row.account_name }}</span>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs">{{ row.products.join(', ') || '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.inventory_value }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ row.gl_balance }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.inventory_value) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(row.gl_balance) }}</td>
                         <td
                             class="px-4 py-3 text-right font-mono"
                             :class="row.status === 'DIFFERENCE' ? 'text-destructive font-medium' : ''"
                         >
-                            {{ row.difference }}
+                            {{ money(row.difference) }}
                         </td>
                         <td class="px-4 py-3">
                             <Badge :variant="row.status === 'MATCHED' ? 'default' : 'destructive'">

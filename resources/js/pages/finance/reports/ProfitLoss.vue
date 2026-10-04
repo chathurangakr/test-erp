@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 import { profitLoss } from '@/routes/reports';
 import type { ProfitLossStatement } from '@/types';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     statement: ProfitLossStatement;
@@ -94,7 +95,7 @@ const selectClass =
         <div class="border-sidebar-border/70 dark:border-sidebar-border flex flex-wrap items-baseline justify-between gap-3 rounded-xl border p-4">
             <div>
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Gross profit') }}</p>
-                <p class="mt-1 font-mono text-xl font-medium">{{ statement.gross_profit }}</p>
+                <p class="mt-1 font-mono text-xl font-medium">{{ money(statement.gross_profit) }}</p>
             </div>
             <p class="text-muted-foreground text-sm">
                 {{ t('Margin') }} <span class="font-mono">{{ statement.gross_margin_percent }}%</span>
@@ -118,7 +119,7 @@ const selectClass =
                 class="mt-1 font-mono text-2xl font-medium"
                 :class="Number(statement.net_profit) < 0 ? 'text-destructive' : ''"
             >
-                {{ statement.net_profit }}
+                {{ money(statement.net_profit) }}
             </p>
         </div>
 

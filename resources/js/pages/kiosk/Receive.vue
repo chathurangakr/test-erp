@@ -10,6 +10,7 @@ import { plainNumber, useKioskText } from '@/kiosk/text';
 import type { KioskParty, KioskProduct, KioskStore } from '@/kiosk/types';
 import { home } from '@/routes/kiosk';
 import { store as storeReceive } from '@/routes/kiosk/receive';
+import { money } from '@/lib/money';
 
 /**
  * Receive goods — one question per screen, then Done posts the goods receipt at once.
@@ -218,7 +219,7 @@ function submit(): void {
                     <p class="font-mono text-lg tabular-nums">
                         {{ plainNumber(line.quantity) }} {{ productOf(line.product_id)?.uom }}
                         <template v-if="line.secondary_quantity">· {{ plainNumber(line.secondary_quantity) }} {{ productOf(line.product_id)?.secondary_uom }}</template>
-                        · Rs. {{ plainNumber(line.unit_price) }} {{ t('common.each') }}
+                        · Rs. {{ money(line.unit_price) }} {{ t('common.each') }}
                     </p>
                 </div>
                 <button type="button" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-red-700" :aria-label="t('common.remove')" @click="removeLine(position)">
@@ -245,11 +246,11 @@ function submit(): void {
                         <strong>{{ productOf(line.product_id)?.name }}</strong>:
                         <span class="font-mono tabular-nums">{{ plainNumber(line.quantity) }} {{ productOf(line.product_id)?.uom }}</span>
                         <span v-if="line.secondary_quantity" class="font-mono tabular-nums"> · {{ plainNumber(line.secondary_quantity) }} {{ productOf(line.product_id)?.secondary_uom }}</span>
-                        · Rs. {{ plainNumber(line.unit_price) }} {{ t('common.each') }}
+                        · Rs. {{ money(line.unit_price) }} {{ t('common.each') }}
                     </li>
                 </ul>
-                <p v-if="form.transport_cost" class="mt-3">{{ t('enter.transport') }}: Rs. {{ plainNumber(form.transport_cost) }}</p>
-                <p v-if="form.loading_cost">{{ t('enter.loading') }}: Rs. {{ plainNumber(form.loading_cost) }}</p>
+                <p v-if="form.transport_cost" class="mt-3">{{ t('enter.transport') }}: Rs. {{ money(form.transport_cost) }}</p>
+                <p v-if="form.loading_cost">{{ t('enter.loading') }}: Rs. {{ money(form.loading_cost) }}</p>
             </div>
         </div>
     </KioskStep>

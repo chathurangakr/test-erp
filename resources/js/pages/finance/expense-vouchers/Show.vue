@@ -10,6 +10,7 @@ import { edit, index } from '@/routes/expense-vouchers';
 import { index as journalsIndex } from '@/routes/journals';
 import type { ExpenseVoucherDetail } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{ voucher: ExpenseVoucherDetail; currency: string }>();
 
@@ -85,7 +86,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total (:currency)', { currency }) }}</p>
-                <p class="mt-1 font-mono text-lg font-medium">{{ props.voucher.total }}</p>
+                <p class="mt-1 font-mono text-lg font-medium">{{ money(props.voucher.total) }}</p>
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Payee') }}</p>
@@ -120,7 +121,7 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             <span class="text-muted-foreground block text-xs">{{ line.account_name }}</span>
                         </td>
                         <td class="px-4 py-3">{{ line.description ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ line.amount }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(line.amount) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -162,10 +163,10 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                             <span class="text-muted-foreground block text-xs">{{ line.account_name }}</span>
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.debit) > 0 ? line.debit : '—' }}
+                            {{ Number(line.debit) > 0 ? money(line.debit) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-right font-mono">
-                            {{ Number(line.credit) > 0 ? line.credit : '—' }}
+                            {{ Number(line.credit) > 0 ? money(line.credit) : '—' }}
                         </td>
                     </tr>
                 </tbody>

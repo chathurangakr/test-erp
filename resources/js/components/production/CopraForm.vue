@@ -14,6 +14,7 @@ import type {
     ProductionLotOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -150,12 +151,6 @@ function error(index: number, field: 'quantity' | 'secondary_quantity'): string 
     return (form.errors as Record<string, string | undefined>)[`outputs.${index}.${field}`];
 }
 
-function money(value: number): string {
-    return value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
 
 /** Pooled dehusked coconut has no lots: the lot picker only appears for lot-tracked input. */
 const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
@@ -252,7 +247,7 @@ const selectClass =
                     <dt class="text-muted-foreground text-xs font-medium">
                         {{ t('Current inventory cost (weighted average)') }}
                     </dt>
-                    <dd class="mt-1 font-mono text-sm">{{ inputUnitCost }}</dd>
+                    <dd class="mt-1 font-mono text-sm">{{ money(inputUnitCost) }}</dd>
                 </div>
                 <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <dt class="text-muted-foreground text-xs font-medium">{{ t('Estimated consumed value') }}</dt>

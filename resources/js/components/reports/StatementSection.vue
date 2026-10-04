@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import type { StatementRow } from '@/types';
+import { money } from '@/lib/money';
 
 defineProps<{
     title: string;
@@ -64,7 +65,7 @@ function ledgerUrl(row: StatementRow, from?: string | null, to?: string | null):
                             </template>
                         </span>
                     </td>
-                    <td class="px-4 py-2 text-right font-mono">{{ row.amount }}</td>
+                    <td class="px-4 py-2 text-right font-mono">{{ money(row.amount) }}</td>
                 </tr>
 
                 <tr v-if="rows.length === 0">
@@ -75,7 +76,7 @@ function ledgerUrl(row: StatementRow, from?: string | null, to?: string | null):
 
                 <tr class="bg-muted/50 border-sidebar-border/70 dark:border-sidebar-border border-t">
                     <td class="px-4 py-3 font-medium">{{ t(totalLabel) }}</td>
-                    <td class="px-4 py-3 text-right font-mono font-medium">{{ total }}</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">{{ money(total) }}</td>
                 </tr>
             </tbody>
         </table>

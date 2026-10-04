@@ -173,7 +173,7 @@ class SupplierController extends Controller
                     $carry = DecimalMath::add(
                         $carry,
                         DecimalMath::add(
-                            DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_price)),
+                            DecimalMath::money(DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_price))),
                             DecimalMath::of($line->allocated_landed_cost),
                         ),
                     );

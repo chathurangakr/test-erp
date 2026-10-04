@@ -203,7 +203,7 @@ class GoodsReceiptController extends Controller
         foreach ($receipt->lines as $line) {
             $material = DecimalMath::add(
                 $material,
-                DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_price))
+                DecimalMath::money(DecimalMath::mul(DecimalMath::of($line->quantity), DecimalMath::of($line->unit_price)))
             );
             $quantity = DecimalMath::add($quantity, DecimalMath::of($line->quantity));
         }

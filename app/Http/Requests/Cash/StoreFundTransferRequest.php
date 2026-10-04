@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Cash;
 
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class StoreFundTransferRequest extends FormRequest
             'transfer_date' => ['required', 'date'],
             'from_cash_bank_account_id' => ['required', 'integer', $configured()],
             'to_cash_bank_account_id' => ['required', 'integer', 'different:from_cash_bank_account_id', $configured()],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', new Money, 'gt:0'],
             'reference' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:500'],
         ];

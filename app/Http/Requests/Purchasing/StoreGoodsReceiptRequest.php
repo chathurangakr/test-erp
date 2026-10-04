@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Purchasing;
 
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,9 +27,9 @@ class StoreGoodsReceiptRequest extends FormRequest
             'receipt_date' => ['required', 'date'],
             'supplier_delivery_reference' => ['nullable', 'string', 'max:100'],
 
-            'transport_cost' => ['required', 'numeric', 'min:0'],
-            'loading_cost' => ['required', 'numeric', 'min:0'],
-            'other_cost' => ['required', 'numeric', 'min:0'],
+            'transport_cost' => ['required', 'numeric', new Money, 'min:0'],
+            'loading_cost' => ['required', 'numeric', new Money, 'min:0'],
+            'other_cost' => ['required', 'numeric', new Money, 'min:0'],
             'notes' => ['nullable', 'string', 'max:5000'],
 
             'lines' => ['required', 'array', 'min:1'],
@@ -36,7 +37,7 @@ class StoreGoodsReceiptRequest extends FormRequest
             'lines.*.purchase_order_line_id' => ['nullable', 'integer', Rule::exists('purchase_order_lines', 'id')],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
             'lines.*.secondary_quantity' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'lines.*.unit_price' => ['required', 'numeric', new Money, 'min:0'],
             'lines.*.supplier_lot_number' => ['nullable', 'string', 'max:100'],
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Customers;
 
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class UpdateCustomerRequest extends FormRequest
         return [
             'code' => ['required', 'string', 'max:50', Rule::unique('customers', 'code')->ignore($this->route('customer'))],
             'name' => ['required', 'string', 'max:150'],
-            'credit_limit' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'credit_limit' => ['required', 'numeric', new Money, 'min:0', 'max:9999999999999.99'],
             'credit_days' => ['required', 'integer', 'min:0', 'max:3650'],
             'contact_person' => ['nullable', 'string', 'max:150'],
             'phone' => ['nullable', 'string', 'max:30'],

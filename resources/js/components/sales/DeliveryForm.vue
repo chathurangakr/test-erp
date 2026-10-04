@@ -15,6 +15,7 @@ import type {
     StatusOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
+import { money, moneyInput } from '@/lib/money';
 
 const { t } = useT();
 
@@ -94,7 +95,7 @@ const form = useForm({
             quantity: line.quantity,
             secondary_quantity: line.secondary_quantity ?? '',
             pricing_basis: line.pricing_basis,
-            unit_price: line.unit_price,
+            unit_price: moneyInput(line.unit_price),
             backflush_quantity: line.backflush_quantity ?? '',
         }),
     ),
@@ -133,7 +134,7 @@ watch(
                 quantity: line.outstanding_quantity,
                 secondary_quantity: '',
                 pricing_basis: line.pricing_basis,
-                unit_price: line.unit_price,
+                unit_price: moneyInput(line.unit_price),
                 backflush_quantity: '',
             }));
         }
@@ -377,7 +378,7 @@ const selectClass =
 
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`dn-price-${index}`" class="text-xs">{{ t('Unit price') }}</Label>
-                            <Input :id="`dn-price-${index}`" v-model="line.unit_price" type="number" step="0.000001" min="0" required />
+                            <Input :id="`dn-price-${index}`" v-model="line.unit_price" type="number" step="0.01" min="0" required />
                             <InputError :message="form.errors[`lines.${index}.unit_price`]" />
                         </div>
 
@@ -428,7 +429,7 @@ const selectClass =
                             <div class="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs">
                                 <span>
                                     {{ t('Sales value:') }}
-                                    <span class="text-foreground font-mono font-medium">{{ salesValue(line) }}</span>
+                                    <span class="text-foreground font-mono font-medium">{{ money(salesValue(line)) }}</span>
                                     {{ t('· Inventory cost is determined by the ledger when this delivery is posted.') }}
                                 </span>
                                 <Button
@@ -450,7 +451,7 @@ const selectClass =
             <div class="flex justify-end">
                 <p class="text-sm">
                     {{ t('Sales total:') }}
-                    <span class="ml-2 font-mono font-medium">{{ salesTotal }}</span>
+                    <span class="ml-2 font-mono font-medium">{{ money(salesTotal) }}</span>
                 </p>
             </div>
         </section>

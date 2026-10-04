@@ -295,7 +295,9 @@ class PostDelivery
      */
     private function salesValueFor(DeliveryLine $line): string
     {
-        return DecimalMath::cost(
+        // What the customer is billed, so it is money: rounded to the cent. Otherwise a KG
+        // quantity times a price leaves fractions of a cent no receipt could ever clear.
+        return DecimalMath::money(
             DecimalMath::mul($line->sellingQuantity(), DecimalMath::of($line->unit_price))
         );
     }

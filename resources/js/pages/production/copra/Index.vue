@@ -9,6 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/copra';
 import type { CopraOutputColumn, CopraRow, OptionRef, Paginated, StatusOption } from '@/types';
+import { money } from '@/lib/money';
 
 const { t } = useT();
 
@@ -163,8 +164,8 @@ const controlClass =
                             <td class="px-4 py-3">
                                 <Badge :variant="badgeVariant(row.status)">{{ row.status_label }}</Badge>
                             </td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.input_value ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ row.output_value ?? '—' }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.input_value) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(row.output_value) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -200,11 +201,11 @@ const controlClass =
                         </div>
                         <div>
                             <dt class="font-medium">{{ t('Input value') }}</dt>
-                            <dd class="font-mono">{{ row.input_value ?? '—' }}</dd>
+                            <dd class="font-mono">{{ money(row.input_value) }}</dd>
                         </div>
                         <div>
                             <dt class="font-medium">{{ t('Output value') }}</dt>
-                            <dd class="font-mono">{{ row.output_value ?? '—' }}</dd>
+                            <dd class="font-mono">{{ money(row.output_value) }}</dd>
                         </div>
                     </dl>
                 </Link>

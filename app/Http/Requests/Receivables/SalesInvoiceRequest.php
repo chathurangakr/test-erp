@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Receivables;
 
+use App\Rules\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ abstract class SalesInvoiceRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.delivery_line_id' => ['required', 'integer', Rule::exists('delivery_lines', 'id')],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
-            'lines.*.amount' => ['required', 'numeric', 'gt:0'],
+            'lines.*.amount' => ['required', 'numeric', new Money, 'gt:0'],
         ];
     }
 

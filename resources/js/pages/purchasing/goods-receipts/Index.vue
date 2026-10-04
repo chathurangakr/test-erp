@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/goods-receipts';
 import type { GoodsReceiptRow, OptionRef, Paginated, StatusOption } from '@/types';
 import { useT } from '@/lib/i18n';
+import { money } from '@/lib/money';
 
 const props = defineProps<{
     receipts: Paginated<GoodsReceiptRow>;
@@ -115,9 +116,9 @@ const controlClass =
                             <td class="px-4 py-3">{{ grn.warehouse_code }}</td>
                             <td class="px-4 py-3">{{ grn.receipt_date }}</td>
                             <td class="px-4 py-3"><Badge :variant="badgeVariant(grn.status)">{{ grn.status_label }}</Badge></td>
-                            <td class="px-4 py-3 text-right font-mono">{{ grn.material_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ grn.landed_total }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-medium">{{ grn.grand_total }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(grn.material_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono">{{ money(grn.landed_total) }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-medium">{{ money(grn.grand_total) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -134,9 +135,9 @@ const controlClass =
                     </div>
                     <dl class="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div><dt class="font-medium">{{ t('Date') }}</dt><dd>{{ grn.receipt_date }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Material') }}</dt><dd class="font-mono">{{ grn.material_total }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Landed') }}</dt><dd class="font-mono">{{ grn.landed_total }}</dd></div>
-                        <div><dt class="font-medium">{{ t('Total cost') }}</dt><dd class="font-mono">{{ grn.grand_total }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Material') }}</dt><dd class="font-mono">{{ money(grn.material_total) }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Landed') }}</dt><dd class="font-mono">{{ money(grn.landed_total) }}</dd></div>
+                        <div><dt class="font-medium">{{ t('Total cost') }}</dt><dd class="font-mono">{{ money(grn.grand_total) }}</dd></div>
                     </dl>
                 </Link>
             </div>
