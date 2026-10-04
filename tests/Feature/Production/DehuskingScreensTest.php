@@ -125,7 +125,7 @@ class DehuskingScreensTest extends TestCase
                 ->where('recipe.outputs.1.allocation_percent', '0.000000')
                 // The raw husk carries the dehusking labour instead of coconut value.
                 ->where('recipe.outputs.1.absorbs_labour', true)
-                ->where('recipe.default_labour_rate', null)
+                ->where('recipe.default_labour_rate', '4.000000')
                 ->where('recipe.input_tracks_lots', true)
                 // Only lots holding stock are offered.
                 ->has('lots', 1));

@@ -562,8 +562,10 @@ absorbing any rounding remainder) and the labour is then added, whole, to the ou
 recipe marks `absorbs_labour`. Which output carries labour is recipe configuration, never a
 product code.
 
-> `TBD` — the factory's standard labour rate. `default_labour_rate` is **NULL** until the
-> owner gives a figure; until then the operator types the rate on each run.
+**Default rate ✅ CONFIRMED: Rs. 4.00 per coconut** (`default_labour_rate`, set in
+`ProductionRecipeSeeder`). The owner expects it to change from time to time: the operator can
+override it on any run, and each run stores the rate it used, so changing the default never
+alters a posted run.
 
 ### Accounting for the labour ✅ **CONFIRMED**
 
@@ -717,8 +719,8 @@ Husk pool:      600 − 180 = 420 husks, Rs.4,410, still Rs.10.50
   Husk inventory meanwhile. This is inherent to backflushing, not an error.
   > `TBD` — whether the owner wants an *estimated* value shown on unsold chips.
 - **Chips costed under the old method (version 1) already carry husk cost.** Stating husks on
-  a delivery of such stock would count the husk twice. On the development database this is
-  test data only.
+  a delivery of such stock would count the husk twice. None exists any more: the development
+  test data was cleared on 2026-10-04, so every chip in stock from now on is version 2.
 
 ### Waste is information only
 

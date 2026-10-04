@@ -389,7 +389,7 @@ else in the application except the seeder.
 | `version` | unsigned smallint, default `1` | **unique with `production_type`** — decision **P-14** |
 | `input_product_id` | FK → `products.id` | `restrictOnDelete` |
 | `input_consumption` | string(30), default `AT_PRODUCTION` | `App\Enums\InputConsumption` — `AT_DELIVERY` = backflushed by the delivery |
-| `default_labour_rate` | **`decimal(20,6)`**, nullable | pre-fills the labour rate per input unit; NULL until the factory states one |
+| `default_labour_rate` | **`decimal(20,6)`**, nullable | pre-fills the labour rate per input unit; dehusking v2 seeds Rs. 4.00 (the owner's current rate); NULL means no default |
 | `notes` | text, nullable | |
 | `is_active` | boolean, default `true` | exactly one active version per type |
 

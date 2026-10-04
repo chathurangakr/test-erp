@@ -174,7 +174,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 18 | Dehusking ratio | **Fixed 1:1:1**, held as recipe configuration, not code. Outputs are derived and never typed. |
 | 19 | Production value | **Conserved, plus labour.** Output value = consumed value + labour, exactly (labour is zero except in dehusking). |
 | 20 | Dehusking cost split | **Superseded (recipe version 2):** dehusked coconut 100% of the coconut value; raw husk 0% + the dehusking labour. Version 1's 85 / 15 is deactivated and kept for history. |
-| 21 | Production expenses | **Dehusking labour only** — operator-confirmed rate per coconut, pre-filled from the recipe default (NULL until the owner gives a figure). No electricity, machine, fuel or overhead cost. |
+| 21 | Production expenses | **Dehusking labour only** — operator-confirmed rate per coconut, pre-filled from the recipe default of **Rs. 4.00** (owner's current rate; it changes from time to time and can be overridden per run). No electricity, machine, fuel or overhead cost. |
 | 22 | Husk chipping yields | **Measured, never derived.** The operator enters the actual quantities as rows (7C / 9C / 10C / Cocopeat, KG or L). No husk-to-KG or KG-to-litre ratio exists. |
 | 23 | Husk chipping costing | **Backflushed at delivery (recipe version 2).** Chipping takes no husk; outputs enter at zero value; the delivery's "Raw Husks Used" are issued at their weighted average into cost of goods sold, atomically with the sale. Version 1's 30 / 30 / 40 is deactivated. |
 | 24 | A product that produced nothing | Simply **left out** of the run — zero rows are refused. |
@@ -234,7 +234,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 28 | Should **drying / moisture / process loss** be captured for copra, and on what basis (input weight vs. output weight, per batch or per dryer run)? | Copra production |
 | 29 | Is the **1 coconut = 1 shell** rule absolute, or do broken shells and rejects need recording? | Copra production |
 | 30 | Should copra be gradeable (edible / milling / rejected), each grade taking its own share? | Copra production / Costing |
-| 31 | What is the factory's **standard dehusking labour rate** per coconut? (Recipe default is NULL; operators type the rate.) | Dehusking |
+| 31 | ~~Standard dehusking labour rate~~ — **answered: Rs. 4.00 per coconut** (recipe default; changes from time to time, overridable per run). | Dehusking |
 | 32 | Is a **cheque lifecycle** (received / deposited / cleared / bounced, with a clearing account) required? | Finance |
 | 33 | Should unsold chips and cocopeat show an **estimated husk value** while their cost is pending backflush? | Costing / Reports |
 | 34 | Should **copra and raw shell** also become pooled (lot-free) stock? | Inventory |

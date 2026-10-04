@@ -244,7 +244,7 @@ The inventory engine exists and is tested. These rules are permanent:
   production, enforced by `ProductionRecipe::assertAllocationIsComplete()`. Dehusking v2 is
   100 / 0 (dehusked / husk) and copra 75 / 25 (provisional); never hard-code them.
 - **Dehusking labour is the raw husk's cost.** The operator confirms a labour rate per
-  coconut (pre-filled from `default_labour_rate`, NULL until the owner gives a figure);
+  coconut (pre-filled from `default_labour_rate` — Rs. 4.00 today; the owner changes it from time to time, and each run keeps the rate it used);
   posting requires it (0 is allowed) and stores `labour_rate` / `labour_cost`. The journal
   credits the production labour account (`accounting_settings.production_labour_account_id`,
   6310 — a contra-expense). Never create cash or a payable for it.

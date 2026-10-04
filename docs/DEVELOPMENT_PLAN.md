@@ -501,7 +501,7 @@ remembered per person.
 
 - [x] **Dehusking labour:** recipe version 2 gives dehusked coconut 100% of the coconut value and
       raw husk the run's labour (quantity × operator-confirmed rate per coconut, pre-filled from
-      `default_labour_rate`, NULL until the owner gives a figure). Output = input + labour exactly;
+      `default_labour_rate`, Rs. 4.00 — the owner's current rate). Output = input + labour exactly;
       journal `Dr 1320/1330 · Cr 1310 · Cr 6310 Production Labour Absorbed` (contra-expense — no
       cash, no payable)
 - [x] **Husk chipping backflushed at delivery:** recipe version 2 (`input_consumption =
@@ -537,13 +537,13 @@ remembered per person.
       `PaymentMethodTest`. Full suite: 1,089 tests passing
 
 **Decided with the owner:** litre items for 7C, 9C, 10C and Cocopeat; Cocopeat on its own accounts;
-cheque details only (no status lifecycle); old lot balances moved into the pool by a one-time
-recorded movement.
+cheque details only (no status lifecycle); default dehusking labour rate Rs. 4.00 (changes from
+time to time). On 2026-10-04 the owner had all development test transactions deleted (backup
+taken first): the dev database now holds master data only, accounting is switched off again, and
+the QA test product is deactivated — so no old lots or old-method chips remain.
 
-**Open:** the standard dehusking labour rate; cheque lifecycle and clearing account; whether unsold
-chips should show an estimated husk value; whether copra and shell should also be pooled. Chips
-costed under version 1 already carry husk cost — stating husks on their delivery would count it
-twice (development test data only).
+**Open:** cheque lifecycle and clearing account; whether unsold
+chips should show an estimated husk value; whether copra and shell should also be pooled.
 
 ---
 

@@ -296,7 +296,7 @@ tables (`production_recipes`, `production_recipe_outputs`) and nowhere else.
 
 | Run | Rule (recipe) | Status |
 | --- | --- | --- |
-| Dehusking (v2) | 100% dehusked / 0% husk + labour to husk; labour rate typed per run (default NULL) | **Confirmed** method; the standard rate is `TBD` |
+| Dehusking (v2) | 100% dehusked / 0% husk + labour to husk; labour rate per run, pre-filled from the default of Rs. 4.00 (this scenario types 2.50) | **Confirmed** method and default |
 | Husk chipping (v2) | No consumption; husk backflushed at delivery | **Confirmed** |
 | Copra (v1) | 75% copra / 25% shell | **Provisional** |
 

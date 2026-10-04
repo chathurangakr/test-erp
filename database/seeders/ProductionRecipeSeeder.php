@@ -29,8 +29,10 @@ class ProductionRecipeSeeder extends Seeder
      * `ratio` 1 for both outputs encodes the confirmed 1:1:1 rule. The dehusked coconut
      * carries 100% of the coconut's value; the raw husk carries NONE of it. Instead the husk's
      * cost is the dehusking LABOUR — quantity x the per-coconut rate the operator confirms on
-     * each run, pre-filled from `labour_rate` (NULL until the factory states its rate). So
-     * input value + labour = outputs, exactly. (Version 1 split 85 / 15 and had no labour.)
+     * each run, pre-filled from `labour_rate` — Rs. 4.00, the owner's current rate. It changes
+     * from time to time: the operator can override it on any run, and each run stores the rate
+     * it used, so changing this default never alters a posted run. So input value + labour =
+     * outputs, exactly. (Version 1 split 85 / 15 and had no labour.)
      *
      * HUSK CHIPPING (version 2): consumes NOTHING when posted. The operator records the
      * measured outputs — any of these grades, by weight or by volume — and they enter stock
@@ -63,7 +65,7 @@ class ProductionRecipeSeeder extends Seeder
             'version' => 2,
             'input' => 'COCONUT',
             'consumption' => InputConsumption::AtProduction,
-            'labour_rate' => null,
+            'labour_rate' => '4.000000',
             'notes' => 'Dehusked coconut carries the coconut value; raw husk carries the dehusking labour.',
             'outputs' => [
                 ['code' => 'DEHUSKED-COCONUT', 'ratio' => '1.000000', 'percent' => '100.000000'],
