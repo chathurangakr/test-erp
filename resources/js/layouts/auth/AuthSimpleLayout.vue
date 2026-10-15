@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import LanguageSwitch from '@/components/LanguageSwitch.vue';
 import { useT } from '@/lib/i18n';
@@ -11,6 +11,7 @@ defineProps<{
 }>();
 
 const { t } = useT();
+const page = usePage();
 </script>
 
 <template>
@@ -37,13 +38,22 @@ const { t } = useT();
                         <span class="sr-only">{{ t(title ?? '') }}</span>
                     </Link>
                     <div class="space-y-2 text-center">
-                        <h1 class="text-xl font-medium">{{ t(title ?? '') }}</h1>
+                        <h1 class="text-xl font-medium">
+                            {{ t(title ?? '') }}
+                        </h1>
                         <p class="text-muted-foreground text-center text-sm">
                             {{ t(description ?? '') }}
                         </p>
                     </div>
                 </div>
                 <slot />
+                <p class="text-muted-foreground text-center text-xs">
+                    {{
+                        t('Version :version', {
+                            version: page.props.appVersion,
+                        })
+                    }}
+                </p>
             </div>
         </div>
     </div>

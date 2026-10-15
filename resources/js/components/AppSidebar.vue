@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     ChartColumn,
@@ -100,6 +100,7 @@ import { index as suppliersIndex } from '@/routes/suppliers';
 import { index as usersIndex } from '@/routes/users';
 import { index as warehousesIndex } from '@/routes/warehouses';
 import type { NavItem } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const mainNavItems: NavItem[] = [
     {
@@ -393,6 +394,9 @@ const administrationNavItems: NavItem[] = [
         icon: ShieldCheck,
     },
 ];
+
+const { t } = useT();
+const page = usePage();
 </script>
 
 <template>
@@ -426,6 +430,11 @@ const administrationNavItems: NavItem[] = [
 
         <SidebarFooter>
             <NavUser />
+            <p
+                class="text-muted-foreground px-2 text-xs group-data-[collapsible=icon]:hidden"
+            >
+                {{ t('Version :version', { version: page.props.appVersion }) }}
+            </p>
         </SidebarFooter>
     </Sidebar>
     <slot />

@@ -17,12 +17,18 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            /** The release number from the VERSION file, e.g. "1.0.0". */
+            appVersion: string;
             auth: Auth;
             sidebarOpen: boolean;
             /** Today (YYYY-MM-DD) in the factory timezone. */
             businessToday: string;
             /** Present on simple-mode (kiosk) pages only. */
-            kiosk?: { locale: 'si' | 'en'; locales: string[]; idle_minutes: number };
+            kiosk?: {
+                locale: 'si' | 'en';
+                locales: string[];
+                idle_minutes: number;
+            };
             [key: string]: unknown;
         };
     }

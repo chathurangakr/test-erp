@@ -40,6 +40,8 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            // The release number, shown in the menu and on the sign-in page.
+            'appVersion' => config('app.version'),
             'auth' => [
                 'user' => $request->user(),
                 // The effective permission codes, so screens can hide what the user cannot

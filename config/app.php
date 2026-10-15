@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | The release this code is, from the VERSION file at the project root. It is
+    | raised (and tagged in git, e.g. v1.0.0) with every release, recorded in
+    | CHANGELOG.md, and shown on screen so anyone can say which version they run.
+    |
+    */
+
+    'version' => is_file(base_path('VERSION')) ? trim((string) file_get_contents(base_path('VERSION'))) : 'dev',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

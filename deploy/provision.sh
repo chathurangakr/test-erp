@@ -599,7 +599,7 @@ ok "Sign-in page answers 200"
 cat >&3 <<DONE
 
 ==================================================================================
-  The Coconut Factory ERP is installed.
+  The Coconut Factory ERP is installed (version $(tr -d '[:space:]' 2>/dev/null < "$APP_DIR/VERSION" || echo unknown)).
 
   Open:            $APP_URL
   Sign in as:      $ADMIN_EMAIL

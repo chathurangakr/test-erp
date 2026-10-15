@@ -783,6 +783,10 @@ no role sees only the dashboard and their own settings.
   environment variable or a scheduled task.
 - **Updating an installed computer is `deploy/update.sh`:** it backs up the database, pulls the
   project folder and runs the installer taken from the newest version (never the folder's copy).
+- **Every release has a version number.** `VERSION` (e.g. `1.0.0`) is the single source; it is
+  shown on screen (`config('app.version')` → the shared `appVersion` prop). When pushing a
+  release, raise it (last number for fixes, middle for features), add a plain-language entry to
+  `CHANGELOG.md`, and tag the commit `vX.Y.Z`.
 - **`deploy/coconut-erp.sh` is the one file a customer runs, for install and update alike.** It asks
   only for the sudo password (saved as `SUDO_PASSWORD` in `provision.env`), clones into
   `~/coconut-erp`, then runs `provision.sh` the first time and `update.sh` afterwards.

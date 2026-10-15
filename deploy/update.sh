@@ -11,6 +11,8 @@
 #       Taking the installer from the version it installs means an older copy of this
 #       folder (a ZIP download, say) can never run an installer that does not match the code.
 #
+#  It finishes by saying which version is now running ("Updated from 1.0.0 to 1.1.0").
+#
 #  Usage — on the computer the ERP is installed on, in the folder it was installed from:
 #    bash deploy/update.sh                                # or: sudo bash deploy/update.sh
 #    bash deploy/update.sh /path/to/other-settings.env    # a settings file elsewhere
@@ -138,10 +140,24 @@ If it mentions local changes, files in $project_dir were edited by hand; ask you
         ok "Installer taken from the newest version: $(as_root runuser -u "$app_user" -- git -C "$app_dir" log -1 --format='%h %s' FETCH_HEAD)"
     fi
 
+    # The release number before and after, from the VERSION file (missing before 1.0.0).
+    installed_version() { [[ -f "$app_dir/VERSION" ]] && tr -d '[:space:]' < "$app_dir/VERSION" || true; }
+    local before_version after_version
+    before_version="$(installed_version)"
+
     say "Applying the update (this takes a few minutes)"
     local status=0
     bash "$installer" "$config_file" || status=$?
     [[ -z "$newest" ]] || rm -f "$newest"
+
+    if [[ $status -eq 0 ]]; then
+        after_version="$(installed_version)"
+        if [[ -n "$after_version" && "$before_version" == "$after_version" ]]; then
+            say "Already up to date: version $after_version"
+        elif [[ -n "$after_version" ]]; then
+            say "Updated from ${before_version:-an earlier version} to version $after_version"
+        fi
+    fi
     exit "$status"
 }
 
