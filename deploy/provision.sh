@@ -221,9 +221,16 @@ systemctl enable mariadb >/dev/null
 # An installation interrupted (e.g. a power cut) can leave MariaDB without its own system
 # tables. Only in that case — no `mysql` system database at all — initialise them. Existing
 # data is never touched.
+#
+# It runs AS the mysql account: Ubuntu's AppArmor profile for mariadbd does not allow the
+# server to switch user, so the usual `--user=mysql` from root fails with "Permission denied"
+# (which is also why the package's own first-time setup can leave the tables missing).
 if [[ ! -d /var/lib/mysql/mysql ]]; then
     systemctl stop mariadb >/dev/null 2>&1 || true
-    mariadb-install-db --user=mysql --datadir=/var/lib/mysql >/dev/null
+    install -d -o mysql -g mysql -m 750 /var/lib/mysql
+    chown -R mysql:mysql /var/lib/mysql
+    runuser -u mysql -- mariadb-install-db --datadir=/var/lib/mysql \
+        --auth-root-authentication-method=socket --auth-root-socket-user=root --skip-test-db >/dev/null
     warn "MariaDB's system tables were missing and have been initialised"
 fi
 systemctl start mariadb
