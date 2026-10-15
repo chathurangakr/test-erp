@@ -14,7 +14,8 @@
 #    bash deploy/provision.sh /path/to/other-settings.env   # a settings file elsewhere
 #
 #  Safe to run again at any time: it updates the code, applies new migrations and restarts
-#  the services. It never drops a database or deletes records.
+#  the services. It never drops a database or deletes records. To update an installed ERP,
+#  use deploy/update.sh — it takes a backup first and then runs this installer.
 #
 #  A full log is written to /var/log/coconut-erp-provision.log (passwords are never logged).
 # =====================================================================================
@@ -586,6 +587,7 @@ cat >&3 <<DONE
    - Change the administrator password after signing in (Settings → Password).
    - Remove SUDO_PASSWORD from $CONFIG_FILE.
    - Copy the nightly backups in $BACKUP_DIR to another computer or drive regularly.
+   - To install a newer version later: bash deploy/update.sh
    - Your accountant sets the accounting start date in Finance → Accounting setup.
 
   Log of this run: $LOG_FILE

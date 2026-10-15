@@ -781,6 +781,8 @@ no role sees only the dashboard and their own settings.
   `COCONUT_ADMIN_PASSWORD`), and sets up the firewall, scheduler and nightly backups. It is
   idempotent and never deletes data. Keep it working when adding a PHP extension, an
   environment variable or a scheduled task.
+- **Updating an installed computer is `deploy/update.sh`:** it backs up the database, pulls the
+  project folder (so the installer itself is current) and then runs `provision.sh`.
 
 ---
 <laravel-boost-guidelines>
