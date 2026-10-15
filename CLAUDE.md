@@ -782,7 +782,10 @@ no role sees only the dashboard and their own settings.
   idempotent and never deletes data. Keep it working when adding a PHP extension, an
   environment variable or a scheduled task.
 - **Updating an installed computer is `deploy/update.sh`:** it backs up the database, pulls the
-  project folder (so the installer itself is current) and then runs `provision.sh`.
+  project folder and runs the installer taken from the newest version (never the folder's copy).
+- **`deploy/coconut-erp.sh` is the one file a customer runs, for install and update alike.** It asks
+  only for the sudo password (saved as `SUDO_PASSWORD` in `provision.env`), clones into
+  `~/coconut-erp`, then runs `provision.sh` the first time and `update.sh` afterwards.
 
 ---
 <laravel-boost-guidelines>

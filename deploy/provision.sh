@@ -611,7 +611,7 @@ cat >&3 <<DONE
   Next steps:
    - Self-signed certificate? Each browser shows a warning once — accept it.
    - Change the administrator password after signing in (Settings → Password).
-   - Remove SUDO_PASSWORD from $CONFIG_FILE.
+   - SUDO_PASSWORD in $CONFIG_FILE lets updates run unattended; delete it to be asked instead.
    - Copy the nightly backups in $BACKUP_DIR to another computer or drive regularly.
    - To install a newer version later: bash deploy/update.sh
    - Your accountant sets the accounting start date in Finance → Accounting setup.
