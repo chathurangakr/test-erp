@@ -5,9 +5,11 @@
 #
 #  Brings an installed ERP up to the newest version:
 #    1. backs up the database right now (beside the nightly backups)
-#    2. gets the newest copy of this project folder, so the installer itself is current
-#    3. runs the installer, which updates the code, libraries, database tables and screens
-#       and restarts the services. It never deletes records.
+#    2. gets the newest copy of this project folder (when it is a git copy)
+#    3. runs the installer FROM THE NEWEST VERSION, which updates the code, libraries,
+#       database tables and screens and restarts the services. It never deletes records.
+#       Taking the installer from the version it installs means an older copy of this
+#       folder (a ZIP download, say) can never run an installer that does not match the code.
 #
 #  Usage — on the computer the ERP is installed on, in the folder it was installed from:
 #    bash deploy/update.sh                                # or: sudo bash deploy/update.sh
@@ -45,11 +47,23 @@ Run the update from the folder the ERP was installed from (the one holding deplo
     [[ -f "$BACKUP_COMMAND" ]] || die "The ERP is not installed on this computer yet.
 Install it first with: bash deploy/provision.sh"
 
-    local sudo_password git_token backup_dir
+    local sudo_password git_token backup_dir app_dir app_user source_dir branch
     sudo_password="$(setting SUDO_PASSWORD "$config_file")"
     git_token="$(setting GIT_TOKEN "$config_file")"
     backup_dir="$(setting BACKUP_DIR "$config_file")"
     backup_dir="${backup_dir:-/var/backups/coconut-erp}"
+    app_dir="$(setting APP_DIR "$config_file")"
+    app_dir="${app_dir:-/var/www/coconut-erp}"
+    app_user="$(setting APP_USER "$config_file")"
+    app_user="${app_user:-coconuterp}"
+    source_dir="$(setting SOURCE_DIR "$config_file")"
+    branch="$(setting REPO_BRANCH "$config_file")"
+    branch="${branch:-main}"
+
+    local -a git_auth=()
+    if [[ -n "$git_token" ]]; then
+        git_auth=(-c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$git_token" | base64 -w0)")
+    fi
 
     as_root() {
         if [[ $EUID -eq 0 ]]; then
@@ -82,11 +96,7 @@ Install it first with: bash deploy/provision.sh"
         fi
 
         local owner
-        local -a git_auth=()
         owner="$(stat -c %U "$project_dir")"
-        if [[ -n "$git_token" ]]; then
-            git_auth=(-c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$git_token" | base64 -w0)")
-        fi
         # Git refuses a folder owned by someone else, so it runs as the folder's owner.
         project_git() {
             if [[ $EUID -eq 0 && "$owner" != root ]]; then
@@ -109,13 +119,30 @@ If it mentions local changes, files in $project_dir were edited by hand; ask you
             ok "Now at: $(project_git log -1 --format='%h %s')"
         fi
     else
-        warn "$project_dir is not a git copy, so it was not updated here."
-        warn "If you install from a copied folder (SOURCE_DIR), copy the new version over it first."
+        warn "$project_dir is not a git copy (a ZIP download?), so this folder was not refreshed."
+        if [[ -n "$source_dir" ]]; then
+            warn "You install from a copied folder (SOURCE_DIR): copy the new version over it first."
+        fi
     fi
 
     # ---------------------------------------------------------------- 3. installer
+    # The installer comes from the version about to be installed, not from this folder.
+    local installer="$script_dir/provision.sh" newest=""
+    if [[ -z "$source_dir" && -d "$app_dir/.git" ]]; then
+        newest="$(mktemp)"
+        as_root runuser -u "$app_user" -- env HOME="/var/lib/$app_user" \
+                git -C "$app_dir" "${git_auth[@]}" fetch --quiet origin "$branch" \
+            && as_root runuser -u "$app_user" -- git -C "$app_dir" show "FETCH_HEAD:deploy/provision.sh" > "$newest" \
+            || { rm -f "$newest"; die "Could not download the newest version. Check the internet connection and try again."; }
+        installer="$newest"
+        ok "Installer taken from the newest version: $(as_root runuser -u "$app_user" -- git -C "$app_dir" log -1 --format='%h %s' FETCH_HEAD)"
+    fi
+
     say "Applying the update (this takes a few minutes)"
-    exec bash "$script_dir/provision.sh" "$config_file"
+    local status=0
+    bash "$installer" "$config_file" || status=$?
+    [[ -z "$newest" ]] || rm -f "$newest"
+    exit "$status"
 }
 
 main "$@"
