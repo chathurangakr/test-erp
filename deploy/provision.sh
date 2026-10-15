@@ -523,7 +523,7 @@ ok "Nginx serves the ERP on ports $HTTP_PORT (redirect) and $HTTPS_PORT (HTTPS)"
 say "Adding the ERP to the Ubuntu app menu"
 LOCAL_URL="https://localhost"
 [[ "$HTTPS_PORT" == "443" ]] || LOCAL_URL="${LOCAL_URL}:${HTTPS_PORT}"
-install -D -m 644 "$APP_DIR/deploy/coconut-erp.svg" /usr/share/icons/hicolor/scalable/apps/coconut-erp.svg
+install -D -m 644 "$APP_DIR/public/favicon.svg" /usr/share/icons/hicolor/scalable/apps/coconut-erp.svg
 # Missing on an Ubuntu without a desktop; the icon is then simply unused.
 install -d -m 755 /usr/share/applications
 cat > /usr/share/applications/coconut-erp.desktop <<DESKTOP

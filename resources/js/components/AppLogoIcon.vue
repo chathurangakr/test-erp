@@ -13,17 +13,51 @@ defineProps<Props>();
 </script>
 
 <template>
+    <!-- The coconut mark; the same drawing as public/favicon.svg and the Ubuntu app-menu icon. -->
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 40 42"
+        viewBox="0 0 256 256"
         :class="className"
         v-bind="$attrs"
     >
+        <rect x="8" y="8" width="240" height="240" rx="52" fill="#2e6b3f" />
         <path
-            fill="currentColor"
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
+            d="M128 92 C 104 58, 66 46, 34 56 C 66 62, 92 76, 114 100 Z"
+            fill="#7cc36e"
+        />
+        <path
+            d="M128 92 C 152 58, 190 46, 222 56 C 190 62, 164 76, 142 100 Z"
+            fill="#7cc36e"
+        />
+        <path
+            d="M128 96 C 124 64, 132 38, 148 22 C 140 46, 138 70, 140 98 Z"
+            fill="#a6dd8f"
+        />
+        <circle cx="128" cy="152" r="74" fill="#6b4226" />
+        <circle
+            cx="128"
+            cy="152"
+            r="74"
+            fill="none"
+            stroke="#4a2c18"
+            stroke-width="6"
+        />
+        <path
+            d="M72 138 C 76 116, 88 102, 100 94"
+            fill="none"
+            stroke="#8d5a36"
+            stroke-width="9"
+            stroke-linecap="round"
+        />
+        <ellipse cx="117" cy="112" rx="7" ry="6" fill="#2b190d" />
+        <ellipse cx="139" cy="112" rx="7" ry="6" fill="#2b190d" />
+        <ellipse cx="128" cy="129" rx="7" ry="6" fill="#2b190d" />
+        <path
+            d="M74 172 C 84 200, 108 218, 136 220"
+            fill="none"
+            stroke="#5a3620"
+            stroke-width="6"
+            stroke-linecap="round"
         />
     </svg>
 </template>
