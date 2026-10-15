@@ -14,6 +14,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\SourceDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -263,7 +264,7 @@ class JournalEntryController extends Controller
             'credit_total' => $entry->creditTotal(),
             'difference' => $entry->difference(),
             'is_balanced' => $entry->isBalanced(),
-            'source' => $entry->source_type === null ? __('Manual') : class_basename((string) $entry->source_type),
+            'source' => SourceDocument::label($entry->source_type),
         ];
     }
 

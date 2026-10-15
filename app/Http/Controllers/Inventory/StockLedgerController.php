@@ -65,7 +65,7 @@ class StockLedgerController extends Controller
             ->withQueryString()
             ->through(fn (InventoryTransactionLine $line): array => [
                 'id' => $line->id,
-                'date' => $line->transaction?->transaction_date?->toDateTimeString(),
+                'date' => $line->transaction?->transaction_date?->toDateString(),
                 'reference' => $line->transaction?->reference,
                 'type' => $line->transaction?->transaction_type?->value,
                 'type_label' => $line->transaction?->transaction_type?->label(),

@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntryLine;
 use App\Support\DecimalMath;
+use App\Support\SourceDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -278,9 +279,7 @@ class AccountingBalanceService
                 'journal_number' => $line->entry?->journal_number,
                 'journal_date' => $line->entry?->journal_date?->toDateString(),
                 'description' => $line->description ?? $line->entry?->description,
-                'source' => $line->entry?->source_type === null
-                    ? __('Manual')
-                    : class_basename((string) $line->entry->source_type),
+                'source' => SourceDocument::label($line->entry?->source_type),
                 'debit' => $line->debit,
                 'credit' => $line->credit,
                 // Presentation only. Never stored.

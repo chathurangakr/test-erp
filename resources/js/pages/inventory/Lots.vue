@@ -29,7 +29,9 @@ defineOptions({
 const { t } = useT();
 
 const search = ref(props.filters.search ?? '');
-const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
+const productId = ref(
+    props.filters.product_id ? String(props.filters.product_id) : '',
+);
 const status = ref(props.filters.status ?? 'all');
 
 let debounce: ReturnType<typeof setTimeout> | undefined;
@@ -105,10 +107,20 @@ const statusOptions = [
             </div>
 
             <div class="grid gap-1.5 lg:w-64">
-                <label for="lot-product" class="text-sm font-medium">{{ t('Product') }}</label>
-                <select id="lot-product" v-model="productId" :class="controlClass">
+                <label for="lot-product" class="text-sm font-medium">{{
+                    t('Product')
+                }}</label>
+                <select
+                    id="lot-product"
+                    v-model="productId"
+                    :class="controlClass"
+                >
                     <option value="">{{ t('All products') }}</option>
-                    <option v-for="p in products" :key="p.id" :value="String(p.id)">
+                    <option
+                        v-for="p in products"
+                        :key="p.id"
+                        :value="String(p.id)"
+                    >
                         {{ p.code }}
                     </option>
                 </select>
@@ -143,7 +155,11 @@ const statusOptions = [
         >
             <p class="font-medium">{{ t('No lots found') }}</p>
             <p class="text-muted-foreground text-sm">
-                {{ t('Lots are created automatically when purchase or production documents post stock.') }}
+                {{
+                    t(
+                        'Lots are created automatically when purchase or production documents post stock.',
+                    )
+                }}
             </p>
         </div>
 
@@ -154,14 +170,30 @@ const statusOptions = [
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Lot number') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Source') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Received') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Manufactured') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Warehouses') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Lot number') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Product') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Source') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Received') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Manufactured') }}
+                            </th>
+                            <th class="px-4 py-3 text-right font-medium">
+                                {{ t('Quantity') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Warehouses') }}
+                            </th>
+                            <th class="px-4 py-3 font-medium">
+                                {{ t('Status') }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -176,20 +208,32 @@ const statusOptions = [
                                     v-if="lot.supplier_lot_number"
                                     class="text-muted-foreground block font-sans"
                                 >
-                                    {{ t('supplier: :lot', { lot: lot.supplier_lot_number }) }}
+                                    {{
+                                        t('supplier: :lot', {
+                                            lot: lot.supplier_lot_number,
+                                        })
+                                    }}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="font-mono text-xs">{{ lot.product_code }}</span>
-                                <span class="text-muted-foreground block text-xs">
+                                <span class="font-mono text-xs">{{
+                                    lot.product_code
+                                }}</span>
+                                <span
+                                    class="text-muted-foreground block text-xs"
+                                >
                                     {{ lot.product_name }}
                                 </span>
                             </td>
                             <td class="text-muted-foreground px-4 py-3 text-xs">
-                                {{ lot.source_type ?? '—' }}
+                                {{ lot.source ?? '—' }}
                             </td>
-                            <td class="px-4 py-3">{{ lot.received_at ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ lot.manufactured_at ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                {{ lot.received_at ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ lot.manufactured_at ?? '—' }}
+                            </td>
                             <td class="px-4 py-3 text-right font-mono">
                                 {{ lot.quantity }} {{ lot.primary_uom }}
                             </td>
@@ -211,8 +255,16 @@ const statusOptions = [
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <Badge :variant="lot.is_active ? 'default' : 'secondary'">
-                                    {{ lot.is_active ? t('Active') : t('Inactive') }}
+                                <Badge
+                                    :variant="
+                                        lot.is_active ? 'default' : 'secondary'
+                                    "
+                                >
+                                    {{
+                                        lot.is_active
+                                            ? t('Active')
+                                            : t('Inactive')
+                                    }}
                                 </Badge>
                             </td>
                         </tr>
@@ -235,25 +287,34 @@ const statusOptions = [
                                 {{ lot.product_code }} — {{ lot.product_name }}
                             </p>
                         </div>
-                        <Badge :variant="lot.is_active ? 'default' : 'secondary'">
+                        <Badge
+                            :variant="lot.is_active ? 'default' : 'secondary'"
+                        >
                             {{ lot.is_active ? t('Active') : t('Inactive') }}
                         </Badge>
                     </div>
 
                     <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div>
-                            <dt class="text-muted-foreground font-medium">{{ t('Quantity') }}</dt>
+                            <dt class="text-muted-foreground font-medium">
+                                {{ t('Quantity') }}
+                            </dt>
                             <dd class="font-mono">
                                 {{ lot.quantity }} {{ lot.primary_uom }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-muted-foreground font-medium">{{ t('Received') }}</dt>
+                            <dt class="text-muted-foreground font-medium">
+                                {{ t('Received') }}
+                            </dt>
                             <dd>{{ lot.received_at ?? '—' }}</dd>
                         </div>
                     </dl>
 
-                    <div v-if="lot.warehouses.length" class="mt-3 flex flex-wrap gap-1">
+                    <div
+                        v-if="lot.warehouses.length"
+                        class="mt-3 flex flex-wrap gap-1"
+                    >
                         <Badge
                             v-for="wh in lot.warehouses"
                             :key="`mw-${lot.id}-${wh.code}`"
@@ -270,7 +331,13 @@ const statusOptions = [
                 class="flex flex-col items-center justify-between gap-3 sm:flex-row"
             >
                 <p class="text-muted-foreground text-sm">
-                    {{ t('Showing :from–:to of :total', { from: lots.from ?? 0, to: lots.to ?? 0, total: lots.total }) }}
+                    {{
+                        t('Showing :from–:to of :total', {
+                            from: lots.from ?? 0,
+                            to: lots.to ?? 0,
+                            total: lots.total,
+                        })
+                    }}
                 </p>
                 <div class="flex flex-wrap items-center gap-1">
                     <Button
@@ -279,7 +346,13 @@ const statusOptions = [
                         :variant="link.active ? 'default' : 'outline'"
                         size="sm"
                         :disabled="!link.url"
-                        @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
+                        @click="
+                            link.url &&
+                            router.visit(link.url, {
+                                preserveState: true,
+                                preserveScroll: true,
+                            })
+                        "
                         v-html="link.label"
                     />
                 </div>

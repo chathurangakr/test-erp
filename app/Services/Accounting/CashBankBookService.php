@@ -11,6 +11,7 @@ use App\Models\FundTransfer;
 use App\Models\JournalEntryLine;
 use App\Models\SupplierPayment;
 use App\Support\DecimalMath;
+use App\Support\SourceDocument;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -298,9 +299,9 @@ class CashBankBookService
         }
 
         if (! isset(self::SOURCES[$type])) {
-            // A source this report has not been taught about still appears; it is simply
-            // named after its class rather than its document number.
-            return ['label' => class_basename($type), 'number' => null];
+            // A source this report has not been taught about still appears, named by its
+            // document type rather than its document number.
+            return ['label' => SourceDocument::label($type), 'number' => null];
         }
 
         [$label] = self::SOURCES[$type];

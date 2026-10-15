@@ -44,6 +44,8 @@ export type LotRow = {
     product_name: string | null;
     primary_uom: string | null;
     source_type: string | null;
+    /** Display name of the document that created the lot, e.g. "Production". */
+    source: string | null;
     manufactured_at: string | null;
     received_at: string | null;
     quantity: string;

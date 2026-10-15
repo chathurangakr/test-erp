@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
+use App\Support\SourceDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,6 +62,7 @@ class InventoryLotController extends Controller
                 'product_name' => $lot->product?->name,
                 'primary_uom' => $lot->product?->primaryUom?->code,
                 'source_type' => $lot->source_type,
+                'source' => $lot->source_type === null ? null : SourceDocument::label($lot->source_type),
                 'manufactured_at' => $lot->manufactured_at?->toDateString(),
                 'received_at' => $lot->received_at?->toDateString(),
                 'quantity' => DecimalMath::quantity($total),

@@ -3,7 +3,8 @@
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+// The bare address (and the Ubuntu app-menu icon) opens the ERP: the dashboard, or sign-in first.
+Route::redirect('/', '/dashboard')->name('home');
 
 // The language switch — open to guests so the sign-in screen can be switched too.
 Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
