@@ -35,3 +35,6 @@ yarn-error.log
 *.csr
 *.p12
 *.pfx
+
+# Installer settings (can hold the sudo and database passwords) - never commit
+/deploy/provision.env

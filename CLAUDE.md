@@ -773,6 +773,14 @@ no role sees only the dashboard and their own settings.
 - Run `php artisan test` and `npm run build` before reporting work complete.
 - Use forward migrations. **Do not use `migrate:fresh`** without explaining why first.
 - The development database is `coconut_erp_dev`. Never drop unrelated tables.
+- **Installing on another Ubuntu computer is one script:** `deploy/provision.sh`, driven by
+  `deploy/provision.env` (copied from `provision.env.example`; git-ignored because it can hold
+  the sudo and database passwords). It installs PHP-FPM, Nginx (HTTPS), MariaDB, Composer and
+  Node, writes `.env`, migrates, seeds master data on a fresh database only, creates the first
+  administrator (`php artisan authorization:create-admin`, password from
+  `COCONUT_ADMIN_PASSWORD`), and sets up the firewall, scheduler and nightly backups. It is
+  idempotent and never deletes data. Keep it working when adding a PHP extension, an
+  environment variable or a scheduled task.
 
 ---
 <laravel-boost-guidelines>

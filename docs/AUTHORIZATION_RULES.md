@@ -123,6 +123,13 @@ production allocation or accounting arithmetic.
 - **Fresh install with no users:** register the first account, then run
   `php artisan authorization:grant-admin {email}` on the server. It needs shell access to the
   machine, which is the right level of trust for granting administrator rights.
+- **Unattended install:** `php artisan authorization:create-admin {email} --name=…` creates the
+  first administrator directly — verified, holding ADMIN — with the password taken from the
+  `COCONUT_ADMIN_PASSWORD` environment variable (never a command argument, which other users
+  could read in the process list) or typed when run by hand. It applies the registration
+  screen's own name, email and password rules. Re-running it only promotes an existing active
+  account and leaves its password alone; a deactivated account is refused.
+  `deploy/provision.sh` uses it.
 - Seeded role defaults are applied **only when a role is first created**. Once an
   administrator edits a role, re-running the seeder leaves it alone. The seeder creates no user
   and no password.
