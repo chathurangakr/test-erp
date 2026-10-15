@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Coconut Factory ERP</title>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="#2e6b3f"/>
+  <path d="M128 92 C 104 58, 66 46, 34 56 C 66 62, 92 76, 114 100 Z" fill="#7cc36e"/>
+  <path d="M128 92 C 152 58, 190 46, 222 56 C 190 62, 164 76, 142 100 Z" fill="#7cc36e"/>
+  <path d="M128 96 C 124 64, 132 38, 148 22 C 140 46, 138 70, 140 98 Z" fill="#a6dd8f"/>
+  <circle cx="128" cy="152" r="74" fill="#6b4226"/>
+  <circle cx="128" cy="152" r="74" fill="none" stroke="#4a2c18" stroke-width="6"/>
+  <path d="M72 138 C 76 116, 88 102, 100 94" fill="none" stroke="#8d5a36" stroke-width="9" stroke-linecap="round"/>
+  <ellipse cx="117" cy="112" rx="7" ry="6" fill="#2b190d"/>
+  <ellipse cx="139" cy="112" rx="7" ry="6" fill="#2b190d"/>
+  <ellipse cx="128" cy="129" rx="7" ry="6" fill="#2b190d"/>
+  <path d="M74 172 C 84 200, 108 218, 136 220" fill="none" stroke="#5a3620" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -517,6 +517,32 @@ systemctl enable nginx >/dev/null
 systemctl reload nginx || systemctl restart nginx
 ok "Nginx serves the ERP on ports $HTTP_PORT (redirect) and $HTTPS_PORT (HTTPS)"
 
+# ------------------------------------------------------------------- app menu icon
+# An icon in Ubuntu's "Show Apps" menu that opens the ERP in the default browser. It points at
+# localhost, so it keeps working on this computer even if its network address changes.
+say "Adding the ERP to the Ubuntu app menu"
+LOCAL_URL="https://localhost"
+[[ "$HTTPS_PORT" == "443" ]] || LOCAL_URL="${LOCAL_URL}:${HTTPS_PORT}"
+install -D -m 644 "$APP_DIR/deploy/coconut-erp.svg" /usr/share/icons/hicolor/scalable/apps/coconut-erp.svg
+# Missing on an Ubuntu without a desktop; the icon is then simply unused.
+install -d -m 755 /usr/share/applications
+cat > /usr/share/applications/coconut-erp.desktop <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=${APP_NAME}
+GenericName=Factory ERP
+Comment=Open the Coconut Factory ERP in the web browser
+Keywords=coconut;erp;factory;stock;
+Exec=xdg-open ${LOCAL_URL}
+Icon=coconut-erp
+Terminal=false
+Categories=Office;
+DESKTOP
+chmod 644 /usr/share/applications/coconut-erp.desktop
+gtk-update-icon-cache -q -t /usr/share/icons/hicolor >/dev/null 2>&1 || true
+update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
+ok "\"${APP_NAME}\" added to Show Apps; it opens ${LOCAL_URL}"
+
 # ------------------------------------------------------------------- firewall
 if [[ "$ENABLE_FIREWALL" == "yes" ]]; then
     say "Configuring the firewall"
