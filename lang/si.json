@@ -1747,5 +1747,9 @@
     "Supplier invoice": "සැපයුම්කරු ඉන්වොයිසිය",
     "Sales invoice": "විකුණුම් ඉන්වොයිසිය",
     "Journal entry": "ජර්නල් සටහන",
-    "Platform": "ප්‍රධාන"
+    "Platform": "ප්‍රධාන",
+    "Sign in with a passkey": "Passkey මඟින් ඇතුල් වන්න",
+    "Or continue with email": "නැතහොත් email මඟින් ඉදිරියට යන්න",
+    "Authenticating...": "තහවුරු කරමින්...",
+    "Nothing posted in this period.": "මෙම කාලපරිච්ඡේදයේ කිසිවක් සටහන් කර නැත."
 }

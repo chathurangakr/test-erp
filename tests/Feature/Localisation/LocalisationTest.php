@@ -193,8 +193,10 @@ class LocalisationTest extends TestCase
                 // Single-quoted keys, and double-quoted ones (used when the English has an apostrophe).
                 preg_match_all("/\bt\('((?:[^'\\\\]|\\\\.)+)'/", $source, $single);
                 preg_match_all('/\bt\("((?:[^"\\\\]|\\\\.)+)"/', $source, $double);
+                // A default inside t(), e.g. t(props.label ?? 'Sign in with a passkey').
+                preg_match_all("/\\bt\\([^()']*\\?\\?\\s*'((?:[^'\\\\]|\\\\.)+)'/", $source, $fallback);
 
-                foreach ([...$single[1], ...$double[1]] as $key) {
+                foreach ([...$single[1], ...$double[1], ...$fallback[1]] as $key) {
                     $key = stripslashes($key);
 
                     if (! array_key_exists($key, $sinhala)) {
