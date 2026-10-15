@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.0.1 — 15 October 2026
+
+- The **user guide** and the **detailed manual** (English and Sinhala, with screenshots) are now
+  included as PDFs in `docs/manuals/`, so every installation has a copy in
+  `~/coconut-erp/docs/manuals/`.
+- Both explain where to see which version is running.
+
 ## 1.0.0 — 15 October 2026
 
 The first numbered release. It contains everything built so far:
