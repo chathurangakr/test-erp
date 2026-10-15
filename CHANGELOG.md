@@ -4,6 +4,17 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.1.0 — 15 October 2026
+
+- **Runs on a cloud server** (tested for Oracle Cloud's free servers). The installer:
+  - finds the server's public internet address by itself, so it can be opened at
+    `https://<IP address>` from anywhere;
+  - opens the web ports in Oracle's own firewall (and leaves it working after a restart);
+  - asks no password where the server's user needs none.
+- New step-by-step guide: `docs/CLOUD_SERVER.md` — creating the free Oracle server, opening its
+  ports, installing, updating and copying backups off the server.
+- Factory installations are unchanged.
+
 ## 1.0.1 — 15 October 2026
 
 - The **user guide** and the **detailed manual** (English and Sinhala, with screenshots) are now

@@ -178,10 +178,20 @@ timedatectl set-timezone "$TIMEZONE" 2>/dev/null || ln -sf "/usr/share/zoneinfo/
 ok "$(date)"
 
 # ----------------------------------------------------------------- packages
+# Oracle Cloud's Ubuntu images keep their own iptables rules (saved by iptables-persistent),
+# which reject everything but SSH. ufw would uninstall that package, so there ufw is not
+# installed and the web ports are opened in Oracle's rules instead (see "firewall" below).
+CLOUD_IPTABLES=no
+if [[ -f /etc/iptables/rules.v4 ]] && grep -q 'icmp-host-prohibited' /etc/iptables/rules.v4; then
+    CLOUD_IPTABLES=yes
+fi
+firewall_package=ufw
+[[ "$CLOUD_IPTABLES" == "no" ]] || firewall_package=""
+
 say "Installing system packages (this takes a few minutes)"
 apt-get update -q
 apt-get install -y -q ca-certificates curl gnupg git unzip rsync openssl acl cron \
-    software-properties-common nginx mariadb-server mariadb-client ufw
+    software-properties-common nginx mariadb-server mariadb-client $firewall_package
 ok "Base packages, Nginx and MariaDB installed"
 
 if ! apt-cache show "php${PHP_VERSION}-fpm" >/dev/null 2>&1; then
@@ -322,7 +332,16 @@ ok "Composer libraries installed"
 
 # ------------------------------------------------------------------- settings (.env)
 say "Writing the ERP settings (.env)"
-[[ -n "$SERVER_NAME" ]] || SERVER_NAME="$(hostname -I | awk '{print $1}')"
+if [[ -z "$SERVER_NAME" ]]; then
+    # A cloud server only knows its private address; people reach it by the public one. A
+    # cloud is recognised by its metadata service, which answers on 169.254.169.254.
+    if [[ "$(curl -s -o /dev/null -m 2 -w '%{http_code}' http://169.254.169.254/ || true)" != "000" ]]; then
+        SERVER_NAME="$(curl -fs -m 10 https://checkip.amazonaws.com | tr -d '[:space:]' || true)"
+        [[ "$SERVER_NAME" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || SERVER_NAME=""
+        [[ -z "$SERVER_NAME" ]] || ok "Cloud server: people will open it at its public address $SERVER_NAME"
+    fi
+    [[ -n "$SERVER_NAME" ]] || SERVER_NAME="$(hostname -I | awk '{print $1}')"
+fi
 [[ -n "$SERVER_NAME" ]] || SERVER_NAME="localhost"
 APP_URL="https://${SERVER_NAME}"
 [[ "$HTTPS_PORT" == "443" ]] || APP_URL="${APP_URL}:${HTTPS_PORT}"
@@ -544,7 +563,18 @@ update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
 ok "\"${APP_NAME}\" added to Show Apps; it opens ${LOCAL_URL}"
 
 # ------------------------------------------------------------------- firewall
-if [[ "$ENABLE_FIREWALL" == "yes" ]]; then
+if [[ "$CLOUD_IPTABLES" == "yes" ]]; then
+    say "Opening the web ports in the cloud server's firewall"
+    for port in "$HTTP_PORT" "$HTTPS_PORT"; do
+        if ! iptables -C INPUT -p tcp -m state --state NEW --dport "$port" -j ACCEPT 2>/dev/null; then
+            # Before Oracle's final "reject everything else" rule, or it would never be reached.
+            reject_line="$(iptables -L INPUT --line-numbers -n | awk '/REJECT/ && /icmp-host-prohibited/ {print $1; exit}')"
+            iptables -I INPUT "${reject_line:-1}" -p tcp -m state --state NEW --dport "$port" -j ACCEPT
+        fi
+    done
+    netfilter-persistent save >/dev/null 2>&1 || iptables-save > /etc/iptables/rules.v4
+    ok "Ports ${HTTP_PORT} and ${HTTPS_PORT} open here — also allow them in the cloud's own security list"
+elif [[ "$ENABLE_FIREWALL" == "yes" ]]; then
     say "Configuring the firewall"
     ufw allow OpenSSH >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null
     ufw allow "${HTTP_PORT}/tcp" >/dev/null

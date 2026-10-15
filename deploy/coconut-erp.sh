@@ -7,7 +7,8 @@
 #
 #      bash coconut-erp.sh
 #
-#  FIRST run  — asks for this computer's sudo password (nothing else), saves it, downloads the
+#  FIRST run  — asks for this computer's sudo password (nothing else; on a cloud server where
+#               sudo needs no password, not even that), saves it, downloads the
 #               ERP with git into ~/coconut-erp and installs everything. The end of the run
 #               shows the address, the administrator's sign-in email and its password.
 #  LATER runs — asks nothing: backs up the database, gets the newest version and updates.
@@ -79,7 +80,11 @@ It asks for the sudo password itself the first time."
         sudo_password="$(set -a; . "$config_file"; printf '%s' "${SUDO_PASSWORD:-}")"
     fi
 
-    if ! password_works "$sudo_password"; then
+    # Cloud servers (Oracle, AWS, Google) usually let the default user run sudo with no password
+    # at all, and that user has none to type. Then nothing is asked and nothing is saved.
+    if sudo -k -n true 2>/dev/null; then
+        sudo_password=""
+    elif ! password_works "$sudo_password"; then
         if [[ -z "$sudo_password" ]]; then
             say "First-time setup"
         else
@@ -95,7 +100,13 @@ It asks for the sudo password itself the first time."
         [[ -n "$sudo_password" ]] || die "The password was not accepted three times. Nothing was changed."
         ok "Password accepted (it is saved, so you are not asked again)"
     fi
-    as_root() { printf '%s\n' "$sudo_password" | sudo -S -p '' "$@"; }
+    as_root() {
+        if [[ -z "$sudo_password" ]]; then
+            sudo "$@"
+        else
+            printf '%s\n' "$sudo_password" | sudo -S -p '' "$@"
+        fi
+    }
 
     # ---------------------------------------------------------------- get the code
     if ! command -v git >/dev/null 2>&1; then
