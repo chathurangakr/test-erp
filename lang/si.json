@@ -1752,5 +1752,8 @@
     "Or continue with email": "නැතහොත් email මඟින් ඉදිරියට යන්න",
     "Authenticating...": "තහවුරු කරමින්...",
     "Nothing posted in this period.": "මෙම කාලපරිච්ඡේදයේ කිසිවක් සටහන් කර නැත.",
-    "Version :version": "අනුවාදය :version"
+    "Version :version": "අනුවාදය :version",
+    "This key was already used for a different entry. Give every entry its own key.": "මෙම යතුර (key) වෙනත් සටහනක් සඳහා දැනටමත් භාවිත කර ඇත. සෑම සටහනකටම තමන්ගේම යතුරක් දෙන්න.",
+    "This entry has just been recorded by another attempt. Send it again to get the result.": "මෙම සටහන වෙනත් උත්සාහයකින් මේ දැන් සටහන් විය. ප්‍රතිඵලය ලබා ගැනීමට එය නැවත යවන්න.",
+    "Send an Idempotency-Key header: a UUID the phone gave this entry when it was recorded.": "Idempotency-Key header එකක් යවන්න: සටහන කළ විට දුරකථනය එයට දුන් UUID අංකය."
 }

@@ -38,7 +38,7 @@ Laravel **Sanctum** personal access tokens (Laravel's official first-party packa
 | `POST /api/v1/auth/login` | `email`, `password`, `device_name` (required, ≤100 chars); plus `code` or `recovery_code` when the account uses two-factor authentication |
 | `POST /api/v1/auth/logout` | Revokes **this device's** token only |
 | `POST /api/v1/auth/logout-all` | Revokes **every** token the user holds |
-| `GET /api/v1/auth/me` | The signed-in user, roles and effective permissions |
+| `GET /api/v1/auth/me` | The signed-in user, roles, effective permissions and `locale` (`en` / `si`, the person's chosen language — also in the login response) |
 
 - Send the token on every request: `Authorization: Bearer <token>` and `Accept: application/json`.
 - Tokens are **stored hashed**; the plain token is returned exactly once, at login. Tokens are
@@ -70,7 +70,7 @@ tokens are refused whether or not they have been pruned.
 ## 4. Protection on every request
 
 In order: HTTPS check (production) → bearer token → `mobile-api` ability → **active user** →
-rate limit → **permission**.
+language (§18) → rate limit → **permission**.
 
 | Limit | Default | Setting |
 | --- | --- | --- |
@@ -94,8 +94,8 @@ permission its web twin checks. There are no mobile-only roles or permissions. E
 | `POST /api/v1/production/copra/{id}/post` | `production.post` |
 | `GET /api/v1/reports/profit-loss` | `reports.finance` |
 
-`/auth/*`, `/meta` and `/dashboard` need no permission; `/dashboard` builds only the sections
-the user may see, **on the server** — a storekeeper's response contains no finance figures.
+`/auth/*`, `/meta`, `/dashboard` and `/kiosk/options` need no permission; `/dashboard` and
+`/kiosk/options` build only the sections the user may see, **on the server** — a storekeeper's response contains no finance figures.
 
 `ApiRouteAuthorizationTest` fails if any `/api/v1` route lacks the protection stack, declares
 no permission (outside the list above), or disagrees with its web twin, and it calls every
@@ -175,7 +175,7 @@ See §13 for the complete generated list. Summary by module:
 <!-- ENDPOINT-SUMMARY -->
 | Module | Endpoints |
 | --- | --- |
-| Session & meta | 6 |
+| Session & meta | 7 |
 | Master data | 21 |
 | Inventory | 3 |
 | Purchasing | 14 |
@@ -185,7 +185,7 @@ See §13 for the complete generated list. Summary by module:
 | Accounts receivable | 13 |
 | Cash & bank | 15 |
 | Finance reports | 12 |
-| **Total** | **135** |
+| **Total** | **136** |
 
 ## 10. Examples
 
@@ -291,6 +291,7 @@ Posting the same receipt again:
 | Session & meta | GET | `/api/v1/auth/me` | signed in |
 | Session & meta | GET | `/api/v1/dashboard` | signed in |
 | Session & meta | GET | `/api/v1/meta` | signed in |
+| Session & meta | GET | `/api/v1/kiosk/options` | signed in (sections filtered by permission, §18) |
 | Master data | GET | `/api/v1/customers` | `customers.view` |
 | Master data | POST | `/api/v1/customers` | `customers.manage` |
 | Master data | GET | `/api/v1/customers/{customer}` | `customers.view` |
@@ -530,3 +531,42 @@ the job, the body fingerprint, the document it became, `recorded_at` (phone) and
 
 Not built: a lookup endpoint for a key (resending gives the same answer), entries for finance
 documents, and screens in the website listing submissions.
+
+## 18. Simple-mode data for the offline app, and language (version 1.3.0)
+
+### `GET /api/v1/kiosk/options`
+
+Everything the offline app needs to draw simple mode's screens. The app downloads it at each sync
+and keeps it on the phone. It is the same data the website's simple mode is built from
+(`KioskOptions`, `KioskTasks`), so **the app never hard-codes a product code**: the recipes say
+which outputs the ERP calculates, which dispatches need "raw husks used", and the default labour
+rate.
+
+| Field | Contents | Sent when |
+| --- | --- | --- |
+| `as_of` | When the snapshot was taken (UTC) | always |
+| `business_today` | Today in the factory's calendar (Asia/Colombo), `YYYY-MM-DD` | always |
+| `tasks` | The jobs this person may do: `receive`, `dispatch`, `dehusking`, `husk-chipping`, `copra`, `stock` — a job needs both its create and post permission, `stock` needs `inventory.view` | always (may be `[]`) |
+| `suppliers` | Active suppliers `{id, code, name}` | `receive` |
+| `customers` | Active customers `{id, code, name}` | `dispatch` |
+| `warehouses` | Active stores `{id, code, name, is_default}`, default first | any job |
+| `products` | Every active product, plus any inactive one still holding stock (it may be dispatched, never received): `id, code, name, uom, decimals, secondary_uom, secondary_decimals, is_active, tracks_lots, backflush` (the raw material a dispatch of it uses, or `null`), `total`, `secondary_total`, `stock` `[{warehouse_id, quantity}]` (positive balances only), `lots` (lot-tracked products only, each with its own `stock`) | any job |
+| `recipes.dehusking` / `recipes.husk-chipping` / `recipes.copra` | `input`, `lots`, `consumes_input`, `input_tracks_lots`, `labour` (`{default_rate}` or `null`), `outputs` (each product + `derived`, `requires_secondary_quantity`) | that job, else `null` |
+
+Sections the person cannot use are `null`. Stock figures are a **snapshot**: the ERP still refuses an
+entry that exceeds real stock when it arrives (§17). Derived outputs (`derived: true`) are never sent
+in an entry.
+
+### Language
+
+Every `/api/v1` answer — messages, validation errors, labels — is in a language chosen in this
+order:
+
+1. **`Accept-Language`** sent by the app (`si` or `en`; only the first two letters count). The app
+   should **always** send the language the worker chose on the phone, because many HTTP clients
+   otherwise send their own default.
+2. The signed-in person's own choice (`users.locale`), returned as `locale` by login and `/auth/me`
+   so the app can start in it.
+3. The default (`en`).
+
+As on the website, saved records stay English whatever the language.

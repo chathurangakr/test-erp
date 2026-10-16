@@ -99,6 +99,46 @@ class KioskOptions
     }
 
     /**
+     * Every product the offline phone app may need, with its last known stock: each active
+     * product, plus an inactive one that still holds stock (it may be dispatched, never received).
+     *
+     * One list rather than the kiosk's receive / dispatch pair, because offline a worker may
+     * receive a product and dispatch it before the phone has synced. The figures are a snapshot;
+     * the ERP still refuses an entry that exceeds real stock when it arrives.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function catalogue(): array
+    {
+        $balances = $this->stock->balancesByProductAndWarehouse()
+            ->filter(fn (object $row): bool => DecimalMath::isPositive((string) $row->quantity));
+
+        $lotBalances = $this->stock->balancesByLot()
+            ->filter(fn (object $row): bool => DecimalMath::isPositive((string) $row->quantity));
+
+        $lots = InventoryLot::query()->whereIn('id', $lotBalances->pluck('lot_id')->unique()->all())->get()->keyBy('id');
+        $backflush = ProductionRecipe::backflushInputsByOutput();
+
+        return Product::query()
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereIn('id', $balances->pluck('product_id')->unique()->all()))
+            ->with(['primaryUom:id,code,decimal_places', 'secondaryUom:id,code,decimal_places'])->orderBy('name')->get()
+            ->map(fn (Product $p): array => $this->product($p) + [
+                'is_active' => $p->is_active,
+                'tracks_lots' => $p->tracksLots(),
+                'backflush' => $backflush->has($p->id) ? $this->product($backflush->get($p->id)) : null,
+                'total' => DecimalMath::quantity($this->stock->quantityForProduct($p->id)),
+                'secondary_total' => $p->secondary_uom_id === null
+                    ? null
+                    : DecimalMath::quantity($this->stock->secondaryQuantityForProduct($p->id)),
+                'stock' => $balances->where('product_id', $p->id)->map(fn (object $row): array => [
+                    'warehouse_id' => (int) $row->warehouse_id,
+                    'quantity' => DecimalMath::quantity((string) $row->quantity),
+                ])->values()->all(),
+                'lots' => $p->tracksLots() ? $this->lotCards($lotBalances, $lots->where('product_id', $p->id)) : [],
+            ])->all();
+    }
+
+    /**
      * The lots of a recipe's input product that hold stock, for the production screens.
      *
      * @return array<string, mixed>

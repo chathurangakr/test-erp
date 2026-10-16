@@ -43,17 +43,18 @@ class ApiRouteAuthorizationTest extends TestCase
     /** The only anonymous endpoint. */
     private const PUBLIC = ['api.v1.auth.login'];
 
-    /** Signed-in endpoints about the user's own session, open to any active user. */
+    /** Signed-in endpoints about the user's own session — or filtered by their permissions inside — open to any active user. */
     private const OWN_SESSION = [
         'api.v1.auth.logout',
         'api.v1.auth.logout-all',
         'api.v1.auth.me',
         'api.v1.meta',
         'api.v1.dashboard',
+        'api.v1.kiosk.options',
     ];
 
     /** The protection every non-public route must carry. */
-    private const REQUIRED_MIDDLEWARE = ['api.https', 'auth:sanctum', 'abilities:mobile-api', 'api.active', 'throttle:api'];
+    private const REQUIRED_MIDDLEWARE = ['api.https', 'auth:sanctum', 'abilities:mobile-api', 'api.active', 'api.locale', 'throttle:api'];
 
     /**
      * @return Collection<int, Route>

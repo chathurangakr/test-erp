@@ -26,6 +26,8 @@ class UserResource extends ApiResource
             'name' => $this->name,
             'email' => $this->email,
             'is_active' => $this->is_active,
+            // The person's chosen language, so the app starts in it.
+            'locale' => $this->locale ?? config('app.locale'),
             'roles' => $this->roles
                 ->where('is_active', true)
                 ->map(fn (Role $role): array => ['code' => $role->code, 'name' => $role->name])

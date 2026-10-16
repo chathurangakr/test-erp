@@ -647,6 +647,11 @@ Full detail lives in `docs/API_V1.md`.
   in the SAME transaction as the document (unique key), replays a repeat before validation, and
   refuses a key reused for another entry. A refused entry stores no key. Never record an offline
   entry any other way, and never update or delete a submission.
+- **The offline app reads simple mode's data from `GET /api/v1/kiosk/options`** (`docs/API_V1.md`
+  §18): the same `KioskOptions` / `KioskTasks` the kiosk pages use, sections filtered by permission.
+  Recipe facts reach the phone only through it — never let the app hard-code a product code.
+- **API answers follow the language** (`SetApiLocale`): `Accept-Language` from the app, else
+  `users.locale`, else the default. `locale` is returned by login and `/auth/me`.
 - **No public API registration, no user/role administration API, no attachments, and no
   idempotency keys on the ordinary draft create endpoints yet.**
 

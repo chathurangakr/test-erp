@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireHttpsForApi;
+use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\SetKioskLocale;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'api.active' => EnsureApiUserIsActive::class,
             'api.https' => RequireHttpsForApi::class,
+            'api.locale' => SetApiLocale::class,
             'kiosk.locale' => SetKioskLocale::class,
         ]);
     })
