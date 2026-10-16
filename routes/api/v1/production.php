@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Route;
  */
 Route::get('production/dehusking', [DehuskingController::class, 'index'])->name('dehusking.index')->can(Permission::ProductionView);
 Route::post('production/dehusking', [DehuskingController::class, 'store'])->name('dehusking.store')->can(Permission::ProductionCreate);
+// Offline entry from the phone: save + post in one step, once per Idempotency-Key. Needs the
+// post permission here and the create permission in the controller, like simple mode.
+Route::post('production/dehusking/record', [DehuskingController::class, 'record'])->name('dehusking.record')->can(Permission::ProductionPost);
 Route::get('production/dehusking/{dehusking}', [DehuskingController::class, 'show'])->name('dehusking.show')->can(Permission::ProductionView);
 Route::put('production/dehusking/{dehusking}', [DehuskingController::class, 'update'])->name('dehusking.update')->can(Permission::ProductionCreate);
 Route::post('production/dehusking/{dehusking}/post', [DehuskingController::class, 'post'])->name('dehusking.post')->can(Permission::ProductionPost);
@@ -22,6 +25,9 @@ Route::post('production/dehusking/{dehusking}/cancel', [DehuskingController::cla
 
 Route::get('production/husk-chipping', [HuskChippingController::class, 'index'])->name('husk-chipping.index')->can(Permission::ProductionView);
 Route::post('production/husk-chipping', [HuskChippingController::class, 'store'])->name('husk-chipping.store')->can(Permission::ProductionCreate);
+// Offline entry from the phone: save + post in one step, once per Idempotency-Key. Needs the
+// post permission here and the create permission in the controller, like simple mode.
+Route::post('production/husk-chipping/record', [HuskChippingController::class, 'record'])->name('husk-chipping.record')->can(Permission::ProductionPost);
 Route::get('production/husk-chipping/{huskChipping}', [HuskChippingController::class, 'show'])->name('husk-chipping.show')->can(Permission::ProductionView);
 Route::put('production/husk-chipping/{huskChipping}', [HuskChippingController::class, 'update'])->name('husk-chipping.update')->can(Permission::ProductionCreate);
 Route::post('production/husk-chipping/{huskChipping}/post', [HuskChippingController::class, 'post'])->name('husk-chipping.post')->can(Permission::ProductionPost);
@@ -30,6 +36,9 @@ Route::post('production/husk-chipping/{huskChipping}/cancel', [HuskChippingContr
 
 Route::get('production/copra', [CopraController::class, 'index'])->name('copra.index')->can(Permission::ProductionView);
 Route::post('production/copra', [CopraController::class, 'store'])->name('copra.store')->can(Permission::ProductionCreate);
+// Offline entry from the phone: save + post in one step, once per Idempotency-Key. Needs the
+// post permission here and the create permission in the controller, like simple mode.
+Route::post('production/copra/record', [CopraController::class, 'record'])->name('copra.record')->can(Permission::ProductionPost);
 Route::get('production/copra/{copra}', [CopraController::class, 'show'])->name('copra.show')->can(Permission::ProductionView);
 Route::put('production/copra/{copra}', [CopraController::class, 'update'])->name('copra.update')->can(Permission::ProductionCreate);
 Route::post('production/copra/{copra}/post', [CopraController::class, 'post'])->name('copra.post')->can(Permission::ProductionPost);

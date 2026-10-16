@@ -4,6 +4,19 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.2.0 — 16 October 2026
+
+- **Ready for the offline phone app.** The ERP can now take work recorded on a phone without
+  internet — goods received, goods dispatched, dehusking, husk chipping and copra — and record it
+  when the phone is back on wifi:
+  - each entry is saved and posted in one step, on the date the work was really done;
+  - **nothing is ever recorded twice**, even if the phone sends the same entry again after a
+    dropped connection;
+  - the ERP keeps who sent each entry, from which phone, when it was made and when it arrived;
+  - an entry the ERP cannot accept (for example, more than is in stock) is refused whole and can
+    be corrected on the phone and sent again.
+- The phone app itself is being built separately (`docs/ANDROID_APP_HANDOFF.md`).
+
 ## 1.1.0 — 15 October 2026
 
 - **Runs on a cloud server** (tested for Oracle Cloud's free servers). The installer:

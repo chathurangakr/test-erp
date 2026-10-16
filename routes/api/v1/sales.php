@@ -19,6 +19,9 @@ Route::post('sales-orders/{order}/cancel', [SalesOrderController::class, 'cancel
 
 Route::get('deliveries', [DeliveryController::class, 'index'])->name('deliveries.index')->can(Permission::SalesView);
 Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store')->can(Permission::SalesDeliveryCreate);
+// Offline entry from the phone: save + post in one step, once per Idempotency-Key. Needs the
+// post permission here and the create permission in the controller, like simple mode.
+Route::post('deliveries/record', [DeliveryController::class, 'record'])->name('deliveries.record')->can(Permission::SalesDeliveryPost);
 Route::get('deliveries/{delivery}', [DeliveryController::class, 'show'])->name('deliveries.show')->can(Permission::SalesView);
 Route::put('deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update')->can(Permission::SalesDeliveryCreate);
 Route::post('deliveries/{delivery}/post', [DeliveryController::class, 'post'])->name('deliveries.post')->can(Permission::SalesDeliveryPost);

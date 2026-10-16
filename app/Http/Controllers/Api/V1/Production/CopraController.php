@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Production;
 
+use App\Actions\Kiosk\RecordKioskEntry;
 use App\Actions\Production\CancelProduction;
 use App\Actions\Production\PostCopraProduction;
 use App\Actions\Production\ReverseProduction;
 use App\Actions\Production\SaveCopraOrder;
+use App\Enums\Permission;
 use App\Enums\ProductionType;
+use App\Http\Controllers\Api\V1\Concerns\RecordsOfflineEntries;
 use App\Http\Controllers\Api\V1\Production\Concerns\HandlesProductionOrders;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Production\StoreCopraRequest;
@@ -28,6 +31,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class CopraController extends Controller
 {
     use HandlesProductionOrders;
+    use RecordsOfflineEntries;
 
     protected function type(): ProductionType
     {
@@ -52,6 +56,18 @@ class CopraController extends Controller
     public function update(UpdateCopraRequest $request, ProductionOrder $copra, SaveCopraOrder $save): ProductionOrderResource
     {
         return $this->resource($save->handle($this->ensureType($copra), $request->validated(), $request->user()->id));
+    }
+
+    public function record(Request $request, RecordKioskEntry $entries): JsonResponse
+    {
+        return $this->recordOnce(
+            $request,
+            'copra',
+            Permission::ProductionCreate,
+            StoreCopraRequest::class,
+            fn (array $data, int $userId): ProductionOrder => $entries->copra($data, $userId),
+            fn (ProductionOrder $order): ProductionOrderResource => $this->resource($order),
+        );
     }
 
     public function post(Request $request, ProductionOrder $copra, PostCopraProduction $post): ProductionOrderResource

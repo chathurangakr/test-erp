@@ -640,8 +640,15 @@ Full detail lives in `docs/API_V1.md`.
   Keep using that key for "wrong state" errors so the API mapping stays true.
 - **Tunables live in `config/api.php`** (token life, rate limits, page sizes, HTTPS). Lists
   paginate with a hard maximum of 100.
-- **No public API registration, no user/role administration API, no attachments, no offline
-  sync, no idempotency keys yet.**
+- **Offline entries are recorded once (`docs/API_V1.md` §17).** `POST …/record` on goods receipts,
+  deliveries and the three production types saves AND posts through `RecordKioskEntry`, keeps the
+  real entry date, and needs the create and post permissions. Each call carries an
+  `Idempotency-Key` UUID made on the phone; `RecordApiSubmission` writes the `api_submissions` row
+  in the SAME transaction as the document (unique key), replays a repeat before validation, and
+  refuses a key reused for another entry. A refused entry stores no key. Never record an offline
+  entry any other way, and never update or delete a submission.
+- **No public API registration, no user/role administration API, no attachments, and no
+  idempotency keys on the ordinary draft create endpoints yet.**
 
 ---
 
@@ -738,7 +745,8 @@ profitability and a finance dashboard — all derived, none stored), and **role-
 control** (73 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
-as the website, decimals as strings, JSON errors with 409 for state conflicts), and **simple mode** (big-button Sinhala/English
+as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
+recorded exactly once per idempotency key), and **simple mode** (big-button Sinhala/English
 screens at `/kiosk` for receiving, dispatch, the three production jobs and stock, where Done saves
 and posts in one transaction) with **Sri Lanka business time** throughout, and **Sinhala / English** for every screen
 (each person chooses; saved records stay English), and the **husk production rework** (dehusking
@@ -753,7 +761,7 @@ credit notes, sales returns and allowances, customer and supplier advances, prod
 accounting, VAT/SVAT, payroll, loans, fixed assets, depreciation, cash flow statement, report
 export, year-end closing, the permanent joint-product costing method, production planning,
 BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, the
-Flutter app itself, API attachments, offline sync.
+Flutter app itself (its offline queue included — the server side is built), API attachments.
 
 The inventory engine still has no direct posting UI by design — business documents drive it.
 

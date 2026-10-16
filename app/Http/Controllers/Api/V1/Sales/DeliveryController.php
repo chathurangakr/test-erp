@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Sales;
 
+use App\Actions\Kiosk\RecordKioskEntry;
 use App\Actions\Sales\CancelDelivery;
 use App\Actions\Sales\PostDelivery;
 use App\Actions\Sales\ReverseDelivery;
 use App\Actions\Sales\SaveDelivery;
+use App\Enums\Permission;
 use App\Http\Controllers\Api\V1\Concerns\PaginatesResults;
+use App\Http\Controllers\Api\V1\Concerns\RecordsOfflineEntries;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDeliveryRequest;
 use App\Http\Requests\Sales\UpdateDeliveryRequest;
@@ -23,11 +26,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  * Posting goes through PostDelivery — the same weighted-average issue, the same negative-stock
  * guard, the same locks and the same cost-of-sales journal as the website. Posting twice is
  * refused by the document's state, so a retried request from a phone cannot issue stock
- * twice; the second call gets 409.
+ * twice; the second call gets 409. `record` saves and posts an offline entry in one step, once
+ * per Idempotency-Key.
  */
 class DeliveryController extends Controller
 {
     use PaginatesResults;
+    use RecordsOfflineEntries;
 
     private const DETAIL = [
         'customer:id,code,name',
@@ -77,6 +82,18 @@ class DeliveryController extends Controller
     public function update(UpdateDeliveryRequest $request, Delivery $delivery, SaveDelivery $save): DeliveryResource
     {
         return new DeliveryResource($save->handle($delivery, $request->validated(), $request->user()->id)->load(self::DETAIL));
+    }
+
+    public function record(Request $request, RecordKioskEntry $entries): JsonResponse
+    {
+        return $this->recordOnce(
+            $request,
+            'deliveries',
+            Permission::SalesDeliveryCreate,
+            StoreDeliveryRequest::class,
+            fn (array $data, int $userId): Delivery => $entries->dispatch($data, $userId),
+            fn (Delivery $delivery): DeliveryResource => new DeliveryResource($delivery->load(self::DETAIL)),
+        );
     }
 
     public function post(Request $request, Delivery $delivery, PostDelivery $post): DeliveryResource

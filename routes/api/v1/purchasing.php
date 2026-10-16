@@ -19,6 +19,9 @@ Route::post('purchase-orders/{order}/cancel', [PurchaseOrderController::class, '
 
 Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->name('goods-receipts.index')->can(Permission::PurchasingView);
 Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->name('goods-receipts.store')->can(Permission::PurchasingGrnCreate);
+// Offline entry from the phone: save + post in one step, once per Idempotency-Key. Needs the
+// post permission here and the create permission in the controller, like simple mode.
+Route::post('goods-receipts/record', [GoodsReceiptController::class, 'record'])->name('goods-receipts.record')->can(Permission::PurchasingGrnPost);
 Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->name('goods-receipts.show')->can(Permission::PurchasingView);
 Route::put('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'update'])->name('goods-receipts.update')->can(Permission::PurchasingGrnCreate);
 Route::post('goods-receipts/{goodsReceipt}/post', [GoodsReceiptController::class, 'post'])->name('goods-receipts.post')->can(Permission::PurchasingGrnPost);

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Purchasing;
 
+use App\Actions\Kiosk\RecordKioskEntry;
 use App\Actions\Purchasing\CancelGoodsReceipt;
 use App\Actions\Purchasing\PostGoodsReceipt;
 use App\Actions\Purchasing\ReverseGoodsReceipt;
 use App\Actions\Purchasing\SaveGoodsReceipt;
+use App\Enums\Permission;
 use App\Http\Controllers\Api\V1\Concerns\PaginatesResults;
+use App\Http\Controllers\Api\V1\Concerns\RecordsOfflineEntries;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StoreGoodsReceiptRequest;
 use App\Http\Requests\Purchasing\UpdateGoodsReceiptRequest;
@@ -23,10 +26,12 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  * Posting goes through PostGoodsReceipt — the same landed-cost allocation, the same inventory
  * engine, the same locks as the website. Posting twice is refused by the document's state,
  * so a retried request from a phone cannot receive stock twice; the second call gets 409.
+ * `record` saves and posts an offline entry in one step, once per Idempotency-Key.
  */
 class GoodsReceiptController extends Controller
 {
     use PaginatesResults;
+    use RecordsOfflineEntries;
 
     private const DETAIL = [
         'supplier:id,code,name',
@@ -75,6 +80,18 @@ class GoodsReceiptController extends Controller
     public function update(UpdateGoodsReceiptRequest $request, GoodsReceipt $goodsReceipt, SaveGoodsReceipt $save): GoodsReceiptResource
     {
         return new GoodsReceiptResource($save->handle($goodsReceipt, $request->validated(), $request->user()->id)->load(self::DETAIL));
+    }
+
+    public function record(Request $request, RecordKioskEntry $entries): JsonResponse
+    {
+        return $this->recordOnce(
+            $request,
+            'goods-receipts',
+            Permission::PurchasingGrnCreate,
+            StoreGoodsReceiptRequest::class,
+            fn (array $data, int $userId): GoodsReceipt => $entries->receive($data, $userId),
+            fn (GoodsReceipt $receipt): GoodsReceiptResource => new GoodsReceiptResource($receipt->load(self::DETAIL)),
+        );
     }
 
     public function post(Request $request, GoodsReceipt $goodsReceipt, PostGoodsReceipt $post): GoodsReceiptResource

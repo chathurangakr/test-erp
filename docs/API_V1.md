@@ -1,7 +1,8 @@
 # REST API v1 — Coconut Factory ERP
 
 > **Status:** ✅ **IMPLEMENTED** in Phase 16. A versioned, token-authenticated JSON API for
-> the future Flutter mobile app. The Flutter app itself is **not built yet**.
+> the future Flutter mobile app. The Flutter app itself is **not built yet**. Offline entries
+> recorded once per Idempotency-Key were added in version 1.2.0 (§17).
 
 ---
 
@@ -177,14 +178,14 @@ See §13 for the complete generated list. Summary by module:
 | Session & meta | 6 |
 | Master data | 21 |
 | Inventory | 3 |
-| Purchasing | 13 |
-| Sales | 13 |
-| Production | 21 |
+| Purchasing | 14 |
+| Sales | 14 |
+| Production | 24 |
 | Accounts payable | 13 |
 | Accounts receivable | 13 |
 | Cash & bank | 15 |
 | Finance reports | 12 |
-| **Total** | **130** |
+| **Total** | **135** |
 
 ## 10. Examples
 
@@ -316,6 +317,7 @@ Posting the same receipt again:
 | Inventory | GET | `/api/v1/inventory/stock` | `inventory.view` |
 | Purchasing | GET | `/api/v1/goods-receipts` | `purchasing.view` |
 | Purchasing | POST | `/api/v1/goods-receipts` | `purchasing.grn_create` |
+| Purchasing | POST | `/api/v1/goods-receipts/record` | `purchasing.grn_post` (+ `purchasing.grn_create`, §17) |
 | Purchasing | GET | `/api/v1/goods-receipts/{goodsReceipt}` | `purchasing.view` |
 | Purchasing | PUT | `/api/v1/goods-receipts/{goodsReceipt}` | `purchasing.grn_create` |
 | Purchasing | POST | `/api/v1/goods-receipts/{goodsReceipt}/cancel` | `purchasing.grn_cancel` |
@@ -329,6 +331,7 @@ Posting the same receipt again:
 | Purchasing | POST | `/api/v1/purchase-orders/{order}/cancel` | `purchasing.order_cancel` |
 | Sales | GET | `/api/v1/deliveries` | `sales.view` |
 | Sales | POST | `/api/v1/deliveries` | `sales.delivery_create` |
+| Sales | POST | `/api/v1/deliveries/record` | `sales.delivery_post` (+ `sales.delivery_create`, §17) |
 | Sales | GET | `/api/v1/deliveries/{delivery}` | `sales.view` |
 | Sales | PUT | `/api/v1/deliveries/{delivery}` | `sales.delivery_create` |
 | Sales | POST | `/api/v1/deliveries/{delivery}/cancel` | `sales.delivery_cancel` |
@@ -342,6 +345,7 @@ Posting the same receipt again:
 | Sales | POST | `/api/v1/sales-orders/{order}/cancel` | `sales.order_cancel` |
 | Production | GET | `/api/v1/production/copra` | `production.view` |
 | Production | POST | `/api/v1/production/copra` | `production.create` |
+| Production | POST | `/api/v1/production/copra/record` | `production.post` (+ `production.create`, §17) |
 | Production | GET | `/api/v1/production/copra/{copra}` | `production.view` |
 | Production | PUT | `/api/v1/production/copra/{copra}` | `production.create` |
 | Production | POST | `/api/v1/production/copra/{copra}/cancel` | `production.cancel` |
@@ -349,6 +353,7 @@ Posting the same receipt again:
 | Production | POST | `/api/v1/production/copra/{copra}/reverse` | `production.reverse` |
 | Production | GET | `/api/v1/production/dehusking` | `production.view` |
 | Production | POST | `/api/v1/production/dehusking` | `production.create` |
+| Production | POST | `/api/v1/production/dehusking/record` | `production.post` (+ `production.create`, §17) |
 | Production | GET | `/api/v1/production/dehusking/{dehusking}` | `production.view` |
 | Production | PUT | `/api/v1/production/dehusking/{dehusking}` | `production.create` |
 | Production | POST | `/api/v1/production/dehusking/{dehusking}/cancel` | `production.cancel` |
@@ -356,6 +361,7 @@ Posting the same receipt again:
 | Production | POST | `/api/v1/production/dehusking/{dehusking}/reverse` | `production.reverse` |
 | Production | GET | `/api/v1/production/husk-chipping` | `production.view` |
 | Production | POST | `/api/v1/production/husk-chipping` | `production.create` |
+| Production | POST | `/api/v1/production/husk-chipping/record` | `production.post` (+ `production.create`, §17) |
 | Production | GET | `/api/v1/production/husk-chipping/{huskChipping}` | `production.view` |
 | Production | PUT | `/api/v1/production/husk-chipping/{huskChipping}` | `production.create` |
 | Production | POST | `/api/v1/production/husk-chipping/{huskChipping}/cancel` | `production.cancel` |
@@ -419,9 +425,9 @@ Posting the same receipt again:
 
 | # | Item | Notes |
 | --- | --- | --- |
-| 1 | **Idempotency keys** on create endpoints | Posting twice is already impossible (409). A *create* retried after a lost response could make a duplicate **draft** — harmless (drafts move nothing) and cancellable, but an `Idempotency-Key` header would prevent it. |
+| 1 | **Idempotency keys** on the ordinary create endpoints | ✅ Built for offline entries (§17). The draft `POST` endpoints still take none: a retried *create* could make a duplicate **draft** — harmless (drafts move nothing) and cancellable. |
 | 2 | **Attachments / photos** | Supplier invoice photos, GRN documents, delivery proof. No module stores files yet. |
-| 3 | **Offline mode** | V1 is online-first. No sync queue or conflict resolution. |
+| 3 | **Offline mode** | ✅ Server side built (§17): save-and-post entries recorded once per key. The phone's queue is the app's job. No automatic conflict resolution: a refused entry is shown to the person. |
 | 4 | **User and role administration API** | Web-only for now; `/auth/me` exposes effective permissions. |
 | 5 | **API registration / invitations** | Deliberately absent. |
 | 6 | **OpenAPI specification** | Not generated yet. This document is maintained by hand from the implemented routes; an OpenAPI file will be added only when it can be generated from the code and kept accurate. |
@@ -465,3 +471,62 @@ required `labour_rate`, `backflush_quantity` and `payment_method` would break an
 client — but no client exists yet (the Flutter app is not built), and the change is a change of
 business rule, not of API shape: the old requests describe operations the factory no longer
 performs. Once an app is in use, a change like this would be released as `/api/v2` (§2).
+
+## 17. Offline entries — save and post once (version 1.2.0)
+
+The mobile app works **offline**: work is recorded on the phone and sent later. Five endpoints
+take such an entry and **save and post it in one step**, exactly as simple mode's *Done* does
+(`RecordKioskEntry`, one database transaction — either the document is posted and stock has
+moved, or nothing at all is written):
+
+| Job | Endpoint | Route permission | Also required |
+| --- | --- | --- | --- |
+| Receive goods | `POST /api/v1/goods-receipts/record` | `purchasing.grn_post` | `purchasing.grn_create` |
+| Dispatch goods | `POST /api/v1/deliveries/record` | `sales.delivery_post` | `sales.delivery_create` |
+| Dehusking | `POST /api/v1/production/dehusking/record` | `production.post` | `production.create` |
+| Husk chipping | `POST /api/v1/production/husk-chipping/record` | `production.post` | `production.create` |
+| Copra | `POST /api/v1/production/copra/record` | `production.post` | `production.create` |
+
+The body is **the same as the matching create endpoint** (`POST /goods-receipts`, …), validated by
+the website's own FormRequest. **The date is NOT forced to today** (unlike simple mode): send the
+date the work was really done. Its fiscal period must still be open once accounting applies.
+Optional `recorded_at` (ISO 8601) — the moment the entry was made on the phone — is stored for the
+audit trail. Response: **201** with the posted document, as `GET /…/{id}` would return it.
+
+### Idempotency-Key — never recorded twice
+
+Every call needs the header **`Idempotency-Key: <UUID>`** (422 without one). The phone creates the
+UUID **once, when the entry is recorded**, stores it with the entry and sends the **same** key on
+every attempt.
+
+| What arrives | Answer |
+| --- | --- |
+| A new key | Recorded and posted → **201**, header `Idempotent-Replayed: false` |
+| A key already recorded, same body, same person, same job | **Nothing recorded again** → **201** with the document it became (its current state), header `Idempotent-Replayed: true`. Checked **before** validation, so it replays even if a product was deactivated since |
+| A key already recorded with a different body, person or job | **422** under `idempotency_key` — an app bug; never reuse keys |
+| Two copies at the very same moment | One wins; the other is rolled back entirely and gets **409** — send it again and it replays |
+| A refused entry (not enough stock, inactive product, closed period, …) | **422** / **409** and **nothing is written, not even the key**, so the person can correct the entry on the phone and send it again under the same key |
+
+The body is fingerprinted (SHA-256 of the JSON with keys sorted), so resend the stored body as it
+was. Correcting a refused entry is the only time the body changes.
+
+### What the ERP keeps
+
+Table `api_submissions`, one row per recorded entry, written in the **same transaction** as the
+document (a unique index on `idempotency_key` makes a duplicate impossible): the key, the user,
+the token id and **device name** (the `device_name` given at sign-in, kept after sign-out),
+the job, the body fingerprint, the document it became, `recorded_at` (phone) and `created_at`
+(arrival). Rows are audit history: the model refuses update and delete.
+
+### How the app should sync
+
+1. Send entries **one at a time, oldest first** — a dispatch may need stock from a receipt recorded
+   earlier on the same phone.
+2. On **201**, mark the entry synced and keep the document number the ERP gave it.
+3. On a **network error or timeout**, keep the entry and send it again later with the same key.
+4. On **422 / 409**, stop the queue, show the message, and let the person correct or discard that
+   entry before the rest continue.
+5. On **401**, sign in again; the queue is kept.
+
+Not built: a lookup endpoint for a key (resending gives the same answer), entries for finance
+documents, and screens in the website listing submissions.
