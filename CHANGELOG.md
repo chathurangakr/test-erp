@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.2.1 — 16 October 2026
+
+- The **user guide** and the **detailed manual** in `docs/manuals/` are updated for this version:
+  a "What's new by version" table, and a section on the coming phone app (manual section 7.6) —
+  how entries made without internet are sent later and never recorded twice.
+
 ## 1.2.0 — 16 October 2026
 
 - **Ready for the offline phone app.** The ERP can now take work recorded on a phone without
