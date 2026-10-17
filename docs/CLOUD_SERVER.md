@@ -95,13 +95,69 @@ ssh -i ~/Downloads/ssh-key-*.key ubuntu@<public IP address> \
 Run it on your own computer (not on the server). It saves one file holding all the backups,
 named with today's date.
 
-## 8. Later: moving to a domain name
+## 8. A name instead of the IP address — and no more browser warning
 
-1. Buy the domain and, in the domain seller's settings, add an **A record** for e.g.
-   `erp.yourcompany.lk` pointing to the server's public IP address.
-2. On the server, edit `~/coconut-erp/deploy/provision.env` and set
-   `SERVER_NAME=erp.yourcompany.lk`.
-3. Run `bash ~/coconut-erp/deploy/coconut-erp.sh` again. Your data is kept.
+1. Get a name that points at the server's public IP address:
+   - **free:** sign in at <https://www.duckdns.org>, create a name (e.g. `factory-erp`) and set
+     its IP to the server's — you get `factory-erp.duckdns.org`;
+   - **bought:** in the domain seller's settings add an **A record**, e.g. `erp.yourcompany.lk`,
+     pointing to the server's IP address.
+2. On the server, put the name in the settings and run the update:
 
-A free trusted certificate (so the browser warning disappears) will be added to the installer at
-that point — tell the developer when the domain is ready.
+   ```bash
+   sed -i 's/^SERVER_NAME=.*/SERVER_NAME=factory-erp.duckdns.org/' ~/coconut-erp/deploy/provision.env
+   bash ~/coconut-erp/deploy/coconut-erp.sh
+   ```
+
+   It gets a free **Let's Encrypt** certificate for the name (port 80 must be open, step 3) and
+   ends with *The certificate is trusted*. Browsers and phones then open
+   `https://factory-erp.duckdns.org` with no warning. The certificate renews itself every few
+   months. Your data is kept.
+3. If it says it **could not get a certificate**, the name does not point at this server yet
+   (DuckDNS changes take a minute or two) or port 80 is blocked; fix that and run step 2 again.
+
+## 9. Only administrators add people (recommended on the internet)
+
+On a server anyone on the internet can reach, turn off self sign-up:
+
+```bash
+sed -i 's/^SELF_REGISTRATION=.*/SELF_REGISTRATION=no/' ~/coconut-erp/deploy/provision.env
+grep -q '^SELF_REGISTRATION=' ~/coconut-erp/deploy/provision.env || echo 'SELF_REGISTRATION=no' >> ~/coconut-erp/deploy/provision.env
+bash ~/coconut-erp/deploy/coconut-erp.sh
+```
+
+The sign-in page then has no "Sign up" link. Add people on **Administration → Users → Add user**.
+
+## 10. Moving the data from another computer (or restoring a backup)
+
+`deploy/restore.sh` replaces ALL the ERP data on a server with a backup. It backs up the server's
+own data first, and puts it back by itself if anything goes wrong. A backup from an older version
+is upgraded as it loads; one from a newer version is refused (update the server first).
+
+**On the old computer** (e.g. the factory PC), once everyone has stopped entering work there:
+
+```bash
+sudo /usr/local/sbin/coconut-erp-backup
+sudo ls -t /var/backups/coconut-erp | head -n 2
+```
+
+The two newest files are a pair with the same date and time, e.g.
+`coconut_erp-2026-10-17-1900.sql.gz` and `env-2026-10-17-1900`. Copy **both** to a USB drive or
+Google Drive (`sudo cp /var/backups/coconut-erp/*2026-10-17-1900* /media/…/` and then
+`sudo chown $USER` the copies). The `env-…` file holds the security key that keeps two-factor
+sign-in working — keep it as private as a password.
+
+**Into the server:** in Oracle Cloud Shell use **⚙ → Upload** for both files, then send them on:
+
+```bash
+scp -i ~/erp_key coconut_erp-2026-10-17-1900.sql.gz env-2026-10-17-1900 ubuntu@<public IP address>:
+```
+
+**On the server:**
+
+```bash
+bash ~/coconut-erp/deploy/restore.sh ~/coconut_erp-2026-10-17-1900.sql.gz
+```
+
+Type `RESTORE` when asked. Afterwards everyone signs in with the accounts and passwords **from
+the old computer**; stop using the old computer for entries from then on, or the two drift apart.

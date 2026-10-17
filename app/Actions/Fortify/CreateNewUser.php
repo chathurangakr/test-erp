@@ -19,6 +19,9 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        // Sign-up may be closed (config fortify.self_registration); administrators add people then.
+        abort_unless(config('fortify.self_registration'), 404);
+
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),

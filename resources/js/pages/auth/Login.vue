@@ -24,6 +24,7 @@ defineOptions({
 defineProps<{
     status?: string;
     canResetPassword: boolean;
+    canRegister: boolean;
 }>();
 
 const { t } = useT();
@@ -105,7 +106,7 @@ const { t } = useT();
             </Button>
         </div>
 
-        <div class="text-muted-foreground text-center text-sm">
+        <div v-if="canRegister" class="text-muted-foreground text-center text-sm">
             {{ t("Don't have an account?") }}
             <TextLink :href="register()" :tabindex="5">{{ t('Sign up') }}</TextLink>
         </div>

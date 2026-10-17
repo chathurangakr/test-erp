@@ -160,6 +160,21 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Self-registration
+    |--------------------------------------------------------------------------
+    |
+    | Whether anyone who can open the sign-in page may create their own account
+    | (it holds no role until an administrator grants one). A server reachable
+    | from the internet usually turns this off; administrators then add people
+    | on Administration → Users. The routes stay registered either way, so the
+    | screens build the same; a closed sign-up page answers 404.
+    |
+    */
+
+    'self_registration' => (bool) env('AUTH_SELF_REGISTRATION', true),
+
     'features' => [
         Features::registration(),
         Features::resetPasswords(),

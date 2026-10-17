@@ -2,21 +2,26 @@
 
 namespace App\Http\Controllers\Administration;
 
+use App\Actions\Administration\CreateUser;
 use App\Actions\Administration\UpdateUserAccess;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administration\StoreUserRequest;
 use App\Http\Requests\Administration\UpdateUserAccessRequest;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
  * Users — who may sign in, and which roles they hold.
  *
- * There is no destroy route: a user with history is deactivated, never deleted, so every
- * document keeps naming who created, approved, posted or reversed it. Only the fields an
+ * Administrators may add an account here (the way in when self-registration is closed). There
+ * is no destroy route: a user with history is deactivated, never deleted, so every document
+ * keeps naming who created, approved, posted or reversed it. Only the fields an
  * administrator needs are sent to the browser — never a password hash or 2FA secret.
  */
 class UserController extends Controller
@@ -44,6 +49,27 @@ class UserController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        return Inertia::render('administration/users/Create', [
+            'roles' => $this->roleOptions(),
+            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+        ]);
+    }
+
+    public function store(StoreUserRequest $request, CreateUser $createUser): RedirectResponse
+    {
+        $user = $createUser->handle(
+            $request->safe()->only(['name', 'email', 'password']),
+            array_map('intval', $request->validated('role_ids')),
+            $request->boolean('start_in_simple_mode'),
+        );
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('User added.')]);
+
+        return to_route('users.show', $user);
+    }
+
     public function show(User $user): Response
     {
         $user->load('roles:id,code,name,is_active');
@@ -60,7 +86,7 @@ class UserController extends Controller
 
         return Inertia::render('administration/users/Edit', [
             'user' => $this->present($user),
-            'roles' => Role::query()->orderBy('name')->get(['id', 'code', 'name', 'description', 'is_active']),
+            'roles' => $this->roleOptions(),
         ]);
     }
 
@@ -76,6 +102,14 @@ class UserController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User access updated.')]);
 
         return to_route('users.show', $user);
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    private function roleOptions(): Collection
+    {
+        return Role::query()->orderBy('name')->get(['id', 'code', 'name', 'description', 'is_active']);
     }
 
     /**

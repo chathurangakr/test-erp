@@ -198,8 +198,64 @@ class UserAdministrationTest extends TestCase
         $router = app('router');
 
         $this->assertFalse($router->has('users.destroy'));
-        $this->assertFalse($router->has('users.store'));
         $this->assertFalse($router->has('permissions.store'));
+    }
+
+    // ------------------------------------------------------------- adding a user
+
+    #[Test]
+    public function an_administrator_adds_a_user_who_can_sign_in_with_the_roles_given(): void
+    {
+        $admin = User::factory()->withRoles('ADMIN')->create();
+
+        $this->actingAs($admin)->get(route('users.create'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('administration/users/Create')->has('roles'));
+
+        $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Kamal Perera',
+            'email' => 'kamal@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'start_in_simple_mode' => true,
+            'role_ids' => [$this->role('STOREKEEPER')->id],
+        ])->assertSessionHasNoErrors();
+
+        $kamal = User::query()->where('email', 'kamal@example.com')->firstOrFail();
+        $this->assertTrue($kamal->is_active);
+        $this->assertTrue($kamal->start_in_simple_mode);
+        $this->assertSame(['STOREKEEPER'], $kamal->roles->pluck('code')->all());
+        $this->assertTrue($kamal->hasPermission(P::PurchasingGrnPost));
+
+        auth()->logout();
+        $this->post(route('login.store'), ['email' => 'kamal@example.com', 'password' => 'password']);
+        $this->assertAuthenticatedAs($kamal);
+    }
+
+    #[Test]
+    public function adding_a_user_needs_the_manage_permission(): void
+    {
+        $viewer = User::factory()->withPermissions(P::UsersView)->create();
+
+        $this->actingAs($viewer)->get(route('users.create'))->assertForbidden();
+        $this->actingAs($viewer)->post(route('users.store'), [
+            'name' => 'Someone', 'email' => 'someone@example.com',
+            'password' => 'password', 'password_confirmation' => 'password', 'role_ids' => [],
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('users', ['email' => 'someone@example.com']);
+    }
+
+    #[Test]
+    public function an_added_user_needs_an_unused_email_and_a_confirmed_password(): void
+    {
+        $admin = User::factory()->withRoles('ADMIN')->create(['email' => 'taken@example.com']);
+
+        $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Someone', 'email' => 'taken@example.com',
+            'password' => 'password', 'password_confirmation' => 'different', 'role_ids' => [],
+        ])->assertSessionHasErrors(['email', 'password']);
+
+        $this->assertSame(1, User::query()->count());
     }
 
     // ------------------------------------------------------------- roles

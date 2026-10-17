@@ -603,8 +603,9 @@ Full detail lives in `docs/AUTHORIZATION_RULES.md`.
 - **The system can never lose its last active administrator.** Wrap any change to roles, activity
   or accounts in `AdministratorGuard::protect()`. The ADMIN role always holds every permission
   and cannot be deactivated or deleted.
-- **New users never become administrators automatically.** Registration is open but grants no
-  role. The seeder's one-time bootstrap (no assignments exist → existing users become ADMIN) never
+- **New users never become administrators automatically.** Registration grants no role; it can
+  be closed (`SELF_REGISTRATION=no`), and administrators add accounts on Users → Add user
+  (`CreateUser`). The seeder's one-time bootstrap (no assignments exist → existing users become ADMIN) never
   fires again; a fresh install uses `php artisan authorization:grant-admin {email}`.
 - **Business-feature tests use `User::factory()->admin()`**; access tests use `withPermissions()`
   / `withRoles()`. A plain factory user holds no role.
@@ -794,6 +795,10 @@ no role sees only the dashboard and their own settings.
   `COCONUT_ADMIN_PASSWORD`), and sets up the firewall, scheduler and nightly backups. It is
   idempotent and never deletes data. Keep it working when adding a PHP extension, an
   environment variable or a scheduled task.
+- **Restoring a backup / moving data between computers is `deploy/restore.sh <backup.sql.gz>`:** it
+  backs up first, loads the dump and the `env-…` file's APP_KEY, migrates, and puts the old data
+  back on any failure; a dump from a newer version is refused. With a real domain as
+  `SERVER_NAME` and port 80, the installer gets a Let's Encrypt certificate (`LETSENCRYPT=yes`).
 - **Updating an installed computer is `deploy/update.sh`:** it backs up the database, pulls the
   project folder and runs the installer taken from the newest version (never the folder's copy).
 - **Cloud servers are supported** (`docs/CLOUD_SERVER.md`). With `SERVER_NAME` blank the installer

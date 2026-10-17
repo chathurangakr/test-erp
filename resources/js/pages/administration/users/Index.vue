@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Search } from '@lucide/vue';
+import { Plus, Search } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { index, show } from '@/routes/users';
+import { usePermissions } from '@/composables/usePermissions';
+import { create, index, show } from '@/routes/users';
 import type { AdminUser, Paginated } from '@/types';
 import { useT } from '@/lib/i18n';
 
@@ -27,6 +29,8 @@ watch(search, () => {
     );
 });
 
+const { can } = usePermissions();
+
 const { t } = useT();
 </script>
 
@@ -34,10 +38,15 @@ const { t } = useT();
     <Head :title="t('Users')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Users"
-            description="Who may sign in, and which roles they hold. New registrations have no access until given a role."
-        />
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Heading
+                title="Users"
+                description="Who may sign in, and which roles they hold. New registrations have no access until given a role."
+            />
+            <Button v-if="can('users.manage')" as-child class="w-full sm:w-auto">
+                <Link :href="create()"><Plus class="size-4" />{{ t('Add user') }}</Link>
+            </Button>
+        </div>
 
         <div class="relative max-w-md">
             <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />

@@ -4,6 +4,25 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.4.0 — 17 October 2026
+
+- **Add user.** Administrators can now add a person on **Administration → Users → Add user**:
+  name, email, a starting password and their roles in one step. The person changes the password
+  in their own settings.
+- **Sign-up can be turned off.** A new installer setting, `SELF_REGISTRATION=no`, removes the
+  "Sign up" link so that only administrators can add accounts. Recommended for a server on the
+  internet. It stays on unless you change it.
+- **Free trusted certificate.** When the server has a real name (a bought domain or a free
+  DuckDNS name such as `factory-erp.duckdns.org`) the installer gets a free Let's Encrypt
+  certificate. Browsers then open the ERP without a security warning, and the certificate renews
+  itself.
+- **Restore a backup, or move data from another computer.** `bash deploy/restore.sh <backup file>`
+  replaces the ERP's data with a nightly backup — this computer's own, or one copied from another
+  computer. It saves the current data first and puts it back by itself if anything goes wrong.
+  See `docs/CLOUD_SERVER.md`.
+- **Fixed:** opening the ERP by a longer name (such as a DuckDNS address) showed "502 Bad
+  Gateway" on every page.
+
 ## 1.3.1 — 16 October 2026
 
 - The **user guide** and the **detailed manual** in `docs/manuals/` are updated for version 1.3:

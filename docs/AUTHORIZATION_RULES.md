@@ -120,6 +120,16 @@ production allocation or accounting arithmetic.
   decision confirmed by the owner), but a registered account holds **no role and no
   permission** until an administrator grants one. It can sign in and see only the dashboard
   and its own settings.
+- **Self-registration can be closed** (`config('fortify.self_registration')`, env
+  `AUTH_SELF_REGISTRATION`, installer setting `SELF_REGISTRATION=yes|no`; default open). The two
+  names differ on purpose: the installer exports its settings, and an exported variable
+  overrides `.env`. Closed, the sign-in
+  page shows no "Sign up" link and both `/register` routes answer 404 — the routes stay
+  registered so the screens build the same. Recommended for a server on the internet.
+- **Administrators add accounts** on Administration → Users → Add user (`users.create` /
+  `users.store`, `users.manage`, `CreateUser`): name, email, a starting password under the
+  sign-up password rules, and the roles it starts with. The person changes the password in their
+  own settings; there is no forced change at first sign-in.
 - **Fresh install with no users:** register the first account, then run
   `php artisan authorization:grant-admin {email}` on the server. It needs shell access to the
   machine, which is the right level of trust for granting administrator rights.
@@ -170,7 +180,7 @@ access rules. A plain factory user holds no role.
 | 1 | **Warehouse-scoped access** — e.g. a storekeeper limited to MAIN. Permissions apply company-wide today. |
 | 2 | **Monetary approval limits** — e.g. a manager approving up to Rs. 500,000. |
 | 3 | **Field-level security** — e.g. seeing quantities but not cost or selling price. |
-| 4 | **Invitations / admin-created accounts** instead of open registration. Registration was deliberately kept on. |
+| 4 | **Invitations** (an emailed link instead of a starting password). Admin-created accounts and closing sign-up were added in 1.4.0. |
 | 5 | ~~API authentication~~ — **done in Phase 16**, see §13. |
 | 6 | **An audit log of access changes** (who granted which role, when). Not requested. |
 

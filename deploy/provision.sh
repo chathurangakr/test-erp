@@ -88,6 +88,8 @@ unset SUDO_PASSWORD
 : "${HTTPS_PORT:=443}"
 : "${TLS_CERT_FILE:=}"
 : "${TLS_KEY_FILE:=}"
+: "${LETSENCRYPT:=yes}"
+: "${SELF_REGISTRATION:=yes}"
 : "${ENABLE_FIREWALL:=yes}"
 : "${MARIADB_ROOT_PASSWORD:=}"
 : "${DB_NAME:=coconut_erp}"
@@ -119,6 +121,8 @@ ok "$PRETTY_NAME"
 [[ "$HTTP_PORT" =~ ^[0-9]+$ && "$HTTPS_PORT" =~ ^[0-9]+$ ]] || die "HTTP_PORT and HTTPS_PORT must be numbers."
 [[ "$HTTP_PORT" != "$HTTPS_PORT" ]] || die "HTTP_PORT and HTTPS_PORT must be different."
 [[ "$BACKUP_TIME" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "BACKUP_TIME must look like 02:30."
+[[ "$LETSENCRYPT" == "yes" || "$LETSENCRYPT" == "no" ]] || die "LETSENCRYPT must be yes or no."
+[[ "$SELF_REGISTRATION" == "yes" || "$SELF_REGISTRATION" == "no" ]] || die "SELF_REGISTRATION must be yes or no."
 [[ -n "$ADMIN_EMAIL" ]] || die "ADMIN_EMAIL is required (the first administrator's sign-in)."
 if [[ -n "$TLS_CERT_FILE" || -n "$TLS_KEY_FILE" ]]; then
     [[ -f "$TLS_CERT_FILE" && -f "$TLS_KEY_FILE" ]] || die "TLS_CERT_FILE and TLS_KEY_FILE must both point at existing files."
@@ -373,6 +377,7 @@ set_env DB_DATABASE "$DB_NAME"
 set_env DB_USERNAME "$DB_USER"
 set_env DB_PASSWORD "$DB_PASSWORD"
 set_env SESSION_SECURE_COOKIE true
+if [[ "$SELF_REGISTRATION" == "yes" ]]; then set_env AUTH_SELF_REGISTRATION true; else set_env AUTH_SELF_REGISTRATION false; fi
 
 if ! grep -qE '^APP_KEY="?base64:' "$ENV_FILE"; then
     as_app php "$APP_DIR/artisan" key:generate --force --no-interaction
@@ -441,9 +446,24 @@ ok "PHP-FPM pool 'coconut-erp' running as $APP_USER"
 
 # ------------------------------------------------------------------- HTTPS certificate
 say "Preparing the HTTPS certificate"
+# A free trusted certificate (Let's Encrypt) needs a real domain name that points at this
+# computer and port 80 open to the internet — e.g. a cloud server with a DuckDNS name. An IP
+# address, a factory-network name or another HTTP port keeps the self-signed certificate.
+ACME_ROOT=/var/www/letsencrypt
+LE_LIVE="/etc/letsencrypt/live/$SERVER_NAME"
+WANT_LETSENCRYPT=no
+if [[ "$LETSENCRYPT" == "yes" && -z "$TLS_CERT_FILE" && "$HTTP_PORT" == "80" \
+      && "$SERVER_NAME" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ && ! "$SERVER_NAME" =~ ^[0-9.]+$ \
+      && ! "$SERVER_NAME" =~ \.(local|lan|home|internal|localhost)$ ]]; then
+    WANT_LETSENCRYPT=yes
+fi
+TRUSTED_CERT=no
 if [[ -n "$TLS_CERT_FILE" ]]; then
-    CERT="$TLS_CERT_FILE"; KEY="$TLS_KEY_FILE"
+    CERT="$TLS_CERT_FILE"; KEY="$TLS_KEY_FILE"; TRUSTED_CERT=yes
     ok "Using your certificate $CERT"
+elif [[ "$WANT_LETSENCRYPT" == "yes" && -f "$LE_LIVE/fullchain.pem" ]]; then
+    CERT="$LE_LIVE/fullchain.pem"; KEY="$LE_LIVE/privkey.pem"; TRUSTED_CERT=yes
+    ok "Using the Let's Encrypt certificate for $SERVER_NAME (it renews itself)"
 else
     CERT=/etc/ssl/coconut-erp/coconut-erp.crt; KEY=/etc/ssl/coconut-erp/coconut-erp.key
     install -d -m 755 /etc/ssl/coconut-erp
@@ -470,13 +490,25 @@ fi
 # ------------------------------------------------------------------- Nginx
 say "Configuring Nginx"
 redirect_port=""; [[ "$HTTPS_PORT" == "443" ]] || redirect_port=":${HTTPS_PORT}"
+install -d -m 755 "$ACME_ROOT"
+write_nginx() {   # uses $CERT and $KEY
 cat > /etc/nginx/sites-available/coconut-erp <<NGINX
 # Coconut Factory ERP — written by deploy/provision.sh (re-running the installer replaces it)
 server {
     listen ${HTTP_PORT};
     listen [::]:${HTTP_PORT};
     server_name _;
-    return 301 https://\$host${redirect_port}\$request_uri;
+
+    # Let's Encrypt proves the domain by fetching a file from here over plain HTTP.
+    location ^~ /.well-known/acme-challenge/ {
+        root ${ACME_ROOT};
+        default_type text/plain;
+        try_files \$uri =404;
+    }
+
+    location / {
+        return 301 https://\$host${redirect_port}\$request_uri;
+    }
 }
 
 server {
@@ -521,6 +553,11 @@ server {
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
         fastcgi_read_timeout 120s;
+        # The reply headers list the screens' files (Link preload) with the full address, so a
+        # longer domain name outgrows nginx's 4 KB default and every page answered 502.
+        fastcgi_buffer_size 32k;
+        fastcgi_buffers 16 32k;
+        fastcgi_busy_buffers_size 64k;
     }
 
     location ~ /\.(?!well-known).* {
@@ -528,6 +565,8 @@ server {
     }
 }
 NGINX
+}
+write_nginx
 ln -sf /etc/nginx/sites-available/coconut-erp /etc/nginx/sites-enabled/coconut-erp
 # The stock "Welcome to nginx" site would answer instead of the ERP on port 80.
 rm -f /etc/nginx/sites-enabled/default
@@ -535,6 +574,26 @@ nginx -t
 systemctl enable nginx >/dev/null
 systemctl reload nginx || systemctl restart nginx
 ok "Nginx serves the ERP on ports $HTTP_PORT (redirect) and $HTTPS_PORT (HTTPS)"
+
+# ------------------------------------------------------------------- trusted certificate
+if [[ "$WANT_LETSENCRYPT" == "yes" && "$TRUSTED_CERT" == "no" ]]; then
+    say "Getting a free trusted certificate for $SERVER_NAME (Let's Encrypt)"
+    apt-get install -y -q certbot
+    # Renewal runs by itself (certbot's timer) and reloads Nginx through the deploy hook.
+    if certbot certonly --webroot -w "$ACME_ROOT" -d "$SERVER_NAME" --non-interactive --agree-tos \
+            --register-unsafely-without-email --keep-until-expiring \
+            --deploy-hook "systemctl reload nginx"; then
+        CERT="$LE_LIVE/fullchain.pem"; KEY="$LE_LIVE/privkey.pem"; TRUSTED_CERT=yes
+        write_nginx
+        nginx -t
+        systemctl reload nginx
+        ok "Trusted certificate installed; browsers no longer warn, and it renews itself"
+    else
+        warn "Could not get a certificate for $SERVER_NAME. Check that the name points at this"
+        warn "server's public address and that port 80 is open; then run the installer again."
+        warn "The self-signed certificate stays in use meanwhile."
+    fi
+fi
 
 # ------------------------------------------------------------------- app menu icon
 # An icon in Ubuntu's "Show Apps" menu that opens the ERP in the default browser. It points at
@@ -639,7 +698,8 @@ cat >&3 <<DONE
                    $SECRETS_FILE   (view with: sudo cat $SECRETS_FILE)
 
   Next steps:
-   - Self-signed certificate? Each browser shows a warning once — accept it.
+$( [[ "$TRUSTED_CERT" == "yes" ]] && echo "   - The certificate is trusted: browsers open the address without a warning." \
+    || echo "   - Self-signed certificate: each browser shows a warning once — accept it." )
    - Change the administrator password after signing in (Settings → Password).
    - SUDO_PASSWORD in $CONFIG_FILE lets updates run unattended; delete it to be asked instead.
    - Copy the nightly backups in $BACKUP_DIR to another computer or drive regularly.

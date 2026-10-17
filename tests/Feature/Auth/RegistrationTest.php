@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -35,5 +37,27 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_the_sign_in_page_offers_sign_up_while_it_is_open()
+    {
+        $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page->where('canRegister', true));
+    }
+
+    public function test_closed_sign_up_refuses_the_page_and_the_form()
+    {
+        config(['fortify.self_registration' => false]);
+
+        $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page->where('canRegister', false));
+        $this->get(route('register'))->assertNotFound();
+        $this->post(route('register.store'), [
+            'name' => 'Stranger',
+            'email' => 'stranger@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertNotFound();
+
+        $this->assertGuest();
+        $this->assertSame(0, User::query()->count());
     }
 }
