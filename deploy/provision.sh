@@ -389,8 +389,12 @@ chown -R "$APP_USER:$APP_USER" "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
 
 # ------------------------------------------------------------------- database
 say "Creating and updating the database tables"
-# A previous run's cached settings must not hide the .env just written (no database needed).
+# A previous run's caches must not hide the new version (no database needed): cached settings
+# would hide the .env just written, and cached routes would hide new pages from the screens'
+# build, which reads the route list (an update adding a page then failed to build).
 as_app php "$APP_DIR/artisan" config:clear --no-interaction >/dev/null
+as_app php "$APP_DIR/artisan" route:clear --no-interaction >/dev/null
+as_app php "$APP_DIR/artisan" event:clear --no-interaction >/dev/null
 as_app php "$APP_DIR/artisan" migrate --force --no-interaction
 
 product_count="$(mariadb -N -B -e "SELECT COUNT(*) FROM \`${DB_NAME}\`.products" 2>/dev/null || echo 0)"

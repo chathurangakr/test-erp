@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.4.1 — 17 October 2026
+
+- **Fixed:** updating an installed computer to 1.4.0 stopped at "Building the screens" with
+  `"store" is not exported`, leaving the ERP showing an error page. The installer now clears the
+  previous version's saved list of pages before building, so updates that add a page work.
+  If an update already stopped there, run
+  `sudo -u coconuterp php /var/www/coconut-erp/artisan route:clear` and then the update again.
+
 ## 1.4.0 — 17 October 2026
 
 - **Add user.** Administrators can now add a person on **Administration → Users → Add user**:
