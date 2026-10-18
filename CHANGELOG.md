@@ -4,6 +4,22 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.5.0 — 18 October 2026
+
+- **Payroll (new section in the menu).**
+  - **Employees** — each with a daily salary rate. Changing a rate never changes days already
+    recorded.
+  - **Attendance** — a daily register: mark each person **full day**, **half day** or **leave**.
+    A full day pays the day's rate, a half day half of it, leave nothing.
+  - **Salary advances** — paid from cash or the bank and recorded in the accounts at once.
+  - **Monthly salaries** — pick a month to see each person's days, pay, advances taken back and
+    the amount to hand over, then pay everyone in one step. Advances are taken back in full; what
+    a salary cannot cover is taken from the next month. Wages appear in profit and loss.
+  - Mistakes are corrected by **reversing**, which also unlocks that month's attendance.
+- **Accounting Setup** has two new choices: the **wages** account and the **employee advances**
+  account. New installations get 6300 Wages and Salaries and a new 1220 Employee Advances account.
+- Rules and limits: `docs/PAYROLL.md`.
+
 ## 1.4.2 — 18 October 2026
 
 - **Customer and supplier names shown in Finance.** The customer filter on Sales invoices and

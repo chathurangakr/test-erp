@@ -4,6 +4,7 @@ export * from './finance';
 export * from './inventory';
 export * from './masters';
 export * from './navigation';
+export * from './payroll';
 export * from './production';
 export * from './products';
 export * from './purchasing';

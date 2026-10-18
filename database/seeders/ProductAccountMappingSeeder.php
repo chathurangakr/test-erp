@@ -62,6 +62,10 @@ class ProductAccountMappingSeeder extends Seeder
 
     private const PRODUCTION_LABOUR_CODE = '6310';
 
+    private const WAGES_CODE = '6300';
+
+    private const EMPLOYEE_ADVANCES_CODE = '1220';
+
     public function run(): void
     {
         $accounts = Account::query()->pluck('id', 'code');
@@ -99,6 +103,8 @@ class ProductAccountMappingSeeder extends Seeder
             $accounts->get(self::TRADE_PAYABLES_CODE),
             $accounts->get(self::TRADE_RECEIVABLES_CODE),
             $accounts->get(self::PRODUCTION_LABOUR_CODE),
+            $accounts->get(self::WAGES_CODE),
+            $accounts->get(self::EMPLOYEE_ADVANCES_CODE),
         );
     }
 
@@ -110,12 +116,16 @@ class ProductAccountMappingSeeder extends Seeder
         ?int $tradePayablesAccountId,
         ?int $tradeReceivablesAccountId,
         ?int $productionLabourAccountId,
+        ?int $wagesAccountId,
+        ?int $employeeAdvancesAccountId,
     ): void {
         $attributes = array_filter([
             'grni_account_id' => $grniAccountId,
             'trade_payables_account_id' => $tradePayablesAccountId,
             'trade_receivables_account_id' => $tradeReceivablesAccountId,
             'production_labour_account_id' => $productionLabourAccountId,
+            'wages_account_id' => $wagesAccountId,
+            'employee_advances_account_id' => $employeeAdvancesAccountId,
         ], fn (?int $id): bool => $id !== null);
 
         if ($attributes === []) {

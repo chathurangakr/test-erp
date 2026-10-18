@@ -23,6 +23,8 @@ class AccountingSetting extends Model
         'trade_payables_account_id',
         'trade_receivables_account_id',
         'production_labour_account_id',
+        'wages_account_id',
+        'employee_advances_account_id',
         'updated_by',
     ];
 
@@ -85,6 +87,26 @@ class AccountingSetting extends Model
     public function productionLabourAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'production_labour_account_id');
+    }
+
+    /**
+     * The expense salaries are charged to when a payroll is paid.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function wagesAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'wages_account_id');
+    }
+
+    /**
+     * The asset salary advances sit in until a payroll takes them back (a control account).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function employeeAdvancesAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'employee_advances_account_id');
     }
 
     public function isOperationalAccountingEnabled(): bool

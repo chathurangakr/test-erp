@@ -8,15 +8,18 @@ use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
+use App\Models\Employee;
 use App\Models\ExpenseVoucher;
 use App\Models\FiscalPeriod;
 use App\Models\FundTransfer;
 use App\Models\GoodsReceipt;
 use App\Models\JournalEntry;
+use App\Models\PayrollRun;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\PurchaseOrder;
 use App\Models\Role;
+use App\Models\SalaryAdvance;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\Supplier;
@@ -121,6 +124,13 @@ class RouteAuthorizationTest extends TestCase
         'finance-dashboard.index' => Permission::ReportsManagement,
         'reports.product-profitability' => Permission::ReportsManagement,
         'reports.inventory-valuation' => Permission::ReportsInventory,
+        'employees.store' => Permission::PayrollEmployeesManage,
+        'employees.update' => Permission::PayrollEmployeesManage,
+        'attendance.update' => Permission::PayrollAttendanceRecord,
+        'salary-advances.store' => Permission::PayrollAdvancePay,
+        'salary-advances.reverse' => Permission::PayrollAdvanceReverse,
+        'payrolls.store' => Permission::PayrollSalaryPay,
+        'payrolls.reverse' => Permission::PayrollSalaryReverse,
         'users.index' => Permission::UsersView,
         'users.update' => Permission::UsersManage,
         'roles.index' => Permission::RolesView,
@@ -306,6 +316,9 @@ class RouteAuthorizationTest extends TestCase
                 'supplier' => Supplier::factory()->create(),
                 'customer' => Customer::factory()->create(),
                 'warehouse' => Warehouse::factory()->create(),
+                'employee' => Employee::factory()->create(),
+                'salaryAdvance' => SalaryAdvance::factory()->create(),
+                'payroll' => PayrollRun::factory()->create(),
                 'user' => User::factory()->create(),
                 'role' => Role::factory()->create(),
                 default => $this->fail("No test record for route parameter '{$name}' on {$route->getName()}."),

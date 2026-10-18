@@ -44,6 +44,8 @@ class ChartOfAccountsSeeder extends Seeder
 
         ['1200', 'Accounts Receivable', AccountType::Asset, true, false],
         ['1210', 'Trade Receivables', AccountType::Asset, false, true],
+        // Salary advances employees owe back until a payroll takes them. Payroll's to post to.
+        ['1220', 'Employee Advances', AccountType::Asset, false, true],
 
         ['1300', 'Inventory', AccountType::Asset, true, false],
         ['1310', 'Whole Coconut Inventory', AccountType::Asset, false, true],

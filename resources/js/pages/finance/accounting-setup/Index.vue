@@ -32,6 +32,8 @@ defineProps<{
         cogs: AccountOption[];
         revenue: AccountOption[];
         liability: AccountOption[];
+        expense: AccountOption[];
+        asset: AccountOption[];
     };
 }>();
 
@@ -185,6 +187,54 @@ const { t } = useT();
                             </option>
                         </select>
                         <InputError :message="errors.grni_account_id" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="wages">{{ t('Wages (payroll)') }}</Label>
+                        <select
+                            id="wages"
+                            name="wages_account_id"
+                            :class="selectClass"
+                            :disabled="!can('finance.setup_manage')"
+                        >
+                            <option value="">{{ t('Not configured') }}</option>
+                            <option
+                                v-for="account in accountOptions.expense"
+                                :key="account.id"
+                                :value="account.id"
+                                :selected="account.id === settings.wages_account?.id"
+                            >
+                                {{ account.code }} — {{ account.name }}
+                            </option>
+                        </select>
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('The expense monthly salaries are charged to.') }}
+                        </p>
+                        <InputError :message="errors.wages_account_id" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="employee_advances">{{ t('Employee advances (payroll)') }}</Label>
+                        <select
+                            id="employee_advances"
+                            name="employee_advances_account_id"
+                            :class="selectClass"
+                            :disabled="!can('finance.setup_manage')"
+                        >
+                            <option value="">{{ t('Not configured') }}</option>
+                            <option
+                                v-for="account in accountOptions.asset"
+                                :key="account.id"
+                                :value="account.id"
+                                :selected="account.id === settings.employee_advances_account?.id"
+                            >
+                                {{ account.code }} — {{ account.name }}
+                            </option>
+                        </select>
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('Where salary advances sit until a salary takes them back.') }}
+                        </p>
+                        <InputError :message="errors.employee_advances_account_id" />
                     </div>
                 </div>
 

@@ -168,6 +168,8 @@ export type AccountingSettingsView = {
     /** Null until an accountant switches operational accounting on. */
     operational_accounting_start_date: string | null;
     grni_account: AccountRef;
+    wages_account: AccountRef;
+    employee_advances_account: AccountRef;
     /** True once operational journals exist: the cutover can no longer move. */
     cutover_locked: boolean;
     operational_journal_count: number;

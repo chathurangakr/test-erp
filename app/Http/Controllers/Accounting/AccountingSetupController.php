@@ -52,6 +52,8 @@ class AccountingSetupController extends Controller
                 'base_currency' => config('accounting.base_currency'),
                 'operational_accounting_start_date' => $settings?->operational_accounting_start_date?->toDateString(),
                 'grni_account' => $this->accountRef($settings?->grniAccount),
+                'wages_account' => $this->accountRef($settings?->wagesAccount),
+                'employee_advances_account' => $this->accountRef($settings?->employeeAdvancesAccount),
                 // Once an operational journal exists the cutover is frozen: moving it would
                 // leave the ledger and the books permanently disagreeing.
                 'cutover_locked' => JournalEntry::query()->whereNotNull('source_type')->exists(),
@@ -68,6 +70,8 @@ class AccountingSetupController extends Controller
                 'cogs' => $this->optionsFor(AccountType::CostOfSales),
                 'revenue' => $this->optionsFor(AccountType::Revenue),
                 'liability' => $this->optionsFor(AccountType::Liability),
+                'expense' => $this->optionsFor(AccountType::Expense),
+                'asset' => $this->optionsFor(AccountType::Asset),
             ],
         ]);
     }

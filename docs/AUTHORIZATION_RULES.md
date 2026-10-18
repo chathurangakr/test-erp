@@ -22,7 +22,7 @@ action is still refused if called directly, and a test proves it for every route
 ## 2. Permissions are capabilities; roles are bundles of them
 
 - A **permission** is one application capability — "post a goods receipt". The catalogue is
-  the enum `App\Enums\Permission` (73 entries). It is the only source of permission codes.
+  the enum `App\Enums\Permission` (80 entries). It is the only source of permission codes.
 - The `permissions` table mirrors the enum so roles can reference it with foreign keys.
   `RolesAndPermissionsSeeder` keeps it in step. **No screen can create, rename or delete a
   permission**: a code that no route checks would be a checkbox that does nothing.
@@ -197,7 +197,7 @@ authority must say so in its docblock.
 - API routes (`/api/v1`) declare the **same** `Permission` abilities as their web twins, one per
   route; `ApiRouteAuthorizationTest` proves each API route and its web twin agree.
 - A Sanctum token carries a single `mobile-api` ability that proves the token was issued for the
-  API. **The 73 permissions are never copied into token abilities** — what the user may do is
+  API. **The 80 permissions are never copied into token abilities** — what the user may do is
   read from their roles on every request, so changing a role takes effect on the phone at once.
 - No mobile-only roles or permissions exist, and none may be added.
 - Deactivating a user or changing their password deletes all their API tokens; the `api.active`

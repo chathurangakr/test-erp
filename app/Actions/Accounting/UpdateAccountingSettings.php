@@ -28,7 +28,7 @@ use Illuminate\Validation\ValidationException;
 class UpdateAccountingSettings
 {
     /**
-     * @param  array{operational_accounting_start_date?: string|null, grni_account_id?: int|null}  $attributes
+     * @param  array{operational_accounting_start_date?: string|null, grni_account_id?: int|null, wages_account_id?: int|null, employee_advances_account_id?: int|null}  $attributes
      */
     public function handle(array $attributes, ?int $userId = null): AccountingSetting
     {
@@ -62,6 +62,24 @@ class UpdateAccountingSettings
                     $attributes['trade_receivables_account_id'],
                     'trade_receivables_account_id',
                     __('Trade Receivables'),
+                    AccountType::Asset,
+                );
+            }
+
+            if (array_key_exists('wages_account_id', $attributes)) {
+                $settings->wages_account_id = $this->validAccountId(
+                    $attributes['wages_account_id'],
+                    'wages_account_id',
+                    __('Wages'),
+                    AccountType::Expense,
+                );
+            }
+
+            if (array_key_exists('employee_advances_account_id', $attributes)) {
+                $settings->employee_advances_account_id = $this->validAccountId(
+                    $attributes['employee_advances_account_id'],
+                    'employee_advances_account_id',
+                    __('Employee advances'),
                     AccountType::Asset,
                 );
             }

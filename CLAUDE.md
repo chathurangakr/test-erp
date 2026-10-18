@@ -700,6 +700,26 @@ Full detail lives in `docs/LOCALISATION.md`.
 
 ---
 
+## Payroll rules (implemented — 1.5.0)
+
+Full detail lives in `docs/PAYROLL.md`.
+
+- **Daily-rate pay:** full day = the day's rate, half day = half (rounded half up to the cent),
+  leave and unrecorded days = nothing. Only days worked are paid. No EPF/ETF.
+- **Each attendance day keeps the rate it was recorded at.** Never re-price a recorded day.
+- **No balance on employees.** Earned, advanced and owed are derived (`PayrollCalculator`).
+- **Advances are taken back in full** from the next salary for a month ending on or after the
+  advance; whatever a salary cannot cover carries on. Employee Advances (a control account) in
+  the GL always equals what employees still owe.
+- **Advances and payrolls are paid in one step and immutable** — correct by reversal. One
+  payroll per month, paid on or after its last day; a paid month's attendance is frozen until
+  the payroll is reversed; an advance already taken back cannot be reversed.
+- **Accounts are configuration:** `wages_account_id` and `employee_advances_account_id` in
+  `accounting_settings`, never codes in payroll logic. Payroll journals need an open period,
+  not the operational cutover.
+
+---
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,
@@ -748,7 +768,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (73 permissions, seven editable starting roles, multiple roles per user, every route
+control** (80 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -759,12 +779,15 @@ and posts in one transaction) with **Sri Lanka business time** throughout, and *
 labour as the husk's cost, pooled lot-free stock for coconut / husk / chips / cocopeat with a
 one-time lot consolidation command, husk chipping with flexible KG / litre outputs and raw husk
 backflushed at delivery into cost of goods sold, Cocopeat with its own accounts, the `L` unit,
-versioned recipes, and cash / cheque / bank-transfer payment methods with cheque details).
+versioned recipes, and cash / cheque / bank-transfer payment methods with cheque details), and
+**payroll** (employees with daily rates, a daily attendance register with full / half day and
+unpaid leave, salary advances, and monthly salaries that take advances back and post to the
+ledger).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
 credit notes, sales returns and allowances, customer and supplier advances, production expense
-accounting, VAT/SVAT, payroll, loans, fixed assets, depreciation, cash flow statement, report
+accounting, VAT/SVAT, EPF/ETF and payslips, loans, fixed assets, depreciation, cash flow statement, report
 export, year-end closing, the permanent joint-product costing method, production planning,
 BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.

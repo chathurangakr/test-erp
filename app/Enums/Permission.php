@@ -100,6 +100,15 @@ enum Permission: string
     case CashTransferReverse = 'finance.cash.transfer_reverse';
     case CashTransferCancel = 'finance.cash.transfer_cancel';
 
+    // ------------------------------------------------------------- payroll
+    case PayrollView = 'payroll.view';
+    case PayrollEmployeesManage = 'payroll.employees_manage';
+    case PayrollAttendanceRecord = 'payroll.attendance_record';
+    case PayrollAdvancePay = 'payroll.advance_pay';
+    case PayrollAdvanceReverse = 'payroll.advance_reverse';
+    case PayrollSalaryPay = 'payroll.salary_pay';
+    case PayrollSalaryReverse = 'payroll.salary_reverse';
+
     // ------------------------------------------------------------- reports
     case ReportsFinance = 'reports.finance';
     case ReportsInventory = 'reports.inventory';
@@ -130,6 +139,7 @@ enum Permission: string
             str_starts_with($this->value, 'finance.ar.') => 'Accounts Receivable',
             str_starts_with($this->value, 'finance.cash.') => 'Cash & Bank',
             str_starts_with($this->value, 'finance.') => 'Finance',
+            str_starts_with($this->value, 'payroll.') => 'Payroll',
             str_starts_with($this->value, 'reports.') => 'Reports',
             str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.') => 'Administration',
             str_starts_with($this->value, 'inventory.') => 'Inventory',
@@ -212,6 +222,13 @@ enum Permission: string
             self::CashTransferPost => 'Post fund transfers',
             self::CashTransferReverse => 'Reverse posted fund transfers',
             self::CashTransferCancel => 'Cancel draft fund transfers',
+            self::PayrollView => 'View employees, attendance, salary advances and paid salaries',
+            self::PayrollEmployeesManage => 'Add and edit employees and their daily rates',
+            self::PayrollAttendanceRecord => 'Record daily attendance and leave',
+            self::PayrollAdvancePay => 'Pay salary advances',
+            self::PayrollAdvanceReverse => 'Reverse salary advances',
+            self::PayrollSalaryPay => 'Pay monthly salaries',
+            self::PayrollSalaryReverse => 'Reverse paid salaries',
             self::ReportsFinance => 'Profit & loss, balance sheet and cash/bank position',
             self::ReportsInventory => 'Inventory valuation and inventory-vs-GL reconciliation',
             self::ReportsManagement => 'Finance dashboard and operational product profitability',
@@ -231,7 +248,7 @@ enum Permission: string
     {
         return [
             'Master Data', 'Inventory', 'Purchasing', 'Sales', 'Production', 'Finance',
-            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Reports', 'Administration',
+            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Payroll', 'Reports', 'Administration',
         ];
     }
 }

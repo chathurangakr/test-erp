@@ -18,6 +18,8 @@ class UpdateAccountingSettingsRequest extends FormRequest
             // possible while no operational journal exists.
             'operational_accounting_start_date' => ['nullable', 'date'],
             'grni_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', true)],
+            'wages_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
+            'employee_advances_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
         ];
     }
 }

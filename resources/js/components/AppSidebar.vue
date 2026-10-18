@@ -41,6 +41,9 @@ import {
     Truck as TruckIcon,
     Truck,
     Users,
+    Contact,
+    CalendarCheck,
+    BadgeDollarSign,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -84,6 +87,10 @@ import { index as cashBankAccountsIndex } from '@/routes/cash-bank-accounts';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { index as expenseVouchersIndex } from '@/routes/expense-vouchers';
 import { index as fundTransfersIndex } from '@/routes/fund-transfers';
+import { index as employeesIndex } from '@/routes/employees';
+import { index as attendanceIndex } from '@/routes/attendance';
+import { index as salaryAdvancesIndex } from '@/routes/salary-advances';
+import { index as payrollsIndex } from '@/routes/payrolls';
 import { index as financeDashboardIndex } from '@/routes/finance-dashboard';
 import {
     balanceSheet as balanceSheetReport,
@@ -380,6 +387,33 @@ const cashNavItems: NavItem[] = [
     },
 ];
 
+const payrollNavItems: NavItem[] = [
+    {
+        title: 'Employees',
+        href: employeesIndex(),
+        permission: 'payroll.view',
+        icon: Contact,
+    },
+    {
+        title: 'Attendance',
+        href: attendanceIndex(),
+        permission: 'payroll.view',
+        icon: CalendarCheck,
+    },
+    {
+        title: 'Salary advances',
+        href: salaryAdvancesIndex(),
+        permission: 'payroll.view',
+        icon: HandCoins,
+    },
+    {
+        title: 'Monthly salaries',
+        href: payrollsIndex(),
+        permission: 'payroll.view',
+        icon: BadgeDollarSign,
+    },
+];
+
 const administrationNavItems: NavItem[] = [
     {
         title: 'Users',
@@ -425,6 +459,7 @@ const page = usePage();
             <NavMain :items="payablesNavItems" label="Accounts payable" />
             <NavMain :items="receivablesNavItems" label="Accounts receivable" />
             <NavMain :items="cashNavItems" label="Cash &amp; bank" />
+            <NavMain :items="payrollNavItems" label="Payroll" />
             <NavMain :items="administrationNavItems" label="Administration" />
         </SidebarContent>
 

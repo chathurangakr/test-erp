@@ -93,6 +93,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     P::SalesOrderApprove, P::SalesOrderCancel,
                     P::PurchasingGrnReverse, P::SalesDeliveryReverse, P::ProductionReverse,
                     P::UsersView, P::RolesView,
+                    P::PayrollView, P::PayrollEmployeesManage, P::PayrollAttendanceRecord,
                 ],
             ],
             'STOREKEEPER' => [
@@ -136,12 +137,13 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'ACCOUNTANT' => [
                 'name' => 'Accountant',
-                'description' => 'All of finance, including reversals and setup. Operational screens read-only.',
+                'description' => 'All of finance and payroll, including reversals and setup. Operational screens read-only.',
                 'permissions' => [
                     ...$allViews,
                     ...array_values(array_filter(
                         P::cases(),
                         fn (P $permission): bool => str_starts_with($permission->value, 'finance.')
+                            || str_starts_with($permission->value, 'payroll.')
                             || str_starts_with($permission->value, 'reports.'),
                     )),
                 ],

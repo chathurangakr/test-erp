@@ -172,6 +172,43 @@ class AccountingPolicy
     }
 
     /**
+     * The expense a paid payroll charges salaries to. See docs/PAYROLL.md.
+     */
+    public function wagesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->wagesAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'wages_account_id' => __('No wages account is configured. Choose one in Accounting Setup before paying salaries.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Expense, __('Wages'));
+
+        return $account;
+    }
+
+    /**
+     * The asset salary advances sit in until a payroll takes them back. A control account:
+     * only payroll's own journals reach it, so its balance always equals what employees owe.
+     */
+    public function employeeAdvancesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->employeeAdvancesAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'employee_advances_account_id' => __('No employee advances account is configured. Choose one in Accounting Setup before paying advances or salaries.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Asset, __('Employee advances'));
+
+        return $account;
+    }
+
+    /**
      * The revenue account a product's sales are recognised in.
      */
     public function revenueAccountFor(Product $product): Account
