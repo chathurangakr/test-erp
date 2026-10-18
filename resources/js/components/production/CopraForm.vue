@@ -214,6 +214,7 @@ function submit(): void {
                         :disabled="!form.warehouse_id"
                         :options="[...(availableLots).map((lot) => ({ value: String(lot.id), label: `${(lot.lot_number) ?? ''}` }))]"
                         :placeholder="form.warehouse_id ? t('Select a lot…') : t('Choose a warehouse first')"
+                        :auto-select-single="false"
                     />
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
                         {{ t('Available lot stock:') }}

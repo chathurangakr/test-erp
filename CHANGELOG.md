@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.6.1 — 18 October 2026
+
+- **A list with only one choice fills itself in.** With a single warehouse (MAIN), for example,
+  the warehouse is shown already chosen instead of a list to pick from. As soon as a second
+  warehouse is added, the searchable list comes back. Lists with an "All" or "None" choice, and
+  batch (lot) pickers, still wait for you to choose.
+
 ## 1.6.0 — 18 October 2026
 
 - **Every dropdown is searchable.** Click a list and type a few letters: it shows only the entries

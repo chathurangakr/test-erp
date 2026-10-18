@@ -23,6 +23,10 @@ import { useT } from '@/lib/i18n';
  *
  * Works with v-model, or — for a plain HTML / Inertia <Form> — with `name` and `defaultValue`,
  * submitting the chosen value through a hidden input exactly as a <select name> would.
+ *
+ * When there is only ONE possible choice (e.g. a single warehouse) and no empty choice such as
+ * "All" or "None", it is chosen automatically and shown as plain text — nothing to pick. Turn
+ * that off with `:auto-select-single="false"` where a choice must be made deliberately (lots).
  */
 type Value = string | number | null;
 export type SearchableOption = { value: Value; label: string; disabled?: boolean };
@@ -39,6 +43,7 @@ const props = withDefaults(
         name?: string;
         ariaLabel?: string;
         class?: HTMLAttributes['class'];
+        autoSelectSingle?: boolean;
     }>(),
     {
         modelValue: undefined,
@@ -50,6 +55,7 @@ const props = withDefaults(
         name: undefined,
         ariaLabel: undefined,
         class: undefined,
+        autoSelectSingle: true,
     },
 );
 
@@ -75,6 +81,28 @@ const selectedKey = computed<string | undefined>(() => {
 
     return index === -1 ? undefined : keyOf(index);
 });
+
+const isEmpty = (value: Value): boolean => value === null || value === '';
+
+/** The one option to take automatically, when there is nothing else to choose. */
+const onlyOption = computed<SearchableOption | null>(() => {
+    if (!props.autoSelectSingle || props.options.length !== 1) return null;
+    const [option] = props.options;
+
+    return option.disabled || isEmpty(option.value) ? null : option;
+});
+
+watch(
+    onlyOption,
+    (option) => {
+        if (option && !same(option.value, selected.value)) {
+            selected.value = option.value;
+            emit('update:modelValue', option.value);
+            emit('change', option.value);
+        }
+    },
+    { immediate: true },
+);
 
 const search = ref('');
 const filtered = computed(() => {
@@ -104,7 +132,17 @@ function choose(key: unknown): void {
 </script>
 
 <template>
+    <div
+        v-if="onlyOption"
+        :id="id"
+        :aria-label="ariaLabel"
+        :class="cn('border-input bg-muted/40 flex h-9 w-full min-w-0 items-center rounded-md border px-3 text-sm', props.class)"
+    >
+        <span class="truncate">{{ onlyOption.label }}</span>
+        <input v-if="name" type="hidden" :name="name" :value="onlyOption.value ?? ''" />
+    </div>
     <ComboboxRoot
+        v-else
         :model-value="selectedKey"
         :disabled="disabled"
         ignore-filter
