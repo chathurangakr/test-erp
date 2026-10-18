@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.4.2 — 18 October 2026
+
+- **Customer and supplier names shown in Finance.** The customer filter on Sales invoices and
+  Customer receipts, the supplier filter on Supplier invoices and Supplier payments, and the top
+  of each of those documents now show the name beside the code (e.g. "CUS-001 — Mr. Chaminda"),
+  not the code alone.
+
 ## 1.4.1 — 17 October 2026
 
 - **Fixed:** updating an installed computer to 1.4.0 stopped at "Building the screens" with

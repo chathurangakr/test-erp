@@ -35,7 +35,7 @@ const { t } = useT();
             <div class="flex flex-col gap-2">
                 <Heading
                     :title="receipt.receipt_number"
-                    :description="`${receipt.customer_code} · ${receipt.receipt_date} · ${receipt.receipt_account ?? ''}`"
+                    :description="`${receipt.customer_code} — ${receipt.customer_name} · ${receipt.receipt_date} · ${receipt.receipt_account ?? ''}`"
                 />
                 <Badge :variant="badgeVariant(receipt.status)" class="w-fit">{{ receipt.status_label }}</Badge>
             </div>

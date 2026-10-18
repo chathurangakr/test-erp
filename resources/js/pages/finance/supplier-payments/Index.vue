@@ -67,7 +67,7 @@ const { t } = useT();
                 <label for="f-supplier" class="text-sm font-medium">{{ t('Supplier') }}</label>
                 <select id="f-supplier" v-model="supplierId" :class="controlClass">
                     <option value="">{{ t('All suppliers') }}</option>
-                    <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }}</option>
+                    <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }} — {{ s.name }}</option>
                 </select>
             </div>
             <div class="grid gap-1.5">

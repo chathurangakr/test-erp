@@ -35,7 +35,7 @@ const { t } = useT();
             <div class="flex flex-col gap-2">
                 <Heading
                     :title="payment.payment_number"
-                    :description="`${payment.supplier_code} · ${payment.payment_date} · ${payment.payment_account ?? ''}`"
+                    :description="`${payment.supplier_code} — ${payment.supplier_name} · ${payment.payment_date} · ${payment.payment_account ?? ''}`"
                 />
                 <Badge :variant="badgeVariant(payment.status)" class="w-fit">{{ payment.status_label }}</Badge>
             </div>

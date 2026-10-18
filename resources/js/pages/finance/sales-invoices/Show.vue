@@ -38,7 +38,7 @@ const { t } = useT();
             <div class="flex flex-col gap-2">
                 <Heading
                     :title="invoice.invoice_number"
-                    :description="`${invoice.customer_code} · ${invoice.invoice_date}${invoice.customer_reference ? ' · ' + invoice.customer_reference : ''}`"
+                    :description="`${invoice.customer_code} — ${invoice.customer_name} · ${invoice.invoice_date}${invoice.customer_reference ? ' · ' + invoice.customer_reference : ''}`"
                 />
                 <div class="flex flex-wrap gap-2">
                     <Badge :variant="badgeVariant(invoice.status)">{{ invoice.status_label }}</Badge>
