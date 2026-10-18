@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Masters;
 
+use App\Actions\Masters\CreateCustomer;
 use App\Http\Controllers\Api\V1\Concerns\PaginatesResults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\StoreCustomerRequest;
@@ -40,9 +41,9 @@ class CustomerController extends Controller
         return new CustomerResource($customer);
     }
 
-    public function store(StoreCustomerRequest $request): JsonResponse
+    public function store(StoreCustomerRequest $request, CreateCustomer $createCustomer): JsonResponse
     {
-        $customer = Customer::create($request->validated());
+        $customer = $createCustomer->handle($request->validated());
 
         return (new CustomerResource($customer->refresh()))->response()->setStatusCode(201);
     }

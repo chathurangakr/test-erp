@@ -174,6 +174,8 @@ class CopraController extends Controller
             // from the quantity processed.
             'ratio' => $output->output_ratio,
             'requires_secondary_quantity' => $output->requires_secondary_quantity,
+            // A weight can be recorded (required or optional) whenever the product has a weight unit.
+            'records_weight' => $output->requires_secondary_quantity || $output->product?->secondary_uom_id !== null,
             'allocation_percent' => $output->allocation_percent,
         ])->values()->all();
     }

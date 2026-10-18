@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type {
     LedgerRow,
@@ -95,43 +96,35 @@ const controlClass =
             </div>
             <div class="grid gap-1.5">
                 <label for="l-product" class="text-sm font-medium">{{ t('Product') }}</label>
-                <select id="l-product" v-model="productId" :class="controlClass">
-                    <option value="">{{ t('All') }}</option>
-                    <option v-for="p in products" :key="p.id" :value="String(p.id)">
-                        {{ p.code }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="l-product"
+                    v-model="productId"
+                    :options="[{ value: '', label: t('All') }, ...(products).map((p) => ({ value: String(p.id), label: `${(p.code) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="l-warehouse" class="text-sm font-medium">{{ t('Warehouse') }}</label>
-                <select id="l-warehouse" v-model="warehouseId" :class="controlClass">
-                    <option value="">{{ t('All') }}</option>
-                    <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                        {{ w.code }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="l-warehouse"
+                    v-model="warehouseId"
+                    :options="[{ value: '', label: t('All') }, ...(warehouses).map((w) => ({ value: String(w.id), label: `${(w.code) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="l-type" class="text-sm font-medium">{{ t('Type') }}</label>
-                <select id="l-type" v-model="transactionType" :class="controlClass">
-                    <option value="">{{ t('All') }}</option>
-                    <option
-                        v-for="option in transactionTypes"
-                        :key="option.value"
-                        :value="option.value"
-                    >
-                        {{ option.label }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="l-type"
+                    v-model="transactionType"
+                    :options="[{ value: '', label: t('All') }, ...(transactionTypes).map((option) => ({ value: option.value, label: `${(option.label) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="l-lot" class="text-sm font-medium">{{ t('Lot') }}</label>
-                <select id="l-lot" v-model="lotId" :class="controlClass">
-                    <option value="">{{ t('All') }}</option>
-                    <option v-for="lot in lots" :key="lot.id" :value="String(lot.id)">
-                        {{ lot.lot_number }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="l-lot"
+                    v-model="lotId"
+                    :options="[{ value: '', label: t('All') }, ...(lots).map((lot) => ({ value: String(lot.id), label: `${(lot.lot_number) ?? ''}` }))]"
+                />
             </div>
         </div>
 

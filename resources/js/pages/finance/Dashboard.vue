@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as apAgingIndex } from '@/routes/ap-aging';
 import { index as arAgingIndex } from '@/routes/ar-aging';
 import { index as financeDashboardIndex } from '@/routes/finance-dashboard';
@@ -125,8 +126,6 @@ const counterpartyLists = computed(() => [
     },
 ]);
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -145,10 +144,11 @@ const selectClass =
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
                 <Label for="period">{{ t('Fiscal period') }}</Label>
-                <select id="period" v-model="periodId" :class="selectClass">
-                    <option value="">{{ t('None — use dates') }}</option>
-                    <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="period"
+                    v-model="periodId"
+                    :options="[{ value: '', label: t('None — use dates') }, ...(periods).map((p) => ({ value: String(p.id), label: `${(p.name) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-2">
                 <Label for="from">{{ t('From') }}</Label>

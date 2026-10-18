@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type {
     AccountOption,
     MatchableGoodsReceipt,
@@ -131,8 +132,6 @@ function submit(): void {
         .submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const { t } = useT();
 </script>
@@ -142,12 +141,13 @@ const { t } = useT();
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-2">
                 <Label for="supplier_id">{{ t('Supplier') }} <span class="text-destructive">*</span></Label>
-                <select id="supplier_id" v-model="form.supplier_id" required :class="selectClass">
-                    <option value="" disabled>{{ t('Select a supplier…') }}</option>
-                    <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">
-                        {{ s.code }} — {{ s.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="supplier_id"
+                    v-model="form.supplier_id"
+                    required
+                    :options="[...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                    :placeholder="t('Select a supplier…')"
+                />
                 <InputError :message="form.errors.supplier_id" />
             </div>
 
@@ -196,31 +196,25 @@ const { t } = useT();
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="grid gap-2">
                             <Label :for="`type-${index}`">{{ t('Type') }}</Label>
-                            <select
+                            <SearchableSelect
                                 :id="`type-${index}`"
                                 v-model="line.line_type"
-                                :class="selectClass"
                                 @change="onTypeChange(index)"
-                            >
-                                <option v-for="lineType in lineTypes" :key="lineType.value" :value="lineType.value">{{ lineType.label }}</option>
-                            </select>
+                                :options="[...(lineTypes).map((lineType) => ({ value: lineType.value, label: `${(lineType.label) ?? ''}` }))]"
+                            />
                         </div>
 
                         <template v-if="line.line_type === 'GRNI_MATCH'">
                             <div class="grid gap-2 lg:col-span-2">
                                 <Label :for="`grn-${index}`">{{ t('Goods receipt') }}</Label>
-                                <select
+                                <SearchableSelect
                                     :id="`grn-${index}`"
-                                    v-model.number="line.goods_receipt_id"
+                                    v-model="line.goods_receipt_id"
                                     required
-                                    :class="selectClass"
                                     @change="onReceiptChange(index)"
-                                >
-                                    <option :value="null" disabled>{{ t('Select a receipt…') }}</option>
-                                    <option v-for="r in goodsReceipts" :key="r.id" :value="r.id">
-                                        {{ t(':number — :amount uninvoiced', { number: r.grn_number, amount: money(r.remaining_amount) }) }}
-                                    </option>
-                                </select>
+                                    :options="[...(goodsReceipts).map((r) => ({ value: r.id, label: t(':number — :amount uninvoiced', { number: r.grn_number, amount: money(r.remaining_amount) }) }))]"
+                                    :placeholder="t('Select a receipt…')"
+                                />
                                 <InputError :message="lineError(index, 'goods_receipt_id')" />
                             </div>
                         </template>
@@ -228,17 +222,13 @@ const { t } = useT();
                         <template v-else>
                             <div class="grid gap-2">
                                 <Label :for="`acct-${index}`">{{ t('Expense account') }}</Label>
-                                <select
+                                <SearchableSelect
                                     :id="`acct-${index}`"
-                                    v-model.number="line.debit_account_id"
+                                    v-model="line.debit_account_id"
                                     required
-                                    :class="selectClass"
-                                >
-                                    <option :value="null" disabled>{{ t('Select an account…') }}</option>
-                                    <option v-for="a in expenseAccounts" :key="a.id" :value="a.id">
-                                        {{ a.code }} — {{ a.name }}
-                                    </option>
-                                </select>
+                                    :options="[...(expenseAccounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                                    :placeholder="t('Select an account…')"
+                                />
                                 <InputError :message="lineError(index, 'debit_account_id')" />
                             </div>
 

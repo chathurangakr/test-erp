@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { Product, UnitOfMeasure } from '@/types';
 import { useT } from '@/lib/i18n';
 
@@ -28,8 +29,6 @@ const sameUomSelected = computed(
     () => primaryUomId.value !== '' && primaryUomId.value === secondaryUomId.value,
 );
 
-const selectClass =
-    'border-input bg-background ring-offset-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const { t } = useT();
 </script>
@@ -76,42 +75,25 @@ const { t } = useT();
                     {{ t('Primary unit of measure') }}
                     <span class="text-destructive">*</span>
                 </Label>
-                <select
+                <SearchableSelect
                     id="primary_uom_id"
                     name="primary_uom_id"
                     v-model="primaryUomId"
                     required
-                    :class="selectClass"
-                >
-                    <option value="" disabled>{{ t('Select a unit…') }}</option>
-                    <option
-                        v-for="uom in unitsOfMeasure"
-                        :key="uom.id"
-                        :value="String(uom.id)"
-                    >
-                        {{ uom.code }} — {{ uom.name }}
-                    </option>
-                </select>
+                    :options="[...(unitsOfMeasure).map((uom) => ({ value: String(uom.id), label: `${uom.code} — ${uom.name}` }))]"
+                    :placeholder="t('Select a unit…')"
+                />
                 <InputError :message="errors.primary_uom_id" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="secondary_uom_id">{{ t('Secondary unit of measure') }}</Label>
-                <select
+                <SearchableSelect
                     id="secondary_uom_id"
                     name="secondary_uom_id"
                     v-model="secondaryUomId"
-                    :class="selectClass"
-                >
-                    <option value="">{{ t('None') }}</option>
-                    <option
-                        v-for="uom in unitsOfMeasure"
-                        :key="uom.id"
-                        :value="String(uom.id)"
-                    >
-                        {{ uom.code }} — {{ uom.name }}
-                    </option>
-                </select>
+                    :options="[{ value: '', label: t('None') }, ...(unitsOfMeasure).map((uom) => ({ value: String(uom.id), label: `${uom.code} — ${uom.name}` }))]"
+                />
                 <p class="text-muted-foreground text-xs">
                     {{ t('Optional. For products sold in two units, such as Raw Coconut Shell.') }}
                 </p>

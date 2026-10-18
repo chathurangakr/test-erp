@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
@@ -32,8 +33,6 @@ watch([productId, warehouseId], () => {
     );
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -48,21 +47,19 @@ const selectClass =
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
                 <Label for="product">{{ t('Product') }}</Label>
-                <select id="product" v-model="productId" :class="selectClass">
-                    <option value="">{{ t('All products') }}</option>
-                    <option v-for="p in products" :key="p.id" :value="String(p.id)">
-                        {{ p.code }} — {{ p.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="product"
+                    v-model="productId"
+                    :options="[{ value: '', label: t('All products') }, ...(products).map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
+                />
             </div>
             <div class="grid gap-2">
                 <Label for="warehouse">{{ t('Warehouse') }}</Label>
-                <select id="warehouse" v-model="warehouseId" :class="selectClass">
-                    <option value="">{{ t('All warehouses') }}</option>
-                    <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                        {{ w.code }} — {{ w.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="warehouse"
+                    v-model="warehouseId"
+                    :options="[{ value: '', label: t('All warehouses') }, ...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                />
             </div>
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Total value (:currency)', { currency }) }}</p>

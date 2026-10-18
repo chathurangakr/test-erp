@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-invoices';
 import type { OptionRef, Paginated, StatusOption, SupplierInvoiceRow } from '@/types';
@@ -75,17 +76,19 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div class="grid gap-1.5">
                 <label for="f-supplier" class="text-sm font-medium">{{ t('Supplier') }}</label>
-                <select id="f-supplier" v-model="supplierId" :class="controlClass">
-                    <option value="">{{ t('All suppliers') }}</option>
-                    <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }} — {{ s.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-supplier"
+                    v-model="supplierId"
+                    :options="[{ value: '', label: t('All suppliers') }, ...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">{{ t('All statuses') }}</option>
-                    <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-status"
+                    v-model="status"
+                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>

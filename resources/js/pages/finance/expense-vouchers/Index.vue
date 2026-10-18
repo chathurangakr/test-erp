@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/expense-vouchers';
 import type { CashBankAccountOption, ExpenseVoucherRow, Paginated } from '@/types';
@@ -43,8 +44,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'outline';
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -63,10 +62,10 @@ const selectClass =
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Input v-model="search" :placeholder="t('Search number, payee or reference')" />
-            <select v-model="status" :class="selectClass">
-                <option value="">{{ t('All statuses') }}</option>
-                <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-            </select>
+            <SearchableSelect
+                v-model="status"
+                :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+            />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">

@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index } from '@/routes/cash-bank-book';
 import { index as journalsIndex } from '@/routes/journals';
 import type { CashBankBook } from '@/types';
@@ -46,8 +47,6 @@ watch([accountId, from, to], () => {
     );
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -62,11 +61,11 @@ const selectClass =
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
                 <Label for="account">{{ t('Account') }}</Label>
-                <select id="account" v-model="accountId" :class="selectClass">
-                    <option v-for="a in accounts" :key="a.id" :value="String(a.id)">
-                        {{ a.account_code }} — {{ a.display_name }} ({{ a.kind_label }})
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="account"
+                    v-model="accountId"
+                    :options="[...(accounts).map((a) => ({ value: String(a.id), label: `${a.account_code} — ${a.display_name} (${a.kind_label})` }))]"
+                />
             </div>
             <div class="grid gap-2">
                 <Label for="from">{{ t('From') }}</Label>

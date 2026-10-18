@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { LotRow, OptionRef, Paginated } from '@/types';
 import { useT } from '@/lib/i18n';
@@ -61,8 +62,6 @@ function applyFilters(immediate = false): void {
 watch(search, () => applyFilters());
 watch([productId, status], () => applyFilters(true));
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const statusOptions = [
     { value: 'all', label: 'All' },
@@ -110,20 +109,11 @@ const statusOptions = [
                 <label for="lot-product" class="text-sm font-medium">{{
                     t('Product')
                 }}</label>
-                <select
+                <SearchableSelect
                     id="lot-product"
                     v-model="productId"
-                    :class="controlClass"
-                >
-                    <option value="">{{ t('All products') }}</option>
-                    <option
-                        v-for="p in products"
-                        :key="p.id"
-                        :value="String(p.id)"
-                    >
-                        {{ p.code }}
-                    </option>
-                </select>
+                    :options="[{ value: '', label: t('All products') }, ...(products).map((p) => ({ value: String(p.id), label: `${(p.code) ?? ''}` }))]"
+                />
             </div>
 
             <div

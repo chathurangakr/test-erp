@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/employees';
 import type { EmployeeRow, Paginated } from '@/types';
@@ -29,8 +30,6 @@ watch([search, status], () => {
     router.get(index().url, { search: search.value || undefined, status: status.value }, { preserveState: true, replace: true });
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -46,11 +45,10 @@ const selectClass =
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Input v-model="search" :placeholder="t('Search code, name, NIC or phone')" />
-            <select v-model="status" :class="selectClass">
-                <option value="active">{{ t('Active') }}</option>
-                <option value="inactive">{{ t('Inactive') }}</option>
-                <option value="all">{{ t('All') }}</option>
-            </select>
+            <SearchableSelect
+                v-model="status"
+                :options="[{ value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }, { value: 'all', label: t('All') }]"
+            />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">

@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { OptionRef, ProductOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -96,8 +97,6 @@ function submit(): void {
     form.submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -107,23 +106,25 @@ const selectClass =
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="supplier_id">{{ t('Supplier') }} <span class="text-destructive">*</span></Label>
-                    <select id="supplier_id" v-model="form.supplier_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a supplier…') }}</option>
-                        <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">
-                            {{ s.code }} — {{ s.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="supplier_id"
+                        v-model="form.supplier_id"
+                        required
+                        :options="[...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                        :placeholder="t('Select a supplier…')"
+                    />
                     <InputError :message="form.errors.supplier_id" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="warehouse_id">{{ t('Deliver to warehouse') }} <span class="text-destructive">*</span></Label>
-                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
-                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                            {{ w.code }} — {{ w.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="warehouse_id"
+                        v-model="form.warehouse_id"
+                        required
+                        :options="[...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                        :placeholder="t('Select a warehouse…')"
+                    />
                     <InputError :message="form.errors.warehouse_id" />
                 </div>
 
@@ -167,17 +168,13 @@ const selectClass =
                     <div class="grid gap-3 sm:grid-cols-12 sm:items-end">
                         <div class="grid gap-1.5 sm:col-span-5">
                             <Label :for="`line-product-${index}`" class="text-xs">{{ t('Product') }}</Label>
-                            <select
+                            <SearchableSelect
                                 :id="`line-product-${index}`"
                                 v-model="line.product_id"
                                 required
-                                :class="selectClass"
-                            >
-                                <option value="" disabled>{{ t('Select…') }}</option>
-                                <option v-for="p in products" :key="p.id" :value="String(p.id)">
-                                    {{ p.code }} — {{ p.name }}
-                                </option>
-                            </select>
+                                :options="[...(products).map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
+                                :placeholder="t('Select…')"
+                            />
                             <InputError :message="form.errors[`lines.${index}.product_id`]" />
                         </div>
 

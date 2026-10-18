@@ -159,14 +159,20 @@ abstract class CopraRequest extends FormRequest
         $given = $secondary !== null && $secondary !== '';
 
         if (! $config->requires_secondary_quantity) {
-            if ($given) {
+            // Optional: a weight may be recorded when the product has a weight unit and it was
+            // actually measured. Nothing is ever worked out from the count.
+            if (! $given) {
+                return;
+            }
+
+            if ($config->product?->secondary_uom_id === null) {
                 $validator->errors()->add(
                     "outputs.{$index}.secondary_quantity",
                     __('A weight cannot be recorded for :product.', ['product' => $config->product?->code ?? __('output')]),
                 );
-            }
 
-            return;
+                return;
+            }
         }
 
         if (! $given || ! is_numeric($secondary)) {

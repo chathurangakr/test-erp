@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/customer-receipts';
 import PaymentMethodFields from '@/components/finance/PaymentMethodFields.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { AccountOption, OptionRef, PaymentMethodOption, OutstandingSalesInvoice } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -107,8 +108,6 @@ function submit(): void {
         .post(index().url, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -126,12 +125,13 @@ const { t } = useT();
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="grid gap-2">
                     <Label for="customer">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
-                    <select id="customer" v-model="customerId" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a customer…') }}</option>
-                        <option v-for="s in customers" :key="s.id" :value="String(s.id)">
-                            {{ s.code }} — {{ s.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="customer"
+                        v-model="customerId"
+                        required
+                        :options="[...(customers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                        :placeholder="t('Select a customer…')"
+                    />
                     <InputError :message="form.errors.customer_id" />
                 </div>
 
@@ -143,12 +143,13 @@ const { t } = useT();
 
                 <div class="grid gap-2">
                     <Label for="receipt_account_id">{{ t('Received into') }} <span class="text-destructive">*</span></Label>
-                    <select id="receipt_account_id" v-model="form.receipt_account_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Cash or bank…') }}</option>
-                        <option v-for="a in accountChoices" :key="a.id" :value="a.id">
-                            {{ a.code }} — {{ a.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="receipt_account_id"
+                        v-model="form.receipt_account_id"
+                        required
+                        :options="[...(accountChoices).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                        :placeholder="t('Cash or bank…')"
+                    />
                     <InputError :message="form.errors.receipt_account_id" />
                 </div>
 

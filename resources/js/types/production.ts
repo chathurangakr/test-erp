@@ -167,6 +167,8 @@ export type CopraOutputColumn = {
     secondary_uom: string | null;
     ratio: string | null;
     requires_secondary_quantity: boolean;
+    /** A weight can be entered — required when `requires_secondary_quantity`, otherwise optional. */
+    records_weight: boolean;
     allocation_percent: string;
 };
 

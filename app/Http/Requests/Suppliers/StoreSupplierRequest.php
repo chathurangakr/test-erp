@@ -13,7 +13,7 @@ class StoreSupplierRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if ($this->has('code')) {
+        if (filled($this->input('code'))) {
             $this->merge(['code' => mb_strtoupper(trim((string) $this->input('code')))]);
         }
     }
@@ -24,7 +24,8 @@ class StoreSupplierRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:50', Rule::unique('suppliers', 'code')],
+            // Blank = the next code in sequence (CreateSupplier).
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('suppliers', 'code')],
             'name' => ['required', 'string', 'max:150'],
             'payment_terms_days' => ['required', 'integer', 'min:0', 'max:3650'],
             'contact_person' => ['nullable', 'string', 'max:150'],

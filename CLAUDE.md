@@ -263,15 +263,18 @@ The inventory engine exists and is tested. These rules are permanent:
 
 ### Copra specifically
 
-- **The shell COUNT is derived; every WEIGHT is measured.** One dehusked coconut leaves one
-  shell — the recipe's `output_ratio` of `1.000000`. Copra KG and shell KG are both entered
-  by the operator, and **no fixed NOS↔KG conversion may ever be added** for either.
+- **The shell COUNT is derived; every WEIGHT is measured, never derived.** One dehusked coconut
+  leaves one shell — the recipe's `output_ratio` of `1.000000`. Copra KG is entered by the
+  operator; shell KG is entered when measured, and **no fixed NOS↔KG conversion may ever be
+  added** for either.
 - **A submitted shell count is refused, not ignored.** `CopraRequest` marks a derived
   output's quantity prohibited, and `PostCopraProduction` recalculates it from
   `input × ratio` regardless. Two independent guards, on purpose.
-- **Shell KG is operationally required here**, even though secondary quantity is
-  informational in the engine generally. It is enforced through the recipe's
-  `requires_secondary_quantity` flag, never by checking for `RAW-SHELL`.
+- **Shell KG is OPTIONAL since copra recipe version 2** (2026-10-18: the factory has no scale for
+  shell). Whether a weight is required is the recipe's `requires_secondary_quantity` flag, never
+  a check for `RAW-SHELL`; an optional weight is recorded when entered and must then be > 0. Runs
+  on version 1 keep the weights they were made with. Existing databases got version 2 from the
+  migration `make_copra_shell_weight_optional`.
 - **Shell is valued against its PRIMARY quantity (`NOS`).** A cost per KG may be *displayed*
   and must be labelled informational; it is never stored and never used as a weighted
   average. See `docs/DATA_MODEL.md` P-10.
@@ -727,6 +730,11 @@ warehouses) and to every master added later:
 
 - **Codes are unique and normalised to uppercase.** Use the `App\Concerns\HasUppercaseCode`
   trait on the model, never a controller, so seeders and the REST API get the same rule.
+- **Supplier, customer and employee codes are assigned automatically** (`CreateSupplier`,
+  `CreateCustomer`, `CreateEmployee` → `App\Support\SequentialCode`): prefix from config
+  (`config/masters.php`, `config/payroll.php`) plus one more than the highest number in use,
+  read under lock. The web form shows the next code read-only; the API numbers a record sent
+  without a code. Supplier and customer codes stay correctable on edit; employee codes never change.
 - **No destroy route and no hard delete in the UI.** Master records are deactivated with
   `is_active`, because historic transactions must keep referring to something meaningful.
 - **No balances, totals or stock columns on master tables.** A supplier has no payable, a

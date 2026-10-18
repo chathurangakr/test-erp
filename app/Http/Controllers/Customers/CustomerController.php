@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customers;
 
+use App\Actions\Masters\CreateCustomer;
 use App\Enums\DeliveryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\StoreCustomerRequest;
@@ -53,14 +54,17 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(CreateCustomer $createCustomer): Response
     {
-        return Inertia::render('customers/Create');
+        return Inertia::render('customers/Create', [
+            // A preview only: the code is taken when the customer is saved.
+            'nextCode' => $createCustomer->nextCode(),
+        ]);
     }
 
-    public function store(StoreCustomerRequest $request): RedirectResponse
+    public function store(StoreCustomerRequest $request, CreateCustomer $createCustomer): RedirectResponse
     {
-        $customer = Customer::create($request->validated());
+        $customer = $createCustomer->handle($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Customer created.')]);
 

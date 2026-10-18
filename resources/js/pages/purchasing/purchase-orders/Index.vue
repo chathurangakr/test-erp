@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/purchase-orders';
 import type { OptionRef, Paginated, PurchaseOrderRow, StatusOption } from '@/types';
@@ -57,8 +58,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'secondary';
 }
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -80,14 +79,16 @@ const controlClass =
                     <X class="size-4" />
                 </button>
             </div>
-            <select v-model="status" :class="controlClass" :aria-label="t('Filter by status')">
-                <option value="">{{ t('All statuses') }}</option>
-                <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-            </select>
-            <select v-model="supplierId" :class="controlClass" :aria-label="t('Filter by supplier')">
-                <option value="">{{ t('All suppliers') }}</option>
-                <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">{{ s.code }} — {{ s.name }}</option>
-            </select>
+            <SearchableSelect
+                v-model="status"
+                :aria-label="t('Filter by status')"
+                :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+            />
+            <SearchableSelect
+                v-model="supplierId"
+                :aria-label="t('Filter by supplier')"
+                :options="[{ value: '', label: t('All suppliers') }, ...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+            />
         </div>
 
         <div v-if="orders.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">

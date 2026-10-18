@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import type {
     CopraFormValues,
@@ -46,7 +47,7 @@ function initialOutputs(): { product_id: number; quantity: string; secondary_qua
         return {
             product_id: output.product_id,
             quantity: output.ratio === null ? (existing?.quantity ?? '') : '',
-            secondary_quantity: output.requires_secondary_quantity
+            secondary_quantity: output.records_weight
                 ? (existing?.secondary_quantity ?? '')
                 : '',
         };
@@ -163,8 +164,6 @@ function submit(): void {
     );
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <template>
@@ -182,12 +181,13 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
-                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
-                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                            {{ w.code }} — {{ w.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="warehouse_id"
+                        v-model="form.warehouse_id"
+                        required
+                        :options="[...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                        :placeholder="t('Select a warehouse…')"
+                    />
                     <InputError :message="form.errors.warehouse_id" />
                 </div>
             </div>
@@ -207,20 +207,14 @@ const selectClass =
                     <Label for="lot_id">
                         {{ t('Dehusked coconut lot') }} <span class="text-destructive">*</span>
                     </Label>
-                    <select
+                    <SearchableSelect
                         id="lot_id"
                         v-model="form.lot_id"
                         required
                         :disabled="!form.warehouse_id"
-                        :class="selectClass"
-                    >
-                        <option value="" disabled>
-                            {{ form.warehouse_id ? 'Select a lot…' : 'Choose a warehouse first' }}
-                        </option>
-                        <option v-for="lot in availableLots" :key="lot.id" :value="String(lot.id)">
-                            {{ lot.lot_number }}
-                        </option>
-                    </select>
+                        :options="[...(availableLots).map((lot) => ({ value: String(lot.id), label: `${(lot.lot_number) ?? ''}` }))]"
+                        :placeholder="form.warehouse_id ? t('Select a lot…') : t('Choose a warehouse first')"
+                    />
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
                         {{ t('Available lot stock:') }}
                         <span class="font-mono">{{ selectedLotQuantity }}</span>
@@ -305,10 +299,11 @@ const selectClass =
                         <InputError :message="error(rowIndex(output.product_id), 'quantity')" />
                     </div>
 
-                    <div v-if="output.requires_secondary_quantity" class="grid gap-2">
+                    <div v-if="output.records_weight" class="grid gap-2">
                         <Label :for="`secondary-${output.product_id}`">
                             {{ t(':code actual weight (:uom)', { code: output.code ?? '', uom: output.secondary_uom ?? '' }) }}
-                            <span class="text-destructive">*</span>
+                            <span v-if="output.requires_secondary_quantity" class="text-destructive">*</span>
+                            <span v-else class="text-muted-foreground text-xs">{{ t('(optional)') }}</span>
                         </Label>
                         <Input
                             :id="`secondary-${output.product_id}`"
@@ -316,7 +311,7 @@ const selectClass =
                             type="number"
                             step="0.001"
                             min="0"
-                            required
+                            :required="output.requires_secondary_quantity"
                         />
                         <p class="text-muted-foreground text-xs">
                             {{ t('Shell weights vary, so this is measured, never converted from the count.') }}
@@ -359,7 +354,7 @@ const selectClass =
                             <td class="px-4 py-3 text-right font-mono">
                                 {{ row.quantity.toFixed(3) }} {{ row.uom }}
                                 <span
-                                    v-if="row.requires_secondary_quantity"
+                                    v-if="row.records_weight && enteredSecondary(row) > 0"
                                     class="text-muted-foreground block text-xs"
                                 >
                                     {{ enteredSecondary(row).toFixed(3) }} {{ row.secondary_uom }}

@@ -156,7 +156,8 @@ class KioskOptionsApiTest extends TestCase
         $copra = collect($data['recipes']['copra']['outputs'])->keyBy('code');
         $this->assertFalse($copra['COPRA']['derived']);
         $this->assertTrue($copra['RAW-SHELL']['derived']);
-        $this->assertTrue($copra['RAW-SHELL']['requires_secondary_quantity']);
+        // Optional since copra recipe version 2: the factory has no scale for shell.
+        $this->assertFalse($copra['RAW-SHELL']['requires_secondary_quantity']);
     }
 
     #[Test]

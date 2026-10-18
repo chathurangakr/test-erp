@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { BillableDeliveryLine, OptionRef, SalesInvoiceFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -96,8 +97,6 @@ function submit(): void {
         .submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const { t } = useT();
 </script>
@@ -107,12 +106,13 @@ const { t } = useT();
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-2">
                 <Label for="customer_id">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
-                <select id="customer_id" v-model="customerId" required :class="selectClass">
-                    <option value="" disabled>{{ t('Select a customer…') }}</option>
-                    <option v-for="c in customers" :key="c.id" :value="String(c.id)">
-                        {{ c.code }} — {{ c.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="customer_id"
+                    v-model="customerId"
+                    required
+                    :options="[...(customers).map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
+                    :placeholder="t('Select a customer…')"
+                />
                 <InputError :message="form.errors.customer_id" />
             </div>
 

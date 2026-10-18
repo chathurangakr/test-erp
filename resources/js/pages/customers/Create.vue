@@ -6,6 +6,8 @@ import CustomerForm from '@/components/masters/CustomerForm.vue';
 import { index } from '@/routes/customers';
 import { useT } from '@/lib/i18n';
 
+defineProps<{ nextCode: string }>();
+
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -27,6 +29,7 @@ const { t } = useT();
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl rounded-xl border p-4 sm:p-6">
             <CustomerForm
                 :action="CustomerController.store.form()"
+                :next-code="nextCode"
                 submit-label="Create customer"
                 :cancel-href="index().url"
             />

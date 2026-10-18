@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { AccountOption, JournalFormValues } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -97,8 +98,6 @@ function submit(): void {
     form.submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const { t } = useT();
 </script>
@@ -154,12 +153,12 @@ const { t } = useT();
                             class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top"
                         >
                             <td class="px-3 py-2">
-                                <select v-model.number="line.account_id" required :class="selectClass">
-                                    <option :value="null" disabled>{{ t('Select an account…') }}</option>
-                                    <option v-for="account in accounts" :key="account.id" :value="account.id">
-                                        {{ account.code }} — {{ account.name }}
-                                    </option>
-                                </select>
+                                <SearchableSelect
+                                    v-model="line.account_id"
+                                    required
+                                    :options="[...(accounts).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                                    :placeholder="t('Select an account…')"
+                                />
                                 <InputError :message="lineError(index, 'account_id')" />
                             </td>
                             <td class="px-3 py-2">

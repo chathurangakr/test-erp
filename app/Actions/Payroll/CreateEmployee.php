@@ -3,6 +3,7 @@
 namespace App\Actions\Payroll;
 
 use App\Models\Employee;
+use App\Support\SequentialCode;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,15 +29,6 @@ class CreateEmployee
      */
     public function nextCode(): string
     {
-        $prefix = mb_strtoupper((string) config('payroll.employee_code_prefix')).'-';
-
-        $highest = Employee::query()
-            ->where('code', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->pluck('code')
-            ->map(fn (string $code): int => preg_match('/^'.preg_quote($prefix, '/').'(\d+)$/', $code, $m) ? (int) $m[1] : 0)
-            ->max() ?? 0;
-
-        return $prefix.str_pad((string) ($highest + 1), (int) config('payroll.employee_code_digits'), '0', STR_PAD_LEFT);
+        return SequentialCode::next(Employee::class, (string) config('payroll.employee_code_prefix'), (int) config('payroll.employee_code_digits'));
     }
 }

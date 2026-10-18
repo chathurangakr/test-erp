@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/sales-orders';
@@ -57,8 +58,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'secondary';
 }
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -80,14 +79,16 @@ const controlClass =
                     <X class="size-4" />
                 </button>
             </div>
-            <select v-model="status" :class="controlClass" :aria-label="t('Filter by status')">
-                <option value="">{{ t('All statuses') }}</option>
-                <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-            </select>
-            <select v-model="customerId" :class="controlClass" :aria-label="t('Filter by customer')">
-                <option value="">{{ t('All customers') }}</option>
-                <option v-for="c in customers" :key="c.id" :value="String(c.id)">{{ c.code }} — {{ c.name }}</option>
-            </select>
+            <SearchableSelect
+                v-model="status"
+                :aria-label="t('Filter by status')"
+                :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+            />
+            <SearchableSelect
+                v-model="customerId"
+                :aria-label="t('Filter by customer')"
+                :options="[{ value: '', label: t('All customers') }, ...(customers).map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
+            />
         </div>
 
         <div v-if="orders.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">

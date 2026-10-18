@@ -123,7 +123,8 @@ class SaveCopraOrder
                 'quantity' => $config->derivesQuantity()
                     ? DecimalMath::quantity(DecimalMath::mul($processed, DecimalMath::of($config->output_ratio)))
                     : DecimalMath::quantity(DecimalMath::of((string) $output['quantity'])),
-                'secondary_quantity' => $config->requires_secondary_quantity
+                // Required or optional per the recipe; kept whenever it was measured.
+                'secondary_quantity' => filled($output['secondary_quantity'] ?? null)
                     ? DecimalMath::quantity(DecimalMath::of((string) $output['secondary_quantity']))
                     : null,
                 // The configured share, recorded for reference. Posting stores the share

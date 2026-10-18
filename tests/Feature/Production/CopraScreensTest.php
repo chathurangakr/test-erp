@@ -164,7 +164,8 @@ class CopraScreensTest extends TestCase
                 ->where('recipe.outputs.1.uom', 'NOS')
                 ->where('recipe.outputs.1.secondary_uom', 'KG')
                 ->where('recipe.outputs.1.ratio', '1.000000')
-                ->where('recipe.outputs.1.requires_secondary_quantity', true)
+                ->where('recipe.outputs.1.requires_secondary_quantity', false)
+                ->where('recipe.outputs.1.records_weight', true)
                 ->where('recipe.outputs.1.allocation_percent', '25.000000')
                 // The estimate figures, so the screen can show a consumed value.
                 ->where('inputStock', '5000.000')
@@ -246,18 +247,10 @@ class CopraScreensTest extends TestCase
     }
 
     #[Test]
-    public function the_screen_requires_the_measured_shell_weight(): void
+    public function the_shell_weight_is_optional_but_an_entered_weight_must_be_positive(): void
     {
         $user = User::factory()->admin()->create();
         $this->receive('5000.000', '87.125000');
-
-        // Missing.
-        $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
-            'outputs' => [
-                ['product_id' => $this->copra->id, 'quantity' => '200.000'],
-                ['product_id' => $this->shell->id],
-            ],
-        ]))->assertSessionHasErrors('outputs.1.secondary_quantity');
 
         // Zero.
         $this->actingAs($user)->post(route('copra.store'), $this->payload(shellKg: '0'))
@@ -268,6 +261,16 @@ class CopraScreensTest extends TestCase
             ->assertSessionHasErrors('outputs.1.secondary_quantity');
 
         $this->assertSame(0, ProductionOrder::count());
+
+        // Missing: allowed — the factory has no scale for shell.
+        $this->actingAs($user)->post(route('copra.store'), $this->payload(extra: [
+            'outputs' => [
+                ['product_id' => $this->copra->id, 'quantity' => '200.000'],
+                ['product_id' => $this->shell->id],
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(1, ProductionOrder::count());
     }
 
     #[Test]
@@ -502,7 +505,7 @@ class CopraScreensTest extends TestCase
                 ->where("orders.data.0.outputs_by_product.{$this->shell->id}.secondary_quantity", '420.000')
                 // The columns follow the recipe, so no product code lives in the screen.
                 ->has('outputColumns', 2)
-                ->where('outputColumns.1.requires_secondary_quantity', true));
+                ->where('outputColumns.1.records_weight', true));
     }
 
     #[Test]

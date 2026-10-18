@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/accounting-setup';
 import { index as accountsIndex } from '@/routes/accounts';
@@ -49,8 +50,6 @@ function label(account: AccountRef): string {
     return account ? `${account.code} — ${account.name}` : '—';
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const { t } = useT();
 </script>
@@ -168,45 +167,25 @@ const { t } = useT();
                         <Label for="grni">{{
                             t('Goods Received Not Invoiced')
                         }}</Label>
-                        <select
+                        <SearchableSelect
                             id="grni"
                             name="grni_account_id"
-                            :class="selectClass"
                             :disabled="!can('finance.setup_manage')"
-                        >
-                            <option value="">{{ t('Not configured') }}</option>
-                            <option
-                                v-for="account in accountOptions.liability"
-                                :key="account.id"
-                                :value="account.id"
-                                :selected="
-                                    account.id === settings.grni_account?.id
-                                "
-                            >
-                                {{ account.code }} — {{ account.name }}
-                            </option>
-                        </select>
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.liability).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.grni_account?.id) ?? ''"
+                        />
                         <InputError :message="errors.grni_account_id" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="wages">{{ t('Wages (payroll)') }}</Label>
-                        <select
+                        <SearchableSelect
                             id="wages"
                             name="wages_account_id"
-                            :class="selectClass"
                             :disabled="!can('finance.setup_manage')"
-                        >
-                            <option value="">{{ t('Not configured') }}</option>
-                            <option
-                                v-for="account in accountOptions.expense"
-                                :key="account.id"
-                                :value="account.id"
-                                :selected="account.id === settings.wages_account?.id"
-                            >
-                                {{ account.code }} — {{ account.name }}
-                            </option>
-                        </select>
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.expense).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.wages_account?.id) ?? ''"
+                        />
                         <p class="text-muted-foreground text-xs">
                             {{ t('The expense monthly salaries are charged to.') }}
                         </p>
@@ -215,22 +194,13 @@ const { t } = useT();
 
                     <div class="grid gap-2">
                         <Label for="employee_advances">{{ t('Employee advances (payroll)') }}</Label>
-                        <select
+                        <SearchableSelect
                             id="employee_advances"
                             name="employee_advances_account_id"
-                            :class="selectClass"
                             :disabled="!can('finance.setup_manage')"
-                        >
-                            <option value="">{{ t('Not configured') }}</option>
-                            <option
-                                v-for="account in accountOptions.asset"
-                                :key="account.id"
-                                :value="account.id"
-                                :selected="account.id === settings.employee_advances_account?.id"
-                            >
-                                {{ account.code }} — {{ account.name }}
-                            </option>
-                        </select>
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.asset).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.employee_advances_account?.id) ?? ''"
+                        />
                         <p class="text-muted-foreground text-xs">
                             {{ t('Where salary advances sit until a salary takes them back.') }}
                         </p>
@@ -432,29 +402,13 @@ const { t } = useT();
                                             <Label :for="`inv-${product.id}`">{{
                                                 t('Inventory (asset)')
                                             }}</Label>
-                                            <select
+                                            <SearchableSelect
                                                 :id="`inv-${product.id}`"
                                                 name="inventory_account_id"
                                                 required
-                                                :class="selectClass"
-                                            >
-                                                <option value="">
-                                                    {{ t('Select…') }}
-                                                </option>
-                                                <option
-                                                    v-for="a in accountOptions.inventory"
-                                                    :key="a.id"
-                                                    :value="a.id"
-                                                    :selected="
-                                                        a.id ===
-                                                        product
-                                                            .inventory_account
-                                                            ?.id
-                                                    "
-                                                >
-                                                    {{ a.code }} — {{ a.name }}
-                                                </option>
-                                            </select>
+                                                :options="[{ value: '', label: t('Select…') }, ...(accountOptions.inventory).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                                                :default-value="(product.inventory_account?.id) ?? ''"
+                                            />
                                             <InputError
                                                 :message="
                                                     errors.inventory_account_id
@@ -467,27 +421,13 @@ const { t } = useT();
                                                 :for="`cogs-${product.id}`"
                                                 >{{ t('Cost of sales') }}</Label
                                             >
-                                            <select
+                                            <SearchableSelect
                                                 :id="`cogs-${product.id}`"
                                                 name="cogs_account_id"
                                                 required
-                                                :class="selectClass"
-                                            >
-                                                <option value="">
-                                                    {{ t('Select…') }}
-                                                </option>
-                                                <option
-                                                    v-for="a in accountOptions.cogs"
-                                                    :key="a.id"
-                                                    :value="a.id"
-                                                    :selected="
-                                                        a.id ===
-                                                        product.cogs_account?.id
-                                                    "
-                                                >
-                                                    {{ a.code }} — {{ a.name }}
-                                                </option>
-                                            </select>
+                                                :options="[{ value: '', label: t('Select…') }, ...(accountOptions.cogs).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                                                :default-value="(product.cogs_account?.id) ?? ''"
+                                            />
                                             <InputError
                                                 :message="
                                                     errors.cogs_account_id
@@ -501,27 +441,12 @@ const { t } = useT();
                                                     'Revenue (for later invoicing)',
                                                 )
                                             }}</Label>
-                                            <select
+                                            <SearchableSelect
                                                 :id="`rev-${product.id}`"
                                                 name="revenue_account_id"
-                                                :class="selectClass"
-                                            >
-                                                <option value="">
-                                                    {{ t('Not configured') }}
-                                                </option>
-                                                <option
-                                                    v-for="a in accountOptions.revenue"
-                                                    :key="a.id"
-                                                    :value="a.id"
-                                                    :selected="
-                                                        a.id ===
-                                                        product.revenue_account
-                                                            ?.id
-                                                    "
-                                                >
-                                                    {{ a.code }} — {{ a.name }}
-                                                </option>
-                                            </select>
+                                                :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.revenue).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                                                :default-value="(product.revenue_account?.id) ?? ''"
+                                            />
                                             <InputError
                                                 :message="
                                                     errors.revenue_account_id

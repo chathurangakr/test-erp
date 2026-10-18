@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/copra';
@@ -89,17 +90,19 @@ const controlClass =
             </div>
             <div class="grid gap-1.5">
                 <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">{{ t('All statuses') }}</option>
-                    <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-status"
+                    v-model="status"
+                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-whs" class="text-sm font-medium">{{ t('Warehouse') }}</label>
-                <select id="f-whs" v-model="warehouseId" :class="controlClass">
-                    <option value="">{{ t('All warehouses') }}</option>
-                    <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">{{ w.code }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-whs"
+                    v-model="warehouseId"
+                    :options="[{ value: '', label: t('All warehouses') }, ...(warehouses).map((w) => ({ value: String(w.id), label: `${(w.code) ?? ''}` }))]"
+                />
             </div>
         </div>
 
@@ -127,7 +130,7 @@ const controlClass =
                                     {{ column.code }} ({{ column.uom }})
                                 </th>
                                 <th
-                                    v-if="column.requires_secondary_quantity"
+                                    v-if="column.records_weight"
                                     class="px-4 py-3 text-right font-medium"
                                 >
                                     {{ column.code }} ({{ column.secondary_uom }})
@@ -155,7 +158,7 @@ const controlClass =
                             <template v-for="column in outputColumns" :key="`${row.id}-${column.product_id}`">
                                 <td class="px-4 py-3 text-right font-mono">{{ quantity(row, column) }}</td>
                                 <td
-                                    v-if="column.requires_secondary_quantity"
+                                    v-if="column.records_weight"
                                     class="px-4 py-3 text-right font-mono"
                                 >
                                     {{ secondary(row, column) }}
@@ -194,7 +197,7 @@ const controlClass =
                             <dt class="font-medium">{{ column.code }}</dt>
                             <dd class="font-mono">
                                 {{ quantity(row, column) }} {{ column.uom }}
-                                <span v-if="column.requires_secondary_quantity" class="block">
+                                <span v-if="column.records_weight" class="block">
                                     {{ secondary(row, column) }} {{ column.secondary_uom }}
                                 </span>
                             </dd>

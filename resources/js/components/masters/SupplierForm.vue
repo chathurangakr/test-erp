@@ -11,6 +11,8 @@ import { useT } from '@/lib/i18n';
 defineProps<{
     action: Record<string, unknown>;
     supplier?: Supplier | null;
+    /** On a new supplier: the code it will be given. */
+    nextCode?: string;
     submitLabel: string;
     cancelHref: string;
 }>();
@@ -24,17 +26,22 @@ const { t } = useT();
             <h3 class="text-sm font-medium">{{ t('Identification') }}</h3>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
-                    <Label for="code">{{ t('Supplier code') }} <span class="text-destructive">*</span></Label>
-                    <Input
-                        id="code"
-                        name="code"
-                        :default-value="supplier?.code ?? ''"
-                        required
-                        autocomplete="off"
-                        :placeholder="t('e.g. SUP-001')"
-                        class="uppercase"
-                    />
-                    <p class="text-muted-foreground text-xs">{{ t('Stored in uppercase. Must be unique.') }}</p>
+                    <Label for="code">{{ t('Supplier code') }}</Label>
+                    <template v-if="supplier">
+                        <Input
+                            id="code"
+                            name="code"
+                            :default-value="supplier.code"
+                            required
+                            autocomplete="off"
+                            class="uppercase"
+                        />
+                        <p class="text-muted-foreground text-xs">{{ t('Stored in uppercase. Must be unique.') }}</p>
+                    </template>
+                    <template v-else>
+                        <Input id="code" :model-value="nextCode ?? ''" disabled class="font-mono" />
+                        <p class="text-muted-foreground text-xs">{{ t('Given automatically when you save.') }}</p>
+                    </template>
                     <InputError :message="errors.code" />
                 </div>
                 <div class="grid gap-2">

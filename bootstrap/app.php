@@ -33,7 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
+            // Preload hints only (the page itself still loads everything). Capped because every
+            // asset adds a Link header with the full address: uncapped, a page's headers outgrew
+            // the web server's FastCGI buffer and it answered 502.
+            AddLinkHeadersForPreloadedAssets::using(12),
         ]);
 
         $middleware->alias([

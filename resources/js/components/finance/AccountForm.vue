@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import type { AccountFormValues, AccountOption, StatusOption } from '@/types';
 
@@ -50,8 +51,6 @@ function submit(): void {
         .submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -73,28 +72,33 @@ const { t } = useT();
 
             <div class="grid gap-2">
                 <Label for="account_type">{{ t('Type') }} <span class="text-destructive">*</span></Label>
-                <select id="account_type" v-model="form.account_type" required :class="selectClass">
-                    <option v-for="option in types" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="account_type"
+                    v-model="form.account_type"
+                    required
+                    :options="[...(types).map((option) => ({ value: option.value, label: `${(option.label) ?? ''}` }))]"
+                />
                 <InputError :message="form.errors.account_type" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="normal_balance">{{ t('Normal balance') }} <span class="text-destructive">*</span></Label>
-                <select id="normal_balance" v-model="form.normal_balance" required :class="selectClass">
-                    <option v-for="b in normalBalances" :key="b.value" :value="b.value">{{ b.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="normal_balance"
+                    v-model="form.normal_balance"
+                    required
+                    :options="[...(normalBalances).map((b) => ({ value: b.value, label: `${(b.label) ?? ''}` }))]"
+                />
                 <InputError :message="form.errors.normal_balance" />
             </div>
 
             <div class="grid gap-2 sm:col-span-2">
                 <Label for="parent_id">{{ t('Parent account') }}</Label>
-                <select id="parent_id" v-model="form.parent_id" :class="selectClass">
-                    <option value="">{{ t('None — this is a top-level account') }}</option>
-                    <option v-for="p in parents" :key="p.id" :value="String(p.id)">
-                        {{ p.code }} — {{ p.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="parent_id"
+                    v-model="form.parent_id"
+                    :options="[{ value: '', label: t('None — this is a top-level account') }, ...(parents).map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
+                />
                 <InputError :message="form.errors.parent_id" />
             </div>
 

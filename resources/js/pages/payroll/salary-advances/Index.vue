@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/salary-advances';
 import type { Paginated, SalaryAdvanceRow } from '@/types';
@@ -28,8 +29,6 @@ watch(employeeId, () => {
     router.get(index().url, { employee_id: employeeId.value || undefined }, { preserveState: true, replace: true });
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -44,10 +43,10 @@ const selectClass =
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <select v-model="employeeId" :class="selectClass">
-                <option value="">{{ t('All employees') }}</option>
-                <option v-for="e in employees" :key="e.id" :value="String(e.id)">{{ e.code }} — {{ e.name }}</option>
-            </select>
+            <SearchableSelect
+                v-model="employeeId"
+                :options="[{ value: '', label: t('All employees') }, ...(employees).map((e) => ({ value: String(e.id), label: `${e.code} — ${e.name}` }))]"
+            />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">

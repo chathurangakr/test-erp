@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index, store } from '@/routes/salary-advances';
 import type { CashBankAccountOption, PaymentMethodOption } from '@/types';
 import { useT } from '@/lib/i18n';
@@ -32,8 +33,6 @@ const form = useForm({
 
 const { t } = useT();
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -46,10 +45,13 @@ const selectClass =
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
                     <Label for="employee_id">{{ t('Employee') }}</Label>
-                    <select id="employee_id" v-model="form.employee_id" required :class="selectClass">
-                        <option :value="null" disabled>{{ t('Select an employee…') }}</option>
-                        <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.code }} — {{ e.name }}</option>
-                    </select>
+                    <SearchableSelect
+                        id="employee_id"
+                        v-model="form.employee_id"
+                        required
+                        :options="[...(employees).map((e) => ({ value: e.id, label: `${e.code} — ${e.name}` }))]"
+                        :placeholder="t('Select an employee…')"
+                    />
                     <InputError :message="form.errors.employee_id" />
                 </div>
                 <div class="grid gap-2">
@@ -64,17 +66,22 @@ const selectClass =
                 </div>
                 <div class="grid gap-2">
                     <Label for="payment_method">{{ t('Paid by') }}</Label>
-                    <select id="payment_method" v-model="form.payment_method" :class="selectClass">
-                        <option v-for="m in paymentMethods" :key="m.value" :value="m.value">{{ m.label }}</option>
-                    </select>
+                    <SearchableSelect
+                        id="payment_method"
+                        v-model="form.payment_method"
+                        :options="[...(paymentMethods).map((m) => ({ value: m.value, label: `${(m.label) ?? ''}` }))]"
+                    />
                     <InputError :message="form.errors.payment_method" />
                 </div>
                 <div class="grid gap-2">
                     <Label for="cash_bank_account_id">{{ t('Paid from') }}</Label>
-                    <select id="cash_bank_account_id" v-model="form.cash_bank_account_id" required :class="selectClass">
-                        <option :value="null" disabled>{{ t('Select a cash or bank account…') }}</option>
-                        <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.code }} — {{ a.name }} ({{ a.kind }})</option>
-                    </select>
+                    <SearchableSelect
+                        id="cash_bank_account_id"
+                        v-model="form.cash_bank_account_id"
+                        required
+                        :options="[...(accounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name} (${a.kind})` }))]"
+                        :placeholder="t('Select a cash or bank account…')"
+                    />
                     <InputError :message="form.errors.cash_bank_account_id" />
                 </div>
                 <div class="grid gap-2">

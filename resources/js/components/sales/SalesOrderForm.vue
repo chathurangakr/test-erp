@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import type { OptionRef, SalesProductOption, StatusOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
@@ -135,8 +136,6 @@ function submit(): void {
     form.submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <template>
@@ -146,23 +145,25 @@ const selectClass =
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="customer_id">{{ t('Customer') }} <span class="text-destructive">*</span></Label>
-                    <select id="customer_id" v-model="form.customer_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a customer…') }}</option>
-                        <option v-for="c in customers" :key="c.id" :value="String(c.id)">
-                            {{ c.code }} — {{ c.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="customer_id"
+                        v-model="form.customer_id"
+                        required
+                        :options="[...(customers).map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
+                        :placeholder="t('Select a customer…')"
+                    />
                     <InputError :message="form.errors.customer_id" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="warehouse_id">{{ t('Ship from warehouse') }} <span class="text-destructive">*</span></Label>
-                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
-                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                            {{ w.code }} — {{ w.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="warehouse_id"
+                        v-model="form.warehouse_id"
+                        required
+                        :options="[...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                        :placeholder="t('Select a warehouse…')"
+                    />
                     <InputError :message="form.errors.warehouse_id" />
                 </div>
 
@@ -206,12 +207,13 @@ const selectClass =
                     <div class="grid gap-3 sm:grid-cols-12 sm:items-end">
                         <div class="grid gap-1.5 sm:col-span-4">
                             <Label :for="`so-product-${index}`" class="text-xs">{{ t('Product') }}</Label>
-                            <select :id="`so-product-${index}`" v-model="line.product_id" required :class="selectClass">
-                                <option value="" disabled>{{ t('Select…') }}</option>
-                                <option v-for="p in products" :key="p.id" :value="String(p.id)">
-                                    {{ p.code }} — {{ p.name }}
-                                </option>
-                            </select>
+                            <SearchableSelect
+                                :id="`so-product-${index}`"
+                                v-model="line.product_id"
+                                required
+                                :options="[...(products).map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
+                                :placeholder="t('Select…')"
+                            />
                             <InputError :message="form.errors[`lines.${index}.product_id`]" />
                         </div>
 
@@ -233,19 +235,12 @@ const selectClass =
 
                         <div class="grid gap-1.5 sm:col-span-2">
                             <Label :for="`so-basis-${index}`" class="text-xs">{{ t('Priced per') }}</Label>
-                            <select
+                            <SearchableSelect
                                 :id="`so-basis-${index}`"
                                 v-model="line.pricing_basis"
                                 :disabled="!supportsSecondary(line.product_id)"
-                                :class="selectClass"
-                            >
-                                <option value="PRIMARY">
-                                    {{ productFor(line.product_id)?.uom ?? 'Primary unit' }}
-                                </option>
-                                <option v-if="supportsSecondary(line.product_id)" value="SECONDARY">
-                                    {{ productFor(line.product_id)?.secondary_uom }}
-                                </option>
-                            </select>
+                                :options="[{ value: 'PRIMARY', label: `${(productFor(line.product_id)?.uom ?? 'Primary unit') ?? ''}` }, ...(supportsSecondary(line.product_id) ? [{ value: 'SECONDARY', label: `${(productFor(line.product_id)?.secondary_uom) ?? ''}` }] : [])]"
+                            />
                             <InputError :message="form.errors[`lines.${index}.pricing_basis`]" />
                         </div>
 

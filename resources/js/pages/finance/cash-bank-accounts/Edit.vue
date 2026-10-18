@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import { index, update } from '@/routes/cash-bank-accounts';
 
@@ -49,8 +50,6 @@ function submit(): void {
     form.put(update(props.cashBankAccount.id).url, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -66,9 +65,12 @@ const selectClass =
             <section class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="account_kind">{{ t('Kind') }} <span class="text-destructive">*</span></Label>
-                    <select id="account_kind" v-model="form.account_kind" required :class="selectClass">
-                        <option v-for="k in props.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
-                    </select>
+                    <SearchableSelect
+                        id="account_kind"
+                        v-model="form.account_kind"
+                        required
+                        :options="[...(props.kinds).map((k) => ({ value: k.value, label: `${(k.label) ?? ''}` }))]"
+                    />
                     <InputError :message="form.errors.account_kind" />
                 </div>
 

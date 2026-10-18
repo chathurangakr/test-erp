@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import { show as deliveryShow } from '@/routes/deliveries';
 import { productProfitability, profitLoss } from '@/routes/reports';
@@ -49,8 +50,6 @@ watch([from, to, productId, customerId], () => {
     );
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -73,21 +72,19 @@ const selectClass =
             </div>
             <div class="grid gap-2">
                 <Label for="product">{{ t('Product') }}</Label>
-                <select id="product" v-model="productId" :class="selectClass">
-                    <option value="">{{ t('All products') }}</option>
-                    <option v-for="p in products" :key="p.id" :value="String(p.id)">
-                        {{ p.code }} — {{ p.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="product"
+                    v-model="productId"
+                    :options="[{ value: '', label: t('All products') }, ...(products).map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
+                />
             </div>
             <div class="grid gap-2">
                 <Label for="customer">{{ t('Customer') }}</Label>
-                <select id="customer" v-model="customerId" :class="selectClass">
-                    <option value="">{{ t('All customers') }}</option>
-                    <option v-for="c in customers" :key="c.id" :value="String(c.id)">
-                        {{ c.code }} — {{ c.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="customer"
+                    v-model="customerId"
+                    :options="[{ value: '', label: t('All customers') }, ...(customers).map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
+                />
             </div>
         </section>
 

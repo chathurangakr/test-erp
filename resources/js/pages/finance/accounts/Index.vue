@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/accounts';
@@ -72,18 +73,19 @@ const controlClass =
             </div>
             <div class="grid gap-1.5">
                 <label for="f-type" class="text-sm font-medium">{{ t('Type') }}</label>
-                <select id="f-type" v-model="type" :class="controlClass">
-                    <option value="">{{ t('All types') }}</option>
-                    <option v-for="option in types" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-type"
+                    v-model="type"
+                    :options="[{ value: '', label: t('All types') }, ...(types).map((option) => ({ value: option.value, label: `${(option.label) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="all">{{ t('All') }}</option>
-                    <option value="active">{{ t('Active') }}</option>
-                    <option value="inactive">{{ t('Inactive') }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-status"
+                    v-model="status"
+                    :options="[{ value: 'all', label: t('All') }, { value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }]"
+                />
             </div>
         </div>
 

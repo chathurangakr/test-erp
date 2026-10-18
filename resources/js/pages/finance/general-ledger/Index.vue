@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index } from '@/routes/general-ledger';
 import { index as journalsIndex } from '@/routes/journals';
 import type { AccountOption, GeneralLedgerReport } from '@/types';
@@ -60,12 +61,11 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="grid gap-1.5">
                 <label for="f-account" class="text-sm font-medium">{{ t('Account') }}</label>
-                <select id="f-account" v-model="accountId" :class="controlClass">
-                    <option value="">{{ t('Select an account…') }}</option>
-                    <option v-for="a in accounts" :key="a.id" :value="String(a.id)">
-                        {{ a.code }} — {{ a.name }}
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="f-account"
+                    v-model="accountId"
+                    :options="[{ value: '', label: t('Select an account…') }, ...(accounts).map((a) => ({ value: String(a.id), label: `${a.code} — ${a.name}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>

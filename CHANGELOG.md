@@ -4,6 +4,20 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.6.0 — 18 October 2026
+
+- **Every dropdown is searchable.** Click a list and type a few letters: it shows only the entries
+  containing them — in the code or the name — so a supplier, product, account or employee is
+  found without scrolling.
+- **Supplier and customer codes are automatic.** A new supplier gets the next code (SUP-029,
+  SUP-030 …) and a new customer the next CUS- code, continuing from the highest number already
+  used. Existing codes are kept and can still be corrected on the edit screen.
+- **Copra: the raw shell weight is optional**, because the factory has no scale for shell. A run
+  can record only the shell count (one per coconut). If a weight is entered it must be above
+  zero. Simple mode and the phone app no longer ask for it. Earlier runs keep their weights.
+- **Fixed:** pages could answer "502 Bad Gateway" as the screens grew, because the list of files
+  sent with each page outgrew the web server's limit. The list is now capped.
+
 ## 1.5.1 — 18 October 2026
 
 - **Employee codes are numbered automatically** — EMP-001, EMP-002, EMP-003 … — when an employee

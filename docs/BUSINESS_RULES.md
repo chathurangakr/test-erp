@@ -796,10 +796,11 @@ request, the controller or any screen.** Product codes live only in
 never guarded against going negative, never convertible to the primary unit. That remains
 true of the **engine**.
 
-Copra production adds a **process-level** requirement on top of it: the shell weight must be
-present and greater than zero, because the factory sells shell by weight and a shell lot
-with no weight is operationally useless. This is enforced twice — in `CopraRequest` and
-again in `PostCopraProduction` — and it changes nothing about how the engine values stock.
+Copra recipe **version 1** required the shell weight. **Version 2 (18 October 2026) makes it
+optional**, because the factory has no scale for shell: a run may record only the shell count.
+When a weight *is* entered it must be greater than zero, checked in `CopraRequest` and again in
+`PostCopraProduction`. Nothing about how the engine values stock changes — shell is valued
+against its count either way, and no weight is ever worked out from the count.
 
 ### Which quantities are accepted
 
@@ -807,7 +808,7 @@ again in `PostCopraProduction` — and it changes nothing about how the engine v
 | --- | --- |
 | Copra KG | **Required, must be > 0** |
 | Shell NOS | **Refused if submitted.** Sending a figure — even the correct one — is an error, not something to ignore. The server recalculates it from `input × ratio` regardless |
-| Shell KG | **Required, must be > 0** |
+| Shell KG | **Optional** (recipe v2); if entered, **must be > 0** |
 | A weight on an output with no secondary unit | **Refused** |
 | An output left out, or one outside the recipe | **Refused** |
 | Any cost figure | **Never accepted.** Costs come from the ledger |

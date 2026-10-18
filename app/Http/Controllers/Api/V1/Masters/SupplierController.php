@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Masters;
 
+use App\Actions\Masters\CreateSupplier;
 use App\Http\Controllers\Api\V1\Concerns\PaginatesResults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Suppliers\StoreSupplierRequest;
@@ -40,9 +41,9 @@ class SupplierController extends Controller
         return new SupplierResource($supplier);
     }
 
-    public function store(StoreSupplierRequest $request): JsonResponse
+    public function store(StoreSupplierRequest $request, CreateSupplier $createSupplier): JsonResponse
     {
-        $supplier = Supplier::create($request->validated());
+        $supplier = $createSupplier->handle($request->validated());
 
         return (new SupplierResource($supplier->refresh()))->response()->setStatusCode(201);
     }

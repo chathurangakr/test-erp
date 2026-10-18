@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
 import type { HuskChippingFormValues, HuskChippingRecipeInfo, OptionRef } from '@/types';
@@ -78,8 +79,6 @@ function submit(): void {
     })).submit(props.method, props.action, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <template>
@@ -97,12 +96,13 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
-                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
-                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                            {{ w.code }} — {{ w.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="warehouse_id"
+                        v-model="form.warehouse_id"
+                        required
+                        :options="[...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                        :placeholder="t('Select a warehouse…')"
+                    />
                     <InputError :message="form.errors.warehouse_id" />
                 </div>
             </div>
@@ -142,18 +142,14 @@ const selectClass =
                             class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top"
                         >
                             <td class="px-4 py-3">
-                                <select
+                                <SearchableSelect
                                     :id="`output-product-${index}`"
                                     v-model="row.product_id"
                                     required
-                                    :class="selectClass"
                                     :aria-label="t('Product')"
-                                >
-                                    <option value="" disabled>{{ t('Select a product…') }}</option>
-                                    <option v-for="o in choicesFor(index)" :key="o.product_id" :value="String(o.product_id)">
-                                        {{ o.name }} — {{ o.uom }}
-                                    </option>
-                                </select>
+                                    :options="[...(choicesFor(index)).map((o) => ({ value: String(o.product_id), label: `${o.name} — ${o.uom}` }))]"
+                                    :placeholder="t('Select a product…')"
+                                />
                                 <InputError :message="rowError(index, 'product_id')" />
                             </td>
                             <td class="px-4 py-3">
@@ -211,12 +207,11 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="waste_uom_id">{{ t('Measured in') }}</Label>
-                    <select id="waste_uom_id" v-model="form.waste_uom_id" :class="selectClass">
-                        <option value="">{{ t('Not recorded') }}</option>
-                        <option v-for="u in wasteUoms" :key="u.id" :value="String(u.id)">
-                            {{ u.code }} — {{ u.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="waste_uom_id"
+                        v-model="form.waste_uom_id"
+                        :options="[{ value: '', label: t('Not recorded') }, ...(wasteUoms).map((u) => ({ value: String(u.id), label: `${u.code} — ${u.name}` }))]"
+                    />
                     <InputError :message="form.errors.waste_uom_id" />
                 </div>
             </div>

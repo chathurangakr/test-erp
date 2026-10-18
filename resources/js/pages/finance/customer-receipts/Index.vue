@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/customer-receipts';
 import type { OptionRef, Paginated, StatusOption, CustomerReceiptRow } from '@/types';
@@ -42,8 +43,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'outline';
 }
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -65,17 +64,19 @@ const { t } = useT();
         <div class="grid gap-3 sm:grid-cols-2">
             <div class="grid gap-1.5">
                 <label for="f-customer" class="text-sm font-medium">{{ t('Customer') }}</label>
-                <select id="f-customer" v-model="customerId" :class="controlClass">
-                    <option value="">{{ t('All customers') }}</option>
-                    <option v-for="s in customers" :key="s.id" :value="String(s.id)">{{ s.code }} — {{ s.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-customer"
+                    v-model="customerId"
+                    :options="[{ value: '', label: t('All customers') }, ...(customers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">{{ t('All statuses') }}</option>
-                    <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-status"
+                    v-model="status"
+                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+                />
             </div>
         </div>
 

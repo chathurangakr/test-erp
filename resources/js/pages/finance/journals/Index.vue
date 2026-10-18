@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
 import type { JournalRow, Paginated, StatusOption } from '@/types';
@@ -80,17 +81,19 @@ const { t } = useT();
             </div>
             <div class="grid gap-1.5">
                 <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <select id="f-status" v-model="status" :class="controlClass">
-                    <option value="">{{ t('All statuses') }}</option>
-                    <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-status"
+                    v-model="status"
+                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-1.5">
                 <label for="f-period" class="text-sm font-medium">{{ t('Fiscal period') }}</label>
-                <select id="f-period" v-model="periodId" :class="controlClass">
-                    <option value="">{{ t('All periods') }}</option>
-                    <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-period"
+                    v-model="periodId"
+                    :options="[{ value: '', label: t('All periods') }, ...(periods).map((p) => ({ value: String(p.id), label: `${(p.name) ?? ''}` }))]"
+                />
             </div>
         </div>
 

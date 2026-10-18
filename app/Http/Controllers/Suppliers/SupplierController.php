@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Suppliers;
 
+use App\Actions\Masters\CreateSupplier;
 use App\Enums\GoodsReceiptStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Suppliers\StoreSupplierRequest;
@@ -53,14 +54,17 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(CreateSupplier $createSupplier): Response
     {
-        return Inertia::render('suppliers/Create');
+        return Inertia::render('suppliers/Create', [
+            // A preview only: the code is taken when the supplier is saved.
+            'nextCode' => $createSupplier->nextCode(),
+        ]);
     }
 
-    public function store(StoreSupplierRequest $request): RedirectResponse
+    public function store(StoreSupplierRequest $request, CreateSupplier $createSupplier): RedirectResponse
     {
-        $supplier = Supplier::create($request->validated());
+        $supplier = $createSupplier->handle($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Supplier created.')]);
 

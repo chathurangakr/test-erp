@@ -14,7 +14,7 @@ class StoreCustomerRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if ($this->has('code')) {
+        if (filled($this->input('code'))) {
             $this->merge(['code' => mb_strtoupper(trim((string) $this->input('code')))]);
         }
     }
@@ -25,7 +25,8 @@ class StoreCustomerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:50', Rule::unique('customers', 'code')],
+            // Blank = the next code in sequence (CreateCustomer).
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('customers', 'code')],
             'name' => ['required', 'string', 'max:150'],
             'credit_limit' => ['required', 'numeric', new Money, 'min:0', 'max:9999999999999.99'],
             'credit_days' => ['required', 'integer', 'min:0', 'max:3650'],

@@ -41,12 +41,13 @@ class ProductionRecipeSeeder extends Seeder
      * ratio, because there is no fixed conversion from husks to KG or litres. (Version 1
      * consumed husk at production and split 30 / 30 / 40.)
      *
-     * COPRA (version 1, unchanged) mixes measured and derived outputs within one recipe:
+     * COPRA (version 2) mixes measured and derived outputs within one recipe:
      *
      *   COPRA      ratio null   — the operator weighs the copra actually dried
      *   RAW-SHELL  ratio 1.0    — one shell per coconut processed, a confirmed factory rule
-     *              secondary    — the operator ALSO weighs the shell; no NOS-to-KG
-     *                             conversion exists or may be invented
+     *              weight       — OPTIONAL since version 2 (the factory has no scale for
+     *                             shell); recorded when measured, never converted from the
+     *                             count. (Version 1 required the shell weight.)
      *
      * Its 75 / 25 value split is provisional, pending the factory's joint-product costing
      * policy. See docs/BUSINESS_RULES.md §18-§20.
@@ -90,14 +91,14 @@ class ProductionRecipeSeeder extends Seeder
             ],
         ],
         ProductionType::Copra->value => [
-            'version' => 1,
+            'version' => 2,
             'input' => 'DEHUSKED-COCONUT',
             'consumption' => InputConsumption::AtProduction,
             'labour_rate' => null,
             'notes' => 'Allocation percentages are provisional and configurable.',
             'outputs' => [
                 ['code' => 'COPRA', 'ratio' => null, 'percent' => '75.000000'],
-                ['code' => 'RAW-SHELL', 'ratio' => '1.000000', 'percent' => '25.000000', 'secondary' => true],
+                ['code' => 'RAW-SHELL', 'ratio' => '1.000000', 'percent' => '25.000000'],
             ],
         ],
     ];

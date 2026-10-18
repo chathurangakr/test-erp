@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import { profitLoss } from '@/routes/reports';
 import type { ProfitLossStatement } from '@/types';
@@ -37,8 +38,6 @@ watch([periodId, from, to], () => {
     );
 });
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -57,10 +56,11 @@ const selectClass =
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
                 <Label for="period">{{ t('Fiscal period') }}</Label>
-                <select id="period" v-model="periodId" :class="selectClass">
-                    <option value="">{{ t('All — use dates') }}</option>
-                    <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="period"
+                    v-model="periodId"
+                    :options="[{ value: '', label: t('All — use dates') }, ...(periods).map((p) => ({ value: String(p.id), label: `${(p.name) ?? ''}` }))]"
+                />
             </div>
             <div class="grid gap-2">
                 <Label for="from">{{ t('From') }}</Label>

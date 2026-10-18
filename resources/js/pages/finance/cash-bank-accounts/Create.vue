@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index } from '@/routes/cash-bank-accounts';
 import { useT } from '@/lib/i18n';
 
@@ -39,8 +40,6 @@ function submit(): void {
     form.post(index().url, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -56,12 +55,13 @@ const selectClass =
             <section class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2 sm:col-span-2">
                     <Label for="account_id">{{ t('Ledger account') }} <span class="text-destructive">*</span></Label>
-                    <select id="account_id" v-model="form.account_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select an asset account…') }}</option>
-                        <option v-for="a in props.availableAccounts" :key="a.id" :value="a.id">
-                            {{ a.code }} — {{ a.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="account_id"
+                        v-model="form.account_id"
+                        required
+                        :options="[...(props.availableAccounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                        :placeholder="t('Select an asset account…')"
+                    />
                     <InputError :message="form.errors.account_id" />
                     <p class="text-muted-foreground text-xs">
                         {{ t('Only active asset accounts that are not control accounts or group headers appear here, and each may be configured once.') }}
@@ -70,9 +70,12 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="account_kind">{{ t('Kind') }} <span class="text-destructive">*</span></Label>
-                    <select id="account_kind" v-model="form.account_kind" required :class="selectClass">
-                        <option v-for="k in props.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
-                    </select>
+                    <SearchableSelect
+                        id="account_kind"
+                        v-model="form.account_kind"
+                        required
+                        :options="[...(props.kinds).map((k) => ({ value: k.value, label: `${(k.label) ?? ''}` }))]"
+                    />
                     <InputError :message="form.errors.account_kind" />
                 </div>
 

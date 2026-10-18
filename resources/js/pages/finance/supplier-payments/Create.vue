@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { create, index } from '@/routes/supplier-payments';
 import PaymentMethodFields from '@/components/finance/PaymentMethodFields.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { AccountOption, OptionRef, PaymentMethodOption, OutstandingInvoice } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -107,8 +108,6 @@ function submit(): void {
         .post(index().url, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -126,12 +125,13 @@ const { t } = useT();
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="grid gap-2">
                     <Label for="supplier">{{ t('Supplier') }} <span class="text-destructive">*</span></Label>
-                    <select id="supplier" v-model="supplierId" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a supplier…') }}</option>
-                        <option v-for="s in suppliers" :key="s.id" :value="String(s.id)">
-                            {{ s.code }} — {{ s.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="supplier"
+                        v-model="supplierId"
+                        required
+                        :options="[...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
+                        :placeholder="t('Select a supplier…')"
+                    />
                     <InputError :message="form.errors.supplier_id" />
                 </div>
 
@@ -143,12 +143,13 @@ const { t } = useT();
 
                 <div class="grid gap-2">
                     <Label for="payment_account_id">{{ t('Paid from') }} <span class="text-destructive">*</span></Label>
-                    <select id="payment_account_id" v-model="form.payment_account_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Cash or bank…') }}</option>
-                        <option v-for="a in accountChoices" :key="a.id" :value="a.id">
-                            {{ a.code }} — {{ a.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="payment_account_id"
+                        v-model="form.payment_account_id"
+                        required
+                        :options="[...(accountChoices).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                        :placeholder="t('Cash or bank…')"
+                    />
                     <InputError :message="form.errors.payment_account_id" />
                 </div>
 

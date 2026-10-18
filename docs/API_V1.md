@@ -293,7 +293,7 @@ Posting the same receipt again:
 | Session & meta | GET | `/api/v1/meta` | signed in |
 | Session & meta | GET | `/api/v1/kiosk/options` | signed in (sections filtered by permission, §18) |
 | Master data | GET | `/api/v1/customers` | `customers.view` |
-| Master data | POST | `/api/v1/customers` | `customers.manage` |
+| Master data | POST | `/api/v1/customers` | `customers.manage` — `code` optional: left out, the next `CUS-nnn` is assigned (1.6.0) |
 | Master data | GET | `/api/v1/customers/{customer}` | `customers.view` |
 | Master data | PUT | `/api/v1/customers/{customer}` | `customers.manage` |
 | Master data | POST | `/api/v1/customers/{customer}/status` | `customers.manage` |
@@ -303,7 +303,7 @@ Posting the same receipt again:
 | Master data | PUT | `/api/v1/products/{product}` | `products.manage` |
 | Master data | POST | `/api/v1/products/{product}/status` | `products.manage` |
 | Master data | GET | `/api/v1/suppliers` | `suppliers.view` |
-| Master data | POST | `/api/v1/suppliers` | `suppliers.manage` |
+| Master data | POST | `/api/v1/suppliers` | `suppliers.manage` — `code` optional: left out, the next `SUP-nnn` is assigned (1.6.0) |
 | Master data | GET | `/api/v1/suppliers/{supplier}` | `suppliers.view` |
 | Master data | PUT | `/api/v1/suppliers/{supplier}` | `suppliers.manage` |
 | Master data | POST | `/api/v1/suppliers/{supplier}/status` | `suppliers.manage` |

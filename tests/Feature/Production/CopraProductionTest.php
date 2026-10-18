@@ -239,10 +239,10 @@ class CopraProductionTest extends TestCase
         $this->assertFalse($outputs[$this->copra->id]->derivesQuantity());
         $this->assertFalse($outputs[$this->copra->id]->requires_secondary_quantity);
 
-        // Shell: one per coconut, and its weight must be measured.
+        // Shell: one per coconut; its weight is optional since recipe version 2 (no scale).
         $this->assertSame('1.000000', $outputs[$this->shell->id]->output_ratio);
         $this->assertTrue($outputs[$this->shell->id]->derivesQuantity());
-        $this->assertTrue($outputs[$this->shell->id]->requires_secondary_quantity);
+        $this->assertFalse($outputs[$this->shell->id]->requires_secondary_quantity);
     }
 
     #[Test]
@@ -603,14 +603,16 @@ class CopraProductionTest extends TestCase
     }
 
     #[Test]
-    public function a_missing_shell_weight_is_rejected(): void
+    public function a_run_without_a_shell_weight_posts_with_the_shell_count_only(): void
     {
         $lot = $this->lotFor($this->dehusked);
         $this->receive('5000.000', '87.125000', $lot);
 
-        $this->expectException(ValidationException::class);
+        $order = $this->dry($this->draftOrder('1000.000', $lot, '190.500', null));
 
-        $this->dry($this->draftOrder('1000.000', $lot, '190.500', null));
+        $shell = $order->outputs->firstWhere('product_id', $this->shell->id);
+        $this->assertSame('1000.000', $shell->quantity, 'One shell per coconut, as always.');
+        $this->assertNull($shell->secondary_quantity, 'No weight is invented from the count.');
     }
 
     #[Test]

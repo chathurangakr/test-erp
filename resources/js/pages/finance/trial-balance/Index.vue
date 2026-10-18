@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index } from '@/routes/trial-balance';
 import type { TrialBalanceReport } from '@/types';
@@ -55,10 +56,11 @@ const { t } = useT();
             </div>
             <div class="grid gap-1.5">
                 <label for="f-period" class="text-sm font-medium">{{ t('Fiscal period') }}</label>
-                <select id="f-period" v-model="periodId" :class="controlClass">
-                    <option value="">{{ t('All periods') }}</option>
-                    <option v-for="p in periods" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="f-period"
+                    v-model="periodId"
+                    :options="[{ value: '', label: t('All periods') }, ...(periods).map((p) => ({ value: String(p.id), label: `${(p.name) ?? ''}` }))]"
+                />
             </div>
         </div>
 

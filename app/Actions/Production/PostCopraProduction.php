@@ -348,10 +348,9 @@ class PostCopraProduction
 
     private function resolveSecondaryQuantity(ProductionOutput $output, ProductionRecipeOutput $config, int $index): void
     {
-        if (! $config->requires_secondary_quantity) {
-            // Nothing asked for a second measurement, so none is kept.
-            $output->secondary_quantity = null;
-
+        if (! $config->requires_secondary_quantity && $output->secondary_quantity === null) {
+            // Optional and not measured: no weight is kept, and none is ever derived from the
+            // count. A weight that WAS entered is checked below exactly like a required one.
             return;
         }
 

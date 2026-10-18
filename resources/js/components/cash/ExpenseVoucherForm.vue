@@ -6,6 +6,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import type { CashBankAccountOption, OptionRef } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { useT } from '@/lib/i18n';
@@ -84,8 +85,6 @@ function submit(): void {
     }))[props.method](props.submitUrl, { preserveScroll: true });
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 </script>
 
 <template>
@@ -99,12 +98,13 @@ const selectClass =
 
             <div class="grid gap-2">
                 <Label for="cash_bank_account_id">{{ t('Paid from') }} <span class="text-destructive">*</span></Label>
-                <select id="cash_bank_account_id" v-model="form.cash_bank_account_id" required :class="selectClass">
-                    <option value="" disabled>{{ t('Cash or bank…') }}</option>
-                    <option v-for="a in accounts" :key="a.id" :value="a.id">
-                        {{ a.code }} — {{ a.name }} ({{ a.kind }})
-                    </option>
-                </select>
+                <SearchableSelect
+                    id="cash_bank_account_id"
+                    v-model="form.cash_bank_account_id"
+                    required
+                    :options="[...(accounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name} (${a.kind})` }))]"
+                    :placeholder="t('Cash or bank…')"
+                />
                 <InputError :message="form.errors.cash_bank_account_id" />
             </div>
 
@@ -116,10 +116,11 @@ const selectClass =
 
             <div class="grid gap-2">
                 <Label for="supplier_id">{{ t('Supplier (optional)') }}</Label>
-                <select id="supplier_id" v-model="form.supplier_id" :class="selectClass">
-                    <option value="">{{ t('None') }}</option>
-                    <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.code }} — {{ s.name }}</option>
-                </select>
+                <SearchableSelect
+                    id="supplier_id"
+                    v-model="form.supplier_id"
+                    :options="[{ value: '', label: t('None') }, ...(suppliers).map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))]"
+                />
                 <InputError :message="form.errors.supplier_id" />
                 <p class="text-muted-foreground text-xs">{{ t('Recorded for reporting. This raises no payable.') }}</p>
             </div>
@@ -163,12 +164,12 @@ const selectClass =
                             class="border-sidebar-border/70 dark:border-sidebar-border border-t"
                         >
                             <td class="px-4 py-3">
-                                <select v-model="line.expense_account_id" required :class="selectClass">
-                                    <option value="" disabled>{{ t('Select…') }}</option>
-                                    <option v-for="a in expenseAccounts" :key="a.id" :value="a.id">
-                                        {{ a.code }} — {{ a.name }}
-                                    </option>
-                                </select>
+                                <SearchableSelect
+                                    v-model="line.expense_account_id"
+                                    required
+                                    :options="[...(expenseAccounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))]"
+                                    :placeholder="t('Select…')"
+                                />
                                 <InputError :message="form.errors[`lines.${index}.expense_account_id`]" />
                             </td>
                             <td class="px-4 py-3">

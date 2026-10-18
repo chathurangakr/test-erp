@@ -182,7 +182,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 26 | Copra input | **Dehusked Coconut in `NOS`** from a chosen warehouse — pooled stock, no lot. |
 | 27 | Copra output | **Measured, never derived.** The operator enters the actual copra KG. There is **no** coconut-to-KG ratio in the recipe, so none can be applied. |
 | 28 | Raw shell count | **Derived 1:1** — one shell per coconut processed. Held as recipe configuration, never typed; a submitted figure is **refused**, and the server recalculates it regardless. |
-| 29 | Raw shell weight | **Measured and required.** No NOS↔KG conversion exists. Recorded as the inventory secondary quantity. |
+| 29 | Raw shell weight | **Measured when a scale is available; optional since 2026-10-18** (copra recipe v2). No NOS↔KG conversion exists. Recorded as the inventory secondary quantity. |
 | 30 | Raw shell valuation | Costed against its **primary `NOS` quantity**. A per-KG figure may be displayed, clearly labelled **informational**; it is never stored and never used as a weighted average. |
 | 31 | Copra cost split | **Configurable fixed percentages**, currently 75% copra / 25% shell — provisional. Must total 100%. |
 | 32 | Drying / moisture loss | **Not modelled in version 1.** No waste product, no mass-balance between NOS input and KG output, no loss quantity captured. |

@@ -130,11 +130,11 @@ prevention, and **no fixed NOS↔KG conversion exists**.
 
 ### A business process may still require a weight
 
-"Informational" describes the **engine**, not every process that feeds it. Copra production
-requires the measured shell weight and refuses a run without one, because the factory sells
-shell by weight and a shell lot with no weight is useless. That requirement lives in the
-copra form request and posting action; the engine's behaviour is unchanged. See
-`BUSINESS_RULES.md` §20.
+"Informational" describes the **engine**, not every process that feeds it. Copra recipe
+version 1 required the measured shell weight; version 2 (2026-10-18) makes it optional because
+the factory has no scale for shell. The rule lives in the recipe's `requires_secondary_quantity`
+flag, checked by the copra form request and posting action; the engine's behaviour is
+unchanged. See `BUSINESS_RULES.md` §20.
 
 ### Value always follows the primary quantity
 

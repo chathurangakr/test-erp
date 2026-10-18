@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
 import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
 import { businessToday } from '@/lib/businessDate';
@@ -103,8 +104,6 @@ function submit(): void {
     );
 }
 
-const selectClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <template>
@@ -122,12 +121,13 @@ const selectClass =
 
                 <div class="grid gap-2">
                     <Label for="warehouse_id">{{ t('Warehouse') }} <span class="text-destructive">*</span></Label>
-                    <select id="warehouse_id" v-model="form.warehouse_id" required :class="selectClass">
-                        <option value="" disabled>{{ t('Select a warehouse…') }}</option>
-                        <option v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                            {{ w.code }} — {{ w.name }}
-                        </option>
-                    </select>
+                    <SearchableSelect
+                        id="warehouse_id"
+                        v-model="form.warehouse_id"
+                        required
+                        :options="[...(warehouses).map((w) => ({ value: String(w.id), label: `${w.code} — ${w.name}` }))]"
+                        :placeholder="t('Select a warehouse…')"
+                    />
                     <InputError :message="form.errors.warehouse_id" />
                 </div>
             </div>
@@ -147,20 +147,14 @@ const selectClass =
             <div class="grid gap-4 sm:grid-cols-2">
                 <div v-if="usesLots" class="grid gap-2">
                     <Label for="lot_id">{{ t('Coconut lot') }} <span class="text-destructive">*</span></Label>
-                    <select
+                    <SearchableSelect
                         id="lot_id"
                         v-model="form.lot_id"
                         required
                         :disabled="!form.warehouse_id"
-                        :class="selectClass"
-                    >
-                        <option value="" disabled>
-                            {{ form.warehouse_id ? 'Select a lot…' : 'Choose a warehouse first' }}
-                        </option>
-                        <option v-for="lot in availableLots" :key="lot.id" :value="String(lot.id)">
-                            {{ lot.lot_number }}
-                        </option>
-                    </select>
+                        :options="[...(availableLots).map((lot) => ({ value: String(lot.id), label: `${(lot.lot_number) ?? ''}` }))]"
+                        :placeholder="form.warehouse_id ? t('Select a lot…') : t('Choose a warehouse first')"
+                    />
                     <p v-if="selectedLotQuantity" class="text-muted-foreground text-xs">
                         {{ t('Available in this lot:') }}
                         <span class="font-mono">{{ selectedLotQuantity }}</span>
