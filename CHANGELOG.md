@@ -4,6 +4,11 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.5.1 — 18 October 2026
+
+- **Employee codes are numbered automatically** — EMP-001, EMP-002, EMP-003 … — when an employee
+  is added. Nobody types a code, and a code never changes.
+
 ## 1.5.0 — 18 October 2026
 
 - **Payroll (new section in the menu).**

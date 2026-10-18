@@ -316,6 +316,29 @@ class PayrollTest extends TestCase
     }
 
     #[Test]
+    public function employees_are_numbered_in_sequence_and_keep_their_code(): void
+    {
+        $this->actingAs($this->user);
+        $details = ['daily_rate' => '1800', 'is_active' => true];
+
+        $this->get(route('employees.create'))->assertInertia(fn ($page) => $page->where('nextCode', 'EMP-001'));
+
+        $this->post(route('employees.store'), ['name' => 'Kamal'] + $details)->assertSessionHasNoErrors();
+        $this->post(route('employees.store'), ['name' => 'Nimal', 'code' => 'BOSS-1'] + $details)->assertSessionHasNoErrors();
+
+        $this->assertSame(['EMP-001', 'EMP-002'], Employee::query()->orderBy('id')->pluck('code')->all());
+
+        // Numbering continues from the highest number, and a code is never changed.
+        Employee::factory()->create(['code' => 'EMP-041']);
+        $nimal = Employee::query()->where('name', 'Nimal')->firstOrFail();
+        $this->put(route('employees.update', $nimal), ['name' => 'Nimal P', 'code' => 'EMP-999'] + $details)->assertSessionHasNoErrors();
+
+        $this->assertSame('EMP-002', $nimal->fresh()->code);
+        $this->post(route('employees.store'), ['name' => 'Saman'] + $details);
+        $this->assertSame('EMP-042', Employee::query()->where('name', 'Saman')->value('code'));
+    }
+
+    #[Test]
     public function the_attendance_register_saves_a_whole_day_from_the_screen(): void
     {
         [$a, $b] = Employee::factory()->count(2)->create();

@@ -8,10 +8,9 @@ import { index, store, update } from '@/routes/employees';
 import type { EmployeeDetail } from '@/types';
 import { useT } from '@/lib/i18n';
 
-const props = defineProps<{ employee?: EmployeeDetail }>();
+const props = defineProps<{ employee?: EmployeeDetail; nextCode?: string }>();
 
 const form = useForm({
-    code: props.employee?.code ?? '',
     name: props.employee?.name ?? '',
     nic: props.employee?.nic ?? '',
     phone: props.employee?.phone ?? '',
@@ -33,8 +32,8 @@ const { t } = useT();
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
                 <Label for="code">{{ t('Code') }}</Label>
-                <Input id="code" v-model="form.code" required maxlength="30" placeholder="EMP-001" />
-                <InputError :message="form.errors.code" />
+                <Input id="code" :model-value="employee?.code ?? nextCode ?? ''" disabled class="font-mono" />
+                <p v-if="!employee" class="text-muted-foreground text-xs">{{ t('Given automatically when you save.') }}</p>
             </div>
             <div class="grid gap-2">
                 <Label for="name">{{ t('Name') }}</Label>

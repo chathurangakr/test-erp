@@ -5,6 +5,8 @@ import EmployeeForm from '@/components/payroll/EmployeeForm.vue';
 import { index } from '@/routes/employees';
 import { useT } from '@/lib/i18n';
 
+defineProps<{ nextCode: string }>();
+
 defineOptions({ layout: { breadcrumbs: [{ title: 'Employees', href: index() }] } });
 
 const { t } = useT();
@@ -15,6 +17,6 @@ const { t } = useT();
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="Add employee" description="Someone the factory pays by the day." />
-        <EmployeeForm />
+        <EmployeeForm :next-code="nextCode" />
     </div>
 </template>

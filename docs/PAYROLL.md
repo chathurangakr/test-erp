@@ -18,7 +18,8 @@ out each month's pay, takes back salary advances, and posts every payment to the
 
 ## The records
 
-- **Employee** (`employees`) — a master: code (unique, uppercase), name, NIC, phone, daily rate,
+- **Employee** (`employees`) — a master: code (**assigned automatically** by `CreateEmployee` —
+  `EMP-001`, `EMP-002`… from `config/payroll.php`; never typed, never changed), name, NIC, phone, daily rate,
   joined date, active flag. Deactivated, never deleted. **No balance column**: what an employee
   earned or owes is always derived.
 - **Attendance** (`employee_attendances`) — one row per employee per day: `FULL_DAY`, `HALF_DAY`

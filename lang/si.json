@@ -1869,5 +1869,6 @@
     "No wages account is configured. Choose one in Accounting Setup before paying salaries.": "වේතන ගිණුමක් සකසා නැත. වැටුප් ගෙවීමට පෙර ගිණුම් සැකසුමෙහි (Accounting Setup) එකක් තෝරන්න.",
     "Wages": "වේතන",
     "No employee advances account is configured. Choose one in Accounting Setup before paying advances or salaries.": "සේවක අත්තිකාරම් ගිණුමක් සකසා නැත. අත්තිකාරම් හෝ වැටුප් ගෙවීමට පෙර ගිණුම් සැකසුමෙහි (Accounting Setup) එකක් තෝරන්න.",
-    "Employee advances": "සේවක අත්තිකාරම්"
+    "Employee advances": "සේවක අත්තිකාරම්",
+    "Given automatically when you save.": "සුරකින විට ස්වයංක්‍රීයව ලබා දේ."
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Payroll;
 
+use App\Actions\Payroll\CreateEmployee;
 use App\Enums\PayrollDocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\EmployeeRequest;
@@ -49,14 +50,17 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(CreateEmployee $createEmployee): Response
     {
-        return Inertia::render('payroll/employees/Create');
+        return Inertia::render('payroll/employees/Create', [
+            // A preview only: the code is taken when the employee is saved.
+            'nextCode' => $createEmployee->nextCode(),
+        ]);
     }
 
-    public function store(EmployeeRequest $request): RedirectResponse
+    public function store(EmployeeRequest $request, CreateEmployee $createEmployee): RedirectResponse
     {
-        $employee = Employee::create($request->validated());
+        $employee = $createEmployee->handle($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Employee added.')]);
 
