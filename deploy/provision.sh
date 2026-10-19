@@ -532,6 +532,14 @@ server {
         try_files \$uri =404;
     }
 
+    # The API is refused over plain HTTP, never redirected: a redirect would let a wrongly set
+    # up app keep working while its bearer token crossed the network unencrypted every time.
+    # (The ERP itself refuses it too — app/Http/Middleware/RequireHttpsForApi.php.)
+    location ^~ /api/ {
+        default_type application/json;
+        return 403 '{"message":"The API is only available over HTTPS."}';
+    }
+
     location / {
         return 301 https://\$host${redirect_port}\$request_uri;
     }

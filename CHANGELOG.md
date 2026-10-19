@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.11.1 — 19 October 2026
+
+- **The API refuses plain HTTP outright.** A phone app pointed at an `http://` address now gets a
+  clear "only available over HTTPS" error instead of being quietly redirected, so a wrongly set
+  up app is noticed at once and its sign-in token never keeps crossing the network unprotected.
+  Websites typed with `http://` are still sent to `https://` as before.
+
 ## 1.11.0 — 19 October 2026
 
 - **Payroll in the mobile API.** The phone app can now work with employees, the daily attendance

@@ -274,7 +274,10 @@ Posting the same receipt again:
 - Base URL like `https://erp.example.com/api/v1` on a real domain with a **trusted TLS
   certificate**. No base URL is written into Laravel business code.
 - `API_REQUIRE_HTTPS` defaults to on when `APP_ENV=production`: plain-HTTP API calls are
-  refused (403), never redirected — a redirect would already have exposed the token.
+  refused (403), never redirected — a redirect would already have exposed the token. Nginx
+  (written by `deploy/provision.sh`) answers `/api/` on the plain-HTTP port with the same JSON 403
+  before Laravel is reached, so a wrongly set up `http://` base URL fails at once instead of
+  silently following a redirect.
 - `APP_DEBUG=false`, so errors reveal nothing internal.
 - **CORS is closed by default.** The native app does not use browser CORS. A future browser
   client must be listed in `CORS_ALLOWED_ORIGINS`; credentials are never allowed cross-origin.
