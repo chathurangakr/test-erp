@@ -32,7 +32,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('administration/company', [CompanyProfileController::class, 'update'])
         ->name('company.update')
         ->can(Permission::CompanyManage);
-
-    // The logo on every printout. Open to any signed-in user: it is not business data.
-    Route::get('company/logo', [CompanyProfileController::class, 'logo'])->name('company.logo');
 });

@@ -3,10 +3,12 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { useChartsVisible } from '@/composables/useChartsVisible';
 import { useT } from '@/lib/i18n';
 import { show as deliveryShow } from '@/routes/deliveries';
 import { productProfitability, profitLoss } from '@/routes/reports';
@@ -33,6 +35,7 @@ defineOptions({
 });
 
 const { t } = useT();
+const { chartsVisible } = useChartsVisible();
 
 const from = ref(props.filters.from ?? '');
 const to = ref(props.filters.to ?? '');
@@ -77,7 +80,10 @@ const profitByProduct = computed(() =>
                 title="Operational product profitability"
                 description="Was each physical sale profitable? Built from posted deliveries — not the financial P&L."
             />
-            <PrintButton />
+            <div class="flex gap-2">
+                <ChartsButton />
+                <PrintButton />
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-4">
@@ -134,7 +140,7 @@ const profitByProduct = computed(() =>
             </div>
         </div>
 
-        <div v-if="profitByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+        <div v-if="chartsVisible && profitByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
             <h3 class="mb-3 text-sm font-medium">{{ t('Gross profit by product (:currency)', { currency }) }}</h3>
             <BarList :rows="profitByProduct" :chart-label="t('Gross profit by product (:currency)', { currency })" />
         </div>

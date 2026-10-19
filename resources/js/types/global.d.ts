@@ -26,6 +26,8 @@ declare module '@inertiajs/core' {
             businessToday: string;
             /** The letterhead for printouts; null when signed out. */
             company: CompanyLetterhead | null;
+            /** The uploaded company logo, shown to everyone including the sign-in screen. */
+            brandLogoUrl: string | null;
             /** Present on simple-mode (kiosk) pages only. */
             kiosk?: {
                 locale: 'si' | 'en';

@@ -40,7 +40,7 @@ class CompanyProfileController extends Controller
     }
 
     /**
-     * The logo image, for letterheads. Not business data, so any signed-in user may load it.
+     * The logo image, for letterheads and the sign-in screen. Not business data, so anyone may load it.
      */
     public function logo(): HttpResponse
     {

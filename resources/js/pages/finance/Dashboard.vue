@@ -5,6 +5,7 @@ import ColumnChart from '@/components/charts/ColumnChart.vue';
 import StackedBar from '@/components/charts/StackedBar.vue';
 import WaterfallChart from '@/components/charts/WaterfallChart.vue';
 import Heading from '@/components/Heading.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,7 @@ import {
     profitLoss,
 } from '@/routes/reports';
 import type { AgingSummary, FinanceDashboardSummary } from '@/types';
+import { useChartsVisible } from '@/composables/useChartsVisible';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 
@@ -34,6 +36,7 @@ const props = defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'Finance dashboard', href: financeDashboardIndex() }] } });
 
 const { t } = useT();
+const { chartsVisible } = useChartsVisible();
 
 const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
 const from = ref(props.filters.from ?? '');
@@ -177,7 +180,10 @@ const counterpartyLists = computed(() => [
                         : t('Performance from :from to :to; position as at :to.', { from: summary.period.from ?? t('the beginning'), to: summary.period.to ?? t('today') })
                 "
             />
-            <PrintButton />
+            <div class="flex gap-2">
+                <ChartsButton />
+                <PrintButton />
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
@@ -224,7 +230,7 @@ const counterpartyLists = computed(() => [
             </div>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
+        <div v-if="chartsVisible" class="grid gap-4 lg:grid-cols-2">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                 <h3 class="text-sm font-medium">{{ t('From revenue to net profit') }}</h3>
                 <p class="text-muted-foreground mb-3 text-xs">{{ t('What each cost takes out of revenue in this window.') }}</p>
@@ -281,7 +287,7 @@ const counterpartyLists = computed(() => [
                     <Link :href="table.href" class="text-muted-foreground text-xs hover:underline">{{ t('Detail →') }}</Link>
                 </div>
                 <StackedBar
-                    v-if="Number(table.aging.total) > 0"
+                    v-if="chartsVisible && Number(table.aging.total) > 0"
                     class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3"
                     :segments="agingBuckets.map((bucket) => ({ key: bucket.key, label: bucket.label, value: Number(table.aging[bucket.key]), display: money(table.aging[bucket.key]) }))"
                     :chart-label="table.title"

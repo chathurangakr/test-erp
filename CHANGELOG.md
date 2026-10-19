@@ -4,6 +4,15 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.9.1 — 19 October 2026
+
+- **The company logo on the sign-in page.** The logo from Administration → Company details now
+  shows on the sign-in screens too. Only the logo is shown before signing in; the company's
+  other details still need a sign-in.
+- **Charts can be hidden.** Screens with charts have a **Hide charts / Show charts** button next to
+  Print, and Settings → Appearance has a **Charts** switch. Each computer or phone remembers its
+  own choice; the tables always stay.
+
 ## 1.9.0 — 19 October 2026
 
 - **Charts.** The finance dashboard shows how revenue becomes net profit, revenue against costs

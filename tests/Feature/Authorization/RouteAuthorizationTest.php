@@ -63,8 +63,6 @@ class RouteAuthorizationTest extends TestCase
         // switch only sets a cookie. Every job route behind them requires a permission.
         'kiosk.home',
         'kiosk.language',
-        // The company logo printed on letterheads — not business data.
-        'company.logo',
     ];
 
     /**

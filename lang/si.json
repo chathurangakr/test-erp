@@ -1922,5 +1922,9 @@
     "Costs": "පිරිවැය",
     "What each cost takes out of revenue in this window.": "මෙම කාලය තුළ එක් එක් පිරිවැය ආදායමෙන් අඩු කරන ප්‍රමාණය.",
     "Revenue and costs, last 6 months": "ආදායම සහ පිරිවැය, පසුගිය මාස 6",
-    "Costs are cost of sales plus operating expenses. Point at a month for its net profit.": "පිරිවැය යනු විකුණුම් පිරිවැය සහ මෙහෙයුම් වියදම් ය. මාසයක ශුද්ධ ලාභය බැලීමට එය මතට යොමු කරන්න."
+    "Costs are cost of sales plus operating expenses. Point at a month for its net profit.": "පිරිවැය යනු විකුණුම් පිරිවැය සහ මෙහෙයුම් වියදම් ය. මාසයක ශුද්ධ ලාභය බැලීමට එය මතට යොමු කරන්න.",
+    "Charts": "ප්‍රස්තාර (Charts)",
+    "Show charts": "ප්‍රස්තාර පෙන්වන්න",
+    "Hide charts": "ප්‍රස්තාර සඟවන්න",
+    "Show charts above the tables on the finance dashboard and reports. Only for this device.": "මූල්‍ය උපකරණ පුවරුවේ සහ වාර්තාවල වගු ඉහළින් ප්‍රස්තාර පෙන්වන්න. මෙම උපාංගයට පමණි."
 }

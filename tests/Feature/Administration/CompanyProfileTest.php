@@ -66,6 +66,23 @@ class CompanyProfileTest extends TestCase
     }
 
     #[Test]
+    public function the_sign_in_screen_shows_the_logo_but_no_other_company_details(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())->put(route('company.update'), [
+            'name' => 'True Line Company',
+            'phone' => '011 234 5678',
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+        ]);
+        auth()->logout();
+
+        $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('brandLogoUrl', fn (?string $url) => str_starts_with((string) $url, '/company/logo'))
+            ->where('company', null));
+
+        $this->get(route('company.logo'))->assertOk()->assertHeader('Content-Type', 'image/png');
+    }
+
+    #[Test]
     public function saving_without_a_new_logo_keeps_the_old_one_and_removing_clears_it(): void
     {
         $admin = User::factory()->admin()->create();

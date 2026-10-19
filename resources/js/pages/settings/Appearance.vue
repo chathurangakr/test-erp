@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import AppearanceTabs from '@/components/AppearanceTabs.vue';
 import BeautyModeToggle from '@/components/BeautyModeToggle.vue';
+import ChartsModeToggle from '@/components/ChartsModeToggle.vue';
 import Heading from '@/components/Heading.vue';
 import { edit } from '@/routes/appearance';
 import { useT } from '@/lib/i18n';
@@ -33,5 +34,6 @@ const { t } = useT();
         />
         <AppearanceTabs />
         <BeautyModeToggle />
+        <ChartsModeToggle />
     </div>
 </template>

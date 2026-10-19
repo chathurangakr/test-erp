@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import BrandLogo from '@/components/BrandLogo.vue';
 import { home } from '@/routes';
 import { useT } from '@/lib/i18n';
 
@@ -27,7 +27,7 @@ const { t } = useT();
                 :href="home()"
                 class="relative z-20 flex items-center text-lg font-medium"
             >
-                <AppLogoIcon class="mr-2 size-8 fill-current text-white" />
+                <BrandLogo class="mr-2 size-8" icon-class="mr-2 size-8 fill-current text-white" />
                 {{ name }}
             </Link>
         </div>

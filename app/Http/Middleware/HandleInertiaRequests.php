@@ -57,6 +57,8 @@ class HandleInertiaRequests extends Middleware
             'locale' => App::getLocale(),
             // The letterhead printed on invoices and reports (the logo is fetched by its URL).
             'company' => fn (): ?array => $request->user() === null ? null : CompanyProfile::current()->letterhead(),
+            // Only the logo, for everyone: the sign-in screen shows it before anyone signs in.
+            'brandLogoUrl' => fn (): ?string => CompanyProfile::current()->letterhead()['logo_url'],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

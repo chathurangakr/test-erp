@@ -3,10 +3,12 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useChartsVisible } from '@/composables/useChartsVisible';
 import { useT } from '@/lib/i18n';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { cashBankPosition } from '@/routes/reports';
@@ -22,6 +24,7 @@ const props = defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'Cash / bank position', href: cashBankPosition() }] } });
 
 const { t } = useT();
+const { chartsVisible } = useChartsVisible();
 
 const asOf = ref(props.filters.as_of ?? '');
 const showInactive = ref(props.filters.show_inactive);
@@ -67,7 +70,10 @@ const balances = computed(() =>
                 title="Cash / bank position"
                 :description="filters.as_of ? t('Money held, as at :date.', { date: filters.as_of }) : t('Money held, as at today.')"
             />
-            <PrintButton />
+            <div class="flex gap-2">
+                <ChartsButton />
+                <PrintButton />
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
@@ -96,7 +102,7 @@ const balances = computed(() =>
             </div>
         </div>
 
-        <div v-if="balances.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+        <div v-if="chartsVisible && balances.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
             <h3 class="mb-3 text-sm font-medium">{{ t('Balance by account (:currency)', { currency }) }}</h3>
             <BarList :rows="balances" :chart-label="t('Balance by account (:currency)', { currency })" />
         </div>

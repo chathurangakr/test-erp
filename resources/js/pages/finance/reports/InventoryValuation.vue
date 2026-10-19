@@ -3,9 +3,11 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { useChartsVisible } from '@/composables/useChartsVisible';
 import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
@@ -24,6 +26,7 @@ const props = defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'Inventory valuation', href: inventoryValuation() }] } });
 
 const { t } = useT();
+const { chartsVisible } = useChartsVisible();
 
 const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
 const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
@@ -74,7 +77,10 @@ const valueByProduct = computed(() => {
                 title="Inventory valuation"
                 description="What the stock is worth, from the inventory ledger."
             />
-            <PrintButton />
+            <div class="flex gap-2">
+                <ChartsButton />
+                <PrintButton />
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
@@ -108,7 +114,7 @@ const valueByProduct = computed(() => {
             <Link :href="inventoryGlReconciliation()" class="underline">{{ t('Inventory vs GL') }}</Link>.
         </div>
 
-        <div v-if="valueByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+        <div v-if="chartsVisible && valueByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
             <h3 class="mb-3 text-sm font-medium">{{ t('Stock value by product (:currency)', { currency }) }}</h3>
             <BarList :rows="valueByProduct" :chart-label="t('Stock value by product (:currency)', { currency })" />
         </div>

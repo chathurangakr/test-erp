@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import BrandLogo from '@/components/BrandLogo.vue';
 import {
     Card,
     CardContent,
@@ -29,9 +29,7 @@ const { t } = useT();
                 class="flex items-center gap-2 self-center font-medium"
             >
                 <div class="flex h-9 w-9 items-center justify-center">
-                    <AppLogoIcon
-                        class="size-9 fill-current text-black dark:text-white"
-                    />
+                    <BrandLogo class="size-9" icon-class="size-9 fill-current text-black dark:text-white" />
                 </div>
             </Link>
 

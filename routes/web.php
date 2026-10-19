@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Administration\CompanyProfileController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,10 @@ Route::redirect('/', '/dashboard')->name('home');
 
 // The language switch — open to guests so the sign-in screen can be switched too.
 Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
+
+// The company logo — open to guests so the sign-in screen can show it. It is what the company
+// prints on its own invoices, not business data.
+Route::get('company/logo', [CompanyProfileController::class, 'logo'])->name('company.logo');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');

@@ -3,11 +3,13 @@ import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import WaterfallChart from '@/components/charts/WaterfallChart.vue';
 import Heading from '@/components/Heading.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { useChartsVisible } from '@/composables/useChartsVisible';
 import { useT } from '@/lib/i18n';
 import { profitLoss } from '@/routes/reports';
 import type { ProfitLossStatement } from '@/types';
@@ -23,6 +25,7 @@ const props = defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'Profit & loss', href: profitLoss() }] } });
 
 const { t } = useT();
+const { chartsVisible } = useChartsVisible();
 
 const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
 const from = ref(props.filters.from ?? '');
@@ -64,7 +67,10 @@ const bridge = computed(() => [
                         : t(':from to :to', { from: statement.from ?? t('the beginning'), to: statement.to ?? t('today') })
                 "
             />
-            <PrintButton />
+            <div class="flex gap-2">
+                <ChartsButton />
+                <PrintButton />
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
@@ -86,7 +92,7 @@ const bridge = computed(() => [
             </div>
         </section>
 
-        <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+        <div v-if="chartsVisible" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
             <h3 class="mb-3 text-sm font-medium">{{ t('From revenue to net profit') }}</h3>
             <WaterfallChart
                 :steps="bridge"
