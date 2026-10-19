@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Enums\Permission;
+use App\Models\MailSetting;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,23 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureApiRateLimiting();
+        $this->configureMail();
+    }
+
+    /**
+     * The email account saved on Administration → Email settings, applied when the mailer is
+     * first needed (so a page that sends nothing reads nothing). Until it is switched on, the
+     * .env settings stand. Before migrations have run there is no table, and .env applies too.
+     */
+    private function configureMail(): void
+    {
+        $this->app->resolving('mail.manager', function (): void {
+            try {
+                MailSetting::current()->applyToConfig();
+            } catch (QueryException) {
+                // Not migrated yet: keep the .env settings.
+            }
+        });
     }
 
     /**

@@ -18,6 +18,12 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { computed } from 'vue';
+import BarList from '@/components/charts/BarList.vue';
+import ChartsButton from '@/components/charts/ChartsButton.vue';
+import ColumnChart from '@/components/charts/ColumnChart.vue';
+import { useChartsVisible } from '@/composables/useChartsVisible';
+import { monthLabel } from '@/lib/charts';
+import { money } from '@/lib/money';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { dashboard } from '@/routes';
@@ -31,6 +37,7 @@ import { create as newHuskChipping } from '@/routes/husk-chipping';
 import { index as stockOnHand } from '@/routes/inventory/stock';
 import { home as kioskHome } from '@/routes/kiosk';
 import { create as newPurchaseOrder } from '@/routes/purchase-orders';
+import { cashBankPosition, inventoryValuation, productProfitability } from '@/routes/reports';
 import { create as newSalesInvoice } from '@/routes/sales-invoices';
 import { create as newSalesOrder } from '@/routes/sales-orders';
 import { create as newSupplierInvoice } from '@/routes/supplier-invoices';
@@ -45,6 +52,20 @@ defineOptions({
         ],
     },
 });
+
+/** Each chart is null when the user may not open the report it comes from. */
+const props = defineProps<{
+    charts: {
+        trend: { month: string; revenue: string; costs: string; net_profit: string }[] | null;
+        recent_sales: {
+            from: string;
+            to: string;
+            rows: { product_id: number; product_code: string; product_name: string; sales_value: string }[];
+        } | null;
+        cash_bank: { id: number; name: string; kind: string; balance: string }[] | null;
+        stock_value: { product_id: number; product_code: string; product_name: string; value: string }[] | null;
+    };
+}>();
 
 type Shortcut = {
     title: string;
@@ -160,6 +181,50 @@ const shortcuts: Shortcut[] = [
     },
 ];
 
+const { chartsVisible } = useChartsVisible();
+const locale = computed(() => String(page.props.locale ?? 'en'));
+
+const hasCharts = computed(() => Object.values(props.charts).some((chart) => chart !== null));
+
+const trendChart = computed(() => {
+    const trend = props.charts.trend ?? [];
+
+    return {
+        categories: trend.map((m) => monthLabel(m.month, locale.value)),
+        series: [
+            { name: t('Revenue'), colour: 'var(--viz-1)', values: trend.map((m) => ({ value: Number(m.revenue), display: money(m.revenue) })) },
+            { name: t('Costs'), colour: 'var(--viz-2)', values: trend.map((m) => ({ value: Number(m.costs), display: money(m.costs) })) },
+        ],
+        extra: [{ label: t('Net profit'), values: trend.map((m) => money(m.net_profit)) }],
+    };
+});
+
+const recentSalesRows = computed(() =>
+    (props.charts.recent_sales?.rows ?? []).map((row) => ({
+        key: row.product_id,
+        label: row.product_code,
+        sublabel: row.product_name,
+        value: Number(row.sales_value),
+        display: money(row.sales_value),
+    })),
+);
+
+const stockValueRows = computed(() =>
+    (props.charts.stock_value ?? []).map((row) => ({
+        key: row.product_id,
+        label: row.product_code,
+        sublabel: row.product_name,
+        value: Number(row.value),
+        display: money(row.value),
+    })),
+);
+
+const cashBankRows = computed(() =>
+    [...(props.charts.cash_bank ?? [])]
+        .sort((a, b) => Number(b.balance) - Number(a.balance))
+        .map((row) => ({ key: row.id, label: row.name, sublabel: row.kind, value: Number(row.balance), display: money(row.balance) })),
+);
+
 const visibleShortcuts = computed(() =>
     shortcuts.filter((shortcut) => canAny(...shortcut.permissions)),
 );
@@ -169,16 +234,19 @@ const visibleShortcuts = computed(() =>
     <Head :title="t('Dashboard')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <div>
-            <h1 class="text-xl font-semibold">
-                {{ t('Welcome, :name', { name: userName }) }}
-            </h1>
-            <p
-                v-if="visibleShortcuts.length > 0"
-                class="text-muted-foreground mt-1 text-sm"
-            >
-                {{ t('What would you like to do?') }}
-            </p>
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-semibold">
+                    {{ t('Welcome, :name', { name: userName }) }}
+                </h1>
+                <p
+                    v-if="visibleShortcuts.length > 0"
+                    class="text-muted-foreground mt-1 text-sm"
+                >
+                    {{ t('What would you like to do?') }}
+                </p>
+            </div>
+            <ChartsButton v-if="hasCharts" />
         </div>
 
         <div
@@ -219,6 +287,45 @@ const visibleShortcuts = computed(() =>
                     )
                 }}
             </p>
+        </div>
+
+        <div v-if="hasCharts && chartsVisible" class="grid gap-4 lg:grid-cols-2">
+            <div v-if="charts.trend" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <h3 class="text-sm font-medium">{{ t('Revenue and costs, last 6 months') }}</h3>
+                <p class="text-muted-foreground mb-3 text-xs">{{ t('Costs are cost of sales plus operating expenses. Point at a month for its net profit.') }}</p>
+                <ColumnChart
+                    :categories="trendChart.categories"
+                    :series="trendChart.series"
+                    :extra="trendChart.extra"
+                    :chart-label="t('Revenue and costs, last 6 months')"
+                />
+            </div>
+            <div v-if="charts.recent_sales" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <div class="mb-3 flex items-baseline justify-between gap-2">
+                    <h3 class="text-sm font-medium">{{ t('Top products sold, last 30 days') }}</h3>
+                    <Link
+                        :href="productProfitability({ query: { from: charts.recent_sales.from, to: charts.recent_sales.to } })"
+                        class="text-muted-foreground text-xs hover:underline"
+                    >
+                        {{ t('Detail →') }}
+                    </Link>
+                </div>
+                <BarList :rows="recentSalesRows" :chart-label="t('Top products sold, last 30 days')" :empty-text="t('No posted deliveries.')" />
+            </div>
+            <div v-if="charts.stock_value" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <div class="mb-3 flex items-baseline justify-between gap-2">
+                    <h3 class="text-sm font-medium">{{ t('Stock value by product') }}</h3>
+                    <Link :href="inventoryValuation()" class="text-muted-foreground text-xs hover:underline">{{ t('Detail →') }}</Link>
+                </div>
+                <BarList :rows="stockValueRows" :chart-label="t('Stock value by product')" :empty-text="t('No stock on hand.')" />
+            </div>
+            <div v-if="charts.cash_bank" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <div class="mb-3 flex items-baseline justify-between gap-2">
+                    <h3 class="text-sm font-medium">{{ t('Cash and bank balances') }}</h3>
+                    <Link :href="cashBankPosition()" class="text-muted-foreground text-xs hover:underline">{{ t('Detail →') }}</Link>
+                </div>
+                <BarList :rows="cashBankRows" :chart-label="t('Cash and bank balances')" :empty-text="t('No cash or bank accounts are set up.')" />
+            </div>
         </div>
     </div>
 </template>

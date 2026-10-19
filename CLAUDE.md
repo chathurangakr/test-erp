@@ -723,6 +723,21 @@ Full detail lives in `docs/PAYROLL.md`.
 
 ---
 
+## Weekly update email (implemented — 1.10.0)
+
+Full detail lives in `docs/WEEKLY_UPDATE.md`.
+
+- **Sunday 20:00 Sri Lanka time**, `reports:weekly-update`, to every active user holding
+  `reports.weekly_email` (administrators always do). Recipients follow the permission — never a
+  role name.
+- **It reads, never recalculates:** figures come from the finance dashboard, cash book, aging and
+  posted production orders through `WeeklyUpdateReport`; nothing is stored.
+- **Mail credentials are data, never code:** Administration → Email settings (`mail_settings`,
+  permission `mail.manage`) stores the Gmail app password **encrypted with APP_KEY** and never
+  sends it back to a page; `deploy/set-mail.sh` / `.env` is the fallback while it is off.
+
+---
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,
@@ -781,7 +796,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (81 permissions, seven editable starting roles, multiple roles per user, every route
+control** (83 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries

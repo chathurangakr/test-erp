@@ -12,6 +12,7 @@ import {
     Landmark,
     ClipboardList,
     Building2,
+    Mail,
     LayoutGrid,
     Layers,
     Package,
@@ -59,6 +60,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { edit as companyEdit } from '@/routes/company';
+import { edit as mailSettingsEdit } from '@/routes/mail-settings';
 import { index as customersIndex } from '@/routes/customers';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -433,6 +435,12 @@ const administrationNavItems: NavItem[] = [
         href: companyEdit(),
         permission: 'company.manage',
         icon: Building2,
+    },
+    {
+        title: 'Email settings',
+        href: mailSettingsEdit(),
+        permission: 'mail.manage',
+        icon: Mail,
     },
 ];
 

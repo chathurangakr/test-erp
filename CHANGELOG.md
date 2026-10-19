@@ -4,6 +4,19 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.10.0 — 19 October 2026
+
+- **Weekly update email.** Every Sunday at 8 PM the system emails each administrator a colourful
+  summary of the week: net profit, sales and costs, top products, cash and bank balances, money
+  owed (with what is overdue), production runs and the current stock value. Other roles can be
+  given it with the new "Receive the weekly update email" permission.
+- **Email settings** (Administration → Email settings): enter the Gmail address and its app
+  password on screen, switch email on and send a test. The password is stored encrypted and is
+  never shown again.
+- **Charts on the main dashboard:** revenue and costs for six months, top products sold in the
+  last 30 days, stock value by product and cash/bank balances — each shown only to people who may
+  open that report.
+
 ## 1.9.1 — 19 October 2026
 
 - **The company logo on the sign-in page.** The logo from Administration → Company details now

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\BusinessClock;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -14,3 +15,11 @@ Artisan::command('inspire', function () {
  * the server. See docs/API_V1.md §3.
  */
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
+
+/*
+ * The weekly update email, Sunday 8 PM Sri Lanka time, to everyone holding
+ * reports.weekly_email. Needs mail settings in .env (deploy/set-mail.sh). See docs/WEEKLY_UPDATE.md.
+ */
+Schedule::command('reports:weekly-update')
+    ->weeklyOn(0, '20:00')
+    ->timezone(BusinessClock::timezone());

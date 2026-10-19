@@ -2,6 +2,7 @@
 
 use App\Enums\Permission;
 use App\Http\Controllers\Administration\CompanyProfileController;
+use App\Http\Controllers\Administration\MailSettingsController;
 use App\Http\Controllers\Administration\RoleController;
 use App\Http\Controllers\Administration\UserController;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +33,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('administration/company', [CompanyProfileController::class, 'update'])
         ->name('company.update')
         ->can(Permission::CompanyManage);
+
+    Route::get('administration/email', [MailSettingsController::class, 'edit'])
+        ->name('mail-settings.edit')
+        ->can(Permission::MailManage);
+    Route::put('administration/email', [MailSettingsController::class, 'update'])
+        ->name('mail-settings.update')
+        ->can(Permission::MailManage);
+    Route::post('administration/email/test', [MailSettingsController::class, 'test'])
+        ->middleware('throttle:5,1')
+        ->name('mail-settings.test')
+        ->can(Permission::MailManage);
 });

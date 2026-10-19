@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Administration\CompanyProfileController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,7 +16,7 @@ Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle
 Route::get('company/logo', [CompanyProfileController::class, 'logo'])->name('company.logo');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 });
 
 require __DIR__.'/products.php';

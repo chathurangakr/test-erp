@@ -128,3 +128,10 @@ export function addDecimals(values: string[]): string {
 
     return `${negative ? '-' : ''}${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
 }
+
+/** "2026-09" as a short month name in the screen's language ("Sep"). */
+export function monthLabel(month: string, locale: string): string {
+    const [year, number] = month.split('-').map(Number);
+
+    return new Date(year, number - 1, 1).toLocaleString(locale === 'si' ? 'si-LK' : 'en-GB', { month: 'short' });
+}

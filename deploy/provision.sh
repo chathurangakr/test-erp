@@ -103,6 +103,11 @@ unset SUDO_PASSWORD
 : "${BACKUP_DIR:=/var/backups/coconut-erp}"
 : "${BACKUP_TIME:=02:30}"
 : "${BACKUP_KEEP_DAYS:=30}"
+: "${SMTP_USERNAME:=}"
+: "${SMTP_PASSWORD:=}"
+: "${SMTP_HOST:=smtp.gmail.com}"
+: "${SMTP_PORT:=587}"
+: "${MAIL_FROM_ADDRESS:=}"
 
 export DEBIAN_FRONTEND=noninteractive
 APP_HOME="/var/lib/$APP_USER"
@@ -126,6 +131,12 @@ ok "$PRETTY_NAME"
 [[ -n "$ADMIN_EMAIL" ]] || die "ADMIN_EMAIL is required (the first administrator's sign-in)."
 if [[ -n "$TLS_CERT_FILE" || -n "$TLS_KEY_FILE" ]]; then
     [[ -f "$TLS_CERT_FILE" && -f "$TLS_KEY_FILE" ]] || die "TLS_CERT_FILE and TLS_KEY_FILE must both point at existing files."
+fi
+SMTP_PASSWORD="${SMTP_PASSWORD// /}"   # Gmail shows app passwords in groups of four
+if [[ -n "$SMTP_USERNAME" ]]; then
+    [[ -n "$SMTP_PASSWORD" ]] || die "SMTP_PASSWORD is required when SMTP_USERNAME is set (a Gmail app password)."
+    [[ "$SMTP_PORT" =~ ^[0-9]+$ ]] || die "SMTP_PORT must be a number."
+    [[ "$SMTP_PASSWORD" != *'"'* && "$SMTP_PASSWORD" != *'\'* ]] || die "SMTP_PASSWORD may not contain quotes or backslashes."
 fi
 for value in "$MARIADB_ROOT_PASSWORD" "$DB_PASSWORD"; do
     [[ "$value" != *"'"* && "$value" != *'\'* && "$value" != *'"'* ]] \
@@ -378,6 +389,17 @@ set_env DB_USERNAME "$DB_USER"
 set_env DB_PASSWORD "$DB_PASSWORD"
 set_env SESSION_SECURE_COOKIE true
 if [[ "$SELF_REGISTRATION" == "yes" ]]; then set_env AUTH_SELF_REGISTRATION true; else set_env AUTH_SELF_REGISTRATION false; fi
+# Outgoing email (the weekly update). Without SMTP_USERNAME mail is only written to the log.
+if [[ -n "$SMTP_USERNAME" ]]; then
+    set_env MAIL_MAILER smtp
+    set_env MAIL_SCHEME smtp
+    set_env MAIL_HOST "$SMTP_HOST"
+    set_env MAIL_PORT "$SMTP_PORT"
+    set_env MAIL_USERNAME "$SMTP_USERNAME"
+    set_env MAIL_PASSWORD "$SMTP_PASSWORD"
+    set_env MAIL_FROM_ADDRESS "${MAIL_FROM_ADDRESS:-$SMTP_USERNAME}"
+    set_env MAIL_FROM_NAME "$APP_NAME"
+fi
 
 if ! grep -qE '^APP_KEY="?base64:' "$ENV_FILE"; then
     as_app php "$APP_DIR/artisan" key:generate --force --no-interaction

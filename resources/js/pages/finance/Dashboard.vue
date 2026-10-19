@@ -22,6 +22,7 @@ import {
 } from '@/routes/reports';
 import type { AgingSummary, FinanceDashboardSummary } from '@/types';
 import { useChartsVisible } from '@/composables/useChartsVisible';
+import { monthLabel } from '@/lib/charts';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 
@@ -76,15 +77,8 @@ const bridge = computed(() => {
 
 const locale = computed(() => String(usePage().props.locale ?? 'en'));
 
-/** "2026-09" as a short month name in the screen's language. */
-function monthLabel(month: string): string {
-    const [year, number] = month.split('-').map(Number);
-
-    return new Date(year, number - 1, 1).toLocaleString(locale.value === 'si' ? 'si-LK' : 'en-GB', { month: 'short' });
-}
-
 const trendChart = computed(() => ({
-    categories: props.trend.map((m) => monthLabel(m.month)),
+    categories: props.trend.map((m) => monthLabel(m.month, locale.value)),
     series: [
         { name: t('Revenue'), colour: 'var(--viz-1)', values: props.trend.map((m) => ({ value: Number(m.revenue), display: money(m.revenue) })) },
         { name: t('Costs'), colour: 'var(--viz-2)', values: props.trend.map((m) => ({ value: Number(m.costs), display: money(m.costs) })) },
