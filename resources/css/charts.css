@@ -1,0 +1,67 @@
+/*
+ * Chart colours (components/charts). Validated for colour-blind readers in both themes:
+ * two categorical slots (blue, orange) and a five-step blue ramp for ordered bands such as
+ * aging. Labels always use the text colours, never a series colour.
+ */
+:root {
+    --viz-1: #2a78d6;
+    --viz-2: #eb6834;
+    --viz-ramp-1: #86b6ef;
+    --viz-ramp-2: #5598e7;
+    --viz-ramp-3: #2a78d6;
+    --viz-ramp-4: #1c5cab;
+    --viz-ramp-5: #0d366b;
+    --viz-ink: #0b0b0b;
+    --viz-ink-2: #52514e;
+    --viz-muted: #898781;
+    --viz-grid: #e1e0d9;
+    --viz-axis: #c3c2b7;
+}
+
+.dark {
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    /* On a dark screen the most serious band is the brightest. */
+    --viz-ramp-1: #184f95;
+    --viz-ramp-2: #256abf;
+    --viz-ramp-3: #3987e5;
+    --viz-ramp-4: #6da7ec;
+    --viz-ramp-5: #9ec5f4;
+    --viz-ink: #f0efec;
+    --viz-ink-2: #c3c2b7;
+    --viz-muted: #898781;
+    --viz-grid: #2c2c2a;
+    --viz-axis: #383835;
+}
+
+.viz-tooltip {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    min-width: 9rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--popover);
+    color: var(--popover-foreground);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.35);
+    transform: translate(-50%, calc(-100% - 10px));
+    white-space: nowrap;
+}
+
+.viz-hit {
+    outline: none;
+    cursor: default;
+}
+
+.viz-hit:focus-visible {
+    stroke: var(--ring);
+    stroke-width: 2px;
+}
+
+@media print {
+    .viz-tooltip {
+        display: none;
+    }
+}

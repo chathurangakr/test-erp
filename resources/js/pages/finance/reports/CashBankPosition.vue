@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,13 @@ function bookUrl(row: CashBankAccountRow): string {
 
     return `${cashBankBookIndex().url}?${params.toString()}`;
 }
+
+/** Each account's balance, largest first (an overdrawn account draws to the left). */
+const balances = computed(() =>
+    [...props.summary.rows]
+        .sort((a, b) => Number(b.balance) - Number(a.balance))
+        .map((row) => ({ key: row.id, label: row.display_name, sublabel: row.kind_label, value: Number(row.balance), display: money(row.balance) })),
+);
 </script>
 
 <template>
@@ -86,6 +94,11 @@ function bookUrl(row: CashBankAccountRow): string {
                 <p class="text-muted-foreground text-xs font-medium">{{ t('Cash + bank (:currency)', { currency }) }}</p>
                 <p class="mt-1 font-mono text-lg font-medium">{{ money(summary.combined_total) }}</p>
             </div>
+        </div>
+
+        <div v-if="balances.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+            <h3 class="mb-3 text-sm font-medium">{{ t('Balance by account (:currency)', { currency }) }}</h3>
+            <BarList :rows="balances" :chart-label="t('Balance by account (:currency)', { currency })" />
         </div>
 
         <div

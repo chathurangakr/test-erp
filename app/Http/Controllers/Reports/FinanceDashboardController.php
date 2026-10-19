@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Models\FiscalPeriod;
 use App\Services\Accounting\FinanceDashboardService;
+use App\Support\BusinessClock;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +27,8 @@ class FinanceDashboardController extends Controller
 
         return Inertia::render('finance/Dashboard', [
             'summary' => $this->dashboard->summary($window['from'], $window['to'], $window['period']),
+            // Six months up to the window's end, for the trend chart (web only).
+            'trend' => $this->dashboard->monthlyTrend($window['period']?->end_date ?? $window['to'] ?? BusinessClock::today()),
             'periods' => FiscalPeriod::query()->orderByDesc('start_date')->get(['id', 'name']),
             'filters' => [
                 'fiscal_period_id' => $periodId,

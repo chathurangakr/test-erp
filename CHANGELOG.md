@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.9.0 — 19 October 2026
+
+- **Charts.** The finance dashboard shows how revenue becomes net profit, revenue against costs
+  for the last six months, and how old the money owed to and by the company is. Profit & loss,
+  inventory valuation, product profitability and cash/bank position each gain a chart above
+  their table. Every chart is drawn from the same figures as its report.
+- **Beauty mode scrollbars** take the chosen style's colours instead of plain grey.
+
 ## 1.8.1 — 19 October 2026
 
 - **Beauty mode colours the whole screen.** The centre of the screen and its boxes take a soft

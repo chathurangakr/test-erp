@@ -632,6 +632,27 @@ class ManagementReportsTest extends TestCase
     }
 
     #[Test]
+    public function the_dashboard_trend_reads_each_month_from_the_profit_and_loss_statement(): void
+    {
+        $this->enableAccounting();
+        $receipt = $this->purchase($this->products['COCONUT'], '5000.000', '102.500000');
+        $lot = $this->lotFrom($receipt, $this->products['COCONUT']);
+        $this->deliver([['product' => $this->products['COCONUT'], 'lot' => $lot, 'quantity' => '2000.000', 'price' => '130.000000']]);
+
+        $trend = app(FinanceDashboardService::class)->monthlyTrend(Carbon::parse('2026-09-30'));
+
+        $this->assertSame(['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'], array_column($trend, 'month'));
+
+        $september = app(ProfitLossService::class)->statement(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30'));
+        $this->assertSame('2026-09-30', $trend[5]['to']);
+        $this->assertSame($september['revenue']['total'], $trend[5]['revenue']);
+        $this->assertSame($september['net_profit'], $trend[5]['net_profit']);
+        // Costs are cost of sales plus operating expenses.
+        $this->assertSame('205000.000000', $trend[5]['costs']);
+        $this->assertSame('0.000000', $trend[0]['costs']);
+    }
+
+    #[Test]
     public function an_empty_dashboard_reports_zero_everywhere(): void
     {
         $dashboard = app(FinanceDashboardService::class)->summary();

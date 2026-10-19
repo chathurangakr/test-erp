@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
 import type { InventoryValuationReport, OptionRef } from '@/types';
+import { addDecimals } from '@/lib/charts';
 import { money } from '@/lib/money';
 
 const props = defineProps<{
@@ -34,6 +36,33 @@ watch([productId, warehouseId], () => {
     );
 });
 
+
+/** Stock value by product (all warehouses together), largest first; the rest folded into "Other". */
+const valueByProduct = computed(() => {
+    const byProduct = new Map<number, { label: string; sublabel: string; values: string[] }>();
+
+    for (const row of props.report.rows) {
+        const entry = byProduct.get(row.product_id) ?? { label: row.product_code, sublabel: row.product_name, values: [] };
+        entry.values.push(row.value);
+        byProduct.set(row.product_id, entry);
+    }
+
+    const rows = [...byProduct.entries()]
+        .map(([id, entry]) => {
+            const total = addDecimals(entry.values);
+
+            return { key: id, label: entry.label, sublabel: entry.sublabel, value: Number(total), display: money(total), total };
+        })
+        .sort((a, b) => b.value - a.value);
+
+    if (rows.length <= 10) {
+        return rows;
+    }
+
+    const other = addDecimals(rows.slice(9).map((r) => r.total));
+
+    return [...rows.slice(0, 9), { key: 'other', label: t('Other'), sublabel: t(':count products', { count: rows.length - 9 }), value: Number(other), display: money(other), total: other }];
+});
 </script>
 
 <template>
@@ -77,6 +106,11 @@ watch([productId, warehouseId], () => {
         >
             {{ t(':count row(s) belong to products with no accounting mapping. Their stock is real but has never reached the general ledger — see', { count: report.unmapped_count }) }}
             <Link :href="inventoryGlReconciliation()" class="underline">{{ t('Inventory vs GL') }}</Link>.
+        </div>
+
+        <div v-if="valueByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+            <h3 class="mb-3 text-sm font-medium">{{ t('Stock value by product (:currency)', { currency }) }}</h3>
+            <BarList :rows="valueByProduct" :chart-label="t('Stock value by product (:currency)', { currency })" />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">

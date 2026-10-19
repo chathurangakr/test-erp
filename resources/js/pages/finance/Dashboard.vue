@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import ColumnChart from '@/components/charts/ColumnChart.vue';
+import StackedBar from '@/components/charts/StackedBar.vue';
+import WaterfallChart from '@/components/charts/WaterfallChart.vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
@@ -25,6 +28,7 @@ const props = defineProps<{
     periods: { id: number; name: string }[];
     filters: { fiscal_period_id: number | null; from: string | null; to: string | null };
     currency: string;
+    trend: { month: string; from: string; to: string; revenue: string; costs: string; net_profit: string }[];
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Finance dashboard', href: financeDashboardIndex() }] } });
@@ -52,6 +56,37 @@ const windowQuery = computed(() => ({
     fiscal_period_id: props.filters.fiscal_period_id ?? undefined,
     from: props.filters.fiscal_period_id ? undefined : (props.summary.period.from ?? undefined),
     to: props.filters.fiscal_period_id ? undefined : (props.summary.period.to ?? undefined),
+}));
+
+/** The profit bridge: revenue, less each cost, down to net profit. */
+const bridge = computed(() => {
+    const p = props.summary.performance;
+
+    return [
+        { key: 'revenue', label: t('Revenue'), value: Number(p.revenue), display: money(p.revenue), total: true },
+        { key: 'cost', label: t('Cost of sales'), value: Number(p.cost_of_sales), display: money(p.cost_of_sales), total: false },
+        { key: 'gross', label: t('Gross profit'), value: Number(p.gross_profit), display: money(p.gross_profit), total: true },
+        { key: 'opex', label: t('Operating expenses'), value: Number(p.operating_expenses), display: money(p.operating_expenses), total: false },
+        { key: 'net', label: t('Net profit'), value: Number(p.net_profit), display: money(p.net_profit), total: true },
+    ];
+});
+
+const locale = computed(() => String(usePage().props.locale ?? 'en'));
+
+/** "2026-09" as a short month name in the screen's language. */
+function monthLabel(month: string): string {
+    const [year, number] = month.split('-').map(Number);
+
+    return new Date(year, number - 1, 1).toLocaleString(locale.value === 'si' ? 'si-LK' : 'en-GB', { month: 'short' });
+}
+
+const trendChart = computed(() => ({
+    categories: props.trend.map((m) => monthLabel(m.month)),
+    series: [
+        { name: t('Revenue'), colour: 'var(--viz-1)', values: props.trend.map((m) => ({ value: Number(m.revenue), display: money(m.revenue) })) },
+        { name: t('Costs'), colour: 'var(--viz-2)', values: props.trend.map((m) => ({ value: Number(m.costs), display: money(m.costs) })) },
+    ],
+    extra: [{ label: t('Net profit'), values: props.trend.map((m) => money(m.net_profit)) }],
 }));
 
 const asOf = computed(() => props.summary.period.to ?? undefined);
@@ -189,6 +224,29 @@ const counterpartyLists = computed(() => [
             </div>
         </div>
 
+        <div class="grid gap-4 lg:grid-cols-2">
+            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <h3 class="text-sm font-medium">{{ t('From revenue to net profit') }}</h3>
+                <p class="text-muted-foreground mb-3 text-xs">{{ t('What each cost takes out of revenue in this window.') }}</p>
+                <WaterfallChart
+                    :steps="bridge"
+                    :total-label="t('Total')"
+                    :decrease-label="t('Cost')"
+                    :chart-label="t('From revenue to net profit')"
+                />
+            </div>
+            <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                <h3 class="text-sm font-medium">{{ t('Revenue and costs, last 6 months') }}</h3>
+                <p class="text-muted-foreground mb-3 text-xs">{{ t('Costs are cost of sales plus operating expenses. Point at a month for its net profit.') }}</p>
+                <ColumnChart
+                    :categories="trendChart.categories"
+                    :series="trendChart.series"
+                    :extra="trendChart.extra"
+                    :chart-label="t('Revenue and costs, last 6 months')"
+                />
+            </div>
+        </div>
+
         <div>
             <div class="mb-2 flex items-baseline justify-between">
                 <h2 class="text-sm font-medium">{{ t('Position (:currency)', { currency }) }}</h2>
@@ -222,6 +280,12 @@ const counterpartyLists = computed(() => [
                     <h3 class="text-sm font-medium">{{ table.title }}</h3>
                     <Link :href="table.href" class="text-muted-foreground text-xs hover:underline">{{ t('Detail →') }}</Link>
                 </div>
+                <StackedBar
+                    v-if="Number(table.aging.total) > 0"
+                    class="border-sidebar-border/70 dark:border-sidebar-border border-b px-4 py-3"
+                    :segments="agingBuckets.map((bucket) => ({ key: bucket.key, label: bucket.label, value: Number(table.aging[bucket.key]), display: money(table.aging[bucket.key]) }))"
+                    :chart-label="table.title"
+                />
                 <table class="w-full text-sm">
                     <tbody>
                         <tr

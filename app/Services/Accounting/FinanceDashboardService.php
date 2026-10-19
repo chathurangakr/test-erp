@@ -24,6 +24,9 @@ class FinanceDashboardService
 {
     private const TOP_N = 5;
 
+    /** How many months the trend chart shows. */
+    private const TREND_MONTHS = 6;
+
     public function __construct(
         private readonly ProfitLossService $profitLoss,
         private readonly BalanceSheetService $balanceSheet,
@@ -78,6 +81,41 @@ class FinanceDashboardService
             'top_customers' => $this->topCounterparties($aging['rows'], 'customer'),
             'top_suppliers' => $this->topCounterparties($payableAging['rows'], 'supplier'),
         ];
+    }
+
+    /**
+     * Revenue, costs and net profit for each calendar month, oldest first, ending with the
+     * month that contains $end — the figures behind the dashboard's trend chart.
+     *
+     * Each month is read from the profit and loss statement for that month, never recalculated;
+     * "costs" is the statement's cost of sales plus its operating expenses.
+     *
+     * @return list<array{month: string, from: string, to: string, revenue: string, costs: string, net_profit: string}>
+     */
+    public function monthlyTrend(CarbonInterface $end, int $months = self::TREND_MONTHS): array
+    {
+        $trend = [];
+        $last = Carbon::instance($end)->startOfMonth();
+
+        for ($offset = $months - 1; $offset >= 0; $offset--) {
+            $from = $last->copy()->subMonthsNoOverflow($offset);
+            $to = $from->copy()->endOfMonth()->startOfDay();
+            $statement = $this->profitLoss->statement($from, $to);
+
+            $trend[] = [
+                'month' => $from->format('Y-m'),
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'revenue' => $statement['revenue']['total'],
+                'costs' => DecimalMath::cost(DecimalMath::add(
+                    $statement['cost_of_sales']['total'],
+                    $statement['operating_expenses']['total'],
+                )),
+                'net_profit' => $statement['net_profit'],
+            ];
+        }
+
+        return $trend;
     }
 
     /**

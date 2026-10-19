@@ -1912,5 +1912,15 @@
     "Coconut Grove": "පොල් වත්ත (Coconut Grove)",
     "Mulberry Dusk": "මල්බෙරි සැන්දෑව (Mulberry Dusk)",
     "Cerulean Sky": "නිල් අහස (Cerulean Sky)",
-    "Petal Pastel": "මල් පෙති (Petal Pastel)"
+    "Petal Pastel": "මල් පෙති (Petal Pastel)",
+    "Balance by account (:currency)": "ගිණුම අනුව ශේෂය (:currency)",
+    ":count products": "භාණ්ඩ :count",
+    "Stock value by product (:currency)": "භාණ්ඩය අනුව තොග වටිනාකම (:currency)",
+    "Gross profit by product (:currency)": "භාණ්ඩය අනුව දළ ලාභය (:currency)",
+    "From revenue to net profit": "ආදායමේ සිට ශුද්ධ ලාභය දක්වා",
+    "Cost": "පිරිවැය",
+    "Costs": "පිරිවැය",
+    "What each cost takes out of revenue in this window.": "මෙම කාලය තුළ එක් එක් පිරිවැය ආදායමෙන් අඩු කරන ප්‍රමාණය.",
+    "Revenue and costs, last 6 months": "ආදායම සහ පිරිවැය, පසුගිය මාස 6",
+    "Costs are cost of sales plus operating expenses. Point at a month for its net profit.": "පිරිවැය යනු විකුණුම් පිරිවැය සහ මෙහෙයුම් වියදම් ය. මාසයක ශුද්ධ ලාභය බැලීමට එය මතට යොමු කරන්න."
 }

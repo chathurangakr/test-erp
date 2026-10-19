@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,20 @@ watch([from, to, productId, customerId], () => {
     );
 });
 
+
+/** Gross profit by product, most profitable first (a loss draws to the left). */
+const profitByProduct = computed(() =>
+    [...props.report.rows]
+        .sort((a, b) => Number(b.gross_profit) - Number(a.gross_profit))
+        .slice(0, 12)
+        .map((row) => ({
+            key: row.product_id,
+            label: row.product_code,
+            sublabel: t(':percent% margin', { percent: row.gross_margin_percent }),
+            value: Number(row.gross_profit),
+            display: money(row.gross_profit),
+        })),
+);
 </script>
 
 <template>
@@ -117,6 +132,11 @@ watch([from, to, productId, customerId], () => {
                     <span class="text-muted-foreground text-sm">· {{ report.delivery_count }}</span>
                 </p>
             </div>
+        </div>
+
+        <div v-if="profitByProduct.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+            <h3 class="mb-3 text-sm font-medium">{{ t('Gross profit by product (:currency)', { currency }) }}</h3>
+            <BarList :rows="profitByProduct" :chart-label="t('Gross profit by product (:currency)', { currency })" />
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">

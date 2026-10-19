@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import WaterfallChart from '@/components/charts/WaterfallChart.vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
@@ -39,6 +40,15 @@ watch([periodId, from, to], () => {
     );
 });
 
+
+/** The profit bridge: revenue, less each cost, down to net profit. */
+const bridge = computed(() => [
+    { key: 'revenue', label: t('Revenue'), value: Number(props.statement.revenue.total), display: money(props.statement.revenue.total), total: true },
+    { key: 'cost', label: t('Cost of sales'), value: Number(props.statement.cost_of_sales.total), display: money(props.statement.cost_of_sales.total), total: false },
+    { key: 'gross', label: t('Gross profit'), value: Number(props.statement.gross_profit), display: money(props.statement.gross_profit), total: true },
+    { key: 'opex', label: t('Operating expenses'), value: Number(props.statement.operating_expenses.total), display: money(props.statement.operating_expenses.total), total: false },
+    { key: 'net', label: t('Net profit'), value: Number(props.statement.net_profit), display: money(props.statement.net_profit), total: true },
+]);
 </script>
 
 <template>
@@ -75,6 +85,16 @@ watch([periodId, from, to], () => {
                 <Input id="to" v-model="to" type="date" :disabled="periodId !== ''" />
             </div>
         </section>
+
+        <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+            <h3 class="mb-3 text-sm font-medium">{{ t('From revenue to net profit') }}</h3>
+            <WaterfallChart
+                :steps="bridge"
+                :total-label="t('Total')"
+                :decrease-label="t('Cost')"
+                :chart-label="t('From revenue to net profit')"
+            />
+        </div>
 
         <div class="grid gap-4 lg:grid-cols-2">
             <StatementSection
