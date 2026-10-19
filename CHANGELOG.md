@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.11.2 — 19 October 2026
+
+- **Security updates** to two components the web server relies on (request handling and text
+  formatting), closing known weaknesses that could have been used to slow the server down.
+- **Browsers are told to use HTTPS only** (an HSTS header), on servers with a trusted certificate.
+  Servers with a self-signed certificate are left as they are, so their warning can still be
+  accepted.
+
 ## 1.11.1 — 19 October 2026
 
 - **The API refuses plain HTTP outright.** A phone app pointed at an `http://` address now gets a

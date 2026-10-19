@@ -517,7 +517,11 @@ fi
 say "Configuring Nginx"
 redirect_port=""; [[ "$HTTPS_PORT" == "443" ]] || redirect_port=":${HTTPS_PORT}"
 install -d -m 755 "$ACME_ROOT"
-write_nginx() {   # uses $CERT and $KEY
+write_nginx() {   # uses $CERT, $KEY and $TRUSTED_CERT
+# HSTS tells browsers to use HTTPS only for a year. Only with a TRUSTED certificate: with a
+# self-signed one it would stop a browser from ever accepting the certificate warning again.
+local hsts=""
+if [[ "$TRUSTED_CERT" == "yes" ]]; then hsts='add_header Strict-Transport-Security "max-age=31536000" always;'; fi
 cat > /etc/nginx/sites-available/coconut-erp <<NGINX
 # Coconut Factory ERP — written by deploy/provision.sh (re-running the installer replaces it)
 server {
@@ -564,6 +568,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    ${hsts}
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
