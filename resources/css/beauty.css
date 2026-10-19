@@ -48,7 +48,11 @@
         --beauty-glow-1: hsl(160 80% 70% / 0.35);
         --beauty-glow-2: hsl(190 90% 70% / 0.3);
         --beauty-glow-3: hsl(265 90% 80% / 0.25);
-        --beauty-glass: hsl(0 0% 100% / 0.78);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #d9f5eab8, #d8f1f6a8 50%, #ebe4fba8);
+        --background: #e9f6f0;
+        --card: #f6fcf9;
+        --muted: #e2f2ea;
         /* Hover, table header and shadows. */
         --beauty-tint: hsl(165 70% 45%);
         --beauty-shadow: hsl(170 60% 25%);
@@ -71,7 +75,11 @@
         --beauty-glow-1: hsl(160 80% 30% / 0.35);
         --beauty-glow-2: hsl(190 90% 30% / 0.3);
         --beauty-glow-3: hsl(265 80% 35% / 0.3);
-        --beauty-glass: hsl(170 40% 6% / 0.72);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #0d2a24c0, #0e2730b8 50%, #1d1a33b8);
+        --background: #0a1a17;
+        --card: #0f221e;
+        --muted: #18302a;
     }
 
     /* Mulberry Dusk — #A67CA4 #6A8CA9 #857A9E #C9A9B8 #CBD3D8 */
@@ -107,7 +115,11 @@
         --beauty-glow-1: hsl(303 20% 57% / 0.35);
         --beauty-glow-2: hsl(208 27% 54% / 0.28);
         --beauty-glow-3: hsl(332 25% 73% / 0.4);
-        --beauty-glass: hsl(300 30% 99% / 0.8);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #eadbe9b8, #e1e8f1a8 50%, #e7dff0a8);
+        --background: #f1e9f0;
+        --card: #fbf6fa;
+        --muted: #efe4ec;
         --beauty-tint: #a67ca4;
         --beauty-shadow: #5d4a6b;
     }
@@ -130,7 +142,11 @@
         --beauty-glow-1: hsl(303 20% 40% / 0.35);
         --beauty-glow-2: hsl(208 27% 38% / 0.3);
         --beauty-glow-3: hsl(258 15% 45% / 0.35);
-        --beauty-glass: hsl(280 20% 8% / 0.74);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #2a1f2dc0, #1f2433b8 50%, #272035b8);
+        --background: #1a141c;
+        --card: #241b27;
+        --muted: #2f2533;
     }
 
     /* Cerulean Sky — #8EB1D1 #A7C7E7 #1C2B48 #E8ECEF #C4D8E5 */
@@ -166,7 +182,11 @@
         --beauty-glow-1: hsl(208 42% 69% / 0.4);
         --beauty-glow-2: hsl(210 58% 78% / 0.4);
         --beauty-glow-3: hsl(204 38% 83% / 0.55);
-        --beauty-glass: hsl(210 30% 99% / 0.8);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #d6e5f3b8, #e5edf4a8 50%, #cfe0eeb0);
+        --background: #e8eff6;
+        --card: #f7fafd;
+        --muted: #e3ecf4;
         --beauty-tint: #8eb1d1;
         --beauty-shadow: #1c2b48;
     }
@@ -189,7 +209,11 @@
         --beauty-glow-1: hsl(220 44% 25% / 0.55);
         --beauty-glow-2: hsl(208 42% 40% / 0.3);
         --beauty-glow-3: hsl(210 58% 50% / 0.2);
-        --beauty-glass: hsl(220 40% 8% / 0.74);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #14213ac0, #172843b8 50%, #1b2d4ab8);
+        --background: #0e1729;
+        --card: #142038;
+        --muted: #1d2a42;
     }
 
     /* Petal Pastel — #F1C6D9 #EEB3C9 #DAC2E2 #C7D7E8 #9CB6CF */
@@ -225,7 +249,11 @@
         --beauty-glow-1: hsl(333 63% 86% / 0.7);
         --beauty-glow-2: hsl(285 38% 82% / 0.6);
         --beauty-glow-3: hsl(211 45% 85% / 0.7);
-        --beauty-glass: hsl(330 60% 99% / 0.75);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #fadcebb8, #eedff6a8 50%, #dde8f5b0);
+        --background: #fbeef4;
+        --card: #fff7fb;
+        --muted: #f8e6ef;
         --beauty-tint: #eeb3c9;
         --beauty-shadow: #a15c7d;
     }
@@ -256,7 +284,11 @@
         --beauty-glow-1: hsl(333 40% 35% / 0.4);
         --beauty-glow-2: hsl(285 25% 38% / 0.35);
         --beauty-glow-3: hsl(211 30% 38% / 0.35);
-        --beauty-glass: hsl(300 15% 8% / 0.74);
+        /* The centre of the screen: a soft wash of the style's colours. */
+        --beauty-glass: linear-gradient(135deg, #2d1f2ac0, #272236b8 50%, #1f2736b8);
+        --background: #1b1419;
+        --card: #261c25;
+        --muted: #302531;
     }
 
     /* ============================================================ shared rules */

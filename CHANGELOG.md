@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.8.1 — 19 October 2026
+
+- **Beauty mode colours the whole screen.** The centre of the screen and its boxes take a soft
+  wash of the chosen style's colours instead of staying white.
+- **The company logo in the menu.** Once a logo is uploaded in Administration → Company details,
+  it replaces the default coconut mark at the top of the menu.
+
 ## 1.8.0 — 19 October 2026
 
 - **Beauty mode** (Settings → Appearance), optional and off by default. It adds colourful screens,
