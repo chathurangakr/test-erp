@@ -3,8 +3,10 @@ import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import KioskLayout from '@/layouts/KioskLayout.vue';
+import PrintLayout from '@/layouts/PrintLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { initializePrinting } from '@/lib/printing';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -16,6 +18,8 @@ void createInertiaApp({
                 return AuthLayout;
             case name.startsWith('kiosk/'):
                 return KioskLayout;
+            case name.endsWith('/Print'):
+                return PrintLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             default:
@@ -32,3 +36,6 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// Printouts are always printed in the light theme...
+initializePrinting();

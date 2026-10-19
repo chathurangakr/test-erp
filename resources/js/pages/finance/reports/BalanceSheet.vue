@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,10 @@ watch(asOf, () => {
     <Head :title="t('Balance sheet')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading title="Balance sheet" :description="t('As at :date', { date: statement.as_of })" />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading title="Balance sheet" :description="t('As at :date', { date: statement.as_of })" />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-4 sm:max-w-xs">
             <div class="grid gap-2">
@@ -147,7 +151,7 @@ watch(asOf, () => {
             </dl>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Assets equal liabilities plus equity plus current earnings. That identity is not a coincidence: because every posted journal balances, it follows arithmetically, so a difference would mean the trial balance itself is broken.') }}
             <strong>{{ t('Current earnings is computed, never posted.') }}</strong>
             {{ t('Conventionally a year-end closing entry moves profit into retained earnings, but year-end closing is not implemented and this report will not invent it — retained earnings shows only what was genuinely posted to it. Current earnings accumulates from the beginning of recorded history, which is correct while no close has ever happened; once closing exists it must start from the last close instead.') }}

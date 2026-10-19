@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CompanyProfile;
 use App\Support\BusinessClock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -54,6 +55,8 @@ class HandleInertiaRequests extends Middleware
             'businessToday' => BusinessClock::todayString(),
             // The screen language; translations themselves ship with the frontend build.
             'locale' => App::getLocale(),
+            // The letterhead printed on invoices and reports (the logo is fetched by its URL).
+            'company' => fn (): ?array => $request->user() === null ? null : CompanyProfile::current()->letterhead(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

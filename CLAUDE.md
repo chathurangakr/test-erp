@@ -740,6 +740,11 @@ warehouses) and to every master added later:
 - **No balances, totals or stock columns on master tables.** A supplier has no payable, a
   customer has no receivable, a product has no stock. Those are always derived from posted
   transactions. `credit_limit` is an agreed *term*, not a balance.
+- **The company's own name, address and logo are data** (`company_profiles`, one row, edited on
+  Administration → Company details, permission `company.manage`). The logo is a data URI in that
+  row so backups carry it. Never write a customer's name or logo into the code or the public repo.
+  Printouts use the shared `company` prop (`Letterhead`, `PrintButton`, the A4 print CSS in
+  `app.css`); a page named `…/Print` gets the menu-less `PrintLayout`.
 - **Exactly one active warehouse is the default.** Never write `is_default` directly; use
   `App\Actions\Warehouses\SetDefaultWarehouse`, which maintains the invariant inside a
   transaction. See `docs/DATA_MODEL.md` D-2.
@@ -776,7 +781,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (80 permissions, seven editable starting roles, multiple roles per user, every route
+control** (81 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries

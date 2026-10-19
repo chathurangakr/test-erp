@@ -1,12 +1,13 @@
 <?php
 
 use App\Enums\Permission;
+use App\Http\Controllers\Administration\CompanyProfileController;
 use App\Http\Controllers\Administration\RoleController;
 use App\Http\Controllers\Administration\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * Administration — users and roles.
+ * Administration — users, roles and the company details printed on documents.
  *
  * Users have no destroy route: a user with history is deactivated, never deleted. People join
  * by registering (holding no access until an administrator grants a role) or are added by an
@@ -24,4 +25,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->names('roles')
         ->middlewareFor(['index', 'show'], Permission::RolesView->middleware())
         ->middlewareFor(['create', 'store', 'edit', 'update', 'destroy'], Permission::RolesManage->middleware());
+
+    Route::get('administration/company', [CompanyProfileController::class, 'edit'])
+        ->name('company.edit')
+        ->can(Permission::CompanyManage);
+    Route::put('administration/company', [CompanyProfileController::class, 'update'])
+        ->name('company.update')
+        ->can(Permission::CompanyManage);
+
+    // The logo on every printout. Open to any signed-in user: it is not business data.
+    Route::get('company/logo', [CompanyProfileController::class, 'logo'])->name('company.logo');
 });

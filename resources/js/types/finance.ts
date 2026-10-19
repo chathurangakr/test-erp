@@ -876,3 +876,30 @@ export type FinanceDashboardSummary = {
     top_customers: { id: number; code: string | null; name: string | null; outstanding: string }[];
     top_suppliers: { id: number; code: string | null; name: string | null; outstanding: string }[];
 };
+
+/** A sales invoice as printed for the customer. */
+export type SalesInvoicePrint = SalesInvoiceRow & {
+    description: string | null;
+    customer: {
+        code: string | null;
+        name: string | null;
+        contact_person: string | null;
+        address: string;
+        phone: string | null;
+        email: string | null;
+        tax_number: string | null;
+    };
+    lines: {
+        id: number;
+        product_code: string | null;
+        product_name: string | null;
+        description: string | null;
+        delivery_number: string | null;
+        delivery_date: string | null;
+        quantity: string | null;
+        uom: string | null;
+        unit_price: string | null;
+        delivered_value: string | null;
+        amount: string;
+    }[];
+};

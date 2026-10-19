@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/composables/usePermissions';
 import { index as deliveriesIndex } from '@/routes/deliveries';
@@ -35,10 +36,13 @@ const { t } = useT();
     <Head :title="t('Unbilled deliveries')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Unbilled deliveries"
-            :description="t('Goods delivered but not yet invoiced, in :currency.', { currency })"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Unbilled deliveries"
+                :description="t('Goods delivered but not yet invoiced, in :currency.', { currency })"
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
@@ -115,7 +119,7 @@ const { t } = useT();
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('A delivery records what the goods cost when they leave; the revenue waits for the invoice. An amount still unbilled here is work done but not yet charged for, not an error. The delivered value shown is the figure the delivery itself stored, which is why a line priced per measured kilogram carries through exactly — nothing is repriced. A delivery appears here only once its cost of sales has reached the ledger.') }}
         </p>
     </div>

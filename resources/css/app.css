@@ -170,3 +170,45 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ---------------------------------------------------------------- printing (A4) */
+@page {
+    size: A4;
+    margin: 12mm;
+}
+
+@media print {
+    html {
+        font-size: 11px;
+    }
+
+    /* The menu and its reserved width never print; the page uses the full sheet. */
+    [data-slot='sidebar'] {
+        display: none !important;
+    }
+
+    [data-slot='sidebar-inset'] {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Wide tables fit the sheet rather than being cut off at a scroll edge. */
+    .overflow-x-auto,
+    .overflow-x-clip {
+        overflow: visible !important;
+    }
+
+    tr,
+    img {
+        break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    [data-sonner-toaster] {
+        display: none !important;
+    }
+}

@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
@@ -39,10 +40,13 @@ watch([productId, warehouseId], () => {
     <Head :title="t('Inventory valuation')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Inventory valuation"
-            description="What the stock is worth, from the inventory ledger."
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Inventory valuation"
+                description="What the stock is worth, from the inventory ledger."
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
@@ -129,7 +133,7 @@ watch([productId, warehouseId], () => {
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Quantity, weighted average and value all come from the inventory ledger, not the general ledger — this is the authoritative record of what is physically held. Where a product carries a second unit, both are shown as measured; neither is ever derived from the other, and value always follows the primary quantity.') }}
             {{ t('This is the position now: historical valuation as at a past date is not supported, because the stock service has no date filter and approximating one would produce a figure that disagrees with every other stock screen.') }}
         </p>

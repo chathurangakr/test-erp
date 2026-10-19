@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
@@ -56,10 +57,13 @@ watch([from, to, productId, customerId], () => {
     <Head :title="t('Operational product profitability')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Operational product profitability"
-            description="Was each physical sale profitable? Built from posted deliveries — not the financial P&L."
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Operational product profitability"
+                description="Was each physical sale profitable? Built from posted deliveries — not the financial P&L."
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-4">
             <div class="grid gap-2">
@@ -213,7 +217,7 @@ watch([from, to, productId, customerId], () => {
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('This is operational profitability: each posted delivery\'s own sales value less the cost of the stock that left, exactly as the delivery recorded them. It answers "was this physical sale profitable?".') }}
             <Link :href="profitLoss()" class="underline">{{ t('Profit & loss') }}</Link>
             {{ t('answers a different question — what revenue has been recognised through sales invoices — so the two can legitimately differ while a delivery is unbilled or partly billed. Products sold by weight use the delivery\'s stored value; nothing is converted between count and weight. Reversed deliveries are excluded.') }}

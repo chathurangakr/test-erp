@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { index } from '@/routes/ap-aging';
 import type { ApAgingReport, ControlAccountCheck } from '@/types';
 import { useT } from '@/lib/i18n';
@@ -32,10 +33,13 @@ const { t } = useT();
     <Head :title="t('AP aging')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Accounts payable aging"
-            :description="t('What each supplier is owed, in :currency, bucketed by how overdue it is.', { currency })"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Accounts payable aging"
+                :description="t('What each supplier is owed, in :currency, bucketed by how overdue it is.', { currency })"
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="grid gap-1.5">
@@ -114,7 +118,7 @@ const { t } = useT();
             </span>.
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Every figure is derived from posted invoices less the payments still allocated to them — nothing is stored, and no supplier carries a balance column. A reversed invoice disappears from this report entirely, and a reversed payment stops reducing what is owed. No revenue or tax is modelled anywhere in this phase.') }}
         </p>
     </div>

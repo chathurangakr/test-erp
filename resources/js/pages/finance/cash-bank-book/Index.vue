@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,10 +54,13 @@ watch([accountId, from, to], () => {
     <Head :title="t('Cash / bank book')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Cash / bank book"
-            description="Every posted movement through one account, whatever recorded it."
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Cash / bank book"
+                description="Every posted movement through one account, whatever recorded it."
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
@@ -171,7 +175,7 @@ watch([accountId, from, to], () => {
             </div>
         </template>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Every row is a posted journal line touching this account — a supplier payment, a customer receipt, an expense voucher, a fund transfer or a journal written by hand. None of them is treated specially: they appear because each posted a line, which is also why the closing balance always equals the general ledger. Money in is a debit, money out a credit, and the running balance is worked out as this page loads. A reversed document stays visible with its reversal beside it; nothing is ever hidden.') }}
         </p>
     </div>

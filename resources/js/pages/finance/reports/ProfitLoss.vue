@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,14 +45,17 @@ watch([periodId, from, to], () => {
     <Head :title="t('Profit & loss')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Profit & loss"
-            :description="
-                statement.period
-                    ? statement.period
-                    : t(':from to :to', { from: statement.from ?? t('the beginning'), to: statement.to ?? t('today') })
-            "
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Profit & loss"
+                :description="
+                    statement.period
+                        ? statement.period
+                        : t(':from to :to', { from: statement.from ?? t('the beginning'), to: statement.to ?? t('today') })
+                "
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
@@ -123,7 +127,7 @@ watch([periodId, from, to], () => {
             </p>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Revenue less cost of sales is gross profit; less operating expenses is net profit. Every figure comes from posted journals, so this shows revenue that has actually been recognised — a delivery that has not been invoiced appears here as cost with no revenue beside it, which is why the unbilled-deliveries report exists. Accounts are grouped by the chart\'s own hierarchy and classified by account type, never by account number. Click any account to open its ledger.') }}
         </p>
     </div>

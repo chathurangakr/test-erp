@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
@@ -132,14 +133,17 @@ const counterpartyLists = computed(() => [
     <Head :title="t('Finance dashboard')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Finance dashboard"
-            :description="
-                summary.period.name
-                    ? t('Performance for :period; position as at its end.', { period: summary.period.name })
-                    : t('Performance from :from to :to; position as at :to.', { from: summary.period.from ?? t('the beginning'), to: summary.period.to ?? t('today') })
-            "
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Finance dashboard"
+                :description="
+                    summary.period.name
+                        ? t('Performance for :period; position as at its end.', { period: summary.period.name })
+                        : t('Performance from :from to :to; position as at :to.', { from: summary.period.from ?? t('the beginning'), to: summary.period.to ?? t('today') })
+                "
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
@@ -302,7 +306,7 @@ const counterpartyLists = computed(() => [
             </div>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t("Performance comes from the general ledger for the chosen window — recognised revenue, not deliveries. Cash, receivables, payables and aging are as at the window's end. Inventory value is always the current position from the inventory ledger, because historical stock valuation is not supported. Top products are operational figures from posted deliveries. Every number is fetched from the report that owns it, so the dashboard can never disagree with the detail behind it.") }}
         </p>
     </div>

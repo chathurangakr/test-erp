@@ -1,3 +1,4 @@
+import type { CompanyLetterhead } from '@/types/administration';
 import type { Auth } from '@/types/auth';
 
 // Extend ImportMeta interface for Vite...
@@ -23,6 +24,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             /** Today (YYYY-MM-DD) in the factory timezone. */
             businessToday: string;
+            /** The letterhead for printouts; null when signed out. */
+            company: CompanyLetterhead | null;
             /** Present on simple-mode (kiosk) pages only. */
             kiosk?: {
                 locale: 'si' | 'en';

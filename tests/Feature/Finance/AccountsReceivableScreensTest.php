@@ -14,6 +14,7 @@ use App\Enums\InventoryTransactionType;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesInvoiceStatus;
 use App\Models\Account;
+use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -311,6 +312,33 @@ class AccountsReceivableScreensTest extends TestCase
                 ->has('invoice.lines', 1)
                 ->where('invoice.lines.0.delivered_value', '260000.000000')
                 ->has('invoice.journal.lines', 2));
+    }
+
+    #[Test]
+    public function the_printed_invoice_shows_what_was_sold_and_the_letterhead(): void
+    {
+        $user = User::factory()->admin()->create();
+        $delivery = $this->postDelivery();
+        CompanyProfile::query()->create(['name' => 'Factory Co', 'address' => '1 Mill Road']);
+
+        $this->actingAs($user)->post(route('sales-invoices.store'), $this->invoicePayload($delivery));
+        $invoice = SalesInvoice::firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('sales-invoices.print', $invoice))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('finance/sales-invoices/Print')
+                ->where('company.name', 'Factory Co')
+                ->where('company.address', '1 Mill Road')
+                ->where('invoice.status', 'DRAFT')
+                ->where('invoice.customer.name', $this->customer->name)
+                ->where('invoice.total', '260000.000000')
+                ->has('invoice.lines', 1)
+                ->where('invoice.lines.0.quantity', '2000.000')
+                ->where('invoice.lines.0.uom', 'NOS')
+                ->where('invoice.lines.0.unit_price', '130.000000')
+                ->where('invoice.lines.0.amount', '260000.000000'));
     }
 
     #[Test]

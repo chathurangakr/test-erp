@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import JournalTable from '@/components/payroll/JournalTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,10 +32,13 @@ function reversePayroll(): void {
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex flex-col gap-2">
-                <Heading
-                    :title="t('Salaries for :month', { month: payroll.month })"
-                    :description="`${payroll.payroll_number} · ${payroll.pay_date} · ${payroll.payment_account ?? ''}`"
-                />
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <Heading
+                        :title="t('Salaries for :month', { month: payroll.month })"
+                        :description="`${payroll.payroll_number} · ${payroll.pay_date} · ${payroll.payment_account ?? ''}`"
+                    />
+                    <PrintButton />
+                </div>
                 <Badge :variant="payroll.status === 'REVERSED' ? 'destructive' : 'default'" class="w-fit">{{ payroll.status_label }}</Badge>
             </div>
             <Button v-if="payroll.can_reverse && can('payroll.salary_reverse')" variant="outline" @click="reversePayroll">{{ t('Reverse') }}</Button>

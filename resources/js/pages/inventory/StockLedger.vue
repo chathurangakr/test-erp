@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect.vue';
@@ -80,10 +81,13 @@ const controlClass =
     <Head :title="t('Stock ledger')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Stock ledger"
-            description="Every posted inventory movement. Read only — postings come from business documents."
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Stock ledger"
+                description="Every posted inventory movement. Read only — postings come from business documents."
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <div class="grid gap-1.5">
@@ -290,7 +294,7 @@ const controlClass =
             </div>
         </template>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Posted movements are permanent. Corrections are made by posting a reversal, which appears here as a separate entry referencing the original.') }}
         </p>
     </div>

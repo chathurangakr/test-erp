@@ -30,3 +30,13 @@ export type PermissionGroup = {
     module: string;
     permissions: { id: number; code: string; name: string }[];
 };
+
+/** The company as printed on invoices and reports (shared with every signed-in page). */
+export type CompanyLetterhead = {
+    name: string;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    registration_number: string | null;
+    logo_url: string | null;
+};

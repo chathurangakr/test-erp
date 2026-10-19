@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { index } from '@/routes/grni-reconciliation';
 import type { ControlAccountCheck, GrniReconciliationReport } from '@/types';
@@ -32,10 +33,13 @@ const { t } = useT();
     <Head :title="t('GRNI reconciliation')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Goods Received Not Invoiced"
-            :description="t('Stock received but not yet invoiced, in :currency.', { currency })"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Goods Received Not Invoiced"
+                :description="t('Stock received but not yet invoiced, in :currency.', { currency })"
+            />
+            <PrintButton />
+        </div>
 
         <div
             v-if="control && !control.reconciles"
@@ -115,7 +119,7 @@ const { t } = useT();
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t("The accrued figure is read from each receipt's own posted journal, never re-derived from quantity and unit cost. A receipt may be invoiced by several suppliers — goods, transport and loading are commonly three different companies — so an amount left over here is normal until every one of them has billed. Nothing is written off automatically: if invoices never fully clear a receipt, the remainder stays visible.") }}
         </p>
     </div>

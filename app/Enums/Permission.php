@@ -119,6 +119,7 @@ enum Permission: string
     case UsersManage = 'users.manage';
     case RolesView = 'roles.view';
     case RolesManage = 'roles.manage';
+    case CompanyManage = 'company.manage';
 
     /**
      * Route middleware requiring this permission, for resource registrations that cannot
@@ -141,7 +142,7 @@ enum Permission: string
             str_starts_with($this->value, 'finance.') => 'Finance',
             str_starts_with($this->value, 'payroll.') => 'Payroll',
             str_starts_with($this->value, 'reports.') => 'Reports',
-            str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.') => 'Administration',
+            str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.'), str_starts_with($this->value, 'company.') => 'Administration',
             str_starts_with($this->value, 'inventory.') => 'Inventory',
             str_starts_with($this->value, 'purchasing.') => 'Purchasing',
             str_starts_with($this->value, 'sales.') => 'Sales',
@@ -236,6 +237,7 @@ enum Permission: string
             self::UsersManage => 'Assign roles to users and activate or deactivate them',
             self::RolesView => 'View roles and their permissions',
             self::RolesManage => 'Create and edit roles and assign permissions',
+            self::CompanyManage => 'Edit the company name, address and logo printed on invoices and reports',
         };
     }
 

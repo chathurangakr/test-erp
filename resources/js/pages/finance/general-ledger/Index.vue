@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index } from '@/routes/general-ledger';
 import { index as journalsIndex } from '@/routes/journals';
@@ -53,10 +54,13 @@ const { t } = useT();
     <Head :title="t('General ledger')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="General ledger"
-            :description="t('Every posted line for one account, with a running balance. Amounts in :currency.', { currency })"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="General ledger"
+                :description="t('Every posted line for one account, with a running balance. Amounts in :currency.', { currency })"
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="grid gap-1.5">
@@ -153,7 +157,7 @@ const { t } = useT();
                 </table>
             </div>
 
-            <p class="text-muted-foreground max-w-3xl text-xs">
+            <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
                 {{ t('The running balance is calculated for this view and never stored. Anything before the chosen start date is folded into the opening balance, so the figures are true rather than starting from an arbitrary zero.') }}
             </p>
         </template>

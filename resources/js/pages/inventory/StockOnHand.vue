@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as stockIndex } from '@/routes/inventory/stock';
@@ -62,10 +63,13 @@ const totalValue = computed(() =>
     <Head :title="t('Stock on hand')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Stock on hand"
-            description="Derived from posted inventory movements. There is no stored stock figure."
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Stock on hand"
+                description="Derived from posted inventory movements. There is no stored stock figure."
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="grid gap-1.5">
@@ -225,7 +229,7 @@ const totalValue = computed(() =>
             </div>
         </template>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Weighted average cost is maintained at company level, so it is the same for a product in every warehouse. Moving stock between warehouses does not change total quantity, total value or the average cost.') }}
         </p>
     </div>

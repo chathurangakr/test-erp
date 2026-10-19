@@ -129,6 +129,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middlewareFor(['index', 'show'], Permission::ArView->middleware())
         ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ArInvoiceCreate->middleware());
 
+    Route::get('finance/sales-invoices/{sales_invoice}/print', [SalesInvoiceController::class, 'print'])
+        ->name('sales-invoices.print')
+        ->can(Permission::ArView);
     Route::patch('finance/sales-invoices/{sales_invoice}/post', [SalesInvoiceActionController::class, 'post'])
         ->name('sales-invoices.post')
         ->can(Permission::ArInvoicePost);

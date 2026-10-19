@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index } from '@/routes/trial-balance';
@@ -44,10 +45,13 @@ const { t } = useT();
     <Head :title="t('Trial balance')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Trial balance"
-            :description="t('Every account with a balance, in :currency. The two totals must be identical.', { currency })"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Trial balance"
+                :description="t('Every account with a balance, in :currency. The two totals must be identical.', { currency })"
+            />
+            <PrintButton />
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
             <div class="grid gap-1.5">
@@ -124,7 +128,7 @@ const { t } = useT();
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Balances are derived from posted journal lines on request — nothing here is stored. An account whose debits and credits cancel out is omitted, because it has no balance to report.') }}
         </p>
     </div>

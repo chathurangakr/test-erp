@@ -58,6 +58,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as companyEdit } from '@/routes/company';
 import { index as customersIndex } from '@/routes/customers';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -426,6 +427,12 @@ const administrationNavItems: NavItem[] = [
         href: rolesIndex(),
         permission: 'roles.view',
         icon: ShieldCheck,
+    },
+    {
+        title: 'Company details',
+        href: companyEdit(),
+        permission: 'company.manage',
+        icon: Building2,
     },
 ];
 

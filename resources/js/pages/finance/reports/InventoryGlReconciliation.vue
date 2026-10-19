@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { useT } from '@/lib/i18n';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
@@ -20,10 +21,13 @@ const { t } = useT();
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <Heading
-                title="Inventory vs general ledger"
-                description="Two independent records of the same value, compared to six decimals."
-            />
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <Heading
+                    title="Inventory vs general ledger"
+                    description="Two independent records of the same value, compared to six decimals."
+                />
+                <PrintButton />
+            </div>
             <Badge :variant="report.reconciled ? 'default' : 'destructive'" class="w-fit">
                 {{ report.reconciled ? t('Reconciled') : t('Differences found') }}
             </Badge>
@@ -129,7 +133,7 @@ const { t } = useT();
             </p>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('The inventory ledger says value moved because stock moved; the general ledger says it moved because a journal was posted. After accounting-integrated operations the two agree exactly, because every stock movement writes its journal inside the same database transaction.') }}
             <strong>{{ t('A difference is shown, never corrected.') }}</strong>
             {{ t('The usual honest cause is stock that predates the accounting cutover; the remedy is an opening-balance process, which is not built. Journals are never backfilled automatically — inventing history to tidy a report destroys the one thing an audit trail is for. Figures are shown to six decimals so a small difference can be diagnosed rather than rounded away.') }}

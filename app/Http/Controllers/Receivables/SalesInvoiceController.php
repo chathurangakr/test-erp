@@ -119,6 +119,57 @@ class SalesInvoiceController extends Controller
         ]);
     }
 
+    /**
+     * The invoice as the customer receives it, laid out for an A4 sheet.
+     */
+    public function print(SalesInvoice $salesInvoice): Response
+    {
+        $salesInvoice->load([
+            'customer',
+            'lines.product.primaryUom:id,code',
+            'lines.product.secondaryUom:id,code',
+            'lines.deliveryLine.delivery:id,delivery_number,delivery_date',
+        ]);
+
+        $customer = $salesInvoice->customer;
+
+        return Inertia::render('finance/sales-invoices/Print', [
+            'invoice' => array_merge($this->summarise($salesInvoice), [
+                'description' => $salesInvoice->description,
+                'customer' => [
+                    'code' => $customer?->code,
+                    'name' => $customer?->name,
+                    'contact_person' => $customer?->contact_person,
+                    'address' => collect([$customer?->address_line_1, $customer?->address_line_2, $customer?->city])
+                        ->filter()
+                        ->implode(', '),
+                    'phone' => $customer?->phone,
+                    'email' => $customer?->email,
+                    'tax_number' => $customer?->tax_number,
+                ],
+                'lines' => $salesInvoice->lines->map(function (SalesInvoiceLine $line): array {
+                    $delivered = $line->deliveryLine;
+                    $isSecondary = $delivered?->pricing_basis->isSecondary() ?? false;
+
+                    return [
+                        'id' => $line->id,
+                        'product_code' => $line->product?->code,
+                        'product_name' => $line->product?->name,
+                        'description' => $line->description,
+                        'delivery_number' => $delivered?->delivery?->delivery_number,
+                        'delivery_date' => $delivered?->delivery?->delivery_date?->toDateString(),
+                        'quantity' => $delivered?->sellingQuantity(),
+                        'uom' => $isSecondary ? $line->product?->secondaryUom?->code : $line->product?->primaryUom?->code,
+                        'unit_price' => $delivered?->unit_price,
+                        'delivered_value' => $delivered === null ? null : $this->billing->originalValue($delivered),
+                        'amount' => $line->amount,
+                    ];
+                })->values(),
+            ]),
+            'currency' => config('accounting.base_currency'),
+        ]);
+    }
+
     public function edit(SalesInvoice $salesInvoice): Response
     {
         $this->saveInvoice->assertEditable($salesInvoice);

@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,10 @@ const tone: Record<AttendanceStatusValue, string> = {
     <Head :title="t('Attendance')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading title="Attendance" description="Mark each employee for the day. Full day pays the day's rate, half day half of it, leave nothing." />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading title="Attendance" description="Mark each employee for the day. Full day pays the day's rate, half day half of it, leave nothing." />
+            <PrintButton />
+        </div>
 
         <div class="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="icon" :aria-label="t('Previous day')" @click="shift(-1)"><ChevronLeft class="size-4" /></Button>

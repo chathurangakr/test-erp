@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,10 +54,13 @@ function bookUrl(row: CashBankAccountRow): string {
     <Head :title="t('Cash / bank position')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Cash / bank position"
-            :description="filters.as_of ? t('Money held, as at :date.', { date: filters.as_of }) : t('Money held, as at today.')"
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Cash / bank position"
+                :description="filters.as_of ? t('Money held, as at :date.', { date: filters.as_of }) : t('Money held, as at today.')"
+            />
+            <PrintButton />
+        </div>
 
         <section class="grid gap-4 sm:grid-cols-3">
             <div class="grid gap-2">
@@ -138,7 +142,7 @@ function bookUrl(row: CashBankAccountRow): string {
             </table>
         </div>
 
-        <p class="text-muted-foreground max-w-3xl text-xs">
+        <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Every balance is derived from posted journal lines on each visit — nothing is stored — using the same calculation as the cash / bank book, so the two always agree. Click an account to open its book. A negative balance is shown as it stands: no overdraft policy has been decided yet.') }}
         </p>
     </div>
