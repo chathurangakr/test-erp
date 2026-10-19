@@ -51,11 +51,14 @@ const notValid = computed(() => {
                 {{ t('Back to invoice') }}
             </Link>
         </Button>
-        <PrintButton />
+        <div class="flex flex-col items-end gap-1">
+            <PrintButton />
+            <p class="text-xs text-neutral-600">{{ t('For a PDF file, choose "Save as PDF" as the printer.') }}</p>
+        </div>
     </div>
 
     <article
-        class="relative mx-auto flex min-h-[297mm] w-[210mm] max-w-full flex-col bg-white p-[12mm] text-[13px] leading-snug shadow-lg print:min-h-[272mm] print:w-auto print:p-0 print:shadow-none"
+        class="relative mx-auto flex min-h-[297mm] w-[210mm] max-w-full flex-col bg-white p-[12mm] text-[13px] leading-snug shadow-lg print:min-h-[296mm] print:w-auto print:p-[12mm] print:shadow-none"
     >
         <p
             v-if="notValid"

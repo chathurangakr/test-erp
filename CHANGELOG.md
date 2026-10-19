@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.7.1 — 19 October 2026
+
+- **Clean printouts.** The browser no longer adds its own date, page title and web address at
+  the top and bottom of a printed invoice or report. The invoice page also reminds you that
+  choosing "Save as PDF" as the printer gives a PDF file to send to a customer.
+
 ## 1.7.0 — 19 October 2026
 
 - **Print invoices on A4.** A sales invoice has a **Print invoice** button. It opens the invoice

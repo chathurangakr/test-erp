@@ -172,9 +172,13 @@
 }
 
 /* ---------------------------------------------------------------- printing (A4) */
+/*
+ * No browser margin: the browser prints its own date, title and web address in that margin, so
+ * leaving none keeps them off the paper. The page supplies its own 12 mm margin instead.
+ */
 @page {
     size: A4;
-    margin: 12mm;
+    margin: 0;
 }
 
 @media print {
@@ -191,6 +195,10 @@
         margin: 0 !important;
         border-radius: 0 !important;
         box-shadow: none !important;
+        /* The margin, repeated on every sheet of a long report. */
+        padding: 12mm !important;
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
     }
 
     /* Wide tables fit the sheet rather than being cut off at a scroll edge. */
