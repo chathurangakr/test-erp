@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import AppearanceTabs from '@/components/AppearanceTabs.vue';
+import BeautyModeToggle from '@/components/BeautyModeToggle.vue';
 import Heading from '@/components/Heading.vue';
 import { edit } from '@/routes/appearance';
 import { useT } from '@/lib/i18n';
@@ -31,5 +32,6 @@ const { t } = useT();
             description="Update the appearance settings for your account"
         />
         <AppearanceTabs />
+        <BeautyModeToggle />
     </div>
 </template>

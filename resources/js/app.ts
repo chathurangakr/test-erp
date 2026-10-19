@@ -1,5 +1,6 @@
 import { createInertiaApp } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
+import { initializeBeautyMode } from '@/composables/useBeautyMode';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import KioskLayout from '@/layouts/KioskLayout.vue';
@@ -33,6 +34,9 @@ void createInertiaApp({
 
 // This will set light / dark mode on page load...
 initializeTheme();
+
+// Beauty mode, when this device has it switched on...
+initializeBeautyMode();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();

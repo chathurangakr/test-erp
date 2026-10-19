@@ -16,6 +16,13 @@
                         document.documentElement.classList.add('dark');
                     }
                 }
+
+                try {
+                    if (localStorage.getItem('beauty-mode') === 'on') {
+                        document.documentElement.classList.add('beauty');
+                        document.documentElement.dataset.beautyTheme = localStorage.getItem('beauty-theme') || 'coconut';
+                    }
+                } catch (e) {}
             })();
         </script>
 

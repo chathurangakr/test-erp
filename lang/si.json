@@ -1905,5 +1905,12 @@
     "How printouts begin (after saving)": "මුද්‍රණ ආරම්භ වන ආකාරය (සුරැකීමෙන් පසු)",
     "Company details saved.": "සමාගම් විස්තර සුරැකිණි.",
     "Edit the company name, address and logo printed on invoices and reports": "ඉන්වොයිසි සහ වාර්තාවල මුද්‍රණය වන සමාගමේ නම, ලිපිනය සහ ලාංඡනය සංස්කරණය",
-    "For a PDF file, choose \"Save as PDF\" as the printer.": "PDF ගොනුවක් සඳහා, මුද්‍රකය ලෙස \"Save as PDF\" තෝරන්න."
+    "For a PDF file, choose \"Save as PDF\" as the printer.": "PDF ගොනුවක් සඳහා, මුද්‍රකය ලෙස \"Save as PDF\" තෝරන්න.",
+    "Beauty mode": "අලංකාර ප්‍රකාරය (Beauty mode)",
+    "Colourful screens with animations. Only for this device; printouts stay plain.": "චලනයන් සහිත වර්ණවත් තිර. මෙම උපාංගයට පමණි; මුද්‍රණ සරලව පවතී.",
+    "Style": "විලාසය (Style)",
+    "Coconut Grove": "පොල් වත්ත (Coconut Grove)",
+    "Mulberry Dusk": "මල්බෙරි සැන්දෑව (Mulberry Dusk)",
+    "Cerulean Sky": "නිල් අහස (Cerulean Sky)",
+    "Petal Pastel": "මල් පෙති (Petal Pastel)"
 }

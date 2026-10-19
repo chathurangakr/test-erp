@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.8.0 — 19 October 2026
+
+- **Beauty mode** (Settings → Appearance), optional and off by default. It adds colourful screens,
+  frosted-glass panels, gradient headings and buttons, iPhone-style animations as screens open,
+  and confetti when something is saved. Choose one of four styles: **Coconut Grove**, **Mulberry
+  Dusk**, **Cerulean Sky** or **Petal Pastel**. Each computer or phone remembers its own choice.
+  With it off nothing changes, and printouts are always plain.
+
 ## 1.7.1 — 19 October 2026
 
 - **Clean printouts.** The browser no longer adds its own date, page title and web address at

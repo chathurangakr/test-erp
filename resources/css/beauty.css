@@ -1,0 +1,639 @@
+/*
+ * Beauty mode — an optional, colourful, animated look (Settings → Appearance).
+ *
+ * Every rule here sits under `html.beauty` and inside `@media screen`, so with the mode off
+ * nothing changes, and printouts are never affected. Movement is skipped for anyone whose
+ * device asks for reduced motion.
+ *
+ * Each style (`data-beauty-theme`) only sets the --beauty-* colours and the app's own colour
+ * tokens; the shared rules below draw everything from them.
+ */
+
+@media screen {
+    /* ============================================================ styles */
+
+    /* Coconut Grove — the first style, and the default. */
+    html.beauty {
+        --primary: hsl(162 84% 32%);
+        --primary-foreground: hsl(0 0% 100%);
+        --ring: hsl(172 80% 40%);
+        --accent: hsl(160 60% 94%);
+        --accent-foreground: hsl(163 80% 18%);
+        --secondary: hsl(190 70% 93%);
+        --secondary-foreground: hsl(195 80% 20%);
+        --border: hsl(165 30% 86%);
+        --sidebar-foreground: hsl(150 40% 92%);
+        --sidebar-primary: hsl(152 76% 60%);
+        --sidebar-primary-foreground: hsl(165 70% 12%);
+        --sidebar-accent: hsl(160 50% 26%);
+        --sidebar-accent-foreground: hsl(0 0% 100%);
+        --sidebar-border: hsl(165 45% 24%);
+
+        --beauty-p1: #10b981;
+        --beauty-p2: #06b6d4;
+        --beauty-p3: #8b5cf6;
+        --beauty-p4: #f59e0b;
+        --beauty-p5: #ec4899;
+        /* Headings and main buttons. */
+        --beauty-a: #10b981;
+        --beauty-b: #06b6d4;
+        --beauty-c: #8b5cf6;
+        --beauty-button-text: #fff;
+        /* The menu. */
+        --beauty-side-1: hsl(165 70% 18%);
+        --beauty-side-2: hsl(180 65% 14%);
+        --beauty-side-3: hsl(200 60% 14%);
+        --beauty-side-active: hsl(152 76% 60%);
+        /* The colours glowing behind the screen. */
+        --beauty-glow-1: hsl(160 80% 70% / 0.35);
+        --beauty-glow-2: hsl(190 90% 70% / 0.3);
+        --beauty-glow-3: hsl(265 90% 80% / 0.25);
+        --beauty-glass: hsl(0 0% 100% / 0.78);
+        /* Hover, table header and shadows. */
+        --beauty-tint: hsl(165 70% 45%);
+        --beauty-shadow: hsl(170 60% 25%);
+    }
+
+    html.beauty.dark {
+        --primary: hsl(152 70% 52%);
+        --primary-foreground: hsl(165 70% 10%);
+        --ring: hsl(172 70% 50%);
+        --accent: hsl(165 40% 16%);
+        --accent-foreground: hsl(150 60% 90%);
+        --secondary: hsl(195 40% 16%);
+        --secondary-foreground: hsl(190 60% 90%);
+        --border: hsl(165 25% 20%);
+        --sidebar-accent: hsl(165 45% 18%);
+        --sidebar-border: hsl(165 40% 16%);
+        --beauty-side-1: hsl(168 60% 9%);
+        --beauty-side-2: hsl(180 55% 8%);
+        --beauty-side-3: hsl(200 50% 9%);
+        --beauty-glow-1: hsl(160 80% 30% / 0.35);
+        --beauty-glow-2: hsl(190 90% 30% / 0.3);
+        --beauty-glow-3: hsl(265 80% 35% / 0.3);
+        --beauty-glass: hsl(170 40% 6% / 0.72);
+    }
+
+    /* Mulberry Dusk — #A67CA4 #6A8CA9 #857A9E #C9A9B8 #CBD3D8 */
+    html.beauty[data-beauty-theme='mulberry'] {
+        --primary: #8e6390;
+        --primary-foreground: #fff;
+        --ring: #857a9e;
+        --accent: #f1e8f0;
+        --accent-foreground: #4f3550;
+        --secondary: #e6ecf1;
+        --secondary-foreground: #33475a;
+        --border: #e2d6de;
+        --sidebar-foreground: #f4eef4;
+        --sidebar-primary: #c9a9b8;
+        --sidebar-primary-foreground: #3a2a3c;
+        --sidebar-accent: hsl(300 15% 100% / 0.14);
+        --sidebar-accent-foreground: #fff;
+        --sidebar-border: hsl(300 15% 100% / 0.12);
+
+        --beauty-p1: #a67ca4;
+        --beauty-p2: #6a8ca9;
+        --beauty-p3: #857a9e;
+        --beauty-p4: #c9a9b8;
+        --beauty-p5: #cbd3d8;
+        --beauty-a: #a67ca4;
+        --beauty-b: #857a9e;
+        --beauty-c: #6a8ca9;
+        --beauty-button-text: #fff;
+        --beauty-side-1: #7a5679;
+        --beauty-side-2: #625a80;
+        --beauty-side-3: #4d6a86;
+        --beauty-side-active: #e3c6d3;
+        --beauty-glow-1: hsl(303 20% 57% / 0.35);
+        --beauty-glow-2: hsl(208 27% 54% / 0.28);
+        --beauty-glow-3: hsl(332 25% 73% / 0.4);
+        --beauty-glass: hsl(300 30% 99% / 0.8);
+        --beauty-tint: #a67ca4;
+        --beauty-shadow: #5d4a6b;
+    }
+
+    html.beauty.dark[data-beauty-theme='mulberry'] {
+        --primary: #c9a9b8;
+        --primary-foreground: #2c1f2d;
+        --ring: #c9a9b8;
+        --accent: #3a2e3d;
+        --accent-foreground: #f1e6ee;
+        --secondary: #2c3542;
+        --secondary-foreground: #dfe7ee;
+        --border: #3b3342;
+        --beauty-a: #e3c6d3;
+        --beauty-b: #c9a9b8;
+        --beauty-c: #9db7cf;
+        --beauty-side-1: #3b2a3d;
+        --beauty-side-2: #312e44;
+        --beauty-side-3: #283647;
+        --beauty-glow-1: hsl(303 20% 40% / 0.35);
+        --beauty-glow-2: hsl(208 27% 38% / 0.3);
+        --beauty-glow-3: hsl(258 15% 45% / 0.35);
+        --beauty-glass: hsl(280 20% 8% / 0.74);
+    }
+
+    /* Cerulean Sky — #8EB1D1 #A7C7E7 #1C2B48 #E8ECEF #C4D8E5 */
+    html.beauty[data-beauty-theme='cerulean'] {
+        --primary: #1c2b48;
+        --primary-foreground: #e8ecef;
+        --ring: #8eb1d1;
+        --accent: #e4eef7;
+        --accent-foreground: #1c2b48;
+        --secondary: #e8ecef;
+        --secondary-foreground: #1c2b48;
+        --border: #d3e0ea;
+        --sidebar-foreground: #e8ecef;
+        --sidebar-primary: #a7c7e7;
+        --sidebar-primary-foreground: #1c2b48;
+        --sidebar-accent: hsl(210 50% 80% / 0.14);
+        --sidebar-accent-foreground: #fff;
+        --sidebar-border: hsl(210 50% 80% / 0.12);
+
+        --beauty-p1: #8eb1d1;
+        --beauty-p2: #a7c7e7;
+        --beauty-p3: #1c2b48;
+        --beauty-p4: #c4d8e5;
+        --beauty-p5: #e8ecef;
+        --beauty-a: #1c2b48;
+        --beauty-b: #3f6592;
+        --beauty-c: #8eb1d1;
+        --beauty-button-text: #fff;
+        --beauty-side-1: #1c2b48;
+        --beauty-side-2: #22365a;
+        --beauty-side-3: #2d4870;
+        --beauty-side-active: #a7c7e7;
+        --beauty-glow-1: hsl(208 42% 69% / 0.4);
+        --beauty-glow-2: hsl(210 58% 78% / 0.4);
+        --beauty-glow-3: hsl(204 38% 83% / 0.55);
+        --beauty-glass: hsl(210 30% 99% / 0.8);
+        --beauty-tint: #8eb1d1;
+        --beauty-shadow: #1c2b48;
+    }
+
+    html.beauty.dark[data-beauty-theme='cerulean'] {
+        --primary: #a7c7e7;
+        --primary-foreground: #1c2b48;
+        --ring: #a7c7e7;
+        --accent: #22344f;
+        --accent-foreground: #e8ecef;
+        --secondary: #1f2c42;
+        --secondary-foreground: #e8ecef;
+        --border: #2a3a54;
+        --beauty-a: #e8ecef;
+        --beauty-b: #a7c7e7;
+        --beauty-c: #8eb1d1;
+        --beauty-side-1: #111b2e;
+        --beauty-side-2: #16233b;
+        --beauty-side-3: #1c2b48;
+        --beauty-glow-1: hsl(220 44% 25% / 0.55);
+        --beauty-glow-2: hsl(208 42% 40% / 0.3);
+        --beauty-glow-3: hsl(210 58% 50% / 0.2);
+        --beauty-glass: hsl(220 40% 8% / 0.74);
+    }
+
+    /* Petal Pastel — #F1C6D9 #EEB3C9 #DAC2E2 #C7D7E8 #9CB6CF */
+    html.beauty[data-beauty-theme='petal'] {
+        --primary: #c56a92;
+        --primary-foreground: #fff;
+        --ring: #dac2e2;
+        --accent: #fbeef4;
+        --accent-foreground: #6b3550;
+        --secondary: #eef3f9;
+        --secondary-foreground: #3e5670;
+        --border: #f0dbe6;
+        --sidebar-foreground: #4b3352;
+        --sidebar-primary: #c56a92;
+        --sidebar-primary-foreground: #fff;
+        --sidebar-accent: hsl(0 0% 100% / 0.55);
+        --sidebar-accent-foreground: #4b3352;
+        --sidebar-border: hsl(0 0% 100% / 0.6);
+
+        --beauty-p1: #f1c6d9;
+        --beauty-p2: #eeb3c9;
+        --beauty-p3: #dac2e2;
+        --beauty-p4: #c7d7e8;
+        --beauty-p5: #9cb6cf;
+        --beauty-a: #c56a92;
+        --beauty-b: #9d7cb3;
+        --beauty-c: #6f8fb3;
+        --beauty-button-text: #fff;
+        --beauty-side-1: #f6d6e4;
+        --beauty-side-2: #e8d6ef;
+        --beauty-side-3: #d3e1ef;
+        --beauty-side-active: #c56a92;
+        --beauty-glow-1: hsl(333 63% 86% / 0.7);
+        --beauty-glow-2: hsl(285 38% 82% / 0.6);
+        --beauty-glow-3: hsl(211 45% 85% / 0.7);
+        --beauty-glass: hsl(330 60% 99% / 0.75);
+        --beauty-tint: #eeb3c9;
+        --beauty-shadow: #a15c7d;
+    }
+
+    html.beauty.dark[data-beauty-theme='petal'] {
+        --primary: #eeb3c9;
+        --primary-foreground: #3b2433;
+        --ring: #dac2e2;
+        --accent: #3a2a36;
+        --accent-foreground: #f6e3ec;
+        --secondary: #2a3240;
+        --secondary-foreground: #e3ebf4;
+        --border: #3d3040;
+        --sidebar-foreground: #f6e3ec;
+        --sidebar-primary: #eeb3c9;
+        --sidebar-primary-foreground: #3b2433;
+        --sidebar-accent: hsl(0 0% 100% / 0.1);
+        --sidebar-accent-foreground: #fff;
+        --sidebar-border: hsl(0 0% 100% / 0.08);
+        --beauty-a: #f1c6d9;
+        --beauty-b: #dac2e2;
+        --beauty-c: #c7d7e8;
+        --beauty-button-text: #3b2433;
+        --beauty-side-1: #3a2734;
+        --beauty-side-2: #322b40;
+        --beauty-side-3: #283244;
+        --beauty-side-active: #eeb3c9;
+        --beauty-glow-1: hsl(333 40% 35% / 0.4);
+        --beauty-glow-2: hsl(285 25% 38% / 0.35);
+        --beauty-glow-3: hsl(211 30% 38% / 0.35);
+        --beauty-glass: hsl(300 15% 8% / 0.74);
+    }
+
+    /* ============================================================ shared rules */
+
+    /* ------------------------------------------------------------ backdrop */
+    html.beauty body {
+        background:
+            radial-gradient(
+                60rem 40rem at 0% 0%,
+                var(--beauty-glow-1),
+                transparent 60%
+            ),
+            radial-gradient(
+                50rem 40rem at 100% 10%,
+                var(--beauty-glow-2),
+                transparent 60%
+            ),
+            radial-gradient(
+                50rem 40rem at 50% 100%,
+                var(--beauty-glow-3),
+                transparent 60%
+            ),
+            var(--background);
+        background-attachment: fixed;
+    }
+
+    /* The main panel becomes frosted glass over the colours. */
+    html.beauty [data-slot='sidebar-inset'] {
+        background: var(--beauty-glass);
+        backdrop-filter: blur(18px) saturate(1.4);
+    }
+
+    /* The menu: a gradient in the style's deepest colours. */
+    html.beauty [data-sidebar='sidebar'] {
+        background: linear-gradient(
+            180deg,
+            var(--beauty-side-1),
+            var(--beauty-side-2) 55%,
+            var(--beauty-side-3)
+        );
+        color: var(--sidebar-foreground);
+    }
+
+    html.beauty [data-slot='sidebar-menu-button'][data-active='true'] {
+        background: color-mix(
+            in srgb,
+            var(--beauty-side-active) 28%,
+            transparent
+        );
+        box-shadow: inset 3px 0 0 var(--beauty-side-active);
+    }
+
+    /* ------------------------------------------------------------ headings */
+    html.beauty [data-slot='sidebar-inset'] h1,
+    html.beauty [data-slot='sidebar-inset'] h2 {
+        background: linear-gradient(
+            90deg,
+            var(--beauty-a),
+            var(--beauty-b),
+            var(--beauty-c),
+            var(--beauty-a)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* ------------------------------------------------------------ panels and cards */
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border,
+    html.beauty [data-slot='card'] {
+        background-color: var(--card);
+        box-shadow:
+            0 1px 2px color-mix(in srgb, var(--beauty-shadow) 8%, transparent),
+            0 8px 24px -12px
+                color-mix(in srgb, var(--beauty-shadow) 30%, transparent);
+        transition:
+            transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+            box-shadow 0.35s ease,
+            border-color 0.35s ease;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border:hover,
+    html.beauty [data-slot='card']:hover {
+        border-color: color-mix(in srgb, var(--beauty-tint) 60%, transparent);
+        box-shadow:
+            0 2px 4px color-mix(in srgb, var(--beauty-shadow) 10%, transparent),
+            0 18px 40px -16px
+                color-mix(in srgb, var(--beauty-shadow) 50%, transparent);
+    }
+
+    /* Clickable tiles (dashboard shortcuts) lift on hover. */
+    html.beauty [data-slot='sidebar-inset'] a.rounded-xl.border:hover {
+        transform: translateY(-3px) scale(1.01);
+    }
+
+    /* ------------------------------------------------------------ buttons */
+    html.beauty [data-slot='button'].bg-primary {
+        background-image: linear-gradient(
+            110deg,
+            var(--beauty-a),
+            var(--beauty-b) 60%,
+            var(--beauty-c)
+        );
+        background-size: 200% 100%;
+        color: var(--beauty-button-text);
+        border: 0;
+        box-shadow: 0 6px 18px -8px
+            color-mix(in srgb, var(--beauty-shadow) 70%, transparent);
+        transition:
+            background-position 0.5s ease,
+            transform 0.2s cubic-bezier(0.32, 0.72, 0, 1),
+            box-shadow 0.25s ease;
+    }
+
+    html.beauty [data-slot='button'].bg-primary:hover {
+        background-position: 100% 0;
+        box-shadow: 0 10px 24px -8px
+            color-mix(in srgb, var(--beauty-shadow) 75%, transparent);
+    }
+
+    /* Pressing a button gives the soft squeeze of an iPhone tap. */
+    html.beauty [data-slot='button']:active {
+        transform: scale(0.96);
+    }
+
+    /* ------------------------------------------------------------ tables */
+    html.beauty [data-slot='sidebar-inset'] thead {
+        background: linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--beauty-a) 14%, transparent),
+            color-mix(in srgb, var(--beauty-b) 10%, transparent),
+            color-mix(in srgb, var(--beauty-c) 10%, transparent)
+        );
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:hover {
+        background-color: color-mix(
+            in srgb,
+            var(--beauty-tint) 12%,
+            transparent
+        );
+    }
+
+    /* ------------------------------------------------------------ form fields */
+    html.beauty [data-slot='input']:focus-visible,
+    html.beauty [data-slot='select-trigger']:focus-visible {
+        box-shadow: 0 0 0 3px
+            color-mix(in srgb, var(--beauty-tint) 30%, transparent);
+    }
+
+    /* ------------------------------------------------------------ confetti */
+    .beauty-confetti {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 9999;
+    }
+
+    .beauty-confetti span {
+        position: absolute;
+        top: -12px;
+        width: 8px;
+        height: 14px;
+        border-radius: 2px;
+        animation-name: beauty-confetti-fall;
+        animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1);
+        animation-fill-mode: forwards;
+    }
+
+    /* ------------------------------------------------------------ switching on / changing style */
+    /* The new look spreads in a circle (animated from useBeautyMode); the old one stays still. */
+    html.beauty-switching::view-transition-old(root),
+    html.beauty-switching::view-transition-new(root) {
+        animation: none;
+        mix-blend-mode: normal;
+    }
+
+    html.beauty-switching::view-transition-new(root) {
+        z-index: 1;
+    }
+}
+
+/* ---------------------------------------------------------------- movement */
+@media screen and (prefers-reduced-motion: no-preference) {
+    /* Each new screen settles in like an iPhone app opening: from slightly small and soft. */
+    html.beauty [data-slot='sidebar-inset'] > * {
+        animation: beauty-rise 0.6s cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+
+    /* Right after switching on, the whole screen springs into place, menu included. */
+    html.beauty.beauty-launch [data-slot='sidebar-inset'] {
+        animation: beauty-launch 0.85s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    }
+
+    html.beauty.beauty-launch [data-sidebar='sidebar'] {
+        animation: beauty-slide 0.75s cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+
+    /* Panels on a screen arrive one after another. */
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border {
+        animation: beauty-pop 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border:nth-child(2) {
+        animation-delay: 0.05s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border:nth-child(3) {
+        animation-delay: 0.1s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border:nth-child(4) {
+        animation-delay: 0.15s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] .rounded-xl.border:nth-child(5) {
+        animation-delay: 0.2s;
+    }
+
+    html.beauty
+        [data-slot='sidebar-inset']
+        .rounded-xl.border:nth-child(n + 6) {
+        animation-delay: 0.25s;
+    }
+
+    /* Table rows ripple in. */
+    html.beauty [data-slot='sidebar-inset'] tbody tr {
+        animation: beauty-fade 0.4s ease both;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:nth-child(2) {
+        animation-delay: 0.03s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:nth-child(3) {
+        animation-delay: 0.06s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:nth-child(4) {
+        animation-delay: 0.09s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:nth-child(5) {
+        animation-delay: 0.12s;
+    }
+
+    html.beauty [data-slot='sidebar-inset'] tbody tr:nth-child(n + 6) {
+        animation-delay: 0.15s;
+    }
+
+    /* The headings' colours drift slowly. */
+    html.beauty [data-slot='sidebar-inset'] h1,
+    html.beauty [data-slot='sidebar-inset'] h2 {
+        background-size: 300% 100%;
+        animation: beauty-shimmer 8s ease-in-out infinite alternate;
+    }
+
+    /* Icons on hovered tiles and menu items give a little bounce. */
+    html.beauty a.rounded-xl.border:hover svg,
+    html.beauty [data-slot='sidebar-menu-button']:hover svg {
+        animation: beauty-bounce 0.6s ease;
+    }
+
+    html.beauty [data-slot='badge'] {
+        animation: beauty-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+    }
+
+    /* The colours behind everything breathe. */
+    html.beauty body {
+        background-size: 120% 120%;
+        animation: beauty-aurora 18s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes beauty-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.985);
+        filter: blur(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+}
+
+@keyframes beauty-launch {
+    from {
+        opacity: 0.4;
+        transform: scale(0.9);
+        filter: blur(10px);
+        border-radius: 2rem;
+    }
+    to {
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+}
+
+@keyframes beauty-slide {
+    from {
+        opacity: 0;
+        transform: translateX(-24px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes beauty-pop {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes beauty-fade {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes beauty-shimmer {
+    from {
+        background-position: 0% 0;
+    }
+    to {
+        background-position: 100% 0;
+    }
+}
+
+@keyframes beauty-bounce {
+    0%,
+    100% {
+        transform: none;
+    }
+    30% {
+        transform: translateY(-4px) rotate(-8deg);
+    }
+    60% {
+        transform: translateY(1px) rotate(5deg);
+    }
+}
+
+@keyframes beauty-aurora {
+    from {
+        background-position: 0% 0%;
+    }
+    to {
+        background-position: 100% 100%;
+    }
+}
+
+@keyframes beauty-confetti-fall {
+    from {
+        transform: translate3d(0, 0, 0) rotate(0);
+        opacity: 1;
+    }
+    to {
+        transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin));
+        opacity: 0.2;
+    }
+}
