@@ -44,5 +44,6 @@ Route::prefix('v1')->name('api.v1.')->middleware('api.https')->group(function ()
             require __DIR__.'/api/v1/payables_receivables.php';
             require __DIR__.'/api/v1/cash.php';
             require __DIR__.'/api/v1/reports.php';
+            require __DIR__.'/api/v1/payroll.php';
         });
 });

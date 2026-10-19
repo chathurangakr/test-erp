@@ -656,6 +656,9 @@ Full detail lives in `docs/API_V1.md`.
   Recipe facts reach the phone only through it — never let the app hard-code a product code.
 - **API answers follow the language** (`SetApiLocale`): `Accept-Language` from the app, else
   `users.locale`, else the default. `locale` is returned by login and `/auth/me`.
+- **Payroll is in the API** (`routes/api/v1/payroll.php`, `docs/API_V1.md` §19). Paying an
+  advance or a month's salaries needs an `Idempotency-Key` (`recordOnce`), because each moves
+  money in one step.
 - **No public API registration, no user/role administration API, no attachments, and no
   idempotency keys on the ordinary draft create endpoints yet.**
 

@@ -8,14 +8,17 @@ use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
+use App\Models\Employee;
 use App\Models\ExpenseVoucher;
 use App\Models\FiscalPeriod;
 use App\Models\FundTransfer;
 use App\Models\GoodsReceipt;
 use App\Models\JournalEntry;
+use App\Models\PayrollRun;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\PurchaseOrder;
+use App\Models\SalaryAdvance;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\Supplier;
@@ -243,6 +246,9 @@ class ApiRouteAuthorizationTest extends TestCase
                 'supplier' => Supplier::factory()->create(),
                 'customer' => Customer::factory()->create(),
                 'warehouse' => Warehouse::factory()->create(),
+                'employee' => Employee::factory()->create(),
+                'salaryAdvance' => SalaryAdvance::factory()->create(),
+                'payroll' => PayrollRun::factory()->create(),
                 default => $this->fail("No test record for API route parameter '{$name}' on {$route->getName()}."),
             };
         }

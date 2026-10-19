@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.11.0 — 19 October 2026
+
+- **Payroll in the mobile API.** The phone app can now work with employees, the daily attendance
+  register, salary advances and monthly salaries — with the same permissions and rules as the
+  website. Paying an advance or a month's salaries is protected against being paid twice if the
+  phone sends the same request again.
+
 ## 1.10.0 — 19 October 2026
 
 - **Weekly update email.** Every Sunday at 8 PM the system emails each administrator a colourful

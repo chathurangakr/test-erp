@@ -86,7 +86,8 @@ changed: an administrator ticks them on the Roles screen.
 
 - EPF / ETF, overtime, paid holidays, leave balances or leave types.
 - Instalment deductions of advances (the owner chose full deduction).
-- Payslip printing, salary by bank file, payroll in the mobile API / simple mode.
+- Payslip printing, salary by bank file, payroll in simple mode. (The mobile API has payroll
+  since 1.11.0 — `docs/API_V1.md` §19.)
 - Interaction with **dehusking labour**: dehusking credits 6310 Production Labour Absorbed (a
   contra-expense) while salaries debit 6300 — by design, so labour sitting in unsold husk offsets
   wages until sold. The accountant should know both lines exist.

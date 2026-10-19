@@ -421,6 +421,22 @@ Posting the same receipt again:
 | Finance reports | GET | `/api/v1/reports/product-profitability` | `reports.management` |
 | Finance reports | GET | `/api/v1/reports/profit-loss` | `reports.finance` |
 | Finance reports | GET | `/api/v1/reports/unbilled-deliveries` | `finance.ar.view` |
+| Payroll | GET | `/api/v1/payroll/employees` | `payroll.view` |
+| Payroll | POST | `/api/v1/payroll/employees` | `payroll.employees_manage` |
+| Payroll | GET | `/api/v1/payroll/employees/{employee}` | `payroll.view` |
+| Payroll | PUT | `/api/v1/payroll/employees/{employee}` | `payroll.employees_manage` |
+| Payroll | GET | `/api/v1/payroll/attendance` | `payroll.view` |
+| Payroll | PUT | `/api/v1/payroll/attendance` | `payroll.attendance_record` |
+| Payroll | GET | `/api/v1/payroll/salary-advances` | `payroll.view` |
+| Payroll | POST | `/api/v1/payroll/salary-advances` (Idempotency-Key) | `payroll.advance_pay` |
+| Payroll | GET | `/api/v1/payroll/salary-advances/options` | `payroll.advance_pay` |
+| Payroll | GET | `/api/v1/payroll/salary-advances/{salaryAdvance}` | `payroll.view` |
+| Payroll | POST | `/api/v1/payroll/salary-advances/{salaryAdvance}/reverse` | `payroll.advance_reverse` |
+| Payroll | GET | `/api/v1/payroll/salaries` | `payroll.view` |
+| Payroll | POST | `/api/v1/payroll/salaries` (Idempotency-Key) | `payroll.salary_pay` |
+| Payroll | GET | `/api/v1/payroll/salaries/preview?month=YYYY-MM` | `payroll.salary_pay` |
+| Payroll | GET | `/api/v1/payroll/salaries/{payroll}` | `payroll.view` |
+| Payroll | POST | `/api/v1/payroll/salaries/{payroll}/reverse` | `payroll.salary_reverse` |
 
 ## 14. Not built yet (`TBD`)
 
@@ -447,7 +463,10 @@ Posting the same receipt again:
 - **`/reports/cash-bank-book` requires `cash_bank_account_id`** instead of defaulting to the first
   account.
 - **`/expense-vouchers/options` and `/fund-transfers/options`** have no web twin: they return what
-  the web create forms offer, guarded by the create permission.
+  the web create forms offer, guarded by the create permission. So do
+  `/payroll/salary-advances/options` and `/payroll/salaries/preview` (§19).
+- **Paying a salary advance or a month's salaries requires an `Idempotency-Key`** (§19); the
+  website's forms need none.
 
 ## 16. Husk production rework — field changes (still v1)
 
@@ -570,3 +589,27 @@ order:
 3. The default (`en`).
 
 As on the website, saved records stay English whatever the language.
+
+## 19. Payroll (version 1.11.0)
+
+Employees, the daily attendance register, salary advances and monthly salaries — the same
+actions, validation and rules as the website (`docs/PAYROLL.md`); permissions in §13.
+
+- **Employees** are numbered automatically (`EMP-001`…; a sent `code` is ignored) and never
+  deleted — send `is_active: false` on `PUT` to deactivate. `advances_owed` is derived.
+- **Attendance:** `GET /payroll/attendance?date=YYYY-MM-DD` returns every active employee with
+  that day's `status` (`FULL_DAY`, `HALF_DAY`, `LEAVE` or `null`), `daily_rate` and `pay`;
+  `paid_payroll` is set when the month is already paid — the register is then frozen and saving
+  is refused. `PUT` takes `{work_date, entries: [{employee_id, status, note}]}`; a `null` status
+  clears a day. It sets each day to what is sent, so repeating it is harmless.
+- **Paying moves money in one step**, so `POST /payroll/salary-advances` and
+  `POST /payroll/salaries` require an **`Idempotency-Key`** UUID header and are recorded exactly
+  once per key, as in §17: the same key with the same body replays the first result
+  (`Idempotent-Replayed: true`); a refused request stores no key.
+- **Salaries:** `GET /payroll/salaries/preview?month=YYYY-MM` shows what each employee would be
+  paid now, the totals, the suggested pay date and the accounts / methods to pay from. `POST`
+  sends only `{month, pay_date, cash_bank_account_id, payment_method, reference}` — **never
+  amounts**: the server works them out again under lock when paying.
+- Payment methods are `CASH` (a cash account) or `BANK_TRANSFER` (a bank account); cheques are not
+  offered, as on the website. Corrections are reversals (`…/reverse`); reversing twice is a 409.
+
