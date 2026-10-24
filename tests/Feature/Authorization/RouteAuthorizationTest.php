@@ -26,6 +26,7 @@ use App\Models\ProductionOrder;
 use App\Models\PurchaseOrder;
 use App\Models\Role;
 use App\Models\SalaryAdvance;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\SalesReturn;
@@ -317,6 +318,7 @@ class RouteAuthorizationTest extends TestCase
                 'account' => Account::factory()->create(),
                 'fiscalPeriod' => FiscalPeriod::factory()->create(),
                 'closing' => FinancialYearClosing::factory()->create(),
+                'creditNote' => SalesCreditNote::factory()->create(),
                 'cashBankAccount' => CashBankAccount::factory()->create(),
                 'supplier_invoice' => SupplierInvoice::factory()->create(),
                 'supplier_payment' => SupplierPayment::factory()->create(),

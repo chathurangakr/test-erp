@@ -25,6 +25,7 @@ use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
 use App\Models\SalaryAdvance;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Models\SalesReturn;
@@ -86,6 +87,7 @@ class TransactionAlertMessage
             $model instanceof SalesInvoice => $this->salesInvoice($model),
             $model instanceof CustomerReceipt => $this->customerReceipt($model),
             $model instanceof SalesReturn => $this->salesReturn($model),
+            $model instanceof SalesCreditNote => $this->creditNote($model),
             $model instanceof CustomerBagMovement => $this->bags($model),
             $model instanceof SupplierInvoice => $this->supplierInvoice($model),
             $model instanceof SupplierPayment => $this->supplierPayment($model),
@@ -194,6 +196,17 @@ class TransactionAlertMessage
             DecimalMath::isPositive((string) $return->good_quantity) ? __('Back in stock').': '.$this->quantityLine($return->product, (string) $return->good_quantity) : null,
             DecimalMath::isPositive((string) $return->damaged_quantity) ? __('Damaged').': '.$this->quantityLine($return->product, (string) $return->damaged_quantity) : null,
         ]), [__('Credited'), (string) $return->credit_amount], route('sales-returns.show', $return));
+    }
+
+    private function creditNote(SalesCreditNote $note): array
+    {
+        $note->load(['customer', 'invoice']);
+
+        return $this->make('🏷️', $note->kind->label(), $note->credit_note_number, $note->credit_date, [
+            [__('Customer'), $note->customer?->name],
+            [__('Invoice'), $note->invoice?->invoice_number],
+            [__('Reason'), $note->reason],
+        ], [], [__('Credited'), (string) $note->amount], route('credit-notes.show', $note));
     }
 
     private function bags(CustomerBagMovement $movement): array

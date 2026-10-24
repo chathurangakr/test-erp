@@ -85,6 +85,7 @@ class ProductAccountMappingSeeder extends Seeder
         'asset_gain_account_id' => '4900',
         'asset_loss_account_id' => '6960',
         'maintenance_account_id' => '6600',
+        'sales_discount_account_id' => '4190',
     ];
 
     /**

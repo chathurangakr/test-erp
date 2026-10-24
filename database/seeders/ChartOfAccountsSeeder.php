@@ -91,6 +91,8 @@ class ChartOfAccountsSeeder extends Seeder
         ['4160', 'Raw Husk Sales', AccountType::Revenue, false, false],
         ['4170', 'Cocopeat Sales', AccountType::Revenue, false, false],
         ['4180', 'Packing Material Sales', AccountType::Revenue, false, false],
+        // A debit balance: discounts and quality allowances given reduce sales revenue.
+        ['4190', 'Sales Discounts and Allowances', AccountType::Revenue, false, false],
         ['4900', 'Gain on Sale of Assets', AccountType::Revenue, false, false],
 
         // --------------------------------------------------------- cost of sales

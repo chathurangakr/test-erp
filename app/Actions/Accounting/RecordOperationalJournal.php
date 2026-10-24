@@ -11,6 +11,7 @@ use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
 use App\Models\JournalEntry;
 use App\Models\ProductionOrder;
+use App\Models\SalesCreditNote;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Services\Accounting\AccountingPolicy;
@@ -333,6 +334,42 @@ class RecordOperationalJournal
      *
      * Written whatever the cutover — a returned line was invoiced, so the books are already on.
      */
+    /**
+     * A discount or quality allowance: `Dr sales discounts and allowances / Cr trade receivables`,
+     * at the credit note's own amount. No stock moves. See docs/ACCOUNTING_RULES.md §33.
+     */
+    public function forSalesCreditNote(SalesCreditNote $note, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $note->amount);
+        $zero = DecimalMath::cost('0');
+        $customer = $note->customer?->code ?? RecordText::of('customer');
+
+        return $this->record(
+            $note,
+            $note->credit_date,
+            RecordText::of('Credit note :reference — :kind for :customer', [
+                'reference' => $note->credit_note_number,
+                'kind' => $note->kind,
+                'customer' => $customer,
+            ]),
+            [
+                [
+                    'account_id' => $this->policy->salesDiscountAccount()->id,
+                    'description' => RecordText::of(':kind on :invoice', ['kind' => $note->kind, 'invoice' => $note->invoice?->invoice_number]),
+                    'debit' => $amount,
+                    'credit' => $zero,
+                ],
+                [
+                    'account_id' => $this->policy->tradeReceivablesAccount()->id,
+                    'description' => RecordText::of('Credit to :customer', ['customer' => $customer]),
+                    'debit' => $zero,
+                    'credit' => $amount,
+                ],
+            ],
+            $userId,
+        );
+    }
+
     public function forSalesReturn(SalesReturn $return, ?CashBankAccount $refundAccount, ?int $userId = null): JournalEntry
     {
         $product = $return->product;

@@ -192,6 +192,21 @@ class AccountingPolicy
     /**
      * The expense damaged stock is written off to. See docs/INVENTORY_RULES.md §17.
      */
+    public function salesDiscountAccount(): Account
+    {
+        $account = AccountingSetting::current()?->salesDiscountAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'sales_discount_account_id' => __('No sales discounts account is configured. Choose one in Accounting Setup before giving a discount or allowance.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Revenue, __('Sales discounts and allowances'));
+
+        return $account;
+    }
+
     public function stockLossAccount(): Account
     {
         $account = AccountingSetting::current()?->stockLossAccount;

@@ -183,10 +183,9 @@ through the codebase.
 
 ## 10. Not implemented — do not begin without instruction
 
-Credit notes · sales returns and allowances · customer advances and deposits · supplier
-advances · production expense accounting (beyond dehusking labour, §30) · VAT/SVAT · payroll · bank reconciliation ·
-cash flow statement · report export (PDF/Excel) · year-end closing · loans · fixed assets ·
-depreciation.
+Production expense accounting (beyond dehusking labour, §30) · VAT/SVAT · cash flow statement ·
+depreciation. (Built since this list was written: payroll, loans, fixed assets, sales returns §32,
+credit notes §33, report export, year-end closing §24 — and whatever later sections describe.)
 
 **A delivery still recognises no revenue.** It records cost of goods sold and nothing else;
 revenue and the receivable belong to the sales invoice (§20). A delivery that is never
@@ -476,10 +475,9 @@ came back, a discount was agreed after the fact, a quality allowance was granted
 commercial document with its own date, its own reason and its own journal, and the original
 invoice remains valid.
 
-Credit notes, sales returns and allowances are **not built**. Do not use a reversal to stand in
-for one: it would remove revenue from the period the sale actually happened in and destroy the
-audit trail of the concession. When the factory needs them they will be a separate feature with
-their own documents.
+Sales returns (§32) and discount / allowance credit notes (§33) are built as their own
+documents. Never use a reversal to stand in for one: it would remove revenue from the period the
+sale actually happened in and destroy the audit trail of the concession.
 
 Practical consequence: **an invoice cannot be reversed once a posted receipt is allocated to
 it.** If money has been taken against an invoice, the invoice was real. Reverse the receipt
@@ -1101,6 +1099,31 @@ it billed.
 
 **Not covered:** returns of goods whose delivery backflushed raw husk (chips, cocopeat) — refused
 until the owner decides what happens to the husk; returns before invoicing (reverse the delivery
-if it all came back); discounts and quality allowances. Operational product profitability still
-reads delivery lines and does not net returns off.
+if it all came back). Discounts and quality allowances are credit notes (§33). Operational
+product profitability still reads delivery lines and does not net returns off.
 
+
+## 33. Discounts and quality allowances (credit notes) — ✅ **CONFIRMED** (2026-10-25, built overnight on the owner's go-ahead)
+
+A **credit note** reduces what a customer owes on ONE invoice when no goods come back — a price
+discount agreed after the sale (`DISCOUNT`) or an allowance for poor quality (`ALLOWANCE`).
+`App\Actions\Receivables\RecordSalesCreditNote`, Finance → Credit notes, numbered `CRN-YYYYMMDD-…`.
+
+```
+Dr  Sales Discounts and Allowances   (accounting_settings.sales_discount_account_id — 4190, REVENUE)
+    Cr  Trade Receivables
+```
+
+- 4190 is a revenue account carrying a debit balance, so the P&L shows sales revenue net of
+  discounts — Sales Revenue falls by the credit.
+- **Against an invoice still owed** (POSTED or PARTIALLY_PAID), never more than it still owes,
+  never dated before it. Money back for a discount is **not built** (TBD) — a paid invoice cannot
+  take a credit note; reduce another invoice of the customer instead.
+- **No stock moves.** Goods coming back are a sales return (§32).
+- An invoice's outstanding is total − receipts − returns credited − credit notes
+  (`AccountsReceivableService::creditedAmount` counts both), so the invariant
+  **Trade Receivables == total outstanding** keeps holding, and the invoice's status follows.
+- One step, immutable; corrected by `ReverseSalesCreditNote` (journal reversed, invoice owed the
+  amount again). An invoice cannot be reversed while a standing credit note is against it.
+- Permissions `finance.ar.credit_note_record` / `finance.ar.credit_note_reverse`; viewing with
+  `finance.ar.view`.

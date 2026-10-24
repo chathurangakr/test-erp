@@ -3,6 +3,7 @@
 namespace App\Actions\Receivables;
 
 use App\Models\CustomerReceipt;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Support\DailyDocumentSequence;
 use Carbon\CarbonInterface;
@@ -23,6 +24,16 @@ class GenerateReceivableReference
             'SINV',
             SalesInvoice::class,
             'invoice_number',
+            $date === null ? null : Carbon::instance($date),
+        );
+    }
+
+    public function forCreditNote(?CarbonInterface $date = null): string
+    {
+        return $this->sequence->next(
+            'CRN',
+            SalesCreditNote::class,
+            'credit_note_number',
             $date === null ? null : Carbon::instance($date),
         );
     }

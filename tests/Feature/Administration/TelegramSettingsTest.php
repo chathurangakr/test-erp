@@ -8,6 +8,7 @@ use App\Models\FiscalPeriod;
 use App\Models\LoanReminder;
 use App\Models\TelegramSetting;
 use App\Models\User;
+use App\Services\Telegram\TransactionAlertCatalog;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,8 +144,8 @@ class TelegramSettingsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('bots.transactions.has_token', true)
                 ->where('bots.transactions.alert_types', ['deliveries', 'sales_invoices'])
-                ->where('bots.reminders.alert_types', fn ($types): bool => count($types) === 19)
-                ->has('alertTypes', 19));
+                ->where('bots.reminders.alert_types', fn ($types): bool => count($types) === count(TransactionAlertCatalog::labels()))
+                ->has('alertTypes', count(TransactionAlertCatalog::labels())));
 
         $this->actingAs($this->admin)->post(route('telegram-settings.test'), ['bot' => 'transactions'])->assertSessionHasNoErrors();
         Http::assertSent(fn (Request $request): bool => ($request['chat_id'] ?? null) === '-100777' && str_contains($request['text'], 'every transaction'));

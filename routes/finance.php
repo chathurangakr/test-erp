@@ -24,6 +24,7 @@ use App\Http\Controllers\Payables\SupplierPaymentController;
 use App\Http\Controllers\Receivables\ArAgingController;
 use App\Http\Controllers\Receivables\CustomerReceiptActionController;
 use App\Http\Controllers\Receivables\CustomerReceiptController;
+use App\Http\Controllers\Receivables\SalesCreditNoteController;
 use App\Http\Controllers\Receivables\SalesInvoiceActionController;
 use App\Http\Controllers\Receivables\SalesInvoiceController;
 use App\Http\Controllers\Receivables\UnbilledDeliveryController;
@@ -160,6 +161,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('customer-receipts.cancel')
         ->can(Permission::ArReceiptCancel);
 
+    // Discounts and quality allowances — docs/ACCOUNTING_RULES.md §33.
+    Route::get('finance/credit-notes', [SalesCreditNoteController::class, 'index'])
+        ->name('credit-notes.index')
+        ->can(Permission::ArView);
+    Route::get('finance/credit-notes/create', [SalesCreditNoteController::class, 'create'])
+        ->name('credit-notes.create')
+        ->can(Permission::ArCreditNoteRecord);
+    Route::post('finance/credit-notes', [SalesCreditNoteController::class, 'store'])
+        ->name('credit-notes.store')
+        ->can(Permission::ArCreditNoteRecord);
+    Route::get('finance/credit-notes/{creditNote}', [SalesCreditNoteController::class, 'show'])
+        ->name('credit-notes.show')
+        ->can(Permission::ArView);
+    Route::patch('finance/credit-notes/{creditNote}/reverse', [SalesCreditNoteController::class, 'reverse'])
+        ->name('credit-notes.reverse')
+        ->can(Permission::ArCreditNoteReverse);
     Route::get('finance/ar-aging', [ArAgingController::class, 'index'])->name('ar-aging.index')
         ->can(Permission::ArView);
     Route::get('finance/unbilled-deliveries', [UnbilledDeliveryController::class, 'index'])

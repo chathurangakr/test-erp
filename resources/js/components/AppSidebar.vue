@@ -50,6 +50,7 @@ import {
     Contact,
     CalendarCheck,
     BadgeDollarSign,
+    BadgePercent,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -95,6 +96,7 @@ import { index as supplierPaymentsIndex } from '@/routes/supplier-payments';
 import { index as apAgingIndex } from '@/routes/ap-aging';
 import { index as grniReconciliationIndex } from '@/routes/grni-reconciliation';
 import { index as salesInvoicesIndex } from '@/routes/sales-invoices';
+import { index as creditNotesIndex } from '@/routes/credit-notes';
 import { index as customerReceiptsIndex } from '@/routes/customer-receipts';
 import { index as arAgingIndex } from '@/routes/ar-aging';
 import { index as unbilledDeliveriesIndex } from '@/routes/unbilled-deliveries';
@@ -333,6 +335,12 @@ const receivablesNavItems: NavItem[] = [
         href: salesInvoicesIndex(),
         permission: 'finance.ar.view',
         icon: ReceiptText,
+    },
+    {
+        title: 'Credit notes',
+        href: creditNotesIndex(),
+        permission: 'finance.ar.view',
+        icon: BadgePercent,
     },
     {
         title: 'Customer Receipts',

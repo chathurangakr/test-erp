@@ -3,10 +3,12 @@
 namespace App\Services\Accounting;
 
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\SalesCreditNoteStatus;
 use App\Enums\SalesInvoiceStatus;
 use App\Enums\SalesReturnStatus;
 use App\Models\Customer;
 use App\Models\CustomerReceiptAllocation;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
 use App\Support\BusinessClock;
@@ -48,16 +50,24 @@ class AccountsReceivableService
     }
 
     /**
-     * How much of this invoice standing sales returns have credited — goods brought back, or
-     * an exchange paid for by them.
+     * How much of this invoice has been credited without money: standing sales returns (goods
+     * brought back, or an exchange paid for by them) and standing credit notes (discounts and
+     * quality allowances).
      */
     public function creditedAmount(SalesInvoice $invoice, ?CarbonInterface $asOf = null): string
     {
-        return DecimalMath::cost((string) SalesReturn::query()
+        $returns = (string) SalesReturn::query()
             ->where('credit_invoice_id', $invoice->getKey())
             ->where('status', SalesReturnStatus::Posted->value)
             ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('return_date', '<=', $date->toDateString()))
-            ->sum('credit_amount'));
+            ->sum('credit_amount');
+        $creditNotes = (string) SalesCreditNote::query()
+            ->where('sales_invoice_id', $invoice->getKey())
+            ->where('status', SalesCreditNoteStatus::Posted->value)
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('credit_date', '<=', $date->toDateString()))
+            ->sum('amount');
+
+        return DecimalMath::cost(DecimalMath::add(DecimalMath::of($returns), DecimalMath::of($creditNotes)));
     }
 
     /**

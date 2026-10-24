@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.21.0 — 25 October 2026
+
+- **Discounts and quality allowances** (Finance → Credit notes). Reduce what a customer owes on an
+  invoice — a price discount agreed after the sale, or an allowance for poor quality — without any
+  goods coming back. The amount goes to a new account, 4190 Sales Discounts and Allowances, so
+  your sales figure shows it. Never more than the invoice still owes; a mistake is undone with
+  Reverse. Telegram reports each one.
+
 ## 1.20.0 — 25 October 2026
 
 - **Year-end closing** (Finance → Year-end closing). Your financial year runs 1 April to 31 March.

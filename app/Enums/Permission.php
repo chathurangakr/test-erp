@@ -95,6 +95,8 @@ enum Permission: string
     case ArReceiptPost = 'finance.ar.receipt_post';
     case ArReceiptReverse = 'finance.ar.receipt_reverse';
     case ArReceiptCancel = 'finance.ar.receipt_cancel';
+    case ArCreditNoteRecord = 'finance.ar.credit_note_record';
+    case ArCreditNoteReverse = 'finance.ar.credit_note_reverse';
 
     // ------------------------------------------------------------- cash and bank
     case CashView = 'finance.cash.view';
@@ -251,6 +253,8 @@ enum Permission: string
             self::ArReceiptPost => 'Post customer receipts',
             self::ArReceiptReverse => 'Reverse posted customer receipts',
             self::ArReceiptCancel => 'Cancel draft customer receipts',
+            self::ArCreditNoteRecord => 'Give customers discounts and quality allowances (credit notes)',
+            self::ArCreditNoteReverse => 'Reverse credit notes',
             self::CashView => 'View cash/bank accounts, the cash/bank book, vouchers and transfers',
             self::CashAccountsManage => 'Configure cash and bank accounts',
             self::CashExpenseCreate => 'Create and edit draft expense vouchers',

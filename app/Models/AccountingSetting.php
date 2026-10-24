@@ -26,6 +26,7 @@ class AccountingSetting extends Model
         'production_labour_account_id',
         'wages_account_id',
         'stock_loss_account_id',
+        'sales_discount_account_id',
         'loans_account_id',
         'loan_interest_account_id',
         'opening_balance_account_id',
@@ -116,6 +117,17 @@ class AccountingSetting extends Model
     public function stockLossAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'stock_loss_account_id');
+    }
+
+    /**
+     * Where discounts and quality allowances given to customers are charged (a revenue account
+     * that carries a debit balance — it reduces sales).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function salesDiscountAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'sales_discount_account_id');
     }
 
     /**

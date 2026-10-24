@@ -4,8 +4,10 @@ namespace App\Actions\Receivables;
 
 use App\Actions\Accounting\ReverseJournalEntry;
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\SalesCreditNoteStatus;
 use App\Enums\SalesInvoiceStatus;
 use App\Enums\SalesReturnStatus;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
 use App\Support\DecimalMath;
@@ -122,6 +124,20 @@ class ReverseSalesInvoice
                 'status' => __('Sales invoice :reference is linked to sales return :return. Reverse the return first.', [
                     'reference' => $invoice->invoice_number,
                     'return' => $return->return_number,
+                ]),
+            ]);
+        }
+
+        $note = SalesCreditNote::query()
+            ->where('sales_invoice_id', $invoice->getKey())
+            ->where('status', SalesCreditNoteStatus::Posted->value)
+            ->first();
+
+        if ($note !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('Sales invoice :reference has credit note :note against it. Reverse the credit note first.', [
+                    'reference' => $invoice->invoice_number,
+                    'note' => $note->credit_note_number,
                 ]),
             ]);
         }

@@ -422,8 +422,13 @@ The inventory engine exists and is tested. These rules are permanent:
   allocated to it, and a delivery cannot be reversed once a posted invoice has billed it.
 - **Reversal is an audit correction, NOT a credit note.** Reversing says the invoice should
   never have existed. Returned goods are a **sales return** (below); post-hoc discounts and
-  quality allowances are still **not built** — never use a reversal in their place. See
+  quality allowances are **credit notes** (below) — never use a reversal in their place. See
   `docs/ACCOUNTING_RULES.md` §19.
+- **Credit notes are implemented** (`RecordSalesCreditNote`, Finance → Credit notes, §33): a
+  DISCOUNT or quality ALLOWANCE against one invoice still owed, never more than it owes, no stock
+  moving. `Dr sales discounts and allowances (accounting_settings.sales_discount_account_id, 4190)
+  / Cr trade receivables`. Counted in `creditedAmount` with returns. Money back for a discount is
+  TBD. An invoice with a standing credit note cannot be reversed.
 - **Sales returns are implemented** (`RecordSalesReturn`, Sales → Returns, §32): against an
   INVOICED delivery line, never more than delivered nor credited beyond what was billed. The
   credit is the PRICE CHARGED; good goods re-enter stock (`SALES_RETURN`) at the line's
@@ -431,7 +436,7 @@ The inventory engine exists and is tested. These rules are permanent:
   invoice of the customer (`CREDIT`; `EXCHANGE` = the invoice for replacement goods) or money back
   (`REFUND`, capped at what was paid on the original invoice). Journal: `Dr revenue / Cr trade
   receivables or cash`, `Dr inventory + stock loss / Cr cost of sales`. An invoice's outstanding
-  is total − receipts − returns credited (`AccountsReceivableService::settledAmount`); an invoice
+  is total − receipts − returns and credit notes credited (`AccountsReceivableService::settledAmount`); an invoice
   linked to a standing return cannot be reversed. Backflushed lines (chips) cannot be returned.
 - **Receipts are always allocated to invoices** — no customer advances, deposits or
   on-account credits — and the allocations must total the receipt exactly.
@@ -480,7 +485,7 @@ The inventory engine exists and is tested. These rules are permanent:
   adding one later is a visible change. See `docs/ACCOUNTING_RULES.md` §23.
 - **`Rule::exists()->where($column, false)` matches nothing** — the value is stringified, and
   `(string) false` is `''`. Use `0` and `1` in exists/unique rules, never booleans.
-- **Do not start bank reconciliation, cheque lifecycle, discount / allowance credit notes, customer
+- **Do not start bank reconciliation, cheque lifecycle, customer
   or supplier advances, VAT/SVAT, depreciation or production overhead accounting**
   without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
@@ -882,7 +887,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (105 permissions, seven editable starting roles, multiple roles per user, every route
+control** (107 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -906,11 +911,12 @@ from the bank slip, what is still owed derived, and email reminders before each 
 **fixed assets** (bought for cash, on a loan or already owned, sold or scrapped with the profit or
 loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
 every posting and reversal) with a **monthly report** by email and Telegram on the 1st, **report
-exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March).
+exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March), and **credit notes**
+for discounts and quality allowances.
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
-discount and allowance credit notes, customer and supplier advances, production expense
+customer and supplier advances, production expense
 accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, the permanent joint-product costing method, production planning,
 BOM editor, maintenance planning, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.

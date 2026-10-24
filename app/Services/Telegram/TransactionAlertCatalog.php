@@ -17,6 +17,7 @@ use App\Models\LoanPayment;
 use App\Models\PayrollRun;
 use App\Models\ProductionOrder;
 use App\Models\SalaryAdvance;
+use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
@@ -44,6 +45,7 @@ final class TransactionAlertCatalog
         SalesInvoice::class => 'sales_invoices',
         CustomerReceipt::class => 'customer_receipts',
         SalesReturn::class => 'sales_returns',
+        SalesCreditNote::class => 'credit_notes',
         CustomerBagMovement::class => 'customer_bags',
         SupplierInvoice::class => 'supplier_invoices',
         SupplierPayment::class => 'supplier_payments',
@@ -73,6 +75,7 @@ final class TransactionAlertCatalog
             'sales_invoices' => 'Sales invoices',
             'customer_receipts' => 'Customer receipts',
             'sales_returns' => 'Sales returns',
+            'credit_notes' => 'Discounts and quality allowances',
             'customer_bags' => 'Bags given to and returned by customers',
             'supplier_invoices' => 'Supplier invoices',
             'supplier_payments' => 'Supplier payments',
