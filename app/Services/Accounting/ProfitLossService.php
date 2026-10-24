@@ -52,12 +52,17 @@ class ProfitLossService
         ?CarbonInterface $from = null,
         ?CarbonInterface $to = null,
         ?FiscalPeriod $period = null,
+        bool $sinceLastClose = false,
     ): array {
         // A period states its own window; explicit dates are only used when none is chosen.
+        // Year-end closing journals are left out — the statement shows what was earned and spent —
+        // unless the profit SINCE THE LAST CLOSE is wanted (the balance sheet's current earnings),
+        // which is exactly what counting the closings leaves.
         $totals = $this->balances->totalsByAccount(
             $to === null ? null : Carbon::instance($to),
             $period,
             $from === null ? null : Carbon::instance($from),
+            withYearEndClosings: $sinceLastClose,
         );
 
         $revenue = $this->tree->build([AccountType::Revenue], $totals);
@@ -87,8 +92,9 @@ class ProfitLossService
         ?CarbonInterface $from = null,
         ?CarbonInterface $to = null,
         ?FiscalPeriod $period = null,
+        bool $sinceLastClose = false,
     ): string {
-        return $this->statement($from, $to, $period)['net_profit'];
+        return $this->statement($from, $to, $period, $sinceLastClose)['net_profit'];
     }
 
     /**

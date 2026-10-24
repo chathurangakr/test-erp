@@ -5,6 +5,7 @@ namespace App\Services\Accounting;
 use App\Enums\AccountType;
 use App\Enums\JournalEntryStatus;
 use App\Models\Account;
+use App\Models\FinancialYearClosing;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntryLine;
 use App\Support\DecimalMath;
@@ -140,9 +141,9 @@ class AccountingBalanceService
      *
      * @return Collection<int, array{debit: string, credit: string, net: string}>
      */
-    public function totalsByAccount(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null): Collection
+    public function totalsByAccount(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null, bool $withYearEndClosings = true): Collection
     {
-        $rows = $this->postedLines($asOf, $period, $from)
+        $rows = $this->postedLines($asOf, $period, $from, $withYearEndClosings)
             ->selectRaw('account_id, SUM(debit) as debit_total, SUM(credit) as credit_total')
             ->groupBy('account_id')
             ->get();
@@ -301,10 +302,17 @@ class AccountingBalanceService
      *
      * @return Builder<JournalEntryLine>
      */
-    private function postedLines(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null): Builder
+    private function postedLines(?Carbon $asOf = null, ?FiscalPeriod $period = null, ?Carbon $from = null, bool $withYearEndClosings = true): Builder
     {
         return JournalEntryLine::query()
-            ->whereHas('entry', function (Builder $entry) use ($asOf, $period, $from): void {
+            ->whereHas('entry', function (Builder $entry) use ($asOf, $period, $from, $withYearEndClosings): void {
+                // Year-end closing journals (and their reversals) empty the profit and loss
+                // accounts into retained earnings; the profit and loss statement leaves them out
+                // so it still shows the year's real figures. Everything else counts them.
+                if (! $withYearEndClosings) {
+                    $entry->where(fn (Builder $source) => $source->whereNull('source_type')->orWhere('source_type', '!=', FinancialYearClosing::class));
+                }
+
                 $entry->whereIn('status', [
                     JournalEntryStatus::Posted->value,
                     JournalEntryStatus::Reversed->value,

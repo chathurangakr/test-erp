@@ -802,21 +802,32 @@ of all six account types sum to zero, and rearranging that sum is the equation a
 report still computes and shows the difference, because a non-zero one would mean the trial
 balance itself is broken — an invariant nobody checks is only a belief.
 
-### Current Earnings is computed, never posted
+### Current Earnings and year-end closing (1.20.0)
 
 - **Retained Earnings (`3200`) is an ordinary ledger account.** The balance sheet shows its
-  actual general-ledger balance. Nothing writes profit into it — no closing journal is ever
-  posted automatically. Its code comes from `config('accounting.retained_earnings_code')`.
-- **Current Earnings** is a computed line under equity: unclosed profit, never written to any
-  account.
-- **Its accumulation boundary is the beginning of recorded history.** Fiscal periods are
-  individual months with no year grouping, and nothing records where a financial year starts,
-  so the system has no basis to assume January — or any date. While no closing entry has ever
-  been posted, "since inception" is not an approximation: every rupee ever earned is still
-  unclosed, so it is the correct figure.
-- **Limitation, stated plainly:** once year-end closing exists, Current Earnings must start
-  from the last close, or profit already moved into retained earnings would be counted twice.
-  Year-end closing is **not implemented** and must not be started without instruction.
+  actual general-ledger balance. Its code comes from `config('accounting.retained_earnings_code')`.
+  Profit reaches it ONLY through a year-end close an accountant performs — never automatically.
+- **The financial year** ends on the last day of `accounting_settings.financial_year_end_month`
+  (3 → 1 April to 31 March, as the owner confirmed). `App\Services\Accounting\FinancialYears`.
+- **Closing a year** (`CloseFinancialYear`, Finance → Year-end closing, permission
+  `finance.year_end_close`) writes ONE journal dated the year's last day, source
+  `FinancialYearClosing`: each revenue, cost-of-sales and expense account's balance at that day
+  reversed (left at zero), the difference — profit or loss — to retained earnings. The balances
+  are cumulative, so whatever is still unclosed is closed exactly once. Refused: a year not yet
+  ended, already closed, or earlier than a closed year (years close in order); and when no open
+  fiscal period covers the year end — close the year BEFORE its last month. A year with nothing
+  to close is recorded without a journal. An inactive profit and loss account with a balance
+  blocks the close (it cannot be posted to) — reactivate it first.
+- **The P&L leaves closing journals out** (`totalsByAccount(..., withYearEndClosings: false)`),
+  so it shows what was earned and spent in any window, before or after a close.
+- **Current Earnings** is a computed line under equity: the profit SINCE THE LAST CLOSE — the
+  profit and loss balances to the report date WITH closing journals counted, which leaves exactly
+  what is unclosed (no close yet → everything since the beginning). Profit in retained earnings is
+  therefore never counted twice, and the balance sheet still balances by construction.
+- **Undoing a close** (`ReverseFinancialYearClosing`, permission `finance.year_end_reverse`):
+  only the latest close, its journal reversed at the exact amounts dated the SAME year-end day
+  (never today, which would move last year's profit into this year). A closing journal cannot
+  be reversed from the journal screen.
 
 ### Chart hierarchy and subtotals
 

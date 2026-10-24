@@ -504,14 +504,15 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Sign presentation is a reporting concern only.** `presentationAmount()` flips
   credit-natured types so revenue prints positive; an abnormal balance prints negative. Its
   result must never feed back into ledger arithmetic.
-- **Balance sheet:** `Assets = Liabilities + Equity + Current Earnings` until year-end closing
-  exists. It holds by construction; the report still computes the difference.
-- **Current Earnings is computed, never posted.** Never write profit into Retained Earnings
-  automatically and never generate a closing journal. Retained Earnings shows its real GL
-  balance, located through `config('accounting.retained_earnings_code')`. Current Earnings
-  accumulates from the start of recorded history, because no financial-year boundary exists;
-  once year-end closing is built it must start from the last close. See
-  `docs/ACCOUNTING_RULES.md` §24.
+- **Balance sheet:** `Assets = Liabilities + Equity + Current Earnings` (profit since the last
+  close). It holds by construction; the report still computes the difference.
+- **Current Earnings is computed, never posted.** Profit reaches Retained Earnings only through a
+  year-end close an accountant performs (`CloseFinancialYear`, 1.20.0): one journal dated the
+  year end (financial year ends on the last day of `accounting_settings.financial_year_end_month`,
+  March), source `FinancialYearClosing`. **The P&L excludes closing journals; Current Earnings
+  (profit since the last close) includes them** — never change one without the other, or profit
+  is lost or counted twice. Years close in order and are undone only from the latest, dated the
+  same year end. See `docs/ACCOUNTING_RULES.md` §24.
 - **Operational product profitability is NOT the financial P&L.** It uses stored
   `DeliveryLine.sales_value` and `cost_of_goods_sold` from POSTED deliveries, never
   recomputed (so no NOS↔KG conversion), and must be labelled "Operational". The P&L shows
@@ -528,7 +529,7 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Exports (1.19.0):** every report downloads as PDF or Excel (`ReportExports` → dompdf / `XlsxWriter`)
   through its own export route with the SAME permission as the report, built from the same
   services and filters as the screen — never a second calculation. See `docs/REPORT_EXPORTS.md`.
-- **Not built:** cash flow statement, year-end closing, comparative periods,
+- **Not built:** cash flow statement, comparative periods,
   historical inventory valuation.
 
 ---
@@ -881,7 +882,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (103 permissions, seven editable starting roles, multiple roles per user, every route
+control** (105 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -904,13 +905,13 @@ credit, exchange or money back), and **loans** (running and new loans, installme
 from the bank slip, what is still owed derived, and email reminders before each due day), and
 **fixed assets** (bought for cash, on a loan or already owned, sold or scrapped with the profit or
 loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
-every posting and reversal) with a **monthly report** by email and Telegram on the 1st.
+every posting and reversal) with a **monthly report** by email and Telegram on the 1st, **report
+exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
 discount and allowance credit notes, customer and supplier advances, production expense
-accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, report
-export, year-end closing, the permanent joint-product costing method, production planning,
+accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, the permanent joint-product costing method, production planning,
 BOM editor, maintenance planning, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.
 

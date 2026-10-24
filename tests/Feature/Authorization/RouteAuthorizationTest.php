@@ -12,6 +12,7 @@ use App\Models\CustomerReceipt;
 use App\Models\Delivery;
 use App\Models\Employee;
 use App\Models\ExpenseVoucher;
+use App\Models\FinancialYearClosing;
 use App\Models\FiscalPeriod;
 use App\Models\FixedAsset;
 use App\Models\FundTransfer;
@@ -315,6 +316,7 @@ class RouteAuthorizationTest extends TestCase
                 'journal' => JournalEntry::factory()->create(),
                 'account' => Account::factory()->create(),
                 'fiscalPeriod' => FiscalPeriod::factory()->create(),
+                'closing' => FinancialYearClosing::factory()->create(),
                 'cashBankAccount' => CashBankAccount::factory()->create(),
                 'supplier_invoice' => SupplierInvoice::factory()->create(),
                 'supplier_payment' => SupplierPayment::factory()->create(),

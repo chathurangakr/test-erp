@@ -6,8 +6,10 @@ use App\Actions\Accounting\CancelJournalEntry;
 use App\Actions\Accounting\PostJournalEntry;
 use App\Actions\Accounting\ReverseJournalEntry;
 use App\Http\Controllers\Controller;
+use App\Models\FinancialYearClosing;
 use App\Models\JournalEntry;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 /**
@@ -30,6 +32,11 @@ class JournalEntryActionController extends Controller
 
     public function reverse(JournalEntry $journal, ReverseJournalEntry $action): RedirectResponse
     {
+        // A closing journal is undone with its close, so the close's record never disagrees.
+        if ($journal->source_type === FinancialYearClosing::class) {
+            throw ValidationException::withMessages(['status' => __('This is a year-end closing entry. Reverse it on the Year-end closing page.')]);
+        }
+
         $reversal = $action->handle($journal, auth()->id());
 
         Inertia::flash('toast', [

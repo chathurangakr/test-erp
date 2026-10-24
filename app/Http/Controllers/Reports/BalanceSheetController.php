@@ -32,7 +32,7 @@ class BalanceSheetController extends Controller
         return Inertia::render('finance/reports/BalanceSheet', [
             'statement' => $this->balanceSheet->statement($asOfDate),
             // The profit behind current earnings, so the reader can see where it came from.
-            'earnings' => $this->profitLoss->statement(null, $asOfDate),
+            'earnings' => $this->profitLoss->statement(null, $asOfDate, sinceLastClose: true),
             'retainedEarnings' => $this->balanceSheet->retainedEarnings($asOfDate),
             'filters' => ['as_of' => $asOfDate?->toDateString()],
             'currency' => config('accounting.base_currency'),

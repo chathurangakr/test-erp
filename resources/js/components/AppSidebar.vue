@@ -88,6 +88,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { index as trialBalanceIndex } from '@/routes/trial-balance';
 import { index as fiscalPeriodsIndex } from '@/routes/fiscal-periods';
+import { index as yearEndIndex } from '@/routes/year-end';
 import { index as accountingSetupIndex } from '@/routes/accounting-setup';
 import { index as supplierInvoicesIndex } from '@/routes/supplier-invoices';
 import { index as supplierPaymentsIndex } from '@/routes/supplier-payments';
@@ -284,6 +285,12 @@ const financeNavItems: NavItem[] = [
         href: fiscalPeriodsIndex(),
         permission: 'finance.view',
         icon: CalendarRange,
+    },
+    {
+        title: 'Year-end closing',
+        href: yearEndIndex(),
+        permission: 'finance.view',
+        icon: CalendarCheck,
     },
     {
         title: 'Accounting Setup',

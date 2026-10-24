@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.20.0 — 25 October 2026
+
+- **Year-end closing** (Finance → Year-end closing). Your financial year runs 1 April to 31 March.
+  From 1 April, an accountant clicks **Close the year**: the year's profit moves into Retained
+  Earnings with one entry dated 31 March, and the new year's profit starts from zero. The profit
+  and loss report still shows each year's real figures. Close the year before closing March; a
+  mistake can be undone with **Reverse**. Two new permissions control who may close and reverse.
+
 ## 1.19.0 — 25 October 2026
 
 - **Download any report as PDF or Excel.** Every report — profit and loss, balance sheet, trial

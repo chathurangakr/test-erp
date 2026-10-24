@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
 use App\Models\ExpenseVoucher;
+use App\Models\FinancialYearClosing;
 use App\Models\FundTransfer;
 use App\Models\GoodsReceipt;
 use App\Models\JournalEntry;
@@ -34,6 +35,7 @@ final class SourceDocument
         ExpenseVoucher::class => 'Expense voucher',
         FundTransfer::class => 'Fund transfer',
         JournalEntry::class => 'Journal entry',
+        FinancialYearClosing::class => 'Year-end closing',
     ];
 
     /**

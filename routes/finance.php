@@ -8,6 +8,7 @@ use App\Http\Controllers\Accounting\GeneralLedgerController;
 use App\Http\Controllers\Accounting\JournalEntryActionController;
 use App\Http\Controllers\Accounting\JournalEntryController;
 use App\Http\Controllers\Accounting\TrialBalanceController;
+use App\Http\Controllers\Accounting\YearEndClosingController;
 use App\Http\Controllers\Cash\CashBankAccountController;
 use App\Http\Controllers\Cash\CashBankBookController;
 use App\Http\Controllers\Cash\ExpenseVoucherActionController;
@@ -257,4 +258,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('finance/fiscal-periods/{fiscalPeriod}/close', [FiscalPeriodController::class, 'close'])
         ->name('fiscal-periods.close')
         ->can(Permission::FinancePeriodManage);
+
+    // Year-end closing — see docs/ACCOUNTING_RULES.md §24.
+    Route::get('finance/year-end', [YearEndClosingController::class, 'index'])
+        ->name('year-end.index')
+        ->can(Permission::FinanceView);
+    Route::post('finance/year-end', [YearEndClosingController::class, 'store'])
+        ->name('year-end.store')
+        ->can(Permission::FinanceYearEndClose);
+    Route::patch('finance/year-end/{closing}/reverse', [YearEndClosingController::class, 'reverse'])
+        ->name('year-end.reverse')
+        ->can(Permission::FinanceYearEndReverse);
 });

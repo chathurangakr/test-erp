@@ -67,6 +67,8 @@ enum Permission: string
     case FinanceAccountsManage = 'finance.accounts_manage';
     case FinanceSetupManage = 'finance.setup_manage';
     case FinancePeriodManage = 'finance.period_manage';
+    case FinanceYearEndClose = 'finance.year_end_close';
+    case FinanceYearEndReverse = 'finance.year_end_reverse';
     case FinanceJournalCreate = 'finance.journal_create';
     case FinanceJournalPost = 'finance.journal_post';
     case FinanceJournalReverse = 'finance.journal_reverse';
@@ -225,6 +227,8 @@ enum Permission: string
             self::FinanceAccountsManage => 'Create and edit ledger accounts',
             self::FinanceSetupManage => 'Change accounting setup and product account mappings',
             self::FinancePeriodManage => 'Create and close fiscal periods',
+            self::FinanceYearEndClose => 'Close a financial year into retained earnings',
+            self::FinanceYearEndReverse => 'Reverse a year-end close',
             self::FinanceJournalCreate => 'Create and edit draft manual journals',
             self::FinanceJournalPost => 'Post manual journals',
             self::FinanceJournalReverse => 'Reverse posted journals',

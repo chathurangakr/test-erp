@@ -19,6 +19,7 @@ class AccountingSetting extends Model
 {
     protected $fillable = [
         'operational_accounting_start_date',
+        'financial_year_end_month',
         'grni_account_id',
         'trade_payables_account_id',
         'trade_receivables_account_id',

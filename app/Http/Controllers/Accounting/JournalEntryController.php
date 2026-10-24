@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\StoreJournalEntryRequest;
 use App\Http\Requests\Accounting\UpdateJournalEntryRequest;
 use App\Models\Account;
+use App\Models\FinancialYearClosing;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
@@ -291,7 +292,8 @@ class JournalEntryController extends Controller
             'can_post' => $entry->status->canPost(),
             'can_edit' => $entry->status->isEditable(),
             'can_cancel' => $entry->status->canCancel(),
-            'can_reverse' => $entry->status->canReverse() && ! $entry->isReversed() && ! $entry->isReversal(),
+            'can_reverse' => $entry->status->canReverse() && ! $entry->isReversed() && ! $entry->isReversal()
+                && $entry->source_type !== FinancialYearClosing::class,
             'lines' => $entry->lines->map(fn (JournalEntryLine $line): array => [
                 'id' => $line->id,
                 'account_id' => $line->account_id,
