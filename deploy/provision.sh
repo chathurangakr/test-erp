@@ -103,6 +103,7 @@ unset SUDO_PASSWORD
 : "${BACKUP_DIR:=/var/backups/coconut-erp}"
 : "${BACKUP_TIME:=02:30}"
 : "${BACKUP_KEEP_DAYS:=30}"
+: "${DRIVE_KEEP_DAYS:=90}"
 : "${SMTP_USERNAME:=}"
 : "${SMTP_PASSWORD:=}"
 : "${SMTP_HOST:=smtp.gmail.com}"
@@ -205,7 +206,7 @@ firewall_package=ufw
 
 say "Installing system packages (this takes a few minutes)"
 apt-get update -q
-apt-get install -y -q ca-certificates curl gnupg git unzip rsync openssl acl cron \
+apt-get install -y -q ca-certificates curl gnupg git unzip rsync openssl acl cron rclone \
     software-properties-common nginx mariadb-server mariadb-client $firewall_package
 ok "Base packages, Nginx and MariaDB installed"
 
@@ -697,6 +698,18 @@ mariadb-dump --single-transaction --routines --triggers "${DB_NAME}" | gzip > "$
 cp "${ENV_FILE}" "${BACKUP_DIR}/env-\${stamp}"
 find "${BACKUP_DIR}" -type f -mtime +${BACKUP_KEEP_DAYS} -delete
 echo "\$(date -Is) backup \${stamp} written"
+
+# Off-site copy to Google Drive, once a Drive connection named coconut-erp-drive exists for root
+# (docs/CLOUD_SERVER.md). A failed upload never fails the local backup; it is logged and the
+# next night's run copies whatever is missing.
+if command -v rclone >/dev/null && rclone listremotes 2>/dev/null | grep -qx 'coconut-erp-drive:'; then
+    if rclone copy "${BACKUP_DIR}" coconut-erp-drive:Coconut-ERP-backups --max-age 7d; then
+        rclone delete coconut-erp-drive:Coconut-ERP-backups --min-age ${DRIVE_KEEP_DAYS}d || true
+        echo "\$(date -Is) backup \${stamp} copied to Google Drive"
+    else
+        echo "\$(date -Is) WARNING: copying to Google Drive failed; the local backup is fine"
+    fi
+fi
 BACKUP
 chmod 700 /usr/local/sbin/coconut-erp-backup
 
@@ -711,6 +724,9 @@ CRON
 chmod 644 /etc/cron.d/coconut-erp
 systemctl enable --now cron >/dev/null
 ok "Scheduler every minute; backups daily at $BACKUP_TIME into $BACKUP_DIR (kept $BACKUP_KEEP_DAYS days)"
+if rclone listremotes 2>/dev/null | grep -qx 'coconut-erp-drive:'; then
+    ok "Each backup is also copied to Google Drive (Coconut-ERP-backups, kept $DRIVE_KEEP_DAYS days)"
+fi
 
 # ------------------------------------------------------------------- final check
 say "Checking the ERP answers"

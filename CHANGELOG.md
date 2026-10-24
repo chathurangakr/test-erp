@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.18.0 — 25 October 2026
+
+- **New accounting months open by themselves.** Every night the system makes sure this month and
+  next month are open, so postings never stop on the 1st because nobody opened the new month. It
+  only continues the months you already have and never closes one — closing stays your decision.
+- **Backups are copied to Google Drive** every night (folder Coconut-ERP-backups, kept 90 days),
+  so a copy survives even if the server is lost. The system can only see the files it puts there.
+
 ## 1.17.0 — 25 October 2026
 
 - **Ask the Telegram bot for figures.** In a private chat with the transactions bot, type `/` and

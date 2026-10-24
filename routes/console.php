@@ -25,6 +25,14 @@ Schedule::command('reports:weekly-update')
     ->timezone(BusinessClock::timezone());
 
 /*
+ * This month and next month always exist as open fiscal periods, so postings never stop at a
+ * month end. Continues the accountant's calendar only; never changes or closes a period.
+ */
+Schedule::command('finance:open-next-periods')
+    ->dailyAt('00:05')
+    ->timezone(BusinessClock::timezone());
+
+/*
  * The monthly report for last month, on the 1st at 8 AM Sri Lanka time: by email to everyone
  * holding reports.monthly_email, and to the Telegram bots set to receive it. See docs/WEEKLY_UPDATE.md.
  */

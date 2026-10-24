@@ -95,6 +95,33 @@ ssh -i ~/Downloads/ssh-key-*.key ubuntu@<public IP address> \
 Run it on your own computer (not on the server). It saves one file holding all the backups,
 named with today's date.
 
+### Automatic copies to Google Drive (1.18.0)
+
+Once Google Drive is connected, the nightly backup also copies itself to the **Coconut-ERP-backups**
+folder of that Drive, keeping `DRIVE_KEEP_DAYS` days (90 by default, in `deploy/provision.env`).
+It uses rclone with the `drive.file` scope: it can see only the files it created, nothing else in
+the Drive. A failed upload never fails the local backup; it is logged in
+`/var/log/coconut-erp-backup.log` and the next night copies whatever is missing (the last 7 days).
+
+The folder holds the database and the `env-…` file with APP_KEY, which together open everything:
+keep that Drive private.
+
+**Connecting (once).** Google's approval needs a browser, so it is done on a desktop computer:
+
+1. Download rclone (https://rclone.org/downloads/) and run
+   `rclone --config ./drive.conf config create coconut-erp-drive drive scope=drive.file` —
+   a Google sign-in opens; choose the account and click **Allow**.
+2. Copy the connection to the server and delete the local copy:
+   ```bash
+   ssh ubuntu@<server> 'sudo install -d -m 700 /root/.config/rclone && sudo tee /root/.config/rclone/rclone.conf >/dev/null && sudo chmod 600 /root/.config/rclone/rclone.conf' < drive.conf
+   shred -u drive.conf
+   ```
+3. Check: `ssh ubuntu@<server> 'sudo rclone lsd coconut-erp-drive:'`.
+
+The installer installs rclone and, finding the `coconut-erp-drive` connection, says so. To stop the
+copies, delete `/root/.config/rclone/rclone.conf` on the server (and remove rclone's access in your
+Google Account → Security → Third-party connections).
+
 ## 8. A name instead of the IP address — and no more browser warning
 
 1. Get a name that points at the server's public IP address:
