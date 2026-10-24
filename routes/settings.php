@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\TelegramLinkController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // The person's own Telegram account for bot commands.
+    Route::post('settings/telegram', [TelegramLinkController::class, 'store'])
+        ->middleware('throttle:10,1,telegram-link')
+        ->name('telegram-link.store');
+    Route::delete('settings/telegram', [TelegramLinkController::class, 'destroy'])->name('telegram-link.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

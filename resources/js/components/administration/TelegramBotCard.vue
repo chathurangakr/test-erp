@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3';
-import { CalendarDays, Search, Send, X } from '@lucide/vue';
+import { CalendarDays, Search, Send, Terminal, X } from '@lucide/vue';
 import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
-import { findChats, monthly, test, update } from '@/routes/telegram-settings';
+import { commands, findChats, monthly, test, update } from '@/routes/telegram-settings';
 
 type Chat = { id: string; title: string };
 export type BotSettings = {
@@ -17,6 +17,7 @@ export type BotSettings = {
     chats: Chat[];
     alert_types: string[];
     sends_monthly_report: boolean;
+    commands_enabled: boolean;
 };
 
 const props = defineProps<{
@@ -59,6 +60,10 @@ function toggleAll(): void {
 
 function post(url: string): void {
     router.post(url, { bot: props.bot }, { preserveScroll: true, preserveState: true });
+}
+
+function switchCommands(enabled: boolean): void {
+    router.post(commands().url, { enabled }, { preserveScroll: true, preserveState: true });
 }
 </script>
 
@@ -122,6 +127,20 @@ function post(url: string): void {
                 <input v-model="form.sends_monthly_report" type="checkbox" class="border-input size-4 rounded" />
                 <span>{{ t('Also send the monthly report here on the 1st of each month') }}</span>
             </label>
+        </div>
+
+        <div v-if="alertTypes" class="bg-muted/40 space-y-2 rounded-lg p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <p class="text-sm font-medium">{{ t('Commands: /stock, /cash, /today, /owed') }}</p>
+                    <p class="text-muted-foreground text-xs">
+                        {{ settings.commands_enabled ? t('On. People who link their Telegram (Settings → Profile) can ask the bot, and see only what their ERP permissions allow.') : t('Off. Switch on (from the cloud server — Telegram must be able to reach it) to let people ask the bot for figures in a private chat.') }}
+                    </p>
+                </div>
+                <Button v-if="settings.commands_enabled" type="button" variant="outline" size="sm" @click="switchCommands(false)"><Terminal class="size-4" />{{ t('Switch commands off') }}</Button>
+                <Button v-else type="button" variant="outline" size="sm" :disabled="!settings.has_token" @click="switchCommands(true)"><Terminal class="size-4" />{{ t('Switch commands on') }}</Button>
+            </div>
+            <InputError :message="actionErrors.transactions_commands" />
         </div>
 
         <div class="flex flex-wrap gap-2">

@@ -18,6 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property list<array{id: string, title: string}>|null $chats
  * @property list<string>|null $alert_types
  * @property bool $sends_monthly_report
+ * @property bool $commands_enabled whether Telegram sends this bot's messages here (commands)
+ * @property string|null $webhook_secret
+ * @property list<array{id: string, title: string}>|null $seen_chats
  */
 class TelegramSetting extends Model
 {
@@ -27,9 +30,9 @@ class TelegramSetting extends Model
 
     public const PURPOSES = [self::REMINDERS, self::TRANSACTIONS];
 
-    protected $fillable = ['purpose', 'is_enabled', 'bot_token', 'bot_username', 'chats', 'alert_types', 'sends_monthly_report', 'updated_by'];
+    protected $fillable = ['purpose', 'is_enabled', 'bot_token', 'bot_username', 'chats', 'alert_types', 'sends_monthly_report', 'commands_enabled', 'webhook_secret', 'seen_chats', 'updated_by'];
 
-    protected $hidden = ['bot_token'];
+    protected $hidden = ['bot_token', 'webhook_secret'];
 
     protected function casts(): array
     {
@@ -39,6 +42,9 @@ class TelegramSetting extends Model
             'chats' => 'array',
             'alert_types' => 'array',
             'sends_monthly_report' => 'boolean',
+            'commands_enabled' => 'boolean',
+            'webhook_secret' => 'encrypted',
+            'seen_chats' => 'array',
         ];
     }
 
@@ -53,6 +59,12 @@ class TelegramSetting extends Model
     public function isReady(): bool
     {
         return $this->is_enabled && $this->bot_token !== null && ($this->chats ?? []) !== [];
+    }
+
+    /** Whether this bot answers commands: it listens, and has a token to answer with. */
+    public function answersCommands(): bool
+    {
+        return $this->commands_enabled && $this->bot_token !== null && $this->webhook_secret !== null;
     }
 
     /** Whether the transactions bot reports this kind of document (no choice saved = all). */

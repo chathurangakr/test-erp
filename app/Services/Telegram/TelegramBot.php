@@ -51,16 +51,57 @@ class TelegramBot
     }
 
     /**
-     * Sends an HTML-formatted message to one chat.
+     * Sends an HTML-formatted message to one chat, optionally with buttons under it.
+     *
+     * @param  list<list<array{text: string, callback_data: string}>>  $buttons  rows of buttons
      */
-    public function send(string $token, string $chatId, string $html): void
+    public function send(string $token, string $chatId, string $html, array $buttons = []): void
     {
-        $this->call($token, 'sendMessage', [
+        $this->call($token, 'sendMessage', array_filter([
             'chat_id' => $chatId,
             'text' => $html,
             'parse_mode' => 'HTML',
             'disable_web_page_preview' => true,
+            'reply_markup' => $buttons === [] ? null : ['inline_keyboard' => $buttons],
+        ], fn ($value): bool => $value !== null));
+    }
+
+    /**
+     * Has Telegram send this bot's messages to $url, signed with $secret, from now on.
+     */
+    public function setWebhook(string $token, string $url, string $secret): void
+    {
+        $this->call($token, 'setWebhook', [
+            'url' => $url,
+            'secret_token' => $secret,
+            'allowed_updates' => ['message', 'callback_query'],
+            'drop_pending_updates' => true,
         ]);
+    }
+
+    /** Stops Telegram sending this bot's messages here. */
+    public function deleteWebhook(string $token): void
+    {
+        $this->call($token, 'deleteWebhook', ['drop_pending_updates' => true]);
+    }
+
+    /**
+     * The command list Telegram shows when someone types "/", optionally for one language.
+     *
+     * @param  array<string, string>  $commands  command (without "/") => description
+     */
+    public function setCommands(string $token, array $commands, ?string $language = null): void
+    {
+        $this->call($token, 'setMyCommands', array_filter([
+            'commands' => array_map(fn (string $command, string $description): array => ['command' => $command, 'description' => $description], array_keys($commands), $commands),
+            'language_code' => $language,
+        ], fn ($value): bool => $value !== null));
+    }
+
+    /** Stops the spinner on a pressed button. */
+    public function answerButton(string $token, string $callbackId): void
+    {
+        $this->call($token, 'answerCallbackQuery', ['callback_query_id' => $callbackId]);
     }
 
     /**

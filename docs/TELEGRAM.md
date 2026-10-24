@@ -1,6 +1,7 @@
 # Telegram
 
-Added in 1.15.0 (loan reminders) and 1.16.0 (transaction alerts, monthly report). Set up on
+Added in 1.15.0 (loan reminders), 1.16.0 (transaction alerts, monthly report) and 1.17.0
+(commands). Set up on
 **Administration → Telegram settings** (permission `telegram.manage`).
 
 ## Two bots
@@ -47,3 +48,37 @@ figures never change, so it reads as it would have at posting. Only what an even
 the alert's `context` (an asset sale, which undoing clears). It shows the number and date, the
 party, accounts and lines (up to 15), the total, who posted or reversed it, and a link to open it.
 Messages are in the server's language (English).
+
+## Commands (1.17.0)
+
+People type `/` in a **private chat** with the transactions bot and tap a command. Telegram shows
+the list because "Switch commands on" set it (`setMyCommands`, English and Sinhala).
+
+| Command | Shows | Needs (any of) |
+| --- | --- | --- |
+| /stock | Stock on hand per product, buttons per product → per warehouse (values with `reports.inventory`) | `inventory.view` |
+| /cash | Each cash and bank account and the totals | `finance.cash.view` |
+| /today | Deliveries (`sales.view`), invoiced (`finance.ar.view`), goods received (`purchasing.view`), production (`production.view`), money in and out (`finance.cash.view`) — each part only with its permission | any of those |
+| /owed | Customers owe us (`finance.ar.view`), we owe suppliers (`finance.ap.view`), loans still owed (`loans.view`) | any of those |
+| /help, anything else | The commands this person may use | — |
+
+**How Telegram reaches the ERP.** Switching commands on makes a 48-character secret and calls
+`setWebhook` with `route('telegram.webhook')` (`POST /telegram/webhook`) — so the server must be
+reachable from the internet over HTTPS (the cloud server is; a computer on a LAN is not, and
+Telegram says so). The route sits outside the web group (no session, cookies or CSRF), is limited
+to 120 requests a minute, and answers 403 unless the `X-Telegram-Bot-Api-Secret-Token` header
+matches the stored secret (constant-time). It always answers 200 otherwise, so Telegram never
+retries a message that failed (the failure is logged). While the webhook is on, Telegram will not
+list chats through getUpdates, so "Find chats" uses the chats the webhook has seen (`seen_chats`).
+Saving a new token switches commands off; switch them on again for the new bot.
+
+**Who gets answers** (`TelegramCommandHandler`):
+
+- **Linked, active ERP users only.** Settings → Profile → "Link my Telegram" stores a random
+  32-character code in the cache for 15 minutes and opens `t.me/<bot>?start=<code>`; pressing Start
+  sends `/start <code>`, which links that Telegram account (`users.telegram_user_id`, unique — a
+  re-link moves it) and is used up. Strangers are told how to link and learn nothing.
+- **Permissions are checked on every message and button press**, so a removed role or a
+  deactivated account stops answers immediately.
+- **Private chats only**: in a group the bot asks to be messaged privately.
+- Answers are in the person's ERP language. Nothing can be posted or changed from Telegram.

@@ -4,6 +4,18 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.17.0 — 25 October 2026
+
+- **Ask the Telegram bot for figures.** In a private chat with the transactions bot, type `/` and
+  tap a command: **/stock** (stock on hand — tap a product to see it per warehouse), **/cash** (cash
+  and bank balances), **/today** (deliveries, invoices, goods received, production and money in and
+  out so far today) and **/owed** (who owes us, whom we owe, loans still owed).
+- **Only people who link their Telegram** get answers — each person clicks "Link my Telegram" in
+  Settings → Profile, then Start in Telegram — and each sees only what their ERP permissions allow.
+  The bot answers in their ERP language, never in a group, and can never change anything.
+- An administrator switches it on with **Switch commands on** under the Transactions bot
+  (Administration → Telegram settings).
+
 ## 1.16.0 — 25 October 2026
 
 - **A Telegram message for every transaction** (Administration → Telegram settings → Transactions

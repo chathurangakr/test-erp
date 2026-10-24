@@ -9,11 +9,13 @@ use App\Models\TelegramAlert;
 use App\Models\TelegramSetting;
 use App\Services\Reporting\MonthlyUpdateReport;
 use App\Services\Telegram\MonthlyUpdateMessage;
+use App\Services\Telegram\TelegramAnswers;
 use App\Services\Telegram\TelegramBot;
 use App\Services\Telegram\TransactionAlertCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -60,6 +62,9 @@ class TelegramSettingsController extends Controller
         if (filled($token)) {
             $settings->bot_token = $token;
             $settings->bot_username = $this->check(fn (): string => $this->bot->username($token), 'bot_token');
+            // Commands belonged to the old bot; they are switched on again for the new one.
+            $settings->commands_enabled = false;
+            $settings->webhook_secret = null;
         }
 
         $settings->chats = array_values($request->validated('chats') ?? []);
@@ -91,10 +96,14 @@ class TelegramSettingsController extends Controller
     public function findChats(Request $request): RedirectResponse
     {
         $bot = $this->purpose($request);
-        $token = TelegramSetting::current($bot)->bot_token
+        $settings = TelegramSetting::current($bot);
+        $token = $settings->bot_token
             ?? throw ValidationException::withMessages([$bot.'_find' => __('Save the bot token first.')]);
 
-        $chats = $this->check(fn (): array => $this->bot->recentChats($token), $bot.'_find');
+        // While Telegram sends this bot's messages here it will not list them; we kept our own.
+        $chats = $settings->commands_enabled
+            ? ($settings->seen_chats ?? [])
+            : $this->check(fn (): array => $this->bot->recentChats($token), $bot.'_find');
 
         if ($chats === []) {
             throw ValidationException::withMessages([$bot.'_find' => __('Nobody has messaged the bot yet. Send it any message in Telegram, then try again.')]);
@@ -119,6 +128,40 @@ class TelegramSettingsController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Test message sent to :count chat(s).', ['count' => count($settings->chats)])]);
+
+        return back();
+    }
+
+    /**
+     * Switches the transactions bot's commands (/stock, /cash, /today, /owed) on or off. On: a
+     * new secret, Telegram told to send the bot's messages to this server with it, and the command
+     * list set (English and Sinhala). This server must be reachable from the internet over HTTPS.
+     */
+    public function commands(Request $request): RedirectResponse
+    {
+        $enable = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
+        $settings = TelegramSetting::current(TelegramSetting::TRANSACTIONS);
+        $token = $settings->bot_token
+            ?? throw ValidationException::withMessages(['transactions_commands' => __('Save the bot token first.')]);
+
+        if ($enable && ! $this->reachableFromTheInternet(route('telegram.webhook'))) {
+            throw ValidationException::withMessages(['transactions_commands' => __('Telegram cannot reach this computer (:address is not on the internet). Switch commands on from the cloud server instead.', [
+                'address' => parse_url(route('telegram.webhook'), PHP_URL_HOST),
+            ])]);
+        }
+
+        if ($enable) {
+            $secret = Str::random(48);
+            $this->check(fn () => $this->bot->setWebhook($token, route('telegram.webhook'), $secret), 'transactions_commands');
+            $this->check(fn () => $this->bot->setCommands($token, TelegramAnswers::menu()), 'transactions_commands');
+            $this->check(fn () => $this->bot->setCommands($token, $this->translatedMenu('si'), 'si'), 'transactions_commands');
+            $settings->forceFill(['commands_enabled' => true, 'webhook_secret' => $secret])->save();
+        } else {
+            $this->check(fn () => $this->bot->deleteWebhook($token), 'transactions_commands');
+            $settings->forceFill(['commands_enabled' => false, 'webhook_secret' => null])->save();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $enable ? __('Commands are on. Type / in a private chat with the bot.') : __('Commands are off.')]);
 
         return back();
     }
@@ -162,7 +205,38 @@ class TelegramSettingsController extends Controller
             // No choice saved yet means every kind.
             'alert_types' => $settings->alert_types ?? array_keys(TransactionAlertCatalog::labels()),
             'sends_monthly_report' => $settings->sends_monthly_report,
+            'commands_enabled' => $settings->commands_enabled,
         ];
+    }
+
+    /**
+     * Whether Telegram could deliver to this address: not localhost, and not a private or reserved
+     * IP (a LAN computer). A name that does not resolve here is left for Telegram to judge.
+     */
+    private function reachableFromTheInternet(string $url): bool
+    {
+        $host = (string) parse_url($url, PHP_URL_HOST);
+        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+
+        if ($host === 'localhost' || str_ends_with($host, '.local')) {
+            return false;
+        }
+
+        return ! filter_var($ip, FILTER_VALIDATE_IP)
+            || (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function translatedMenu(string $locale): array
+    {
+        $previous = app()->getLocale();
+        app()->setLocale($locale);
+        $menu = TelegramAnswers::menu();
+        app()->setLocale($previous);
+
+        return $menu;
     }
 
     private function purpose(Request $request): string

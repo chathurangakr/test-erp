@@ -60,6 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:5,1,telegram-test')
         ->name('telegram-settings.test')
         ->can(Permission::TelegramManage);
+    Route::post('administration/telegram/commands', [TelegramSettingsController::class, 'commands'])
+        ->middleware('throttle:5,1,telegram-commands')
+        ->name('telegram-settings.commands')
+        ->can(Permission::TelegramManage);
     Route::post('administration/telegram/monthly', [TelegramSettingsController::class, 'monthly'])
         ->middleware('throttle:5,1,telegram-monthly')
         ->name('telegram-settings.monthly')

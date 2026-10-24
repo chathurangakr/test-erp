@@ -795,6 +795,12 @@ Full detail lives in `docs/TELEGRAM.md` and `docs/WEEKLY_UPDATE.md`.
 - **`telegram:send-alerts` (every minute) sends them**, each chat once (`delivered_to`); unreachable
   → wait, refused → retried, FAILED after `MAX_ATTEMPTS`. Messages are written at send time from
   the document; only what an event erases goes in `context`.
+- **Commands (1.17.0): /stock, /cash, /today, /owed** to the transactions bot, through a webhook
+  (`POST telegram/webhook`, outside the web group, trusted ONLY by the secret header set with
+  setWebhook — `telegram_settings.webhook_secret`, encrypted). Answers go only to ACTIVE users who
+  linked their Telegram (`users.telegram_user_id`, one-time code from Settings → Profile), only in
+  private chats, and only what their permissions allow (`TelegramAnswers::COMMANDS`, checked on
+  every message and button). Read-only: never post or change anything from Telegram.
 - **`reports:monthly-update`** on the 1st at 08:00 Sri Lanka time: `MonthlyUpdateReport` (reads,
   never stores) by email to holders of `reports.monthly_email` and to every bot with
   `sends_monthly_report`.

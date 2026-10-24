@@ -66,6 +66,9 @@ class RouteAuthorizationTest extends TestCase
         'security.edit',
         'user-password.update',
         'appearance.edit',
+        // The person links or unlinks their own Telegram account.
+        'telegram-link.store',
+        'telegram-link.destroy',
         // Simple mode's home draws only the tiles the user's roles allow, and the language
         // switch only sets a cookie. Every job route behind them requires a permission.
         'kiosk.home',

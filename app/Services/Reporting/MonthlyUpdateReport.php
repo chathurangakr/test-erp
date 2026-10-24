@@ -43,7 +43,8 @@ use Illuminate\Support\Collection;
  * before for comparison, expenses by account (the profit and loss statement), sales by customer
  * (standing invoices), purchases by supplier (posted goods receipts), money in and out by kind,
  * returns, damaged stock, loans still owed, fixed assets bought and sold, and bags still with
- * customers. Each figure is read from the posted documents or the service that owns it; reversed,
+ * customers. The sales, purchases and money figures work for any window (the Telegram /today
+ * command asks for one day). Each figure is read from the posted documents or the service that owns it; reversed,
  * cancelled and draft documents count for nothing. See docs/WEEKLY_UPDATE.md.
  */
 class MonthlyUpdateReport
@@ -131,7 +132,7 @@ class MonthlyUpdateReport
      *
      * @return array{invoices: int, total: string, customers: list<array{name: string, amount: string}>}
      */
-    private function sales(CarbonInterface $from, CarbonInterface $to): array
+    public function sales(CarbonInterface $from, CarbonInterface $to): array
     {
         $invoices = SalesInvoice::query()
             ->whereIn('status', [SalesInvoiceStatus::Posted, SalesInvoiceStatus::PartiallyPaid, SalesInvoiceStatus::Paid])
@@ -152,7 +153,7 @@ class MonthlyUpdateReport
      *
      * @return array{receipts: int, total: string, suppliers: list<array{name: string, amount: string}>}
      */
-    private function purchases(CarbonInterface $from, CarbonInterface $to): array
+    public function purchases(CarbonInterface $from, CarbonInterface $to): array
     {
         $receipts = GoodsReceipt::query()
             ->where('status', GoodsReceiptStatus::Posted)
@@ -177,7 +178,7 @@ class MonthlyUpdateReport
      *
      * @return array<string, string>
      */
-    private function money(CarbonInterface $from, CarbonInterface $to): array
+    public function money(CarbonInterface $from, CarbonInterface $to): array
     {
         $between = [$from->toDateString(), $to->toDateString()];
         $loanPayments = LoanPayment::query()->where('status', LoanDocumentStatus::Posted)->whereBetween('payment_date', $between);

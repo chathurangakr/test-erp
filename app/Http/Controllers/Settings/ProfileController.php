@@ -6,6 +6,8 @@ use App\Actions\Administration\DeleteOwnAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\TelegramSetting;
+use App\Support\BusinessClock;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +25,13 @@ class ProfileController extends Controller
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'telegram' => [
+                // Linking is offered once an administrator has switched commands on.
+                'available' => TelegramSetting::current(TelegramSetting::TRANSACTIONS)->answersCommands(),
+                'linked' => $request->user()->telegram_user_id !== null,
+                'username' => $request->user()->telegram_username,
+                'linked_at' => BusinessClock::display($request->user()->telegram_linked_at),
+            ],
         ]);
     }
 

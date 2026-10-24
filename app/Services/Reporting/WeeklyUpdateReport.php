@@ -86,11 +86,12 @@ class WeeklyUpdateReport
     }
 
     /**
-     * The week's posted production runs, per type: how many, what went in and what came out.
+     * Posted production runs dated in the window, per type: how many, what went in and what came
+     * out. Also used by the Telegram /today command.
      *
      * @return list<array{type: string, runs: int, inputs: list<array{code: string, name: string, uom: string, quantity: string}>, outputs: list<array{code: string, name: string, uom: string, quantity: string}>}>
      */
-    private function production(CarbonInterface $from, CarbonInterface $to): array
+    public function production(CarbonInterface $from, CarbonInterface $to): array
     {
         $orders = ProductionOrder::query()
             ->where('status', ProductionStatus::Posted)
