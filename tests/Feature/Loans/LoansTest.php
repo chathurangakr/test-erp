@@ -210,6 +210,21 @@ class LoansTest extends TestCase
     }
 
     #[Test]
+    public function the_reminder_email_reads_clearly_in_html_and_text(): void
+    {
+        $mail = new LoanReminder([
+            ['loan_number' => 'LOAN-1', 'lender' => 'People\'s Bank', 'due_date' => '2026-09-25', 'days_before' => 0, 'installment' => '25000.000000', 'outstanding' => '475000.000000', 'url' => 'https://example.test/loans/1'],
+            ['loan_number' => 'LOAN-2', 'lender' => 'Machine seller', 'due_date' => '2026-09-30', 'days_before' => 7, 'installment' => null, 'outstanding' => '60000.000000', 'url' => 'https://example.test/loans/2'],
+        ]);
+
+        $mail->assertSeeInHtml('Due today — 2026-09-25');
+        $mail->assertSeeInHtml('Due in 7 days — 2026-09-30');
+        $mail->assertSeeInHtml('25,000.00');
+        $mail->assertSeeInText('Machine seller (LOAN-2)');
+        $this->assertSame('2 loan installments due soon', $mail->envelope()->subject);
+    }
+
+    #[Test]
     public function the_screens_add_a_loan_and_record_a_payment_for_permitted_users(): void
     {
         $user = User::factory()->withPermissions(Permission::LoansView, Permission::LoansManage, Permission::LoansPaymentRecord)->create();

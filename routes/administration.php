@@ -4,6 +4,7 @@ use App\Enums\Permission;
 use App\Http\Controllers\Administration\CompanyProfileController;
 use App\Http\Controllers\Administration\MailSettingsController;
 use App\Http\Controllers\Administration\RoleController;
+use App\Http\Controllers\Administration\TelegramSettingsController;
 use App\Http\Controllers\Administration\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,4 +45,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:5,1')
         ->name('mail-settings.test')
         ->can(Permission::MailManage);
+
+    Route::get('administration/telegram', [TelegramSettingsController::class, 'edit'])
+        ->name('telegram-settings.edit')
+        ->can(Permission::TelegramManage);
+    Route::put('administration/telegram', [TelegramSettingsController::class, 'update'])
+        ->name('telegram-settings.update')
+        ->can(Permission::TelegramManage);
+    Route::post('administration/telegram/find-chats', [TelegramSettingsController::class, 'findChats'])
+        ->middleware('throttle:10,1')
+        ->name('telegram-settings.find-chats')
+        ->can(Permission::TelegramManage);
+    Route::post('administration/telegram/test', [TelegramSettingsController::class, 'test'])
+        ->middleware('throttle:5,1')
+        ->name('telegram-settings.test')
+        ->can(Permission::TelegramManage);
 });

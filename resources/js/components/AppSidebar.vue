@@ -9,6 +9,7 @@ import {
     TrendingUp,
     BookOpenCheck,
     Boxes,
+    Forklift,
     Landmark,
     ClipboardList,
     Building2,
@@ -16,6 +17,7 @@ import {
     LayoutGrid,
     Layers,
     PackageX,
+    Send,
     ShoppingBag,
     Undo2,
     Package,
@@ -64,6 +66,7 @@ import {
 import { dashboard } from '@/routes';
 import { edit as companyEdit } from '@/routes/company';
 import { edit as mailSettingsEdit } from '@/routes/mail-settings';
+import { edit as telegramSettingsEdit } from '@/routes/telegram-settings';
 import { index as customersIndex } from '@/routes/customers';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
@@ -72,6 +75,7 @@ import { index as stockDamagesIndex } from '@/routes/stock-damages';
 import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import { index as customerBagsIndex } from '@/routes/customer-bags';
+import { index as assetsIndex } from '@/routes/assets';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as loansIndex } from '@/routes/loans';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
@@ -419,6 +423,12 @@ const cashNavItems: NavItem[] = [
         permission: 'loans.view',
         icon: Landmark,
     },
+    {
+        title: 'Assets',
+        href: assetsIndex(),
+        permission: 'assets.view',
+        icon: Forklift,
+    },
 ];
 
 const payrollNavItems: NavItem[] = [
@@ -472,6 +482,12 @@ const administrationNavItems: NavItem[] = [
         href: mailSettingsEdit(),
         permission: 'mail.manage',
         icon: Mail,
+    },
+    {
+        title: 'Telegram settings',
+        href: telegramSettingsEdit(),
+        permission: 'telegram.manage',
+        icon: Send,
     },
 ];
 

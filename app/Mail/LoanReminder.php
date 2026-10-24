@@ -14,18 +14,21 @@ use Illuminate\Mail\Mailables\Envelope;
 class LoanReminder extends Mailable
 {
     /**
-     * @param  list<array{loan_number: string, lender: string, due_date: string, days_before: int, installment: string|null, outstanding: string, url: string}>  $items
+     * Not public on purpose: a public property is handed to the view as-is and would replace
+     * the `items` (with their "due in" wording) built in content().
+     *
+     * @param  list<array{loan_number: string, lender: string, due_date: string, days_before: int, installment: string|null, outstanding: string, url: string}>  $installments
      */
-    public function __construct(public array $items) {}
+    public function __construct(private readonly array $installments) {}
 
     public function envelope(): Envelope
     {
-        $first = $this->items[0];
+        $first = $this->installments[0];
 
         return new Envelope(
-            subject: count($this->items) === 1
+            subject: count($this->installments) === 1
                 ? __('Loan installment due :when: :lender', ['when' => $this->dueIn($first['days_before']), 'lender' => $first['lender']])
-                : __(':count loan installments due soon', ['count' => count($this->items)]),
+                : __(':count loan installments due soon', ['count' => count($this->installments)]),
         );
     }
 
@@ -38,7 +41,7 @@ class LoanReminder extends Mailable
             text: 'mail.loan-reminder-text',
             with: [
                 'companyName' => $company->name,
-                'items' => array_map(fn (array $item): array => $item + ['when' => $this->dueIn($item['days_before'])], $this->items),
+                'items' => array_map(fn (array $item): array => $item + ['when' => $this->dueIn($item['days_before'])], $this->installments),
             ],
         );
     }

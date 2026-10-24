@@ -4,6 +4,7 @@ namespace App\Actions\Loans;
 
 use App\Actions\Accounting\ReverseJournalEntry;
 use App\Enums\LoanDocumentStatus;
+use App\Enums\LoanFunding;
 use App\Models\Loan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +25,12 @@ class ReverseLoan
             if (! $locked->status->canReverse()) {
                 throw ValidationException::withMessages([
                     'status' => __('Loan :reference has already been reversed.', ['reference' => $locked->loan_number]),
+                ]);
+            }
+
+            if ($locked->funding === LoanFunding::Asset) {
+                throw ValidationException::withMessages([
+                    'status' => __('Loan :reference was opened with an asset. Reverse the asset instead.', ['reference' => $locked->loan_number]),
                 ]);
             }
 

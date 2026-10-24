@@ -173,6 +173,10 @@ export type AccountingSettingsView = {
     loans_account: AccountRef;
     loan_interest_account: AccountRef;
     opening_balance_account: AccountRef;
+    fixed_assets_account: AccountRef;
+    asset_gain_account: AccountRef;
+    asset_loss_account: AccountRef;
+    maintenance_account: AccountRef;
     employee_advances_account: AccountRef;
     /** True once operational journals exist: the cutover can no longer move. */
     cutover_locked: boolean;

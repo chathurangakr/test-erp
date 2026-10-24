@@ -79,7 +79,7 @@ class LoanController extends Controller
 
     public function show(Loan $loan): Response
     {
-        $loan->load(['cashBankAccount:id,display_name', 'journalEntry.lines.account:id,code,name', 'createdBy:id,name', 'reversedBy:id,name', 'payments.cashBankAccount:id,display_name']);
+        $loan->load(['fixedAsset:id,asset_number,name', 'cashBankAccount:id,display_name', 'journalEntry.lines.account:id,code,name', 'createdBy:id,name', 'reversedBy:id,name', 'payments.cashBankAccount:id,display_name']);
         $today = BusinessClock::today();
 
         return Inertia::render('loans/Show', [
@@ -94,7 +94,8 @@ class LoanController extends Controller
                 'posted_at' => BusinessClock::display($loan->posted_at),
                 'reversed_by' => $loan->reversedBy?->name,
                 'reversed_at' => BusinessClock::display($loan->reversed_at),
-                'can_reverse' => $loan->status->canReverse() && ! $loan->payments->contains(fn (LoanPayment $payment): bool => $payment->status === LoanDocumentStatus::Posted),
+                'fixed_asset' => $loan->fixedAsset?->only(['id', 'asset_number', 'name']),
+                'can_reverse' => $loan->status->canReverse() && $loan->funding !== LoanFunding::Asset && ! $loan->payments->contains(fn (LoanPayment $payment): bool => $payment->status === LoanDocumentStatus::Posted),
                 'journal' => PayrollController::journal($loan->journalEntry),
                 'payments' => $loan->payments->sortByDesc('payment_date')->values()->map(fn (LoanPayment $payment): array => [
                     'id' => $payment->id,

@@ -58,6 +58,10 @@ class AccountingSetupController extends Controller
                 'loans_account' => $this->accountRef($settings?->loansAccount),
                 'loan_interest_account' => $this->accountRef($settings?->loanInterestAccount),
                 'opening_balance_account' => $this->accountRef($settings?->openingBalanceAccount),
+                'fixed_assets_account' => $this->accountRef($settings?->fixedAssetsAccount),
+                'asset_gain_account' => $this->accountRef($settings?->assetGainAccount),
+                'asset_loss_account' => $this->accountRef($settings?->assetLossAccount),
+                'maintenance_account' => $this->accountRef($settings?->maintenanceAccount),
                 // Once an operational journal exists the cutover is frozen: moving it would
                 // leave the ledger and the books permanently disagreeing.
                 'cutover_locked' => JournalEntry::query()->whereNotNull('source_type')->exists(),

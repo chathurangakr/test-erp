@@ -264,6 +264,62 @@ const { t } = useT();
                         </p>
                         <InputError :message="errors.opening_balance_account_id" />
                     </div>
+                    <div class="grid gap-2">
+                        <Label for="fixed_assets">{{ t('Fixed assets') }}</Label>
+                        <SearchableSelect
+                            id="fixed_assets"
+                            name="fixed_assets_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.asset).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.fixed_assets_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('Where vehicles, machines and other assets are carried, at what they cost.') }}
+                        </p>
+                        <InputError :message="errors.fixed_assets_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="asset_gain">{{ t('Gain on asset sales') }}</Label>
+                        <SearchableSelect
+                            id="asset_gain"
+                            name="asset_gain_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.revenue).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.asset_gain_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('Credited when an asset sells for more than it cost.') }}
+                        </p>
+                        <InputError :message="errors.asset_gain_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="asset_loss">{{ t('Loss on asset sales') }}</Label>
+                        <SearchableSelect
+                            id="asset_loss"
+                            name="asset_loss_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.expense).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.asset_loss_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('Charged when an asset sells for less than it cost, or is scrapped.') }}
+                        </p>
+                        <InputError :message="errors.asset_loss_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="maintenance">{{ t('Repairs and maintenance') }}</Label>
+                        <SearchableSelect
+                            id="maintenance"
+                            name="maintenance_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.expense).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.maintenance_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('The expense asset repairs and servicing are charged to.') }}
+                        </p>
+                        <InputError :message="errors.maintenance_account_id" />
+                    </div>
                 </div>
 
                 <Button

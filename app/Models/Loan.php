@@ -32,6 +32,7 @@ class Loan extends Model
         'funding',
         'amount',
         'cash_bank_account_id',
+        'fixed_asset_id',
         'has_interest',
         'installment_amount',
         'due_day',
@@ -87,6 +88,16 @@ class Loan extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(LoanPayment::class);
+    }
+
+    /**
+     * The asset bought on this loan, if any.
+     *
+     * @return BelongsTo<FixedAsset, $this>
+     */
+    public function fixedAsset(): BelongsTo
+    {
+        return $this->belongsTo(FixedAsset::class);
     }
 
     /**

@@ -225,6 +225,30 @@ class AccountingPolicy
         return $this->configured(AccountingSetting::current()?->openingBalanceAccount, 'opening_balance_account_id', AccountType::Equity, __('Opening balances'));
     }
 
+    /** The asset fixed assets are carried in. See docs/FIXED_ASSETS.md. */
+    public function fixedAssetsAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->fixedAssetsAccount, 'fixed_assets_account_id', AccountType::Asset, __('Fixed assets'));
+    }
+
+    /** The revenue a sale above an asset's cost is recognised in. */
+    public function assetGainAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->assetGainAccount, 'asset_gain_account_id', AccountType::Revenue, __('Gain on asset sales'));
+    }
+
+    /** The expense a sale below an asset's cost is charged to. */
+    public function assetLossAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->assetLossAccount, 'asset_loss_account_id', AccountType::Expense, __('Loss on asset sales'));
+    }
+
+    /** The expense asset maintenance is charged to. */
+    public function maintenanceAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->maintenanceAccount, 'maintenance_account_id', AccountType::Expense, __('Repairs and maintenance'));
+    }
+
     private function configured(?Account $account, string $field, AccountType $type, string $subject): Account
     {
         if ($account === null) {

@@ -137,7 +137,7 @@ class ChartOfAccountsTest extends TestCase
     {
         $this->seed(ChartOfAccountsSeeder::class);
 
-        $this->assertSame(61, Account::count());
+        $this->assertSame(63, Account::count());
 
         foreach (['1110' => 'Cash on Hand', '1210' => 'Trade Receivables', '4140' => 'Copra Sales',
             '5140' => 'Copra COGS', '6400' => 'Electricity', '3200' => 'Retained Earnings',
@@ -241,7 +241,7 @@ class ChartOfAccountsTest extends TestCase
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(ChartOfAccountsSeeder::class);
 
-        $this->assertSame(61, Account::count());
+        $this->assertSame(63, Account::count());
     }
 
     #[Test]

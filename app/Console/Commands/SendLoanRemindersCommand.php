@@ -7,8 +7,11 @@ use App\Enums\Permission;
 use App\Mail\LoanReminder;
 use App\Models\Loan;
 use App\Models\LoanReminder as SentReminder;
+use App\Models\TelegramSetting;
 use App\Models\User;
 use App\Services\Loans\LoanBalances;
+use App\Services\Telegram\LoanReminderMessage;
+use App\Services\Telegram\TelegramBot;
 use App\Support\BusinessClock;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -17,8 +20,9 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Emails the loan installments falling due — 7 days before, 2 days before and on the due day —
- * to every active user holding `loans.reminders` (administrators always do). An installment
+ * Sends the loan installments falling due — 7 days before, 2 days before and on the due day — by
+ * email to every active user holding `loans.reminders` (administrators always do), and to the
+ * Telegram chats chosen on Administration → Telegram settings when that is switched on. An installment
  * already recorded is not reminded about, and each reminder is sent once (loan_reminders), so
  * the daily run can be repeated safely. See docs/LOANS.md.
  */
@@ -29,7 +33,7 @@ class SendLoanRemindersCommand extends Command
     /** The days before a due date a reminder goes out. */
     public const DAYS_BEFORE = [7, 2, 0];
 
-    public function handle(LoanBalances $balances): int
+    public function handle(LoanBalances $balances, TelegramBot $bot): int
     {
         $today = BusinessClock::today();
         $due = [];
@@ -69,14 +73,16 @@ class SendLoanRemindersCommand extends Command
 
         $recipients = User::query()->where('is_active', true)->get()
             ->filter(fn (User $user): bool => $user->hasPermission(Permission::LoansReminders));
+        $telegram = TelegramSetting::current();
 
-        if ($recipients->isEmpty()) {
-            $this->warn('Nobody receives loan reminders (no active user holds loans.reminders).');
+        if ($recipients->isEmpty() && ! $telegram->isReady()) {
+            $this->warn('Nobody receives loan reminders (no active user holds loans.reminders, and Telegram is off).');
 
             return self::SUCCESS;
         }
 
         $sent = 0;
+        $failed = 0;
 
         foreach ($recipients as $user) {
             try {
@@ -85,8 +91,25 @@ class SendLoanRemindersCommand extends Command
                 $this->info("Sent to {$user->email}");
             } catch (Throwable $exception) {
                 // One bad address must not stop the others; the failure is reported and logged.
+                $failed++;
                 report($exception);
                 $this->error("Could not send to {$user->email}: {$exception->getMessage()}");
+            }
+        }
+
+        if ($telegram->isReady()) {
+            $message = LoanReminderMessage::forTelegram(array_column($due, 'item'));
+
+            foreach ($telegram->chats as $chat) {
+                try {
+                    $bot->send($telegram->bot_token, $chat['id'], $message);
+                    $sent++;
+                    $this->info("Sent to Telegram chat {$chat['title']}");
+                } catch (Throwable $exception) {
+                    $failed++;
+                    report($exception);
+                    $this->error("Could not send to Telegram chat {$chat['title']}: {$exception->getMessage()}");
+                }
             }
         }
 
@@ -102,6 +125,6 @@ class SendLoanRemindersCommand extends Command
             }
         }
 
-        return $sent === $recipients->count() ? self::SUCCESS : self::FAILURE;
+        return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }
 }

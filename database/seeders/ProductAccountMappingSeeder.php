@@ -77,10 +77,14 @@ class ProductAccountMappingSeeder extends Seeder
     private const STOCK_LOSS_CODE = '6900';
 
     /** @var array<string, string> setting column => account code */
-    private const LOAN_ACCOUNTS = [
+    private const MORE_SETTING_ACCOUNTS = [
         'loans_account_id' => '2400',
         'loan_interest_account_id' => '6950',
         'opening_balance_account_id' => '3300',
+        'fixed_assets_account_id' => '1500',
+        'asset_gain_account_id' => '4900',
+        'asset_loss_account_id' => '6960',
+        'maintenance_account_id' => '6600',
     ];
 
     /**
@@ -165,7 +169,7 @@ class ProductAccountMappingSeeder extends Seeder
             'wages_account_id' => $wagesAccountId,
             'employee_advances_account_id' => $employeeAdvancesAccountId,
             'stock_loss_account_id' => $stockLossAccountId,
-            ...array_map(fn (string $code): ?int => Account::query()->where('code', $code)->value('id'), self::LOAN_ACCOUNTS),
+            ...array_map(fn (string $code): ?int => Account::query()->where('code', $code)->value('id'), self::MORE_SETTING_ACCOUNTS),
         ], fn (?int $id): bool => $id !== null);
 
         if ($attributes === []) {

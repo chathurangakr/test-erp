@@ -4,6 +4,7 @@ namespace Tests\Feature\Authorization;
 
 use App\Enums\Permission;
 use App\Models\Account;
+use App\Models\AssetMaintenance;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerBagMovement;
@@ -12,6 +13,7 @@ use App\Models\Delivery;
 use App\Models\Employee;
 use App\Models\ExpenseVoucher;
 use App\Models\FiscalPeriod;
+use App\Models\FixedAsset;
 use App\Models\FundTransfer;
 use App\Models\GoodsReceipt;
 use App\Models\JournalEntry;
@@ -328,6 +330,8 @@ class RouteAuthorizationTest extends TestCase
                 'salesReturn' => SalesReturn::factory()->create(),
                 'loan' => Loan::factory()->create(),
                 'loanPayment' => LoanPayment::factory()->create(),
+                'asset' => FixedAsset::factory()->create(),
+                'assetMaintenance' => AssetMaintenance::factory()->create(),
                 'payroll' => PayrollRun::factory()->create(),
                 'user' => User::factory()->create(),
                 'role' => Role::factory()->create(),

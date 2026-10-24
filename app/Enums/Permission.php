@@ -123,6 +123,14 @@ enum Permission: string
     case LoansPaymentReverse = 'loans.payment_reverse';
     case LoansReminders = 'loans.reminders';
 
+    // ------------------------------------------------------------------ assets
+    case AssetsView = 'assets.view';
+    case AssetsManage = 'assets.manage';
+    case AssetsReverse = 'assets.reverse';
+    case AssetsSell = 'assets.sell';
+    case AssetsMaintenanceRecord = 'assets.maintenance_record';
+    case AssetsMaintenanceReverse = 'assets.maintenance_reverse';
+
     // ------------------------------------------------------------- reports
     case ReportsFinance = 'reports.finance';
     case ReportsInventory = 'reports.inventory';
@@ -136,6 +144,7 @@ enum Permission: string
     case RolesManage = 'roles.manage';
     case CompanyManage = 'company.manage';
     case MailManage = 'mail.manage';
+    case TelegramManage = 'telegram.manage';
 
     /**
      * Route middleware requiring this permission, for resource registrations that cannot
@@ -158,8 +167,9 @@ enum Permission: string
             str_starts_with($this->value, 'finance.') => 'Finance',
             str_starts_with($this->value, 'payroll.') => 'Payroll',
             str_starts_with($this->value, 'loans.') => 'Loans',
+            str_starts_with($this->value, 'assets.') => 'Assets',
             str_starts_with($this->value, 'reports.') => 'Reports',
-            str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.'), str_starts_with($this->value, 'company.'), str_starts_with($this->value, 'mail.') => 'Administration',
+            str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.'), str_starts_with($this->value, 'company.'), str_starts_with($this->value, 'mail.'), str_starts_with($this->value, 'telegram.') => 'Administration',
             str_starts_with($this->value, 'inventory.') => 'Inventory',
             str_starts_with($this->value, 'purchasing.') => 'Purchasing',
             str_starts_with($this->value, 'sales.') => 'Sales',
@@ -259,6 +269,12 @@ enum Permission: string
             self::LoansPaymentRecord => 'Record loan installments paid',
             self::LoansPaymentReverse => 'Reverse loan payments',
             self::LoansReminders => 'Receive loan installment reminders by email',
+            self::AssetsView => 'View assets, their maintenance history and sales',
+            self::AssetsManage => 'Add assets and edit their names and descriptions',
+            self::AssetsReverse => 'Reverse assets recorded by mistake',
+            self::AssetsSell => 'Sell or scrap assets, and reverse a sale',
+            self::AssetsMaintenanceRecord => 'Record maintenance and repairs on assets',
+            self::AssetsMaintenanceReverse => 'Reverse maintenance records',
             self::ReportsFinance => 'Profit & loss, balance sheet and cash/bank position',
             self::ReportsInventory => 'Inventory valuation and inventory-vs-GL reconciliation',
             self::ReportsManagement => 'Finance dashboard and operational product profitability',
@@ -269,6 +285,7 @@ enum Permission: string
             self::RolesManage => 'Create and edit roles and assign permissions',
             self::CompanyManage => 'Edit the company name, address and logo printed on invoices and reports',
             self::MailManage => 'Set up the email account the system sends from, and send a test email',
+            self::TelegramManage => 'Set up the Telegram bot reminders are sent through',
         };
     }
 
@@ -281,7 +298,7 @@ enum Permission: string
     {
         return [
             'Master Data', 'Inventory', 'Purchasing', 'Sales', 'Production', 'Finance',
-            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Loans', 'Payroll', 'Reports', 'Administration',
+            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Loans', 'Assets', 'Payroll', 'Reports', 'Administration',
         ];
     }
 }

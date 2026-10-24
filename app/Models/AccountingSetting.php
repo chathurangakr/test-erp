@@ -28,6 +28,10 @@ class AccountingSetting extends Model
         'loans_account_id',
         'loan_interest_account_id',
         'opening_balance_account_id',
+        'fixed_assets_account_id',
+        'asset_gain_account_id',
+        'asset_loss_account_id',
+        'maintenance_account_id',
         'employee_advances_account_id',
         'updated_by',
     ];
@@ -142,6 +146,42 @@ class AccountingSetting extends Model
     public function openingBalanceAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'opening_balance_account_id');
+    }
+
+    /**
+     * The asset fixed assets are carried in, at what they cost.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function fixedAssetsAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'fixed_assets_account_id');
+    }
+
+    /**
+     * @return BelongsTo<Account, $this>
+     */
+    public function assetGainAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'asset_gain_account_id');
+    }
+
+    /**
+     * @return BelongsTo<Account, $this>
+     */
+    public function assetLossAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'asset_loss_account_id');
+    }
+
+    /**
+     * The expense asset repairs and servicing are charged to.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function maintenanceAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'maintenance_account_id');
     }
 
     /**

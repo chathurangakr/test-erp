@@ -4,6 +4,16 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.15.0 — 25 October 2026
+
+- **Assets** (Cash & bank → Assets). Record vehicles, machines and everything the factory owns —
+  paid in full, bought on a loan (with an optional down payment; the rest becomes a loan with its
+  own reminders) or already owned. Sell or scrap an asset and see the profit or loss against what
+  it cost. Each asset keeps a maintenance and repair history with its costs.
+- **Loan reminders on Telegram** as well as email (Administration → Telegram settings): create a
+  bot with @BotFather, paste its token, choose the chats and send a test message.
+- **Fix:** the loan reminder email could not be drawn and would have failed to send.
+
 ## 1.14.0 — 24 October 2026
 
 - **Customer returns** (Sales → Returns, or "Record a return" on a delivery). The customer is

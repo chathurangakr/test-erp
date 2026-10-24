@@ -54,6 +54,14 @@ not already paid — a standing payment after the previous due date — it email
 holding `loans.reminders` (administrators always do) one message listing every installment due.
 A reminder is remembered only once someone received it, so a failed run tries again.
 
+**Telegram** (2026-10-25): the same reminder also goes to the chats chosen on Administration →
+Telegram settings (permission `telegram.manage`) when that is switched on. The owner creates a bot
+with @BotFather, pastes its token (stored encrypted with APP_KEY in `telegram_settings`, never sent
+back to a page), each administrator — or a group with them in it — messages the bot, and **Find
+chats** lists them (`getUpdates`) to choose from. The server only calls out to
+`api.telegram.org` (`App\Services\Telegram\TelegramBot`); no webhook. Errors never repeat the
+token, which Telegram carries in the URL.
+
 ## Permissions
 
 `loans.view`, `loans.manage` (add, edit reminder details), `loans.reverse`,
@@ -62,6 +70,5 @@ Accountant; existing roles are ticked by an administrator.
 
 ## Not built (TBD)
 
-- Telegram reminders (planned last).
 - Loans funding an asset directly (with the fixed assets stage).
 - Interest schedules / amortisation tables; reminders by SMS; loans in the mobile API.

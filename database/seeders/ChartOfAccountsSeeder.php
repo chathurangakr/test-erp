@@ -91,6 +91,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['4160', 'Raw Husk Sales', AccountType::Revenue, false, false],
         ['4170', 'Cocopeat Sales', AccountType::Revenue, false, false],
         ['4180', 'Packing Material Sales', AccountType::Revenue, false, false],
+        ['4900', 'Gain on Sale of Assets', AccountType::Revenue, false, false],
 
         // --------------------------------------------------------- cost of sales
         ['5000', 'Cost of Sales', AccountType::CostOfSales, true, false],
@@ -121,6 +122,7 @@ class ChartOfAccountsSeeder extends Seeder
         // Damaged stock written off. The system's to post (StockDamage), so a control account.
         ['6900', 'Stock Damage and Losses', AccountType::Expense, false, true],
         ['6950', 'Loan Interest', AccountType::Expense, false, false],
+        ['6960', 'Loss on Sale of Assets', AccountType::Expense, false, false],
     ];
 
     /**
