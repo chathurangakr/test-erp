@@ -114,6 +114,9 @@ class InventoryAccountingTest extends TestCase
         $this->store = Warehouse::factory()->create(['code' => 'STORE']);
 
         $this->seedProductionRecipes();
+        // The allocation mechanics need a recipe that splits; the real one gives the shell nothing.
+        $this->splitCopraValue('75.000000', '25.000000');
+
         $this->seed(ChartOfAccountsSeeder::class);
         $this->seed(ProductAccountMappingSeeder::class);
 
@@ -284,8 +287,9 @@ class InventoryAccountingTest extends TestCase
     #[Test]
     public function the_official_products_are_mapped_and_the_qa_product_is_not(): void
     {
-        // The eight original products plus Cocopeat and the four litre stock items.
-        $this->assertSame(13, ProductAccountMapping::count());
+        // The eight original products, Cocopeat, the four litre stock items, the bag and the six
+        // coconut sizes (whole and dehusked).
+        $this->assertSame(20, ProductAccountMapping::count());
 
         $coconut = $this->product('COCONUT')->accountMapping;
         $this->assertSame('1310', $coconut->inventoryAccount->code);
@@ -316,7 +320,7 @@ class InventoryAccountingTest extends TestCase
         $this->seed(ProductAccountMappingSeeder::class);
 
         $this->assertNull($qa->fresh()->accountMapping);
-        $this->assertSame(13, ProductAccountMapping::count());
+        $this->assertSame(20, ProductAccountMapping::count());
     }
 
     #[Test]

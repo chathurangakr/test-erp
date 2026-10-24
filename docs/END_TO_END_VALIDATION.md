@@ -160,21 +160,21 @@ anywhere.
 
 | Output | Quantity | Source | Share | Allocated | Unit cost |
 | --- | --- | --- | --- | --- | --- |
-| `COPRA` | 190.500 KG | **measured** | 75% | Rs.76,875.000000 | Rs.403.543307 / KG |
-| `RAW-SHELL` | 1,000 NOS | **derived 1:1** | 25% | Rs.25,625.000000 | Rs.25.625000 / NOS |
+| `COPRA` | 190.500 KG | **measured** | 100% | Rs.102,500.000000 | Rs.538.057743 / KG |
+| `RAW-SHELL` | 1,000 NOS | **derived 1:1** | 0% | Rs.0.000000 | Rs.0.000000 / NOS |
 | | 420.750 KG | **measured** | | | *(informational per-KG only)* |
 | | | | | **Rs.102,500.000000** | = consumed, exactly |
 
-Copra and shell still get lots, each recording the copra run as its source. Shell is valued
-against its **primary NOS quantity**.
+Copra and shell still get lots, each recording the copra run as its source. The shell comes
+free (copra recipe version 3): the factory buys coconuts, not shell.
 
 ### Step 8 — sell finished goods
 
 | Sale | Basis | Revenue | Unit cost | Husk backflushed | COGS |
 | --- | --- | --- | --- | --- | --- |
 | 50.000 KG `HUSK-7C` @ 200, **Raw Husks Used 180** | primary | Rs.10,000.000000 | Rs.0.000000 | 180 × 13.4375 = **Rs.2,418.750000** | **Rs.2,418.750000** |
-| 90.500 KG `COPRA` @ 500 | primary | Rs.45,250.000000 | Rs.403.543307 | — | Rs.36,520.669284 |
-| 500 NOS `RAW-SHELL` / **208.750 KG** @ 80 | **secondary** | **Rs.16,700.000000** | Rs.25.625000 | — | **Rs.12,812.500000** |
+| 90.500 KG `COPRA` @ 500 | primary | Rs.45,250.000000 | Rs.538.057743 | — | Rs.48,694.225742 |
+| 500 NOS `RAW-SHELL` / **208.750 KG** @ 80 | **secondary** | **Rs.16,700.000000** | Rs.0.000000 | — | **Rs.0.000000** |
 
 The chip sale writes a separate `BACKFLUSH_ISSUE` transaction (source: the delivery) taking
 180 husks out of `MAIN`, inside the same database transaction as the sale. Gross profit on the
@@ -183,7 +183,8 @@ chips is Rs.7,581.25.
 The shell sale is still the sharpest test of units:
 
 - **Revenue follows the weight** — `208.750 × 80 = Rs.16,700`.
-- **Cost follows the count** — `500 × Rs.25.625`, because the count is what left stock.
+- **Cost follows the count** — the count is what left stock; at Rs.0 a shell, the whole sale is
+  profit.
 - **The weight is measured, not apportioned.** Half the shells by count would have been
   `210.375 KG` pro rata. The actual figure is `208.750 KG`, and stock records exactly that.
 
@@ -201,8 +202,8 @@ The shell sale is still the sharpest test of units:
 | `HUSK-10C` | 281.750 KG | Rs.0.000000 | — *(husk cost pending)* |
 | `COCOPEAT-L` | 100.000 L | Rs.0.000000 | — *(husk cost pending)* |
 | `COCOPEAT` | 0.000 KG | Rs.0.000000 | — |
-| `COPRA` | 100.000 KG | Rs.40,354.330716 | Rs.403.543307 |
-| `RAW-SHELL` | 500.000 NOS **/ 212.000 KG** | Rs.12,812.500000 | Rs.25.625000 |
+| `COPRA` | 100.000 KG | Rs.53,805.774258 | Rs.538.057743 |
+| `RAW-SHELL` | 500.000 NOS **/ 212.000 KG** | Rs.0.000000 | Rs.0.000000 |
 
 Raw husk by warehouse: `MAIN` 2,820 (3,000 from dehusking − 180 backflushed) + `STORE`
 5,000 = 7,820 company-wide.
@@ -298,11 +299,10 @@ tables (`production_recipes`, `production_recipe_outputs`) and nowhere else.
 | --- | --- | --- |
 | Dehusking (v2) | 100% dehusked / 0% husk + labour to husk; labour rate per run, pre-filled from the default of Rs. 4.00 (this scenario types 2.50) | **Confirmed** method and default |
 | Husk chipping (v2) | No consumption; husk backflushed at delivery | **Confirmed** |
-| Copra (v1) | 75% copra / 25% shell | **Provisional** |
+| Copra (v3) | 100% copra / 0% shell — the shell comes free | **Confirmed** 2026-10-24 |
 
-The labour rate of Rs.2.50 is this test's own figure, not the factory's. The copra split is a
-placeholder for a **market-value / NRV** joint-product costing method (`BUSINESS_RULES.md`
-§20 TBD-2).
+The labour rate of Rs.2.50 is this test's own figure, not the factory's. Versions 1-2 of the copra
+recipe split 75 / 25; runs made on them keep that split.
 
 Also still open and deliberately unmodelled: drying / moisture / process loss
 (§20 TBD-3), chipping waste measurement basis (§19 TBD-1), and production expenses other than

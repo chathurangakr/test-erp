@@ -115,20 +115,25 @@ class DehuskingScreensTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('production/dehusking/Create')
-                ->where('recipe.input_code', 'COCONUT')
-                ->has('recipe.outputs', 2)
-                ->where('recipe.outputs.0.code', 'DEHUSKED-COCONUT')
-                ->where('recipe.outputs.0.ratio', '1.000000')
-                ->where('recipe.outputs.0.allocation_percent', '100.000000')
-                ->where('recipe.outputs.0.absorbs_labour', false)
-                ->where('recipe.outputs.1.code', 'RAW-HUSK')
-                ->where('recipe.outputs.1.allocation_percent', '0.000000')
+                // One recipe per coconut size, the original coconut first.
+                ->has('recipes', 4)
+                ->where('recipes.0.input_code', 'COCONUT')
+                ->where('recipes.1.input_code', 'COCONUT-LARGE')
+                ->where('recipes.1.outputs.0.code', 'DEHUSKED-LARGE')
+                ->where('recipes.1.outputs.1.code', 'RAW-HUSK')
+                ->has('recipes.0.outputs', 2)
+                ->where('recipes.0.outputs.0.code', 'DEHUSKED-COCONUT')
+                ->where('recipes.0.outputs.0.ratio', '1.000000')
+                ->where('recipes.0.outputs.0.allocation_percent', '100.000000')
+                ->where('recipes.0.outputs.0.absorbs_labour', false)
+                ->where('recipes.0.outputs.1.code', 'RAW-HUSK')
+                ->where('recipes.0.outputs.1.allocation_percent', '0.000000')
                 // The raw husk carries the dehusking labour instead of coconut value.
-                ->where('recipe.outputs.1.absorbs_labour', true)
-                ->where('recipe.default_labour_rate', '4.000000')
-                ->where('recipe.input_tracks_lots', true)
+                ->where('recipes.0.outputs.1.absorbs_labour', true)
+                ->where('recipes.0.default_labour_rate', '4.000000')
+                ->where('recipes.0.input_tracks_lots', true)
                 // Only lots holding stock are offered.
-                ->has('lots', 1));
+                ->has('recipes.0.lots', 1));
     }
 
     #[Test]
@@ -360,8 +365,8 @@ class DehuskingScreensTest extends TestCase
         $this->actingAs($user)
             ->get(route('dehusking.create'))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('recipe.input_tracks_lots', false)
-                ->has('lots', 0));
+                ->where('recipes.0.input_tracks_lots', false)
+                ->has('recipes.0.lots', 0));
     }
 
     #[Test]

@@ -185,7 +185,7 @@ class DeliveryController extends Controller
 
         return [
             'customers' => Customer::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            'warehouses' => Warehouse::query()->operational()->orderBy('code')->get(['id', 'code', 'name']),
             'products' => Product::query()
                 ->with(['primaryUom:id,code', 'secondaryUom:id,code'])
                 ->orderBy('code')

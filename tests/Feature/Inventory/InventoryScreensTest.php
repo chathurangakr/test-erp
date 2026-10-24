@@ -167,9 +167,15 @@ class InventoryScreensTest extends TestCase
         $transaction = $this->seedMovement();
 
         // The inventory module exposes read-only GET routes only. Nothing that could
-        // modify a posted transaction is registered at all.
-        $routes = collect(app('router')->getRoutes()->getRoutes())
-            ->filter(fn ($route): bool => str_starts_with($route->uri(), 'inventory'));
+        // modify a posted transaction is registered at all. Damaged stock is a business
+        // document of its own — recorded and reversed, never edited or deleted.
+        $allRoutes = collect(app('router')->getRoutes()->getRoutes());
+        $routes = $allRoutes->filter(fn ($route): bool => str_starts_with($route->uri(), 'inventory')
+            && ! str_starts_with($route->uri(), 'inventory/damages'));
+
+        foreach ($allRoutes->filter(fn ($route): bool => str_starts_with($route->uri(), 'inventory/damages')) as $route) {
+            $this->assertSame([], array_values(array_intersect($route->methods(), ['PUT', 'DELETE'])), "Route [{$route->uri()}] must not edit or delete.");
+        }
 
         $this->assertTrue($routes->isNotEmpty(), 'Expected inventory routes to exist.');
 

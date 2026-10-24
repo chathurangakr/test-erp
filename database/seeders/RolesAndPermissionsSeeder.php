@@ -101,9 +101,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'description' => 'Receives and dispatches stock: posts goods receipts and deliveries.',
                 'permissions' => [
                     ...$masterDataView,
-                    P::InventoryView, P::ReportsInventory,
+                    P::InventoryView, P::InventoryDamageRecord, P::ReportsInventory,
                     P::PurchasingView, P::PurchasingGrnCreate, P::PurchasingGrnPost, P::PurchasingGrnCancel,
                     P::SalesView, P::SalesDeliveryCreate, P::SalesDeliveryPost, P::SalesDeliveryCancel,
+                    P::SalesBagsRecord,
                     P::ProductionView,
                 ],
             ],

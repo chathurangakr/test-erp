@@ -41,6 +41,8 @@ class TransferStock
      *     transaction_date?: Carbon|string|null,
      *     notes?: string|null,
      *     posted_by?: int|null,
+     *     source_type?: class-string|null,
+     *     source_id?: int|null,
      * }  $attributes
      */
     public function handle(
@@ -121,6 +123,9 @@ class TransferStock
                     'transaction_date' => $attributes['transaction_date'] ?? BusinessClock::todayString(),
                     'notes' => $attributes['notes'] ?? null,
                     'posted_by' => $attributes['posted_by'] ?? null,
+                    // The document that moved the stock, when one did (a bag movement).
+                    'source_type' => $attributes['source_type'] ?? null,
+                    'source_id' => $attributes['source_id'] ?? null,
                 ],
             );
         });

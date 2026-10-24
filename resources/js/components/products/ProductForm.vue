@@ -117,6 +117,22 @@ const { t } = useT();
             <InputError :message="errors.description" />
         </div>
 
+        <label class="flex items-start gap-3 text-sm">
+            <input type="hidden" name="is_returnable" value="0" />
+            <input
+                type="checkbox"
+                name="is_returnable"
+                value="1"
+                :checked="product?.is_returnable ?? false"
+                class="border-input mt-0.5 size-4 rounded"
+            />
+            <span>
+                <span class="font-medium">{{ t('Returnable') }}</span>
+                <span class="text-muted-foreground block">{{ t('Given to customers with the goods and brought back, like bags. Tracked on the Customer bags screen.') }}</span>
+            </span>
+        </label>
+        <InputError :message="errors.is_returnable" />
+
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button type="submit" :disabled="processing || sameUomSelected">
                 {{ t(submitLabel) }}

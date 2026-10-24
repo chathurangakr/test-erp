@@ -10,9 +10,8 @@ import { useT } from '@/lib/i18n';
 import type {
     CopraFormValues,
     CopraOutputColumn,
-    CopraRecipeInfo,
+    CopraRecipeOption,
     OptionRef,
-    ProductionLotOption,
 } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { money } from '@/lib/money';
@@ -25,10 +24,7 @@ const props = defineProps<{
     submitLabel: string;
     cancelHref: string;
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
-    recipe: CopraRecipeInfo;
-    inputStock: string;
-    inputUnitCost: string;
+    recipes: CopraRecipeOption[];
     initial?: CopraFormValues | null;
 }>();
 
@@ -41,7 +37,8 @@ const today = businessToday();
  * value for it and calculates the shell count itself.
  */
 function initialOutputs(): { product_id: number; quantity: string; secondary_quantity: string }[] {
-    return props.recipe.outputs.map((output) => {
+    // Every size makes the same copra and shell, so the first recipe's outputs serve.
+    return props.recipes[0].outputs.map((output) => {
         const existing = props.initial?.outputs?.find((o) => o.product_id === output.product_id);
 
         return {
@@ -57,11 +54,18 @@ function initialOutputs(): { product_id: number; quantity: string; secondary_qua
 const form = useForm({
     production_date: props.initial?.production_date ?? today,
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
+    // Which dehusked coconuts are dried: one recipe per size. Chosen by the operator when there are several.
+    input_product_id: String(props.initial?.input_product_id ?? (props.recipes.length === 1 ? props.recipes[0].input_product_id : '')),
     lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
     quantity: props.initial?.quantity ?? '',
     outputs: initialOutputs(),
     notes: props.initial?.notes ?? '',
 });
+
+/** The chosen size's recipe; the first until one is chosen, so the preview has something to show. */
+const recipe = computed(() => props.recipes.find((r) => String(r.input_product_id) === form.input_product_id) ?? props.recipes[0]);
+const inputStock = computed(() => recipe.value.input_stock);
+const inputUnitCost = computed(() => recipe.value.input_unit_cost);
 
 /** Dehusked coconut lots holding stock in the chosen warehouse. */
 const availableLots = computed(() => {
@@ -69,13 +73,13 @@ const availableLots = computed(() => {
         return [];
     }
 
-    return props.lots.filter((lot) =>
+    return recipe.value.lots.filter((lot) =>
         lot.warehouses.some((w) => String(w.warehouse_id) === form.warehouse_id),
     );
 });
 
 const selectedLotQuantity = computed(() => {
-    const lot = props.lots.find((l) => String(l.id) === form.lot_id);
+    const lot = recipe.value.lots.find((l) => String(l.id) === form.lot_id);
 
     return (
         lot?.warehouses.find((w) => String(w.warehouse_id) === form.warehouse_id)?.quantity ?? null
@@ -95,10 +99,10 @@ const exceedsLot = computed(() => {
 });
 
 /** What the consumption is expected to be worth. The ledger decides for real at posting. */
-const estimatedConsumedValue = computed(() => processed.value * Number(props.inputUnitCost));
+const estimatedConsumedValue = computed(() => processed.value * Number(inputUnitCost.value));
 
 function rowIndex(productId: number): number {
-    return props.recipe.outputs.findIndex((o) => o.product_id === productId);
+    return recipe.value.outputs.findIndex((o) => o.product_id === productId);
 }
 
 /** The shell count the server will calculate: one per coconut processed. */
@@ -120,14 +124,14 @@ function enteredSecondary(output: CopraOutputColumn): number {
 }
 
 /**
- * The provisional split, previewed.
+ * The recipe's split, previewed.
  *
  * The percentages are configuration read from the recipe — the screen never proposes them
  * and the operator cannot type an allocated cost. The money shown is an estimate only,
  * because the real consumed value comes from the weighted average in force when you post.
  */
 const allocationPreview = computed(() =>
-    props.recipe.outputs.map((output) => {
+    recipe.value.outputs.map((output) => {
         const percent = Number(output.allocation_percent);
         const allocated = (estimatedConsumedValue.value * percent) / 100;
         const quantity = enteredQuantity(output);
@@ -145,7 +149,7 @@ const allocationPreview = computed(() =>
 );
 
 const percentTotal = computed(() =>
-    props.recipe.outputs.reduce((sum, o) => sum + Number(o.allocation_percent), 0),
+    recipe.value.outputs.reduce((sum, o) => sum + Number(o.allocation_percent), 0),
 );
 
 function error(index: number, field: 'quantity' | 'secondary_quantity'): string | undefined {
@@ -154,7 +158,7 @@ function error(index: number, field: 'quantity' | 'secondary_quantity'): string 
 
 
 /** Pooled dehusked coconut has no lots: the lot picker only appears for lot-tracked input. */
-const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
+const usesLots = computed(() => recipe.value.input_tracks_lots !== false);
 
 function submit(): void {
     form.transform((data) => ({ ...data, lot_id: usesLots.value ? data.lot_id || null : null })).submit(
@@ -194,6 +198,19 @@ function submit(): void {
         </section>
 
         <section class="space-y-4">
+            <div v-if="recipes.length > 1" class="grid gap-2 sm:max-w-md">
+                <Label for="input_product_id">{{ t('Dehusked coconuts to dry') }} <span class="text-destructive">*</span></Label>
+                <SearchableSelect
+                    id="input_product_id"
+                    v-model="form.input_product_id"
+                    required
+                    :options="recipes.map((r) => ({ value: String(r.input_product_id), label: `${r.input_name} — ${r.input_stock} ${r.input_uom ?? ''}` }))"
+                    :auto-select-single="false"
+                    @update:model-value="form.lot_id = ''"
+                />
+                <InputError :message="form.errors.input_product_id" />
+            </div>
+
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class="text-sm font-medium">{{ t('Input — :code', { code: recipe.input_code }) }}</h3>
                 <p class="text-muted-foreground text-xs">
@@ -382,7 +399,7 @@ function submit(): void {
             <p class="text-muted-foreground text-xs">
                 {{ t('These shares total') }}
                 <span class="font-mono">{{ percentTotal.toFixed(2) }}%</span> {{ t('and are configuration, not something you can type here — the consumed coconut value is divided between copra and shell in exactly these proportions, so copra production neither creates nor destroys inventory value. The') }}
-                <strong>{{ t('75 / 25 split is provisional') }}</strong> {{ t('and will later be replaced by a market-value / NRV method. Every figure above is an estimate: the real money is calculated when you post, from the weighted average cost in the ledger at that moment.') }}
+                <strong>{{ t('split is set in the recipe.') }}</strong> {{ t('Today the copra carries the whole coconut value and the shell comes free, because the factory buys coconuts, not shell. Every figure above is an estimate: the real money is calculated when you post, from the weighted average cost in the ledger at that moment.') }}
             </p>
             <p class="text-muted-foreground text-xs">
                 {{ t('Shell is valued against its') }} <strong>{{ t('count') }}</strong>{{ t(', because NOS is its primary unit. The per-kilogram figure is shown for information only and is never used as a weighted average cost.') }}

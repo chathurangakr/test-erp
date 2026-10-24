@@ -4,6 +4,7 @@ namespace App\Actions\Inventory;
 
 use App\Models\InventoryLot;
 use App\Models\InventoryTransaction;
+use App\Models\StockDamage;
 use App\Support\DailyDocumentSequence;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -33,8 +34,14 @@ class GenerateInventoryReference
         return $this->next('LOT', InventoryLot::class, 'lot_number', $date);
     }
 
+    /** DMG-YYYYMMDD-000001 — a stock damage write-off. */
+    public function forStockDamage(?Carbon $date = null): string
+    {
+        return $this->next('DMG', StockDamage::class, 'damage_number', $date);
+    }
+
     /**
-     * @param  class-string<InventoryTransaction|InventoryLot>  $model
+     * @param  class-string<InventoryTransaction|InventoryLot|StockDamage>  $model
      */
     private function next(string $prefix, string $model, string $column, ?Carbon $date): string
     {

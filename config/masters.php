@@ -19,6 +19,11 @@ return [
 
     'customer_code_prefix' => env('CUSTOMER_CODE_PREFIX', 'CUS'),
 
+    /*
+    | The warehouse that counts returnable bags while customers hold them. Created on first use.
+    */
+    'customer_custody_warehouse_code' => env('CUSTOMER_CUSTODY_WAREHOUSE_CODE', 'WITH-CUSTOMERS'),
+
     'code_digits' => 3,
 
 ];

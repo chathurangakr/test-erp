@@ -150,27 +150,28 @@ class CopraScreensTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('production/copra/Create')
-                ->where('recipe.input_code', 'DEHUSKED-COCONUT')
-                ->where('recipe.input_uom', 'NOS')
-                ->has('recipe.outputs', 2)
+                ->where('recipes.0.input_code', 'DEHUSKED-COCONUT')
+                ->where('recipes.0.input_uom', 'NOS')
+                ->has('recipes.0.outputs', 2)
                 // Copra: measured, so no ratio exists to derive a weight from.
-                ->where('recipe.outputs.0.code', 'COPRA')
-                ->where('recipe.outputs.0.uom', 'KG')
-                ->where('recipe.outputs.0.ratio', null)
-                ->where('recipe.outputs.0.requires_secondary_quantity', false)
-                ->where('recipe.outputs.0.allocation_percent', '75.000000')
+                ->where('recipes.0.outputs.0.code', 'COPRA')
+                ->where('recipes.0.outputs.0.uom', 'KG')
+                ->where('recipes.0.outputs.0.ratio', null)
+                ->where('recipes.0.outputs.0.requires_secondary_quantity', false)
+                ->where('recipes.0.outputs.0.allocation_percent', '100.000000')
                 // Shell: one per coconut, weighed separately.
-                ->where('recipe.outputs.1.code', 'RAW-SHELL')
-                ->where('recipe.outputs.1.uom', 'NOS')
-                ->where('recipe.outputs.1.secondary_uom', 'KG')
-                ->where('recipe.outputs.1.ratio', '1.000000')
-                ->where('recipe.outputs.1.requires_secondary_quantity', false)
-                ->where('recipe.outputs.1.records_weight', true)
-                ->where('recipe.outputs.1.allocation_percent', '25.000000')
+                ->where('recipes.0.outputs.1.code', 'RAW-SHELL')
+                ->where('recipes.0.outputs.1.uom', 'NOS')
+                ->where('recipes.0.outputs.1.secondary_uom', 'KG')
+                ->where('recipes.0.outputs.1.ratio', '1.000000')
+                ->where('recipes.0.outputs.1.requires_secondary_quantity', false)
+                ->where('recipes.0.outputs.1.records_weight', true)
+                // The shell comes free: it takes none of the coconut's value.
+                ->where('recipes.0.outputs.1.allocation_percent', '0.000000')
                 // The estimate figures, so the screen can show a consumed value.
-                ->where('inputStock', '5000.000')
-                ->where('inputUnitCost', '87.125000')
-                ->has('lots', 1));
+                ->where('recipes.0.input_stock', '5000.000')
+                ->where('recipes.0.input_unit_cost', '87.125000')
+                ->has('recipes.0.lots', 1));
     }
 
     #[Test]
@@ -434,6 +435,8 @@ class CopraScreensTest extends TestCase
     #[Test]
     public function the_show_screen_hides_costs_until_the_run_is_posted(): void
     {
+        // A splitting recipe, so the shell has a per-count cost for the screen to show.
+        $this->splitCopraValue('75.000000', '25.000000');
         $user = User::factory()->admin()->create();
         $this->receive('5000.000', '100.000000');
 

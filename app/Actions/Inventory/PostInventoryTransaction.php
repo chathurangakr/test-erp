@@ -199,6 +199,21 @@ class PostInventoryTransaction
                 ]);
             }
 
+            // The place customers' returnable bags are counted is not a store: only a bag
+            // movement (a transfer in or out, a loss written off) or a reversal may touch it.
+            // See docs/INVENTORY_RULES.md §18.
+            if ($warehouse->holds_customer_items && ! in_array($type, [
+                InventoryTransactionType::Transfer,
+                InventoryTransactionType::AdjustmentOut,
+                InventoryTransactionType::Reversal,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    $field.'.warehouse_id' => __('Warehouse :warehouse only counts bags customers are holding. Choose a real store.', [
+                        'warehouse' => $warehouse->code,
+                    ]),
+                ]);
+            }
+
             // Inactive products may be issued OUT so existing stock can be cleared, but
             // must never receive NEW stock. Transfers and reversals are exempt: they move
             // or undo stock that already exists. See docs/INVENTORY_RULES.md §14.

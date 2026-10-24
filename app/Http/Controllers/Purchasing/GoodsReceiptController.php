@@ -151,7 +151,7 @@ class GoodsReceiptController extends Controller
     {
         return [
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            'warehouses' => Warehouse::query()->operational()->orderBy('code')->get(['id', 'code', 'name']),
             'products' => Product::query()
                 ->where('is_active', true)
                 ->with(['primaryUom:id,code', 'secondaryUom:id,code'])

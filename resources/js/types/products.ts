@@ -12,6 +12,8 @@ export type Product = {
     description: string | null;
     primary_uom_id: number;
     secondary_uom_id: number | null;
+    /** Lent to customers with the goods and expected back (bags). */
+    is_returnable?: boolean;
     is_active: boolean;
     created_at: string | null;
     updated_at: string | null;

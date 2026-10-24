@@ -863,24 +863,26 @@ It is **labelled informational wherever it appears**, is never stored, and is ne
 a weighted average cost. Deriving a per-KG cost and treating it as authoritative would
 silently contradict how the engine values the product.
 
-### Cost allocation — configurable, currently 75 / 25
+### Cost allocation — configurable, currently 100 / 0
 
 | Output | Share |
 | --- | --- |
-| Copra | **75%** |
-| Raw Shell | **25%** |
+| Copra | **100%** |
+| Raw Shell | **0%** |
 
-**These numbers are provisional and are expected to change.** They live in
+**Confirmed 2026-10-24 (copra recipe version 3): the shell comes free.** The factory buys
+coconuts, not shell, so the whole dehusked coconut value goes to the copra and the shell
+enters stock at zero cost — selling it is all profit. Versions 1-2 split 75 / 25; runs posted
+on them keep that split, and the worked examples above still show it. The shares live in
 `production_recipe_outputs.allocation_percent`, seeded by `ProductionRecipeSeeder`, and
 nowhere else — never in the posting action. Changing the factory's costing policy is a data
 change, not a code change.
 
 **Percentages must total exactly 100**, or the recipe is refused at posting time.
 
-> `TBD-2` — the permanent joint-product costing method. 75 / 25 is a placeholder chosen so
-> the process can run end to end; the intended replacement is a **market-value / NRV**
-> method that shares the consumed value by what each output is actually worth. When that
-> lands, it replaces the percentages in configuration — the posting action does not change.
+> `TBD-2` — closed for now by the owner's decision above (2026-10-24). A **market-value / NRV**
+> method remains possible later; it would replace the percentages in configuration — the
+> posting action does not change.
 
 **Rounding:** as everywhere, the last participating output receives
 `consumed value − everything already allocated`, so the allocation sums exactly. The shared
@@ -1312,3 +1314,26 @@ never merge, net off or share a cost.
 | 2 | Cheque lifecycle and clearing account |
 | 3 | Whether unsold chips / cocopeat should show an estimated husk value |
 | 4 | Whether copra and raw shell should also become pooled stock |
+
+## 33. Coconut sizes ✅ **CONFIRMED** (2026-10-24)
+
+Suppliers deliver **large**, **small** and **immature** coconuts at different prices, and customers
+buy a specific size at its own price. So each size is **its own stock item at its own cost**:
+
+| Whole coconut | Dehusked coconut |
+| --- | --- |
+| `COCONUT-LARGE` | `DEHUSKED-LARGE` |
+| `COCONUT-SMALL` | `DEHUSKED-SMALL` |
+| `COCONUT-IMMATURE` | `DEHUSKED-IMMATURE` |
+
+- **The plain `COCONUT` and `DEHUSKED-COCONUT` stay** until their stock runs out; nothing is converted.
+- **Dehusking keeps the size:** each whole size has its own dehusking recipe (same 1:1:1 rule, same
+  100 / 0 split, same labour default) making dehusked coconut of that size **plus the one raw husk
+  stock**.
+- **Copra is one stock, shell is one stock:** each dehusked size has its own copra recipe making the
+  same `COPRA` and `RAW-SHELL` (100 / 0 — the shell comes free).
+- **One active recipe per type AND input product.** The operator picks which coconuts are used on the
+  dehusking and copra screens and in simple mode (`input_product_id`); a request naming none uses the
+  original input, so older clients keep working. The sizes share their kind's accounts (1310 / 5110 /
+  4110 whole, 1320 / 5120 / 4120 dehusked).
+

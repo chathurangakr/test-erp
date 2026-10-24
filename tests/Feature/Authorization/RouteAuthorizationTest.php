@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Models\Account;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
+use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
 use App\Models\Employee;
@@ -22,6 +23,7 @@ use App\Models\Role;
 use App\Models\SalaryAdvance;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
+use App\Models\StockDamage;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
@@ -318,6 +320,8 @@ class RouteAuthorizationTest extends TestCase
                 'warehouse' => Warehouse::factory()->create(),
                 'employee' => Employee::factory()->create(),
                 'salaryAdvance' => SalaryAdvance::factory()->create(),
+                'stockDamage' => StockDamage::factory()->create(),
+                'customerBag' => CustomerBagMovement::factory()->create(),
                 'payroll' => PayrollRun::factory()->create(),
                 'user' => User::factory()->create(),
                 'role' => Role::factory()->create(),

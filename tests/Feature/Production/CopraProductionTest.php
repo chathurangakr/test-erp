@@ -26,6 +26,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
+use Database\Seeders\ProductionRecipeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -91,6 +92,9 @@ class CopraProductionTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
         $this->seedProductionRecipes();
+        // The allocation mechanics need a recipe that splits; the real one gives the shell nothing.
+        $this->splitCopraValue('75.000000', '25.000000');
+
     }
 
     private function stock(): StockQueryService
@@ -246,14 +250,43 @@ class CopraProductionTest extends TestCase
     }
 
     #[Test]
-    public function the_configured_allocation_is_seventy_five_twenty_five_and_totals_one_hundred(): void
+    public function the_seeded_recipe_gives_the_copra_the_whole_value_and_the_shell_none(): void
     {
+        // Undo setUp's split: this test examines the recipe exactly as seeded.
+        $this->seed(ProductionRecipeSeeder::class);
+
         $recipe = ProductionRecipe::forType(ProductionType::Copra);
         $percentages = $recipe->outputs->pluck('allocation_percent', 'product_id');
 
-        $this->assertSame('75.000000', $percentages[$this->copra->id]);
-        $this->assertSame('25.000000', $percentages[$this->shell->id]);
+        $this->assertSame(3, $recipe->version);
+        $this->assertSame('100.000000', $percentages[$this->copra->id]);
+        $this->assertSame('0.000000', $percentages[$this->shell->id]);
         $this->assertSame('100.000000', $recipe->allocationTotal());
+    }
+
+    #[Test]
+    public function the_migration_moves_an_existing_split_recipe_to_a_new_version_with_free_shell(): void
+    {
+        // setUp left the active recipe splitting 75 / 25, as an existing database's would.
+        $old = ProductionRecipe::forType(ProductionType::Copra);
+        $migration = require database_path('migrations/2026_10_24_160430_give_copra_the_whole_coconut_value.php');
+
+        $migration->up();
+        $migration->up(); // A second run changes nothing.
+
+        $current = ProductionRecipe::forType(ProductionType::Copra);
+        $this->assertSame($old->version + 1, $current->version);
+        $this->assertSame(2, ProductionRecipe::query()->where('production_type', ProductionType::Copra)->where('input_product_id', $old->input_product_id)->count());
+
+        $percentages = $current->outputs->pluck('allocation_percent', 'product_id');
+        $this->assertSame('100.000000', $percentages[$this->copra->id]);
+        $this->assertSame('0.000000', $percentages[$this->shell->id]);
+        $this->assertSame('1.000000', $current->outputs->firstWhere('product_id', $this->shell->id)->output_ratio);
+
+        // The old version is kept, untouched, for the runs that used it.
+        $old->refresh()->load('outputs');
+        $this->assertFalse($old->is_active);
+        $this->assertSame('75.000000', $old->outputs->firstWhere('product_id', $this->copra->id)->allocation_percent);
     }
 
     #[Test]

@@ -28,6 +28,8 @@ enum Permission: string
 
     // ------------------------------------------------------------- inventory
     case InventoryView = 'inventory.view';
+    case InventoryDamageRecord = 'inventory.damage_record';
+    case InventoryDamageReverse = 'inventory.damage_reverse';
 
     // ------------------------------------------------------------- purchasing
     case PurchasingView = 'purchasing.view';
@@ -48,6 +50,8 @@ enum Permission: string
     case SalesDeliveryPost = 'sales.delivery_post';
     case SalesDeliveryReverse = 'sales.delivery_reverse';
     case SalesDeliveryCancel = 'sales.delivery_cancel';
+    case SalesBagsRecord = 'sales.bags_record';
+    case SalesBagsReverse = 'sales.bags_reverse';
 
     // ------------------------------------------------------------- production
     case ProductionView = 'production.view';
@@ -167,7 +171,9 @@ enum Permission: string
             self::CustomersManage => 'Create, edit and deactivate customers',
             self::WarehousesView => 'View warehouses',
             self::WarehousesManage => 'Create, edit, deactivate and set the default warehouse',
-            self::InventoryView => 'View stock on hand, stock ledger and lots',
+            self::InventoryView => 'View stock on hand, stock ledger, lots and damaged stock',
+            self::InventoryDamageRecord => 'Write off damaged stock',
+            self::InventoryDamageReverse => 'Reverse damaged stock write-offs',
             self::PurchasingView => 'View purchase orders and goods receipts',
             self::PurchasingOrderCreate => 'Create and edit draft purchase orders',
             self::PurchasingOrderApprove => 'Approve purchase orders',
@@ -176,7 +182,7 @@ enum Permission: string
             self::PurchasingGrnPost => 'Post goods receipts (stock in)',
             self::PurchasingGrnReverse => 'Reverse posted goods receipts',
             self::PurchasingGrnCancel => 'Cancel draft goods receipts',
-            self::SalesView => 'View sales orders and deliveries',
+            self::SalesView => 'View sales orders, deliveries and customer bags',
             self::SalesOrderCreate => 'Create and edit draft sales orders',
             self::SalesOrderApprove => 'Approve sales orders',
             self::SalesOrderCancel => 'Cancel sales orders',
@@ -184,6 +190,8 @@ enum Permission: string
             self::SalesDeliveryPost => 'Post deliveries (stock out)',
             self::SalesDeliveryReverse => 'Reverse posted deliveries',
             self::SalesDeliveryCancel => 'Cancel draft deliveries',
+            self::SalesBagsRecord => 'Record bags given to, returned by or lost by customers',
+            self::SalesBagsReverse => 'Reverse customer bag records',
             self::ProductionView => 'View dehusking, husk chipping and copra runs',
             self::ProductionCreate => 'Create and edit draft production runs',
             self::ProductionPost => 'Post production runs',

@@ -144,3 +144,43 @@ export type SalesOrderOption = {
         outstanding_quantity: string;
     }[];
 };
+
+export type CustomerBagRow = {
+    id: number;
+    movement_number: string;
+    movement_date: string;
+    kind: 'GIVEN' | 'RETURNED' | 'LOST';
+    kind_label: string;
+    customer_name: string | null;
+    customer_code: string | null;
+    product_name: string | null;
+    warehouse: string | null;
+    quantity: string;
+    status: string;
+    status_label: string;
+    is_reversed: boolean;
+};
+
+export type CustomerBagDetail = CustomerBagRow & {
+    customer_id: number;
+    held_now: string;
+    note: string | null;
+    inventory_reference: string | null;
+    reversal_reference: string | null;
+    journal_number: string | null;
+    journal_id: number | null;
+    created_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_reverse: boolean;
+};
+
+export type CustomerBagHolding = {
+    customer_id: number;
+    customer_code: string | null;
+    customer_name: string | null;
+    product_code: string | null;
+    product_name: string | null;
+    quantity: string;
+};

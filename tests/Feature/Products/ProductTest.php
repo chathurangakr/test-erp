@@ -215,6 +215,12 @@ class ProductTest extends TestCase
         $expected = [
             'COCONUT' => ['NOS', null, false],
             'DEHUSKED-COCONUT' => ['NOS', null, false],
+            'COCONUT-LARGE' => ['NOS', null, false],
+            'COCONUT-SMALL' => ['NOS', null, false],
+            'COCONUT-IMMATURE' => ['NOS', null, false],
+            'DEHUSKED-LARGE' => ['NOS', null, false],
+            'DEHUSKED-SMALL' => ['NOS', null, false],
+            'DEHUSKED-IMMATURE' => ['NOS', null, false],
             'RAW-HUSK' => ['NOS', null, false],
             'COPRA' => ['KG', null, true],
             'HUSK-7C' => ['KG', null, false],
@@ -226,6 +232,7 @@ class ProductTest extends TestCase
             'HUSK-10C-L' => ['L', null, false],
             'COCOPEAT-L' => ['L', null, false],
             'RAW-SHELL' => ['NOS', 'KG', true],
+            'PP-BAG' => ['NOS', null, false],
         ];
 
         $this->assertSame(count($expected), Product::count());

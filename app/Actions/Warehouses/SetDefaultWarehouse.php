@@ -24,6 +24,12 @@ class SetDefaultWarehouse
             ]);
         }
 
+        if ($warehouse->holds_customer_items) {
+            throw ValidationException::withMessages([
+                'is_default' => __('The warehouse counting bags customers hold cannot be the default warehouse.'),
+            ]);
+        }
+
         return DB::transaction(function () use ($warehouse): Warehouse {
             // Clearing first and setting second means no moment exists with two defaults.
             Warehouse::query()

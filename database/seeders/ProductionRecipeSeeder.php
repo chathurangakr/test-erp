@@ -22,8 +22,8 @@ class ProductionRecipeSeeder extends Seeder
 {
     /**
      * The CURRENT version of each recipe. Running the seeder makes that version the only
-     * active one for its type; earlier versions are deactivated, never deleted, and every
-     * posted run keeps the figures it stored.
+     * active one for its type and input product; earlier versions are deactivated, never
+     * deleted, and every posted run keeps the figures it stored.
      *
      * DEHUSKING (version 2): one whole coconut becomes one dehusked coconut plus one raw husk.
      * `ratio` 1 for both outputs encodes the confirmed 1:1:1 rule. The dehusked coconut
@@ -41,7 +41,7 @@ class ProductionRecipeSeeder extends Seeder
      * ratio, because there is no fixed conversion from husks to KG or litres. (Version 1
      * consumed husk at production and split 30 / 30 / 40.)
      *
-     * COPRA (version 2) mixes measured and derived outputs within one recipe:
+     * COPRA (version 3) mixes measured and derived outputs within one recipe:
      *
      *   COPRA      ratio null   — the operator weighs the copra actually dried
      *   RAW-SHELL  ratio 1.0    — one shell per coconut processed, a confirmed factory rule
@@ -49,10 +49,12 @@ class ProductionRecipeSeeder extends Seeder
      *                             shell); recorded when measured, never converted from the
      *                             count. (Version 1 required the shell weight.)
      *
-     * Its 75 / 25 value split is provisional, pending the factory's joint-product costing
-     * policy. See docs/BUSINESS_RULES.md §18-§20.
+     * The copra carries 100% of the dehusked coconut's value and the shell NONE of it (version
+     * 3, confirmed 2026-10-24): the factory buys coconuts, not shell, so the shell comes free.
+     * Version 2 split 75 / 25. See docs/BUSINESS_RULES.md §18-§20.
      *
-     * @var array<string, array{
+     * @var list<array{
+     *     type: string,
      *     version: int,
      *     input: string,
      *     consumption: InputConsumption,
@@ -62,7 +64,8 @@ class ProductionRecipeSeeder extends Seeder
      * }>
      */
     private const RECIPES = [
-        ProductionType::Dehusking->value => [
+        [
+            'type' => ProductionType::Dehusking->value,
             'version' => 2,
             'input' => 'COCONUT',
             'consumption' => InputConsumption::AtProduction,
@@ -73,7 +76,8 @@ class ProductionRecipeSeeder extends Seeder
                 ['code' => 'RAW-HUSK', 'ratio' => '1.000000', 'percent' => '0.000000', 'labour' => true],
             ],
         ],
-        ProductionType::HuskChipping->value => [
+        [
+            'type' => ProductionType::HuskChipping->value,
             'version' => 2,
             'input' => 'RAW-HUSK',
             'consumption' => InputConsumption::AtDelivery,
@@ -90,28 +94,63 @@ class ProductionRecipeSeeder extends Seeder
                 ['code' => 'COCOPEAT-L', 'ratio' => null, 'percent' => '0.000000'],
             ],
         ],
-        ProductionType::Copra->value => [
-            'version' => 2,
+        [
+            'type' => ProductionType::Copra->value,
+            'version' => 3,
             'input' => 'DEHUSKED-COCONUT',
             'consumption' => InputConsumption::AtProduction,
             'labour_rate' => null,
-            'notes' => 'Allocation percentages are provisional and configurable.',
+            'notes' => 'Copra carries the coconut value; the shell comes free.',
             'outputs' => [
-                ['code' => 'COPRA', 'ratio' => null, 'percent' => '75.000000'],
-                ['code' => 'RAW-SHELL', 'ratio' => '1.000000', 'percent' => '25.000000'],
+                ['code' => 'COPRA', 'ratio' => null, 'percent' => '100.000000'],
+                ['code' => 'RAW-SHELL', 'ratio' => '1.000000', 'percent' => '0.000000'],
             ],
         ],
     ];
 
+    /**
+     * Coconut sizes (2026-10-24): whole coconut of a size => dehusked coconut of that size.
+     * Each size is dehusked and dried exactly like the original coconut — same outputs, same
+     * shares, same labour default — so its recipes are the originals with the size's products.
+     * Husk, copra and shell stay one stock each, whatever the size.
+     *
+     * @var array<string, string>
+     */
+    private const SIZES = [
+        'COCONUT-LARGE' => 'DEHUSKED-LARGE',
+        'COCONUT-SMALL' => 'DEHUSKED-SMALL',
+        'COCONUT-IMMATURE' => 'DEHUSKED-IMMATURE',
+    ];
+
+    /**
+     * When true, only what does not exist yet is created; nothing existing is changed.
+     */
+    private bool $onlyMissing = false;
+
+    /**
+     * Add what a newer version introduced to an installed database, leaving every existing row
+     * exactly as people left it. Run by `masters:add-new` on each update.
+     */
+    public function addMissing(): void
+    {
+        $this->onlyMissing = true;
+        $this->run();
+    }
+
     public function run(): void
     {
-        foreach (self::RECIPES as $type => $definition) {
+        foreach ($this->definitions() as $definition) {
+            $type = $definition['type'];
             $input = $this->product($definition['input']);
 
+            // On an update, a type + input that already has recipes keeps them untouched.
+            if ($this->onlyMissing && ProductionRecipe::query()->where('production_type', $type)->where('input_product_id', $input->id)->exists()) {
+                continue;
+            }
+
             $recipe = ProductionRecipe::updateOrCreate(
-                ['production_type' => $type, 'version' => $definition['version']],
+                ['production_type' => $type, 'input_product_id' => $input->id, 'version' => $definition['version']],
                 [
-                    'input_product_id' => $input->id,
                     'input_consumption' => $definition['consumption'],
                     'default_labour_rate' => $definition['labour_rate'],
                     'notes' => $definition['notes'],
@@ -135,12 +174,40 @@ class ProductionRecipeSeeder extends Seeder
             // Refuse to leave a recipe that would create or destroy value on every run.
             $recipe->load('outputs')->assertAllocationIsComplete();
 
-            // Exactly one active version per type. Superseded versions stay for the record.
+            // Exactly one active version per type and input. Superseded versions stay for the record.
             ProductionRecipe::query()
                 ->where('production_type', $type)
+                ->where('input_product_id', $input->id)
                 ->whereKeyNot($recipe->getKey())
                 ->update(['is_active' => false]);
         }
+    }
+
+    /**
+     * The original recipes, then one dehusking and one copra recipe per coconut size.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function definitions(): array
+    {
+        $byType = collect(self::RECIPES)->keyBy('type');
+        $definitions = self::RECIPES;
+
+        foreach (self::SIZES as $whole => $dehusked) {
+            $dehusking = $byType[ProductionType::Dehusking->value];
+            $definitions[] = array_merge($dehusking, [
+                'version' => 1,
+                'input' => $whole,
+                'outputs' => array_map(
+                    fn (array $output): array => $output['code'] === 'DEHUSKED-COCONUT' ? ['code' => $dehusked] + $output : $output,
+                    $dehusking['outputs'],
+                ),
+            ]);
+
+            $definitions[] = array_merge($byType[ProductionType::Copra->value], ['version' => 1, 'input' => $dehusked]);
+        }
+
+        return $definitions;
     }
 
     private function product(string $code): Product

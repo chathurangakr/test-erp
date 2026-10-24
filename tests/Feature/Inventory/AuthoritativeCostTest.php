@@ -92,6 +92,9 @@ class AuthoritativeCostTest extends TestCase
         $this->store = Warehouse::factory()->create(['code' => 'STORE']);
 
         $this->seedProductionRecipes();
+        // The allocation mechanics need a recipe that splits; the real one gives the shell nothing.
+        $this->splitCopraValue('75.000000', '25.000000');
+
     }
 
     private function stock(): StockQueryService

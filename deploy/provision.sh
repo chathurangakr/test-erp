@@ -427,9 +427,11 @@ if [[ "$product_count" == "0" ]]; then
     as_app php "$APP_DIR/artisan" db:seed --force --no-interaction
     ok "Master data loaded"
 else
-    # An update: keep everyone's edits to master data; only bring permissions up to date.
+    # An update: keep everyone's edits to master data; bring permissions up to date and add
+    # only the accounts, products and recipes a newer version introduced (never changing any).
     as_app php "$APP_DIR/artisan" db:seed --class='Database\Seeders\RolesAndPermissionsSeeder' --force --no-interaction
-    ok "Existing data kept; roles and permissions brought up to date"
+    as_app php "$APP_DIR/artisan" masters:add-new --no-interaction
+    ok "Existing data kept; roles, permissions and new master data brought up to date"
 fi
 
 # ------------------------------------------------------------------- screens

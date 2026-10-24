@@ -2,6 +2,7 @@
 
 namespace App\Services\Kiosk;
 
+use App\Enums\ProductionType;
 use App\Models\Customer;
 use App\Models\InventoryLot;
 use App\Models\Product;
@@ -48,7 +49,7 @@ class KioskOptions
      */
     public function warehouses(): array
     {
-        return Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')
+        return Warehouse::query()->operational()->orderByDesc('is_default')->orderBy('name')
             ->get(['id', 'code', 'name', 'is_default'])
             ->map(fn (Warehouse $w): array => [
                 'id' => $w->id, 'code' => $w->code, 'name' => $w->name, 'is_default' => $w->is_default,
@@ -139,6 +140,20 @@ class KioskOptions
     }
 
     /**
+     * Every active recipe of a type — one per input product (coconut size) — for the
+     * production screens.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function productionVariants(ProductionType $type): array
+    {
+        return ProductionRecipe::activeForType($type)
+            ->map(fn (ProductionRecipe $recipe): array => $this->production($recipe))
+            ->values()
+            ->all();
+    }
+
+    /**
      * The lots of a recipe's input product that hold stock, for the production screens.
      *
      * @return array<string, mixed>
@@ -155,6 +170,13 @@ class KioskOptions
 
         return [
             'input' => $this->product($recipe->inputProduct),
+            // How much of this input each store holds — a size the store has none of says so.
+            'input_stock' => $this->stock->balancesByProductAndWarehouse($recipe->input_product_id)
+                ->filter(fn (object $row): bool => DecimalMath::isPositive((string) $row->quantity))
+                ->map(fn (object $row): array => [
+                    'warehouse_id' => (int) $row->warehouse_id,
+                    'quantity' => DecimalMath::quantity((string) $row->quantity),
+                ])->values()->all(),
             // No lots for a pooled input; none at all for a run that takes no input now.
             'lots' => $recipe->inputProduct->tracksLots() && ! $recipe->consumesInputAtDelivery()
                 ? $this->lotCards($lotBalances, $lots)

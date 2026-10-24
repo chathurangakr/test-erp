@@ -4,16 +4,13 @@ import Heading from '@/components/Heading.vue';
 import CopraForm from '@/components/production/CopraForm.vue';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/copra';
-import type { CopraRecipeInfo, OptionRef, ProductionLotOption } from '@/types';
+import type { CopraRecipeOption, OptionRef } from '@/types';
 
 const { t } = useT();
 
 defineProps<{
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
-    recipe: CopraRecipeInfo;
-    inputStock: string;
-    inputUnitCost: string;
+    recipes: CopraRecipeOption[];
 }>();
 
 defineOptions({
@@ -35,10 +32,7 @@ defineOptions({
                 :submit-label="t('Save draft')"
                 :cancel-href="index().url"
                 :warehouses="warehouses"
-                :lots="lots"
-                :recipe="recipe"
-                :input-stock="inputStock"
-                :input-unit-cost="inputUnitCost"
+                :recipes="recipes"
             />
         </div>
     </div>

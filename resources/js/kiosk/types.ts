@@ -35,6 +35,8 @@ export type KioskRecipeOutput = KioskProduct & { derived: boolean; requires_seco
  */
 export type KioskRecipe = {
     input: KioskProduct;
+    /** How much of the input each store holds (stores holding none are left out). */
+    input_stock: { warehouse_id: number; quantity: string }[];
     lots: KioskLot[];
     outputs: KioskRecipeOutput[];
     consumes_input: boolean;

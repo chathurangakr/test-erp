@@ -18,7 +18,8 @@ use Illuminate\Validation\ValidationException;
  * action resolves everything through the recipe, so product codes never appear in
  * controllers or services — only in the seeder.
  *
- * A type may hold several VERSIONS; exactly one is active. A superseded version is
+ * A type may have one recipe per INPUT PRODUCT — dehusking and copra have one per coconut size
+ * — and each of those may hold several VERSIONS, exactly one active. A superseded version is
  * deactivated, never deleted, and posted runs keep the figures they stored.
  *
  * See docs/BUSINESS_RULES.md §18-§19.
@@ -62,14 +63,35 @@ class ProductionRecipe extends Model
         return $this->hasMany(ProductionRecipeOutput::class)->orderBy('sort_order')->orderBy('id');
     }
 
-    public static function forType(ProductionType $type): ?self
+    /**
+     * The active recipe of a type for the given input product, or — with no input named — the
+     * recipe of the type's original input (the oldest input product: the plain coconut, before
+     * sizes). A request that names no input keeps working as it did before sizes existed.
+     */
+    public static function forType(ProductionType $type, ?int $inputProductId = null): ?self
     {
         return static::query()
             ->with(['inputProduct', 'outputs.product'])
             ->where('production_type', $type)
             ->where('is_active', true)
-            ->orderByDesc('version')
+            ->when($inputProductId !== null, fn ($query) => $query->where('input_product_id', $inputProductId))
+            ->orderBy('input_product_id')
             ->first();
+    }
+
+    /**
+     * Every active recipe of a type — one per input product — original input first.
+     *
+     * @return Collection<int, self>
+     */
+    public static function activeForType(ProductionType $type): Collection
+    {
+        return static::query()
+            ->with(['inputProduct.primaryUom', 'outputs.product.primaryUom', 'outputs.product.secondaryUom'])
+            ->where('production_type', $type)
+            ->where('is_active', true)
+            ->orderBy('input_product_id')
+            ->get();
     }
 
     /**

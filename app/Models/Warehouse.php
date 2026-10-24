@@ -28,6 +28,7 @@ class Warehouse extends Model
         'address',
         'is_active',
         'is_default',
+        'holds_customer_items',
     ];
 
     protected function casts(): array
@@ -35,7 +36,41 @@ class Warehouse extends Model
         return [
             'is_active' => 'boolean',
             'is_default' => 'boolean',
+            'holds_customer_items' => 'boolean',
         ];
+    }
+
+    /**
+     * Real stores: active, and not the place customers' returnable items are counted. This is
+     * what every document's warehouse picker offers.
+     *
+     * @param  Builder<Warehouse>  $query
+     */
+    public function scopeOperational(Builder $query): void
+    {
+        $query->where('is_active', true)->where('holds_customer_items', false);
+    }
+
+    /**
+     * The one warehouse holding returnable items while customers have them, created the first
+     * time a bag is lent. Its code comes from configuration. See docs/INVENTORY_RULES.md §18.
+     */
+    public static function customerCustody(): self
+    {
+        $existing = static::query()->where('holds_customer_items', true)->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        return static::query()->create([
+            'code' => config('masters.customer_custody_warehouse_code'),
+            'name' => 'With customers',
+            'description' => 'Returnable bags customers are holding. Not a real store.',
+            'is_active' => true,
+            'is_default' => false,
+            'holds_customer_items' => true,
+        ]);
     }
 
     /**

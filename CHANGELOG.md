@@ -4,6 +4,26 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.12.0 — 24 October 2026
+
+- **Coconut shell has no cost.** When copra is made, the whole coconut cost goes to the copra and
+  the shell enters stock at Rs. 0, so selling shell is all profit. Copra made before today keeps
+  its old 75 / 25 split.
+- **Damaged stock** (Inventory → Damaged stock). Write off anything damaged and thrown away —
+  torn bags, rotten coconuts, wet copra. The stock leaves at what it cost and the value is
+  recorded as a loss. A mistake can be reversed.
+- **Bags are a stock item.** Woven polypropylene bags are bought on goods receipts, counted in
+  stock and written off when torn.
+- **Bags given to customers** (Sales → Customer bags). Bags sent free with the goods are counted
+  against the customer until they come back; bags that never come back can be marked lost. The
+  screen shows who holds how many.
+- **Coconuts by size.** Large, small and immature coconuts — whole and dehusked — are separate
+  stock items, each with its own price and cost. Dehusking keeps the size; husk, copra and shell
+  stay one stock each. The dehusking and copra screens and simple mode ask which coconuts are
+  used. Coconuts already in stock stay as they are until they are used up.
+- **Updates now add new accounts, products and recipes automatically**, without changing anything
+  you have edited.
+
 ## 1.11.2 — 19 October 2026
 
 - **Security updates** to two components the web server relies on (request handling and text

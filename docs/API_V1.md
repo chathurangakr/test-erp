@@ -573,7 +573,8 @@ rate.
 | `customers` | Active customers `{id, code, name}` | `dispatch` |
 | `warehouses` | Active stores `{id, code, name, is_default}`, default first | any job |
 | `products` | Every active product, plus any inactive one still holding stock (it may be dispatched, never received): `id, code, name, uom, decimals, secondary_uom, secondary_decimals, is_active, tracks_lots, backflush` (the raw material a dispatch of it uses, or `null`), `total`, `secondary_total`, `stock` `[{warehouse_id, quantity}]` (positive balances only), `lots` (lot-tracked products only, each with its own `stock`) | any job |
-| `recipes.dehusking` / `recipes.husk-chipping` / `recipes.copra` | `input`, `lots`, `consumes_input`, `input_tracks_lots`, `labour` (`{default_rate}` or `null`), `outputs` (each product + `derived`, `requires_secondary_quantity`) | that job, else `null` |
+| `recipes.dehusking` / `recipes.husk-chipping` / `recipes.copra` | The original input's recipe: `input`, `input_stock` `[{warehouse_id, quantity}]`, `lots`, `consumes_input`, `input_tracks_lots`, `labour` (`{default_rate}` or `null`), `outputs` (each product + `derived`, `requires_secondary_quantity`) | that job, else `null` |
+| `recipe_variants.dehusking` / `.husk-chipping` / `.copra` | **Every** active recipe of that job, one per input product — dehusking and copra have one per coconut size (2026-10-24) — same shape as `recipes.*`, original input first. When a job has more than one, ask which and send that recipe's `input.id` as `input_product_id` in the entry; an entry without it uses the original input | that job, else `null` |
 
 Sections the person cannot use are `null`. Stock figures are a **snapshot**: the ERP still refuses an
 entry that exceeds real stock when it arrives (§17). Derived outputs (`derived: true`) are never sent

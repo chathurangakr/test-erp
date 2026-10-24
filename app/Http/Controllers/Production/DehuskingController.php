@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Production\StoreDehuskingRequest;
 use App\Http\Requests\Production\UpdateDehuskingRequest;
 use App\Models\InventoryLot;
+use App\Models\Product;
 use App\Models\ProductionOrder;
+use App\Models\ProductionRecipe;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\BusinessClock;
@@ -17,6 +19,7 @@ use App\Support\DecimalMath;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -120,6 +123,7 @@ class DehuskingController extends Controller
                 'production_number' => $dehusking->production_number,
                 'production_date' => $dehusking->production_date?->toDateString(),
                 'warehouse_id' => $dehusking->warehouse_id,
+                'input_product_id' => $input?->product_id,
                 'lot_id' => $input?->lot_id,
                 'quantity' => $input?->quantity,
                 'labour_rate' => $dehusking->labour_rate,
@@ -145,54 +149,66 @@ class DehuskingController extends Controller
      */
     private function formOptions(): array
     {
-        $recipe = $this->saveOrder->recipe();
-        $inputProduct = $recipe->inputProduct;
-
         // Only coconut lots that actually hold stock can be processed.
         $balances = $this->stock->balancesByLot()
             ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
 
-        // Pooled coconut has no lots to choose from (docs/INVENTORY_RULES.md §15).
-        $lots = ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
+        return [
+            'warehouses' => Warehouse::query()->operational()->orderBy('code')->get(['id', 'code', 'name']),
+            // One recipe per coconut size; the operator picks which coconuts are dehusked.
+            'recipes' => ProductionRecipe::activeForType(ProductionType::Dehusking)
+                ->map(function (ProductionRecipe $recipe) use ($balances): array {
+                    $inputProduct = $recipe->inputProduct;
+
+                    return [
+                        'input_product_id' => $inputProduct->id,
+                        'input_code' => $inputProduct->code,
+                        'input_name' => $inputProduct->name,
+                        'input_uom' => $inputProduct->primaryUom?->code,
+                        'input_tracks_lots' => $inputProduct->tracksLots(),
+                        // Company-wide position of this size, shown for context on the form.
+                        'input_stock' => $this->stock->quantityForProduct($inputProduct->id),
+                        'lots' => $this->lotsHolding($inputProduct, $balances),
+                        // Pre-fills the labour rate the operator confirms; null until configured.
+                        'default_labour_rate' => $recipe->default_labour_rate,
+                        'outputs' => $recipe->outputs->map(fn ($output): array => [
+                            'code' => $output->product?->code,
+                            'name' => $output->product?->name,
+                            'uom' => $output->product?->primaryUom?->code,
+                            'ratio' => $output->output_ratio,
+                            'allocation_percent' => $output->allocation_percent,
+                            'absorbs_labour' => $output->absorbs_labour,
+                        ])->values(),
+                    ];
+                })
+                ->values(),
+        ];
+    }
+
+    /**
+     * Lots of a lot-tracked input holding stock. Pooled coconut has none to choose from
+     * (docs/INVENTORY_RULES.md §15).
+     *
+     * @param  Collection<int, object>  $balances
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function lotsHolding(Product $inputProduct, Collection $balances): Collection
+    {
+        return ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
             ->where('product_id', $inputProduct->id)
             ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
             ->orderByDesc('id')
             ->get(['id', 'lot_number', 'product_id'])
-            ->map(function (InventoryLot $lot) use ($balances): array {
-                return [
-                    'id' => $lot->id,
-                    'lot_number' => $lot->lot_number,
-                    'warehouses' => $balances->where('lot_id', $lot->id)
-                        ->map(fn (object $row): array => [
-                            'warehouse_id' => $row->warehouse_id,
-                            'quantity' => $row->quantity,
-                        ])->values(),
-                ];
-            })
+            ->map(fn (InventoryLot $lot): array => [
+                'id' => $lot->id,
+                'lot_number' => $lot->lot_number,
+                'warehouses' => $balances->where('lot_id', $lot->id)
+                    ->map(fn (object $row): array => [
+                        'warehouse_id' => $row->warehouse_id,
+                        'quantity' => $row->quantity,
+                    ])->values(),
+            ])
             ->values();
-
-        return [
-            'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'lots' => $lots,
-            'recipe' => [
-                'input_code' => $inputProduct->code,
-                'input_name' => $inputProduct->name,
-                'input_uom' => $inputProduct->primaryUom?->code,
-                'input_tracks_lots' => $inputProduct->tracksLots(),
-                // Pre-fills the labour rate the operator confirms; null until configured.
-                'default_labour_rate' => $recipe->default_labour_rate,
-                'outputs' => $recipe->outputs->map(fn ($output): array => [
-                    'code' => $output->product?->code,
-                    'name' => $output->product?->name,
-                    'uom' => $output->product?->primaryUom?->code,
-                    'ratio' => $output->output_ratio,
-                    'allocation_percent' => $output->allocation_percent,
-                    'absorbs_labour' => $output->absorbs_labour,
-                ])->values(),
-            ],
-            // Company-wide coconut position, shown for context on the form.
-            'inputStock' => $this->stock->quantityForProduct($inputProduct->id),
-        ];
     }
 
     /**

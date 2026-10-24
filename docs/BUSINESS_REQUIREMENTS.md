@@ -98,7 +98,7 @@ each, with no lots** (`tracks_lots = false`). Copra and raw shell keep lots.
   The copra weight and the shell weight are both **measured by the operator**; only the
   shell **count** is derived, one shell per coconut processed. Shell stock keeps both its
   count (`NOS`) and its measured weight (`KG`), with no conversion between them. Value is
-  shared by configurable percentages (provisionally 75 / 25), with traceable output lots and
+  shared by configurable percentages (100 / 0 since 2026-10-24: the shell comes free), with traceable output lots and
   reversal.
 - **Accounting foundation** — a chart of accounts, fiscal periods, manual double-entry
   journals with reversal, derived account balances, a general ledger and a trial balance.
@@ -184,7 +184,7 @@ Nothing seeds stock or purchases — real inventory is zero until a goods receip
 | 28 | Raw shell count | **Derived 1:1** — one shell per coconut processed. Held as recipe configuration, never typed; a submitted figure is **refused**, and the server recalculates it regardless. |
 | 29 | Raw shell weight | **Measured when a scale is available; optional since 2026-10-18** (copra recipe v2). No NOS↔KG conversion exists. Recorded as the inventory secondary quantity. |
 | 30 | Raw shell valuation | Costed against its **primary `NOS` quantity**. A per-KG figure may be displayed, clearly labelled **informational**; it is never stored and never used as a weighted average. |
-| 31 | Copra cost split | **Configurable fixed percentages**, currently 75% copra / 25% shell — provisional. Must total 100%. |
+| 31 | Copra cost split | **Configurable fixed percentages**, currently 100% copra / 0% shell — the shell comes free (confirmed 2026-10-24; 75 / 25 before). Must total 100%. |
 | 32 | Drying / moisture loss | **Not modelled in version 1.** No waste product, no mass-balance between NOS input and KG output, no loss quantity captured. |
 | 33 | Accounting method | **True double-entry.** Every posted journal satisfies Total Debit = Total Credit exactly, at `decimal(20,6)`. |
 | 34 | Account balances | **Derived from posted journal lines, never stored.** No balance column exists on any account. |

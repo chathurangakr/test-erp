@@ -484,7 +484,60 @@ reversals and every report — and a KG/L average for one product has no meaning
 Separate stock items get the same result with the engine unchanged. The two items of a
 grade share their accounting mapping.
 
-## 17. Remaining open questions (`TBD`)
+## 17. Damaged stock — ✅ **CONFIRMED** (2026-10-24)
+
+Stock that is damaged and thrown away — torn polypropylene bags, spoiled coconuts, wet copra —
+is **written off** on Inventory → Damaged stock (`StockDamage`, `DMG-YYYYMMDD-000001`).
+
+- **One step, no approval.** The owner confirmed that whoever records the damage posts it
+  straight away (permission `inventory.damage_record`). Reversing is a separate permission,
+  `inventory.damage_reverse`.
+- **The stock leaves through `ADJUSTMENT_OUT`** posted by `RecordStockDamage` through the
+  engine, so the negative-stock guard applies: writing off more than is held fails the whole
+  record, leaving nothing behind.
+- **Never priced by the person recording it.** The engine values the issue at the weighted
+  average in force (or the whole remaining value, §8.2); each line keeps the `unit_cost` and
+  authoritative `total_cost` the ledger charged.
+- **Lots follow `tracks_lots`:** a lot-tracked product (copra, shell) needs the lot the damaged
+  stock came from; a pooled one refuses a lot.
+- **Accounting:** once operational accounting applies, `Dr stock damage and losses / Cr the
+  product's inventory account`. The expense is configuration —
+  `accounting_settings.stock_loss_account_id`, seeded as `6900 Stock Damage and Losses` (a
+  control account, so only write-offs reach it). A write-off that moved no value writes no
+  journal.
+- **Immutable; corrected by reversal.** `ReverseStockDamage` reverses the ledger transaction
+  (original costs) and mirrors the journal exactly; the record stays, marked REVERSED.
+
+Bags are an ordinary pooled stock item, `PP-BAG` (NOS), with its own accounts (1380 / 5180 /
+4180): bought on a goods receipt, written off here when torn.
+
+## 18. Returnable bags lent to customers — ✅ **CONFIRMED** (2026-10-24)
+
+Bags go out **free** with a customer's goods and **must come back** (the same bag or a similar
+one). Until then they are still the factory's stock, so lending one never touches profit.
+
+- **Which items:** products marked `is_returnable` (Products → edit → Returnable; `PP-BAG` is
+  seeded so). Never a product code in logic.
+- **Where they are counted:** one warehouse flagged `holds_customer_items`
+  (`Warehouse::customerCustody()`, code from `config('masters.customer_custody_warehouse_code')`,
+  created on first use). It is **not a store**: `Warehouse::operational()` — what every document
+  picker offers — excludes it, it can never be the default, and the engine refuses any
+  transaction there except a transfer, an adjustment out or a reversal.
+- **Sales → Customer bags** (`CustomerBagMovement`, `BAG-YYYYMMDD-000001`, permissions
+  `sales.bags_record` / `sales.bags_reverse`, viewed with `sales.view`):
+
+  | Kind | Stock movement | Journal |
+  | --- | --- | --- |
+  | GIVEN | `TRANSFER` store → with customers | none (value-neutral) |
+  | RETURNED | `TRANSFER` with customers → store | none (value-neutral) |
+  | LOST | `ADJUSTMENT_OUT` from with customers | `Dr stock damage and losses / Cr inventory` |
+
+- **What a customer holds is derived** — given − returned − lost over POSTED movements
+  (`CustomerBagBalances`); a customer has no bag column. A return or loss beyond that is refused
+  under a lock on the customer row; reversing a gift whose bags already came back is refused.
+- One step, immutable, corrected by `ReverseCustomerBagMovement`.
+
+## 19. Remaining open questions (`TBD`)
 
 | # | Question |
 | --- | --- |
@@ -498,4 +551,4 @@ grade share their accounting mapping.
 
 **Confirmed and closed:** I-1 (reversal cost basis), I-2 (secondary quantity informational),
 I-3 (company-wide weighted average), I-4 (total cost authoritative, §8.1-8.3), and the
-inactive-product rule (§14), pooled stock (§15), units (§16).
+inactive-product rule (§14), pooled stock (§15), units (§16), damaged stock (§17), returnable bags (§18).

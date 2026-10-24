@@ -36,10 +36,15 @@ class KioskOptionsController extends Controller
         $anyJob = $tasks !== [];
 
         $recipes = [];
+        $variants = [];
 
         foreach (self::RECIPES as $task => $type) {
             $recipe = $may($task) ? ProductionRecipe::forType($type) : null;
+            // The original input's recipe, as before sizes existed…
             $recipes[$task] = $recipe === null ? null : $options->production($recipe);
+            // …and every size's, one per input product. Send the chosen one's input id as
+            // `input_product_id` when recording.
+            $variants[$task] = $recipe === null ? null : $options->productionVariants($type);
         }
 
         return response()->json([
@@ -52,6 +57,7 @@ class KioskOptionsController extends Controller
                 'warehouses' => $anyJob ? $options->warehouses() : null,
                 'products' => $anyJob ? $options->catalogue() : null,
                 'recipes' => $recipes,
+                'recipe_variants' => $variants,
             ],
         ]);
     }

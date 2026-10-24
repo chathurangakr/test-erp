@@ -4,17 +4,14 @@ import Heading from '@/components/Heading.vue';
 import CopraForm from '@/components/production/CopraForm.vue';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/copra';
-import type { CopraFormValues, CopraRecipeInfo, OptionRef, ProductionLotOption } from '@/types';
+import type { CopraFormValues, CopraRecipeOption, OptionRef } from '@/types';
 
 const { t } = useT();
 
 const props = defineProps<{
     order: CopraFormValues & { id: number; production_number: string };
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
-    recipe: CopraRecipeInfo;
-    inputStock: string;
-    inputUnitCost: string;
+    recipes: CopraRecipeOption[];
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Copra production', href: index() }] } });
@@ -34,10 +31,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Copra production', href: index
                 :submit-label="t('Save changes')"
                 :cancel-href="`${index().url}/${props.order.id}`"
                 :warehouses="warehouses"
-                :lots="lots"
-                :recipe="recipe"
-                :input-stock="inputStock"
-                :input-unit-cost="inputUnitCost"
+                :recipes="recipes"
                 :initial="props.order"
             />
         </div>

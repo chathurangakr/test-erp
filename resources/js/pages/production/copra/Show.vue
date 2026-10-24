@@ -266,7 +266,7 @@ const lotted = () => props.order.outputs.filter((o) => o.lot_number !== null);
         </div>
 
         <p class="text-muted-foreground max-w-3xl text-xs">
-            {{ t('Coconut is counted in NOS and copra is weighed in KG, so the quantities above are not comparable — and nothing in the system converts one into the other. The shell count is the one derived figure: one coconut leaves one shell. What is conserved is value: the allocated copra and shell costs sum exactly to the coconut value consumed. The 75 / 25 split is provisional configuration and will later be replaced by a market-value / NRV method. No drying labour, fuel, electricity or overhead cost is added; that comes in a later costing phase, and moisture loss is not yet recorded.') }}
+            {{ t('Coconut is counted in NOS and copra is weighed in KG, so the quantities above are not comparable — and nothing in the system converts one into the other. The shell count is the one derived figure: one coconut leaves one shell. What is conserved is value: the allocated copra and shell costs sum exactly to the coconut value consumed, in the split set by the recipe this run used. No drying labour, fuel, electricity or overhead cost is added; that comes in a later costing phase, and moisture loss is not yet recorded.') }}
         </p>
     </div>
 </template>

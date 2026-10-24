@@ -423,14 +423,15 @@ else in the application except the seeder.
 
 | Input | Output | Ratio | Secondary required | Allocation |
 | --- | --- | --- | --- | --- |
-| `DEHUSKED-COCONUT` | `COPRA` | **`NULL`** — operator-entered KG | no | **75%** |
-| `DEHUSKED-COCONUT` | `RAW-SHELL` | **`1.000000`** — one shell per coconut | **yes — measured KG** | **25%** |
+| `DEHUSKED-COCONUT` | `COPRA` | **`NULL`** — operator-entered KG | no | **100%** |
+| `DEHUSKED-COCONUT` | `RAW-SHELL` | **`1.000000`** — one shell per coconut | no — optional measured KG (v2) | **0%** |
 
 Copra is the first recipe that mixes both kinds of output in one row set: the shell *count*
 is derived while its *weight*, and the copra weight, are measured. That is why
 `output_ratio` is per output and nullable rather than a property of the production type.
 
-The copra percentages are **provisional** pending the factory's costing policy. See
+Since version 3 (2026-10-24) the copra takes the whole value and the shell comes free; versions
+1-2 split 75 / 25. See
 `BUSINESS_RULES.md` §18, §19 and §20.
 
 ### 1.18 `production_orders`
@@ -862,7 +863,7 @@ are ignored. This keeps the 1:1:1 rule and the valuation impossible to subvert f
 ### P-5 — the 85 / 15 allocation is configuration, and provisional
 
 > **Superseded for dehusking by P-14** (recipe version 2: dehusked coconut 100%, raw husk 0% +
-> labour). The principle stands for copra's 75 / 25.
+> labour). The principle stands for copra's 100 / 0 (75 / 25 before version 3).
 
 Stored in `production_recipe_outputs`, validated to total exactly 100%, and referenced only
 through the recipe. The factory has not finalised its joint-product costing policy; when it

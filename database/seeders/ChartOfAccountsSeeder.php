@@ -55,6 +55,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['1350', 'Copra Inventory', AccountType::Asset, false, true],
         ['1360', 'Raw Shell Inventory', AccountType::Asset, false, true],
         ['1370', 'Cocopeat Inventory', AccountType::Asset, false, true],
+        ['1380', 'Packing Materials Inventory', AccountType::Asset, false, true],
 
         ['1400', 'Other Current Assets', AccountType::Asset, false, false],
         ['1500', 'Property, Plant and Equipment', AccountType::Asset, false, false],
@@ -84,6 +85,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['4150', 'Raw Shell Sales', AccountType::Revenue, false, false],
         ['4160', 'Raw Husk Sales', AccountType::Revenue, false, false],
         ['4170', 'Cocopeat Sales', AccountType::Revenue, false, false],
+        ['4180', 'Packing Material Sales', AccountType::Revenue, false, false],
 
         // --------------------------------------------------------- cost of sales
         ['5000', 'Cost of Sales', AccountType::CostOfSales, true, false],
@@ -95,6 +97,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['5150', 'Raw Shell COGS', AccountType::CostOfSales, false, false],
         ['5160', 'Raw Husk COGS', AccountType::CostOfSales, false, false],
         ['5170', 'Cocopeat COGS', AccountType::CostOfSales, false, false],
+        ['5180', 'Packing Materials COGS', AccountType::CostOfSales, false, false],
 
         // ---------------------------------------------------- operating expenses
         ['6000', 'Operating Expenses', AccountType::Expense, true, false],
@@ -110,7 +113,24 @@ class ChartOfAccountsSeeder extends Seeder
         ['6600', 'Repairs and Maintenance', AccountType::Expense, false, false],
         ['6700', 'Factory Overheads', AccountType::Expense, false, false],
         ['6800', 'Administrative Expenses', AccountType::Expense, false, false],
+        // Damaged stock written off. The system's to post (StockDamage), so a control account.
+        ['6900', 'Stock Damage and Losses', AccountType::Expense, false, true],
     ];
+
+    /**
+     * When true, only what does not exist yet is created; nothing existing is changed.
+     */
+    private bool $onlyMissing = false;
+
+    /**
+     * Add what a newer version introduced to an installed database, leaving every existing row
+     * exactly as people left it. Run by `masters:add-new` on each update.
+     */
+    public function addMissing(): void
+    {
+        $this->onlyMissing = true;
+        $this->run();
+    }
 
     public function run(): void
     {
@@ -119,6 +139,15 @@ class ChartOfAccountsSeeder extends Seeder
 
         foreach (self::ACCOUNTS as [$code, $name, $type, $isHeader, $isControl]) {
             $parentId = $this->parentFor($code, $headers);
+            $existing = $this->onlyMissing ? Account::query()->where('code', $code)->first() : null;
+
+            if ($existing !== null) {
+                if ($isHeader) {
+                    $headers[$this->levelOf($code)] = $existing->id;
+                }
+
+                continue;
+            }
 
             $account = Account::updateOrCreate(
                 ['code' => $code],

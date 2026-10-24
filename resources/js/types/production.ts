@@ -58,6 +58,13 @@ export type ProductionLotOption = {
     warehouses: { warehouse_id: number; quantity: string }[];
 };
 
+/** One dehusking recipe per coconut size, with what the form needs for that size. */
+export type ProductionRecipeOption = ProductionRecipeInfo & {
+    input_product_id: number;
+    input_stock: string;
+    lots: ProductionLotOption[];
+};
+
 export type ProductionRecipeInfo = {
     input_code: string;
     input_name: string;
@@ -235,9 +242,18 @@ export type CopraRecipeInfo = {
     outputs: CopraOutputColumn[];
 };
 
+/** One copra recipe per dehusked coconut size, with what the form needs for that size. */
+export type CopraRecipeOption = CopraRecipeInfo & {
+    input_product_id: number;
+    input_stock: string;
+    input_unit_cost: string;
+    lots: ProductionLotOption[];
+};
+
 export type CopraFormValues = {
     production_date: string | null;
     warehouse_id: number | null;
+    input_product_id?: number | null;
     lot_id: number | null;
     quantity: string | null;
     notes: string | null;

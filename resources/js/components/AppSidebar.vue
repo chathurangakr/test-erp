@@ -15,6 +15,8 @@ import {
     Mail,
     LayoutGrid,
     Layers,
+    PackageX,
+    ShoppingBag,
     Package,
     Factory,
     Grid2x2,
@@ -65,8 +67,10 @@ import { index as customersIndex } from '@/routes/customers';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import { index as stockIndex } from '@/routes/inventory/stock';
+import { index as stockDamagesIndex } from '@/routes/stock-damages';
 import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
+import { index as customerBagsIndex } from '@/routes/customer-bags';
 import { index as deliveriesIndex } from '@/routes/deliveries';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
 import { index as dehuskingIndex } from '@/routes/dehusking';
@@ -172,6 +176,12 @@ const inventoryNavItems: NavItem[] = [
         permission: 'inventory.view',
         icon: Layers,
     },
+    {
+        title: 'Damaged stock',
+        href: stockDamagesIndex(),
+        permission: 'inventory.view',
+        icon: PackageX,
+    },
 ];
 
 const purchasingNavItems: NavItem[] = [
@@ -201,6 +211,12 @@ const salesNavItems: NavItem[] = [
         href: deliveriesIndex(),
         permission: 'sales.view',
         icon: TruckIcon,
+    },
+    {
+        title: 'Customer bags',
+        href: customerBagsIndex(),
+        permission: 'sales.view',
+        icon: ShoppingBag,
     },
 ];
 

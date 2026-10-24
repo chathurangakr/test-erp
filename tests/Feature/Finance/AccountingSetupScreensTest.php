@@ -93,10 +93,11 @@ class AccountingSetupScreensTest extends TestCase
                 // Never invented.
                 ->where('settings.operational_accounting_start_date', null)
                 ->where('settings.grni_account.code', '2120')
+                ->where('settings.stock_loss_account.code', '6900')
                 ->where('settings.cutover_locked', false)
                 ->where('referenceAccounts.trade_payables.code', '2110')
                 ->where('referenceAccounts.trade_receivables.code', '1210')
-                ->has('products', 14)
+                ->has('products', 21)
                 // Only the QA product.
                 ->where('unmappedCount', 1));
     }

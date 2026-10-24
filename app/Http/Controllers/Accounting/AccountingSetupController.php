@@ -54,6 +54,7 @@ class AccountingSetupController extends Controller
                 'grni_account' => $this->accountRef($settings?->grniAccount),
                 'wages_account' => $this->accountRef($settings?->wagesAccount),
                 'employee_advances_account' => $this->accountRef($settings?->employeeAdvancesAccount),
+                'stock_loss_account' => $this->accountRef($settings?->stockLossAccount),
                 // Once an operational journal exists the cutover is frozen: moving it would
                 // leave the ledger and the books permanently disagreeing.
                 'cutover_locked' => JournalEntry::query()->whereNotNull('source_type')->exists(),

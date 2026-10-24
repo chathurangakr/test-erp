@@ -28,20 +28,27 @@ import { money, moneyInput } from '@/lib/money';
  * batch and no count: the worker picks what was made and measures only those; the raw husk
  * is deducted later, at dispatch. A recipe with `labour` (dehusking) asks for the labour per
  * coconut, pre-filled from its default.
+ *
+ * Dehusking and copra have one recipe per coconut size; with more than one, the worker first
+ * picks which coconuts are used, and that size's recipe drives the rest.
  */
 const props = defineProps<{
     task: 'dehusking' | 'husk-chipping' | 'copra';
-    recipe: KioskRecipe;
+    recipes: KioskRecipe[];
     warehouses: KioskStore[];
 }>();
 
 const { t } = useKioskText();
 
+const choosesSize = props.recipes.length > 1;
+const inputId = ref<number | null>(choosesSize ? null : props.recipes[0].input.id);
+const recipe = computed(() => props.recipes.find((r) => r.input.id === inputId.value) ?? props.recipes[0]);
+
 type Measure = { output: KioskRecipeOutput; field: 'quantity' | 'secondary_quantity' };
 
 /** For a run with flexible outputs: which products the worker says were made. */
 const made = ref<number[]>([]);
-const flexible = computed(() => !props.recipe.consumes_input);
+const flexible = computed(() => !recipe.value.consumes_input);
 
 function toggleMade(id: number): void {
     made.value = made.value.includes(id) ? made.value.filter((m) => m !== id) : [...made.value, id];
@@ -49,7 +56,7 @@ function toggleMade(id: number): void {
 
 /** Every value the worker must weigh, one screen each. */
 const measures = computed<Measure[]>(() =>
-    props.recipe.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).flatMap((output) => [
+    recipe.value.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).flatMap((output) => [
         ...(output.derived ? [] : [{ output, field: 'quantity' as const }]),
         ...(output.requires_secondary_quantity ? [{ output, field: 'secondary_quantity' as const }] : []),
     ]),
@@ -60,7 +67,7 @@ const form = useForm({
     lot_id: null as number | null,
     quantity: '',
     // "4.000000" from the server becomes "4.00": rupees and cents.
-    labour_rate: moneyInput(props.recipe.labour?.default_rate),
+    labour_rate: moneyInput(props.recipes[0].labour?.default_rate),
 });
 
 /** Measured values keyed "productId:field". */
@@ -68,14 +75,15 @@ const values = ref<Record<string, string>>({});
 const key = (m: Measure) => `${m.output.id}:${m.field}`;
 
 const inStore = (rows: { warehouse_id: number; quantity: string }[]) => rows.find((r) => r.warehouse_id === form.warehouse_id)?.quantity ?? null;
-const lotsHere = computed(() => props.recipe.lots.filter((lot) => inStore(lot.stock) !== null));
-const chosenLot = computed(() => props.recipe.lots.find((l) => l.id === form.lot_id) ?? null);
+const lotsHere = computed(() => recipe.value.lots.filter((lot) => inStore(lot.stock) !== null));
+const chosenLot = computed(() => recipe.value.lots.find((l) => l.id === form.lot_id) ?? null);
 
 const steps = computed(() => [
     'store',
-    ...(props.recipe.consumes_input && props.recipe.input_tracks_lots ? ['lot'] : []),
-    ...(props.recipe.consumes_input ? ['count'] : []),
-    ...(props.recipe.labour ? ['labour'] : []),
+    ...(choosesSize ? ['size'] : []),
+    ...(recipe.value.consumes_input && recipe.value.input_tracks_lots ? ['lot'] : []),
+    ...(recipe.value.consumes_input ? ['count'] : []),
+    ...(recipe.value.labour ? ['labour'] : []),
     ...(flexible.value ? ['made'] : []),
     ...measures.value.map((m) => `measure:${key(m)}`),
     'review',
@@ -113,6 +121,10 @@ const canNext = computed(() => {
         return form.warehouse_id !== null;
     }
 
+    if (current.value === 'size') {
+        return inputId.value !== null;
+    }
+
     if (current.value === 'lot') {
         return form.lot_id !== null;
     }
@@ -148,7 +160,7 @@ function measureLabel(m: Measure): string {
 const storeName = computed(() => props.warehouses.find((w) => w.id === form.warehouse_id)?.name);
 
 function submit(): void {
-    const outputs = props.recipe.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).map((output) => ({
+    const outputs = recipe.value.outputs.filter((output) => !flexible.value || made.value.includes(output.id)).map((output) => ({
         product_id: output.id,
         quantity: output.derived ? null : (values.value[`${output.id}:quantity`] ?? null),
         secondary_quantity: output.requires_secondary_quantity ? (values.value[`${output.id}:secondary_quantity`] ?? null) : null,
@@ -161,12 +173,16 @@ function submit(): void {
     form.transform((data) => {
         const payload: Record<string, unknown> = { warehouse_id: data.warehouse_id };
 
-        if (props.recipe.consumes_input) {
-            payload.quantity = data.quantity;
-            payload.lot_id = props.recipe.input_tracks_lots ? data.lot_id : null;
+        if (choosesSize) {
+            payload.input_product_id = inputId.value;
         }
 
-        if (props.recipe.labour) {
+        if (recipe.value.consumes_input) {
+            payload.quantity = data.quantity;
+            payload.lot_id = recipe.value.input_tracks_lots ? data.lot_id : null;
+        }
+
+        if (recipe.value.labour) {
             payload.labour_rate = data.labour_rate;
         }
 
@@ -180,7 +196,9 @@ function submit(): void {
         :title="
             current === 'store'
                 ? t('pick.store')
-                : current === 'lot'
+                : current === 'size'
+                  ? t('pick.size')
+                  : current === 'lot'
                   ? t('pick.lot')
                   : current === 'count'
                     ? t('prod.input')
@@ -193,15 +211,17 @@ function submit(): void {
                           : t('prod.outputs')
         "
         :hint="
-            current === 'lot'
-                ? t('pick.lot.hint')
-                : current === 'labour'
-                  ? t('prod.labour.hint')
-                  : current === 'made'
-                    ? `${t('prod.made.hint')} ${t('prod.huskLater')}`
-                    : currentMeasure && flexible
-                      ? t('prod.measure.hint')
-                      : null
+            current === 'size'
+                ? t('pick.size.hint')
+                : current === 'lot'
+                  ? t('pick.lot.hint')
+                  : current === 'labour'
+                    ? t('prod.labour.hint')
+                    : current === 'made'
+                      ? `${t('prod.made.hint')} ${t('prod.huskLater')}`
+                      : currentMeasure && flexible
+                        ? t('prod.measure.hint')
+                        : null
         "
         :step="index + 1"
         :total="steps.length"
@@ -216,6 +236,21 @@ function submit(): void {
             v-model="form.warehouse_id"
             :items="warehouses.map((w) => ({ id: w.id, title: w.name, subtitle: w.code }))"
             @update:model-value="form.lot_id = null"
+        />
+
+        <KioskChoice
+            v-else-if="current === 'size'"
+            v-model="inputId"
+            :items="
+                recipes.map((r) => ({
+                    id: r.input.id,
+                    title: r.input.name,
+                    subtitle: r.input.code,
+                    badge: `${plainNumber(inStore(r.input_stock) ?? '0')} ${r.input.uom ?? ''}`,
+                }))
+            "
+            @update:model-value="form.lot_id = null"
+            @chosen="go(1)"
         />
 
         <KioskChoice

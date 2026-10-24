@@ -34,7 +34,10 @@ class SaveCopraOrder
             $this->assertEditable($order);
         }
 
-        $recipe = $this->recipe();
+        // The coconut size chosen; a draft edited without naming one keeps its own.
+        $recipe = $this->recipe(isset($data['input_product_id'])
+            ? (int) $data['input_product_id']
+            : $order?->inputs()->value('product_id'));
 
         return DB::transaction(function () use ($order, $data, $recipe, $userId): ProductionOrder {
             $header = [
@@ -77,9 +80,12 @@ class SaveCopraOrder
         }
     }
 
-    public function recipe(): ProductionRecipe
+    /**
+     * The active recipe for an input product (a coconut size), or the type's original.
+     */
+    public function recipe(?int $inputProductId = null): ProductionRecipe
     {
-        $recipe = ProductionRecipe::forType(ProductionType::Copra);
+        $recipe = ProductionRecipe::forType(ProductionType::Copra, $inputProductId);
 
         if ($recipe === null) {
             throw ValidationException::withMessages([

@@ -87,6 +87,9 @@ class NoOperationalAccountingTest extends TestCase
         $this->main = Warehouse::factory()->default()->create(['code' => 'MAIN']);
 
         $this->seedProductionRecipes();
+        // The allocation mechanics need a recipe that splits; the real one gives the shell nothing.
+        $this->splitCopraValue('75.000000', '25.000000');
+
         $this->seed(ChartOfAccountsSeeder::class);
     }
 
@@ -232,7 +235,7 @@ class NoOperationalAccountingTest extends TestCase
     #[Test]
     public function the_chart_of_accounts_exists_but_the_books_start_empty(): void
     {
-        $this->assertSame(54, Account::count());
+        $this->assertSame(58, Account::count());
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
         $this->assertSame(0, FiscalPeriod::count());

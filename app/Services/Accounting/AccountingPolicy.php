@@ -190,6 +190,24 @@ class AccountingPolicy
     }
 
     /**
+     * The expense damaged stock is written off to. See docs/INVENTORY_RULES.md §17.
+     */
+    public function stockLossAccount(): Account
+    {
+        $account = AccountingSetting::current()?->stockLossAccount;
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'stock_loss_account_id' => __('No stock damage account is configured. Choose one in Accounting Setup before writing off damaged stock.'),
+            ]);
+        }
+
+        $this->assertUsable($account, AccountType::Expense, __('Stock damage and losses'));
+
+        return $account;
+    }
+
+    /**
      * The asset salary advances sit in until a payroll takes them back. A control account:
      * only payroll's own journals reach it, so its balance always equals what employees owe.
      */

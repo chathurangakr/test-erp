@@ -140,6 +140,15 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Secondary quantity is informational.** It is recorded where known, is not guarded
   against going negative, and has **no fixed conversion** to the primary unit. The primary
   quantity is authoritative for negative-stock prevention.
+- **Damaged stock is written off, never deleted or edited** (`RecordStockDamage`, Inventory →
+  Damaged stock): `ADJUSTMENT_OUT` at the engine's weighted average, `Dr stock damage and losses
+  (accounting_settings.stock_loss_account_id) / Cr inventory`, recorded in one step and corrected
+  by `ReverseStockDamage`. See `docs/INVENTORY_RULES.md` §17.
+- **Returnable bags lent to customers stay our stock** (`RecordCustomerBagMovement`, Sales →
+  Customer bags): given / returned are value-neutral transfers to and from the one
+  `holds_customer_items` warehouse, a loss is a write-off. What a customer holds is derived
+  (`CustomerBagBalances`). That warehouse is never offered on documents — pickers use
+  `Warehouse::operational()` — and the engine refuses ordinary documents there. See §18.
 - **No new stock may land in a lot of a pooled product.** The engine refuses it for every
   type except `REVERSAL` (back where it came from) and `LOT_CONSOLIDATION`. Decide lots with
   `Product::tracksLots()`, never a product code.
@@ -224,9 +233,13 @@ The inventory engine exists and is tested. These rules are permanent:
   add a parallel engine for a new production type.
 - **Product codes live only in `ProductionRecipeSeeder`.** Everything resolves products
   through `production_recipes` / `production_recipe_outputs`. Never reference `COCONUT`,
-  `DEHUSKED-COCONUT`, `RAW-HUSK`, `HUSK-7C`, `HUSK-9C`, `HUSK-10C`, `COCOPEAT`, the `-L`
-  items, `COPRA` or `RAW-SHELL` in a controller, service or action.
-- **Recipes are versioned.** Exactly one version per type is active (`ProductionRecipe::forType`);
+  `DEHUSKED-COCONUT`, the size items (`COCONUT-LARGE` …), `RAW-HUSK`, `HUSK-7C`, `HUSK-9C`,
+  `HUSK-10C`, `COCOPEAT`, the `-L` items, `COPRA` or `RAW-SHELL` in a controller, service or action.
+- **A type has one recipe per INPUT PRODUCT** — dehusking and copra have one per coconut size
+  (`docs/BUSINESS_RULES.md` §33). `ProductionRecipe::forType($type, $inputProductId)` finds it;
+  with no input named it returns the original input's recipe, so a request naming no
+  `input_product_id` behaves as before. Husk, copra and shell stay one stock each.
+- **Recipes are versioned.** Exactly one version per type and input product is active;
   a superseded version is deactivated, never deleted or edited, and each posted run records the
   version it used (`production_recipe_id`). Change a rule by seeding a new version.
 - **Whether an output is derived or measured is a per-OUTPUT fact, not a per-type one.**
@@ -242,7 +255,7 @@ The inventory engine exists and is tested. These rules are permanent:
   `absorbs_labour`, and those exact figures reach the ledger unchanged.
 - **The allocation percentages must total exactly 100** for a recipe that consumes at
   production, enforced by `ProductionRecipe::assertAllocationIsComplete()`. Dehusking v2 is
-  100 / 0 (dehusked / husk) and copra 75 / 25 (provisional); never hard-code them.
+  100 / 0 (dehusked / husk) and copra 100 / 0 (copra / shell — the shell comes free); never hard-code them.
 - **Dehusking labour is the raw husk's cost.** The operator confirms a labour rate per
   coconut (pre-filled from `default_labour_rate` — Rs. 4.00 today; the owner changes it from time to time, and each run keeps the rate it used);
   posting requires it (0 is allowed) and stores `labour_rate` / `labour_cost`. The journal
@@ -278,9 +291,10 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Shell is valued against its PRIMARY quantity (`NOS`).** A cost per KG may be *displayed*
   and must be labelled informational; it is never stored and never used as a weighted
   average. See `docs/DATA_MODEL.md` P-10.
-- **Value is split 75 / 25 (provisional, configurable)** between copra and shell, in
-  `production_recipe_outputs.allocation_percent` — never in the posting action. The intended
-  replacement is market-value / NRV costing.
+- **The copra takes 100% of the value and the shell 0%** (version 3, 2026-10-24: the factory buys
+  coconuts, not shell, so the shell comes free; versions 1-2 split 75 / 25). Configurable, in
+  `production_recipe_outputs.allocation_percent` — never in the posting action. Existing
+  databases got version 3 from the migration `give_copra_the_whole_coconut_value`.
 - **Moisture and drying loss are not modelled.** No waste product, no mass-balance equation
   between the NOS input and the KG outputs, no loss quantity. See `docs/BUSINESS_RULES.md`
   §20 TBD-3.
@@ -562,7 +576,7 @@ Input: Dehusked Coconut in `NOS`. Outputs: Copra in `KG`, plus Raw Coconut Shell
 - One coconut yields one shell quantity — the only fixed relationship in this process.
 - **Do not use a fixed NOS-to-KG conversion** — shell and copra weights vary and are
   measured.
-- Value is split 75 / 25 (provisional, configurable). See `docs/BUSINESS_RULES.md` §20.
+- The copra carries the whole value; the shell comes free (configurable). See `docs/BUSINESS_RULES.md` §20.
 
 ### Raw Coconut Shell
 
@@ -782,7 +796,7 @@ configurable value allocation, posting and reversal), and **Husk chipping produc
 (operator-measured output weights with no husk-to-KG conversion, zero-output
 redistribution, informational waste, traceable output lots, posting and reversal), and
 **Copra production** (measured copra and shell weights, a 1:1 derived shell count that
-cannot be overridden, dual-unit shell stock, provisional 75/25 value allocation, traceable
+cannot be overridden, dual-unit shell stock, a configurable value allocation (shell free since 2026-10-24), traceable
 output lots, posting and reversal), and the **accounting foundation** (chart of accounts,
 fiscal periods, manual journal entries with reversal, derived balances, general ledger and
 trial balance), and **inventory accounting integration** (goods receipts, deliveries and all
@@ -799,7 +813,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (83 permissions, seven editable starting roles, multiple roles per user, every route
+control** (87 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -813,7 +827,10 @@ backflushed at delivery into cost of goods sold, Cocopeat with its own accounts,
 versioned recipes, and cash / cheque / bank-transfer payment methods with cheque details), and
 **payroll** (employees with daily rates, a daily attendance register with full / half day and
 unpaid leave, salary advances, and monthly salaries that take advances back and post to the
-ledger).
+ledger), and **damaged stock write-offs** (bags, coconuts or any product, valued by the ledger and
+charged to a stock-loss expense), and **returnable bags lent to customers** (given, returned and
+lost per customer, with what each holds derived), and **coconut sizes** (large / small / immature
+whole and dehusked stock, one dehusking and copra recipe per size).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
@@ -855,6 +872,10 @@ no role sees only the dashboard and their own settings.
   `SERVER_NAME` and port 80, the installer gets a Let's Encrypt certificate (`LETSENCRYPT=yes`).
 - **Updating an installed computer is `deploy/update.sh`:** it backs up the database, pulls the
   project folder and runs the installer taken from the newest version (never the folder's copy).
+  An update refreshes permissions and runs `php artisan masters:add-new`, which adds only the
+  accounts, products, mappings, recipes and unset settings a newer version introduced (each
+  seeder's `addMissing()`), never changing an existing row. New master data therefore goes into
+  the seeders, never into a manual step.
 - **Cloud servers are supported** (`docs/CLOUD_SERVER.md`). With `SERVER_NAME` blank the installer
   uses the public IP when the cloud metadata service (169.254.169.254) answers, else the LAN IP.
   On Oracle's Ubuntu images (iptables-persistent with an `icmp-host-prohibited` REJECT) it opens

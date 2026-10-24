@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { useT } from '@/lib/i18n';
-import type { OptionRef, ProductionLotOption, ProductionRecipeInfo } from '@/types';
+import type { OptionRef, ProductionRecipeOption } from '@/types';
 import { businessToday } from '@/lib/businessDate';
 import { money, moneyInput } from '@/lib/money';
 
@@ -19,12 +19,11 @@ const props = defineProps<{
     submitLabel: string;
     cancelHref: string;
     warehouses: OptionRef[];
-    lots: ProductionLotOption[];
-    recipe: ProductionRecipeInfo;
-    inputStock: string;
+    recipes: ProductionRecipeOption[];
     initial?: {
         production_date: string | null;
         warehouse_id: number | null;
+        input_product_id?: number | null;
         lot_id: number | null;
         quantity: string | null;
         labour_rate?: string | null;
@@ -37,15 +36,21 @@ const today = businessToday();
 const form = useForm({
     production_date: props.initial?.production_date ?? today,
     warehouse_id: props.initial?.warehouse_id ? String(props.initial.warehouse_id) : '',
+    // Which coconuts are dehusked: one recipe per size. Chosen by the operator when there are several.
+    input_product_id: String(props.initial?.input_product_id ?? (props.recipes.length === 1 ? props.recipes[0].input_product_id : '')),
     lot_id: props.initial?.lot_id ? String(props.initial.lot_id) : '',
     quantity: props.initial?.quantity ?? '',
     // "4.000000" from the server shows as "4.00": rupees and cents.
-    labour_rate: moneyInput(props.initial?.labour_rate ?? props.recipe.default_labour_rate),
+    labour_rate: moneyInput(props.initial?.labour_rate ?? props.recipes[0]?.default_labour_rate),
     notes: props.initial?.notes ?? '',
 });
 
+/** The chosen size's recipe; the first until one is chosen, so the preview has something to show. */
+const recipe = computed(() => props.recipes.find((r) => String(r.input_product_id) === form.input_product_id) ?? props.recipes[0]);
+const inputStock = computed(() => recipe.value.input_stock);
+
 /** Pooled coconut has no lots: the lot picker only appears for lot-tracked input. */
-const usesLots = computed(() => props.recipe.input_tracks_lots !== false);
+const usesLots = computed(() => recipe.value.input_tracks_lots !== false);
 
 const labourCost = computed(() => {
     const rate = Number(form.labour_rate);
@@ -59,13 +64,13 @@ const availableLots = computed(() => {
         return [];
     }
 
-    return props.lots.filter((lot) =>
+    return recipe.value.lots.filter((lot) =>
         lot.warehouses.some((w) => String(w.warehouse_id) === form.warehouse_id),
     );
 });
 
 const selectedLotQuantity = computed(() => {
-    const lot = props.lots.find((l) => String(l.id) === form.lot_id);
+    const lot = recipe.value.lots.find((l) => String(l.id) === form.lot_id);
 
     return (
         lot?.warehouses.find((w) => String(w.warehouse_id) === form.warehouse_id)?.quantity ??
@@ -84,7 +89,7 @@ const inputQuantity = computed(() => {
  * 1:1:1 rule — they are shown read-only and are recalculated server-side at posting.
  */
 const outputPreview = computed(() =>
-    props.recipe.outputs.map((output) => ({
+    recipe.value.outputs.map((output) => ({
         ...output,
         quantity: (inputQuantity.value * Number(output.ratio)).toFixed(3),
     })),
@@ -134,6 +139,19 @@ function submit(): void {
         </section>
 
         <section class="space-y-4">
+            <div v-if="recipes.length > 1" class="grid gap-2 sm:max-w-md">
+                <Label for="input_product_id">{{ t('Coconuts to dehusk') }} <span class="text-destructive">*</span></Label>
+                <SearchableSelect
+                    id="input_product_id"
+                    v-model="form.input_product_id"
+                    required
+                    :options="recipes.map((r) => ({ value: String(r.input_product_id), label: `${r.input_name} — ${r.input_stock} ${r.input_uom ?? ''}` }))"
+                    :auto-select-single="false"
+                    @update:model-value="form.lot_id = ''"
+                />
+                <InputError :message="form.errors.input_product_id" />
+            </div>
+
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class="text-sm font-medium">
                     {{ t('Input — :code', { code: recipe.input_code }) }}

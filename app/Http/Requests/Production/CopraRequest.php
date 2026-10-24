@@ -4,7 +4,6 @@ namespace App\Http\Requests\Production;
 
 use App\Enums\ProductionType;
 use App\Http\Requests\Production\Concerns\ValidatesInputLot;
-use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Support\DecimalMath;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -51,6 +50,7 @@ abstract class CopraRequest extends FormRequest
         return [
             'production_date' => ['required', 'date'],
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
+            'input_product_id' => $this->inputProductRules(ProductionType::Copra),
             'lot_id' => $this->inputLotRules(ProductionType::Copra),
             'quantity' => ['required', 'numeric', 'gt:0'],
 
@@ -69,6 +69,7 @@ abstract class CopraRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'input_product_id.in' => __('Choose which dehusked coconuts are being dried.'),
             'lot_id.required' => __('Select the dehusked coconut lot being processed, so the output lots remain traceable.'),
             'lot_id.prohibited' => $this->pooledInputMessage(ProductionType::Copra),
             'quantity.gt' => __('The quantity to process must be greater than zero.'),
@@ -195,13 +196,13 @@ abstract class CopraRequest extends FormRequest
     }
 
     /**
-     * The copra recipe's outputs, keyed by product id.
+     * The chosen copra recipe's outputs, keyed by product id.
      *
      * @return Collection<int, ProductionRecipeOutput>
      */
     protected function recipeOutputs(): Collection
     {
-        $recipe = ProductionRecipe::forType(ProductionType::Copra);
+        $recipe = $this->chosenRecipe(ProductionType::Copra);
 
         return $recipe === null
             ? collect()

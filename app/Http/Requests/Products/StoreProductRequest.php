@@ -35,6 +35,7 @@ class StoreProductRequest extends FormRequest
                 Rule::exists('units_of_measure', 'id'),
                 'different:primary_uom_id',
             ],
+            'is_returnable' => ['boolean'],
             'is_active' => ['boolean'],
         ];
     }

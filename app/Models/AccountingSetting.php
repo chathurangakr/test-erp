@@ -24,6 +24,7 @@ class AccountingSetting extends Model
         'trade_receivables_account_id',
         'production_labour_account_id',
         'wages_account_id',
+        'stock_loss_account_id',
         'employee_advances_account_id',
         'updated_by',
     ];
@@ -97,6 +98,16 @@ class AccountingSetting extends Model
     public function wagesAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'wages_account_id');
+    }
+
+    /**
+     * The expense damaged stock is written off to.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function stockLossAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'stock_loss_account_id');
     }
 
     /**

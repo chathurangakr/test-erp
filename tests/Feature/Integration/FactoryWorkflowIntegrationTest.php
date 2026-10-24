@@ -539,17 +539,17 @@ class FactoryWorkflowIntegrationTest extends TestCase
         // Measured by the operator.
         $this->assertSame('190.500', $copraOut->quantity);
         $this->assertNull($copraOut->secondary_quantity);
-        $this->assertSame('75.000000', $copraOut->allocation_percent);
-        $this->assertSame('76875.000000', $copraOut->allocated_cost);
-        $this->assertSame('403.543307', $copraOut->unit_cost);
+        // The copra carries the whole coconut value; the shell comes free (recipe version 3).
+        $this->assertSame('100.000000', $copraOut->allocation_percent);
+        $this->assertSame('102500.000000', $copraOut->allocated_cost);
+        $this->assertSame('538.057743', $copraOut->unit_cost);
 
         // Count derived 1:1 from the coconuts; weight measured.
         $this->assertSame('1000.000', $shellOut->quantity);
         $this->assertSame('420.750', $shellOut->secondary_quantity);
-        $this->assertSame('25.000000', $shellOut->allocation_percent);
-        $this->assertSame('25625.000000', $shellOut->allocated_cost);
-        // Valued per NOS, its primary unit.
-        $this->assertSame('25.625000', $shellOut->unit_cost);
+        $this->assertSame('0.000000', $shellOut->allocation_percent);
+        $this->assertSame('0.000000', $shellOut->allocated_cost);
+        $this->assertSame('0.000000', $shellOut->unit_cost);
 
         $this->assertSame($copra->inputValue(), $copra->outputValue());
         $this->assertSame('102500.000000', $copra->outputValue());
@@ -582,19 +582,19 @@ class FactoryWorkflowIntegrationTest extends TestCase
 
         $copra = $flow['copra_sale']->lines->first();
         $this->assertSame('45250.000000', $copra->sales_value);
-        $this->assertSame('403.543307', $copra->inventory_unit_cost);
-        // 90.5 x 403.543307
-        $this->assertSame('36520.669284', $copra->cost_of_goods_sold);
+        $this->assertSame('538.057743', $copra->inventory_unit_cost);
+        // 90.5 x 538.057743
+        $this->assertSame('48694.225742', $copra->cost_of_goods_sold);
 
         $shell = $flow['shell_sale']->lines->first();
         $this->assertSame(PricingBasis::Secondary, $shell->pricing_basis);
 
         // Revenue follows the measured weight: 208.750 x 80.
         $this->assertSame('16700.000000', $shell->sales_value);
-        // Cost follows the count, because the count is what left stock.
-        $this->assertSame('25.625000', $shell->inventory_unit_cost);
-        $this->assertSame('12812.500000', $shell->cost_of_goods_sold);
-        $this->assertSame('3887.500000', $shell->grossProfit());
+        // The shell came free, so the whole sale is profit.
+        $this->assertSame('0.000000', $shell->inventory_unit_cost);
+        $this->assertSame('0.000000', $shell->cost_of_goods_sold);
+        $this->assertSame('16700.000000', $shell->grossProfit());
 
         // The weight that left was measured, not apportioned: half the shells by count did
         // not carry half the weight.
@@ -620,8 +620,8 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->assertStock('HUSK-10C', '281.750', '0.000000', '0.000000');
         $this->assertStock('COCOPEAT-L', '100.000', '0.000000', '0.000000');
         $this->assertStock('COCOPEAT', '0.000', '0.000000', '0.000000');
-        $this->assertStock('COPRA', '100.000', '40354.330716', '403.543307');
-        $this->assertStock('RAW-SHELL', '500.000', '12812.500000', '25.625000');
+        $this->assertStock('COPRA', '100.000', '53805.774258', '538.057743');
+        $this->assertStock('RAW-SHELL', '500.000', '0.000000', '0.000000');
 
         // Shell keeps its measured weight alongside its count.
         $this->assertSame('212.000', $this->stock()->secondaryQuantityForProduct($this->product('RAW-SHELL')->id));

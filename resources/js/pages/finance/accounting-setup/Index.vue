@@ -206,6 +206,21 @@ const { t } = useT();
                         </p>
                         <InputError :message="errors.employee_advances_account_id" />
                     </div>
+
+                    <div class="grid gap-2">
+                        <Label for="stock_loss">{{ t('Stock damage and losses') }}</Label>
+                        <SearchableSelect
+                            id="stock_loss"
+                            name="stock_loss_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.expense).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.stock_loss_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('The expense damaged stock is written off to.') }}
+                        </p>
+                        <InputError :message="errors.stock_loss_account_id" />
+                    </div>
                 </div>
 
                 <Button

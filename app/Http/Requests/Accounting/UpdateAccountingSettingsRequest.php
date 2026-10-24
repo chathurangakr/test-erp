@@ -20,6 +20,7 @@ class UpdateAccountingSettingsRequest extends FormRequest
             'grni_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', true)],
             'wages_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
             'employee_advances_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
+            'stock_loss_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
         ];
     }
 }

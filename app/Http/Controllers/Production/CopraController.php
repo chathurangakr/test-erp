@@ -11,6 +11,7 @@ use App\Http\Requests\Production\UpdateCopraRequest;
 use App\Models\InventoryLot;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOutput;
+use App\Models\ProductionRecipe;
 use App\Models\ProductionRecipeOutput;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
@@ -84,7 +85,8 @@ class CopraController extends Controller
             'statuses' => ProductionStatus::options(),
             // The index columns come from the recipe, so no product code is written into a
             // controller or a screen.
-            'outputColumns' => $this->outputColumns(),
+            // Every size makes the same copra and shell, so the original recipe's outputs serve.
+            'outputColumns' => $this->outputColumns($this->saveOrder->recipe()),
         ]);
     }
 
@@ -137,6 +139,7 @@ class CopraController extends Controller
                 'production_number' => $copra->production_number,
                 'production_date' => $copra->production_date?->toDateString(),
                 'warehouse_id' => $copra->warehouse_id,
+                'input_product_id' => $input?->product_id,
                 'lot_id' => $input?->lot_id,
                 'quantity' => $input?->quantity,
                 'notes' => $copra->notes,
@@ -162,9 +165,9 @@ class CopraController extends Controller
     /**
      * @return list<array<string, mixed>>
      */
-    private function outputColumns(): array
+    private function outputColumns(ProductionRecipe $recipe): array
     {
-        return $this->saveOrder->recipe()->outputs->map(fn (ProductionRecipeOutput $output): array => [
+        return $recipe->outputs->map(fn (ProductionRecipeOutput $output): array => [
             'product_id' => (int) $output->product_id,
             'code' => $output->product?->code,
             'name' => $output->product?->name,
@@ -188,43 +191,46 @@ class CopraController extends Controller
      */
     private function formOptions(): array
     {
-        $recipe = $this->saveOrder->recipe();
-        $inputProduct = $recipe->inputProduct;
-
         $balances = $this->stock->balancesByLot()
             ->filter(fn (object $row): bool => DecimalMath::isPositive($row->quantity));
 
-        // Pooled dehusked coconut has no lots to choose from (docs/INVENTORY_RULES.md §15).
-        $lots = ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
-            ->where('product_id', $inputProduct->id)
-            ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
-            ->orderByDesc('id')
-            ->get(['id', 'lot_number', 'product_id'])
-            ->map(fn (InventoryLot $lot): array => [
-                'id' => $lot->id,
-                'lot_number' => $lot->lot_number,
-                'warehouses' => $balances->where('lot_id', $lot->id)
-                    ->map(fn (object $row): array => [
-                        'warehouse_id' => $row->warehouse_id,
-                        'quantity' => $row->quantity,
-                    ])->values(),
-            ])
-            ->values();
-
         return [
-            'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
-            'lots' => $lots,
-            'recipe' => [
-                'input_code' => $inputProduct->code,
-                'input_name' => $inputProduct->name,
-                'input_uom' => $inputProduct->primaryUom?->code,
-                'input_tracks_lots' => $inputProduct->tracksLots(),
-                'outputs' => $this->outputColumns(),
-            ],
-            'inputStock' => $this->stock->quantityForProduct($inputProduct->id),
-            // What the input is expected to be valued at. The ledger decides for real at
-            // posting time; this only lets the screen show an estimate.
-            'inputUnitCost' => $this->stock->weightedAverageCostForProduct($inputProduct->id),
+            'warehouses' => Warehouse::query()->operational()->orderBy('code')->get(['id', 'code', 'name']),
+            // One recipe per dehusked coconut size; the operator picks which are dried.
+            'recipes' => ProductionRecipe::activeForType(ProductionType::Copra)
+                ->map(function (ProductionRecipe $recipe) use ($balances): array {
+                    $inputProduct = $recipe->inputProduct;
+
+                    return [
+                        'input_product_id' => $inputProduct->id,
+                        'input_code' => $inputProduct->code,
+                        'input_name' => $inputProduct->name,
+                        'input_uom' => $inputProduct->primaryUom?->code,
+                        'input_tracks_lots' => $inputProduct->tracksLots(),
+                        'input_stock' => $this->stock->quantityForProduct($inputProduct->id),
+                        // What the input is expected to be valued at. The ledger decides for
+                        // real at posting time; this only lets the screen show an estimate.
+                        'input_unit_cost' => $this->stock->weightedAverageCostForProduct($inputProduct->id),
+                        // Pooled dehusked coconut has no lots to choose from (docs/INVENTORY_RULES.md §15).
+                        'lots' => ! $inputProduct->tracksLots() ? collect() : InventoryLot::query()
+                            ->where('product_id', $inputProduct->id)
+                            ->whereIn('id', $balances->pluck('lot_id')->unique()->all())
+                            ->orderByDesc('id')
+                            ->get(['id', 'lot_number', 'product_id'])
+                            ->map(fn (InventoryLot $lot): array => [
+                                'id' => $lot->id,
+                                'lot_number' => $lot->lot_number,
+                                'warehouses' => $balances->where('lot_id', $lot->id)
+                                    ->map(fn (object $row): array => [
+                                        'warehouse_id' => $row->warehouse_id,
+                                        'quantity' => $row->quantity,
+                                    ])->values(),
+                            ])
+                            ->values(),
+                        'outputs' => $this->outputColumns($recipe),
+                    ];
+                })
+                ->values(),
         ];
     }
 

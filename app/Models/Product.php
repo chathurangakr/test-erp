@@ -27,6 +27,7 @@ class Product extends Model
         'primary_uom_id',
         'secondary_uom_id',
         'tracks_lots',
+        'is_returnable',
         'is_active',
     ];
 
@@ -44,6 +45,7 @@ class Product extends Model
         return [
             'is_active' => 'boolean',
             'tracks_lots' => 'boolean',
+            'is_returnable' => 'boolean',
         ];
     }
 

@@ -7,6 +7,7 @@ use App\Actions\Production\SaveCopraOrder;
 use App\Actions\Production\SaveDehuskingOrder;
 use App\Actions\Production\SaveHuskChippingOrder;
 use App\Enums\Permission;
+use App\Enums\ProductionType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Kiosk\KioskCopraRequest;
 use App\Http\Requests\Kiosk\KioskDehuskingRequest;
@@ -133,7 +134,9 @@ class KioskEntryController extends Controller
 
     public function dehusking(SaveDehuskingOrder $save): Response
     {
-        return $this->productionPage('dehusking', $this->options->production($save->recipe()));
+        $save->recipe(); // Refuses, as before, when no recipe is configured at all.
+
+        return $this->productionPage('dehusking', $this->options->productionVariants(ProductionType::Dehusking));
     }
 
     public function storeDehusking(KioskDehuskingRequest $request): RedirectResponse
@@ -150,7 +153,7 @@ class KioskEntryController extends Controller
 
     public function huskChipping(SaveHuskChippingOrder $save): Response
     {
-        return $this->productionPage('husk-chipping', $this->options->production($save->recipe()));
+        return $this->productionPage('husk-chipping', [$this->options->production($save->recipe())]);
     }
 
     public function storeHuskChipping(KioskHuskChippingRequest $request): RedirectResponse
@@ -167,7 +170,9 @@ class KioskEntryController extends Controller
 
     public function copra(SaveCopraOrder $save): Response
     {
-        return $this->productionPage('copra', $this->options->production($save->recipe()));
+        $save->recipe(); // Refuses, as before, when no recipe is configured at all.
+
+        return $this->productionPage('copra', $this->options->productionVariants(ProductionType::Copra));
     }
 
     public function storeCopra(KioskCopraRequest $request): RedirectResponse
@@ -183,13 +188,13 @@ class KioskEntryController extends Controller
     }
 
     /**
-     * @param  array<string, mixed>  $recipe
+     * @param  list<array<string, mixed>>  $recipes  one per input product (coconut size)
      */
-    private function productionPage(string $task, array $recipe): Response
+    private function productionPage(string $task, array $recipes): Response
     {
         return Inertia::render('kiosk/Production', KioskController::shared() + [
             'task' => $task,
-            'recipe' => $recipe,
+            'recipes' => $recipes,
             'warehouses' => $this->options->warehouses(),
         ]);
     }

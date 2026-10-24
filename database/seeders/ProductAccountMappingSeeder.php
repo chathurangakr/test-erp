@@ -37,6 +37,13 @@ class ProductAccountMappingSeeder extends Seeder
     private const MAPPINGS = [
         'COCONUT' => ['1310', '5110', '4110'],
         'DEHUSKED-COCONUT' => ['1320', '5120', '4120'],
+        // Every size shares its kind's accounts: the size detail lives in the inventory ledger.
+        'COCONUT-LARGE' => ['1310', '5110', '4110'],
+        'COCONUT-SMALL' => ['1310', '5110', '4110'],
+        'COCONUT-IMMATURE' => ['1310', '5110', '4110'],
+        'DEHUSKED-LARGE' => ['1320', '5120', '4120'],
+        'DEHUSKED-SMALL' => ['1320', '5120', '4120'],
+        'DEHUSKED-IMMATURE' => ['1320', '5120', '4120'],
         'RAW-HUSK' => ['1330', '5160', '4160'],
         // The three chip grades share one inventory, cost and revenue account: the factory
         // reports them together, and the grade detail lives in the inventory ledger.
@@ -52,6 +59,7 @@ class ProductAccountMappingSeeder extends Seeder
         'COCOPEAT-L' => ['1370', '5170', '4170'],
         'COPRA' => ['1350', '5140', '4140'],
         'RAW-SHELL' => ['1360', '5150', '4150'],
+        'PP-BAG' => ['1380', '5180', '4180'],
     ];
 
     private const GRNI_CODE = '2120';
@@ -66,6 +74,23 @@ class ProductAccountMappingSeeder extends Seeder
 
     private const EMPLOYEE_ADVANCES_CODE = '1220';
 
+    private const STOCK_LOSS_CODE = '6900';
+
+    /**
+     * When true, only what does not exist yet is created; nothing existing is changed.
+     */
+    private bool $onlyMissing = false;
+
+    /**
+     * Add what a newer version introduced to an installed database, leaving every existing row
+     * exactly as people left it. Run by `masters:add-new` on each update.
+     */
+    public function addMissing(): void
+    {
+        $this->onlyMissing = true;
+        $this->run();
+    }
+
     public function run(): void
     {
         $accounts = Account::query()->pluck('id', 'code');
@@ -76,6 +101,10 @@ class ProductAccountMappingSeeder extends Seeder
             if ($product === null) {
                 // The product master is seeded separately; skip rather than fail, so this
                 // seeder can run against a partially built database.
+                continue;
+            }
+
+            if ($this->onlyMissing && ProductAccountMapping::query()->where('product_id', $product->id)->exists()) {
                 continue;
             }
 
@@ -105,6 +134,7 @@ class ProductAccountMappingSeeder extends Seeder
             $accounts->get(self::PRODUCTION_LABOUR_CODE),
             $accounts->get(self::WAGES_CODE),
             $accounts->get(self::EMPLOYEE_ADVANCES_CODE),
+            $accounts->get(self::STOCK_LOSS_CODE),
         );
     }
 
@@ -118,6 +148,7 @@ class ProductAccountMappingSeeder extends Seeder
         ?int $productionLabourAccountId,
         ?int $wagesAccountId,
         ?int $employeeAdvancesAccountId,
+        ?int $stockLossAccountId,
     ): void {
         $attributes = array_filter([
             'grni_account_id' => $grniAccountId,
@@ -126,6 +157,7 @@ class ProductAccountMappingSeeder extends Seeder
             'production_labour_account_id' => $productionLabourAccountId,
             'wages_account_id' => $wagesAccountId,
             'employee_advances_account_id' => $employeeAdvancesAccountId,
+            'stock_loss_account_id' => $stockLossAccountId,
         ], fn (?int $id): bool => $id !== null);
 
         if ($attributes === []) {
@@ -143,6 +175,9 @@ class ProductAccountMappingSeeder extends Seeder
             return;
         }
 
-        $settings->update($attributes);
+        // On an update only settings nobody has chosen yet are filled in.
+        $settings->update($this->onlyMissing
+            ? array_filter($attributes, fn (int $id, string $column): bool => $settings->{$column} === null, ARRAY_FILTER_USE_BOTH)
+            : $attributes);
     }
 }

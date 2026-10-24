@@ -310,7 +310,11 @@ class PostDehuskingProduction
 
     private function resolveRecipe(ProductionOrder $order): ProductionRecipe
     {
-        $recipe = ProductionRecipe::forType($order->production_type);
+        // One recipe per input product (coconut size): the draft's input says which.
+        $recipe = ProductionRecipe::forType(
+            $order->production_type,
+            $order->inputs()->orderBy('id')->value('product_id'),
+        );
 
         if ($recipe === null) {
             throw ValidationException::withMessages([

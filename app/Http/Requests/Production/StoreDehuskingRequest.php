@@ -32,6 +32,7 @@ class StoreDehuskingRequest extends FormRequest
         return [
             'production_date' => ['required', 'date'],
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
+            'input_product_id' => $this->inputProductRules(ProductionType::Dehusking),
             'lot_id' => $this->inputLotRules(ProductionType::Dehusking),
             'quantity' => ['required', 'numeric', 'gt:0'],
             'labour_rate' => ['required', 'numeric', 'min:0', new Money],
@@ -45,6 +46,7 @@ class StoreDehuskingRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'input_product_id.in' => __('Choose which coconuts are being dehusked.'),
             'lot_id.required' => __('Select the coconut lot being processed, so the output lots remain traceable.'),
             'lot_id.prohibited' => $this->pooledInputMessage(ProductionType::Dehusking),
             'quantity.gt' => __('The quantity to process must be greater than zero.'),

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Permission;
+use App\Http\Controllers\Sales\CustomerBagController;
 use App\Http\Controllers\Sales\DeliveryActionController;
 use App\Http\Controllers\Sales\DeliveryController;
 use App\Http\Controllers\Sales\SalesOrderApprovalController;
@@ -45,4 +46,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('deliveries/{delivery}/cancel', [DeliveryActionController::class, 'cancel'])
         ->name('deliveries.cancel')
         ->can(Permission::SalesDeliveryCancel);
+
+    // Returnable bags lent to customers — recorded in one step, corrected by reversal.
+    Route::resource('customer-bags', CustomerBagController::class)
+        ->parameters(['customer-bags' => 'customerBag'])
+        ->only(['index', 'create', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], Permission::SalesView->middleware())
+        ->middlewareFor(['create', 'store'], Permission::SalesBagsRecord->middleware());
+    Route::patch('customer-bags/{customerBag}/reverse', [CustomerBagController::class, 'reverse'])
+        ->name('customer-bags.reverse')
+        ->can(Permission::SalesBagsReverse);
 });

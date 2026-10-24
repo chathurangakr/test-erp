@@ -3,12 +3,14 @@
 namespace App\Actions\Accounting;
 
 use App\Enums\JournalEntryStatus;
+use App\Models\CustomerBagMovement;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
 use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
 use App\Models\JournalEntry;
 use App\Models\ProductionOrder;
+use App\Models\StockDamage;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
@@ -31,6 +33,8 @@ use Illuminate\Validation\ValidationException;
  *   GOODS RECEIPT   Dr product inventory        Cr Goods Received Not Invoiced
  *   DELIVERY        Dr product cost of sales    Cr product inventory
  *   PRODUCTION      Dr output inventory         Cr input inventory
+ *   STOCK DAMAGE    Dr stock damage and losses  Cr product inventory
+ *   BAGS LOST       Dr stock damage and losses  Cr product inventory
  *
  * A **warehouse transfer posts nothing**: the company owns the same product, valued the
  * same, in the same account, before and after.
@@ -255,6 +259,97 @@ class RecordOperationalJournal
             $lines,
             $userId,
         );
+    }
+
+    /**
+     * Damaged stock written off: Dr stock damage and losses, Cr each product's inventory — at
+     * the exact value the engine charged the issue. A write-off that moved no value (stock
+     * still carrying no cost) records no journal.
+     */
+    public function forStockDamage(StockDamage $damage, InventoryTransaction $transaction, ?int $userId = null): ?JournalEntry
+    {
+        if (! $this->policy->appliesTo($damage->damage_date)) {
+            return null;
+        }
+
+        $lines = $this->writeOffLines($transaction);
+
+        if ($lines === []) {
+            return null;
+        }
+
+        return $this->record(
+            $damage,
+            $damage->damage_date,
+            RecordText::of('Stock damage :reference — :reason', [
+                'reference' => $damage->damage_number,
+                'reason' => $damage->reason,
+            ]),
+            $lines,
+            $userId,
+        );
+    }
+
+    /**
+     * Returnable bags a customer will not bring back: the same write-off as damaged stock,
+     * charged to the stock-loss expense at the value the ledger charged.
+     */
+    public function forLostBags(CustomerBagMovement $movement, InventoryTransaction $transaction, ?int $userId = null): ?JournalEntry
+    {
+        if (! $this->policy->appliesTo($movement->movement_date)) {
+            return null;
+        }
+
+        $lines = $this->writeOffLines($transaction);
+
+        if ($lines === []) {
+            return null;
+        }
+
+        return $this->record(
+            $movement,
+            $movement->movement_date,
+            RecordText::of('Bags lost by :customer — :reference', [
+                'customer' => $movement->customer?->code ?? RecordText::of('customer'),
+                'reference' => $movement->movement_number,
+            ]),
+            $lines,
+            $userId,
+        );
+    }
+
+    /**
+     * Dr stock damage and losses, Cr each product's inventory, for every valued ledger line.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function writeOffLines(InventoryTransaction $transaction): array
+    {
+        $lines = [];
+
+        foreach ($this->linesOf($transaction) as $line) {
+            $amount = DecimalMath::cost(DecimalMath::of($line->total_cost));
+
+            if (! DecimalMath::isPositive($amount)) {
+                continue;
+            }
+
+            $lines[] = [
+                'account_id' => $this->policy->stockLossAccount()->id,
+                'description' => RecordText::of('Damaged :product written off', ['product' => $line->product->code]),
+                'debit' => $amount,
+                'credit' => DecimalMath::cost('0'),
+            ];
+
+            $lines[] = [
+                'account_id' => $this->policy->inventoryAccountFor($line->product)->id,
+                'description' => RecordText::of('Written off :product', ['product' => $line->product->code]),
+                'debit' => DecimalMath::cost('0'),
+                'credit' => $amount,
+            ];
+        }
+
+        return $lines;
     }
 
     /**

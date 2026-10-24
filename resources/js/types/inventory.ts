@@ -56,3 +56,39 @@ export type LotRow = {
 export type OptionRef = { id: number; code: string; name?: string };
 
 export type TransactionTypeOption = { value: string; label: string };
+
+export type StockDamageRow = {
+    id: number;
+    damage_number: string;
+    damage_date: string;
+    warehouse: string | null;
+    reason: string;
+    products: string[];
+    total_cost: string;
+    status: string;
+    status_label: string;
+    is_reversed: boolean;
+};
+
+export type StockDamageDetail = StockDamageRow & {
+    notes: string | null;
+    lines: {
+        id: number;
+        product_code: string | null;
+        product_name: string | null;
+        lot_number: string | null;
+        quantity: string;
+        uom: string | null;
+        unit_cost: string | null;
+        total_cost: string | null;
+    }[];
+    inventory_reference: string | null;
+    reversal_reference: string | null;
+    journal_number: string | null;
+    journal_id: number | null;
+    created_by: string | null;
+    posted_at: string | null;
+    reversed_by: string | null;
+    reversed_at: string | null;
+    can_reverse: boolean;
+};

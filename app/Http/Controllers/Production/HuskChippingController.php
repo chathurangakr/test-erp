@@ -159,7 +159,7 @@ class HuskChippingController extends Controller
         $inputProduct = $recipe->inputProduct;
 
         return [
-            'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            'warehouses' => Warehouse::query()->operational()->orderBy('code')->get(['id', 'code', 'name']),
             'recipe' => [
                 'input_code' => $inputProduct->code,
                 'input_name' => $inputProduct->name,

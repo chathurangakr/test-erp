@@ -2,7 +2,9 @@
 
 namespace Tests;
 
+use App\Enums\ProductionType;
 use App\Models\Product;
+use App\Models\ProductionRecipe;
 use App\Models\UnitOfMeasure;
 use Database\Seeders\ProductionRecipeSeeder;
 use Database\Seeders\ProductSeeder;
@@ -66,6 +68,23 @@ abstract class TestCase extends BaseTestCase
         }
 
         $this->seed(ProductionRecipeSeeder::class);
+    }
+
+    /**
+     * Give the active copra recipe a value split between its outputs, in sort order.
+     *
+     * The real recipe gives the copra everything and the shell nothing (version 3). Tests of
+     * the allocation mechanics — rounding, per-count shell costing, journals with two debit
+     * lines — need a recipe that actually splits, so they configure one here, exactly as the
+     * factory could by seeding a new version.
+     */
+    protected function splitCopraValue(string ...$percents): void
+    {
+        $recipe = ProductionRecipe::forType(ProductionType::Copra);
+
+        foreach ($recipe->outputs()->orderBy('sort_order')->get() as $index => $output) {
+            $output->update(['allocation_percent' => $percents[$index]]);
+        }
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void
