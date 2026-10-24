@@ -4,6 +4,26 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.16.0 — 25 October 2026
+
+- **A Telegram message for every transaction** (Administration → Telegram settings → Transactions
+  bot). Make a second bot with @BotFather for it. Every goods receipt, delivery, production run,
+  invoice, receipt, payment, expense, transfer, return, damage write-off, salary, advance, loan,
+  loan payment, asset and maintenance job is reported with its details — who, what, how much, who
+  posted it and a link to open it — within a minute of being posted, and again if it is reversed.
+  Tick which kinds you want. Telegram being slow or down never holds up your work: messages wait
+  and go out when it is back.
+- **Monthly report on the 1st** at 8 AM: a full picture of last month by email (to everyone with
+  "Receive the monthly report email" — administrators always) and on Telegram (each bot has a
+  "send the monthly report here" tick). Profit with a comparison to the month before, sales by
+  customer, goods bought by supplier, money in and out, expenses by account, cash and bank, money
+  owed, loans still owed, production, stock value, returns, damage, bags with customers and assets.
+  "Send last month's report now" on the Telegram page shows you one straight away.
+- **Fix:** buttons limited to a few clicks a minute (Telegram's find chats / test / monthly
+  report, the test email, changing password or language) shared one count, so a few clicks on one
+  could make another say "Too many requests". Each now has its own count. Telegram's own "slow
+  down" is now waited out instead of counted as a failure.
+
 ## 1.15.0 — 25 October 2026
 
 - **Assets** (Cash & bank → Assets). Record vehicles, machines and everything the factory owns —

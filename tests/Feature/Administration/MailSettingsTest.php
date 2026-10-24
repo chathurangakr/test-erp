@@ -31,7 +31,7 @@ class MailSettingsTest extends TestCase
             'username' => 'factory@gmail.com',
             'password' => 'abcd efgh ijkl mnop',
             'from_address' => '',
-            'from_name' => 'True Line ERP',
+            'from_name' => 'Example Mills ERP',
             ...$overrides,
         ];
     }

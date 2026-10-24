@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('mail-settings.update')
         ->can(Permission::MailManage);
     Route::post('administration/email/test', [MailSettingsController::class, 'test'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,mail-test')
         ->name('mail-settings.test')
         ->can(Permission::MailManage);
 
@@ -53,11 +53,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('telegram-settings.update')
         ->can(Permission::TelegramManage);
     Route::post('administration/telegram/find-chats', [TelegramSettingsController::class, 'findChats'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,telegram-find-chats')
         ->name('telegram-settings.find-chats')
         ->can(Permission::TelegramManage);
     Route::post('administration/telegram/test', [TelegramSettingsController::class, 'test'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,telegram-test')
         ->name('telegram-settings.test')
+        ->can(Permission::TelegramManage);
+    Route::post('administration/telegram/monthly', [TelegramSettingsController::class, 'monthly'])
+        ->middleware('throttle:5,1,telegram-monthly')
+        ->name('telegram-settings.monthly')
         ->can(Permission::TelegramManage);
 });

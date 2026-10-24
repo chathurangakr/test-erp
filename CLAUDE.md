@@ -781,6 +781,24 @@ Full detail lives in `docs/FIXED_ASSETS.md`.
 - **Maintenance** is a log per asset charged to repairs and maintenance; a free job has no journal.
 - Purchase figures are immutable (`FixedAsset::EDITABLE` only); everything is corrected by reversal.
 
+## Telegram alerts and the monthly report (implemented — 1.16.0)
+
+Full detail lives in `docs/TELEGRAM.md` and `docs/WEEKLY_UPDATE.md`.
+
+- **Two bots, one row each** in `telegram_settings` (`purpose`: `reminders`, `transactions`), tokens
+  encrypted with APP_KEY and never sent to a page. Use `TelegramSetting::current($purpose)`.
+- **A transaction alert is read from a status change, never called from an action.**
+  `TransactionAlertObserver` (registered for `TransactionAlertCatalog::MODELS`) writes a
+  `telegram_alerts` row in the posting's OWN transaction on posted / reversed (and an asset's sold /
+  sale undone). Add a new document type to the catalog and `TransactionAlertMessage`; never send
+  to Telegram from inside a posting.
+- **`telegram:send-alerts` (every minute) sends them**, each chat once (`delivered_to`); unreachable
+  → wait, refused → retried, FAILED after `MAX_ATTEMPTS`. Messages are written at send time from
+  the document; only what an event erases goes in `context`.
+- **`reports:monthly-update`** on the 1st at 08:00 Sri Lanka time: `MonthlyUpdateReport` (reads,
+  never stores) by email to holders of `reports.monthly_email` and to every bot with
+  `sends_monthly_report`.
+
 ## Weekly update email (implemented — 1.10.0)
 
 Full detail lives in `docs/WEEKLY_UPDATE.md`.
@@ -854,7 +872,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (102 permissions, seven editable starting roles, multiple roles per user, every route
+control** (103 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -876,7 +894,8 @@ whole and dehusked stock, one dehusking and copra recipe per size), and **sales 
 credit, exchange or money back), and **loans** (running and new loans, installments with interest
 from the bank slip, what is still owed derived, and email reminders before each due day), and
 **fixed assets** (bought for cash, on a loan or already owned, sold or scrapped with the profit or
-loss against cost, and a maintenance log).
+loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
+every posting and reversal) with a **monthly report** by email and Telegram on the 1st.
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),

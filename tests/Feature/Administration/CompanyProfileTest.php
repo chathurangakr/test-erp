@@ -38,7 +38,7 @@ class CompanyProfileTest extends TestCase
 
         $this->actingAs($admin)
             ->put(route('company.update'), [
-                'name' => 'True Line Company',
+                'name' => 'Example Mills Company',
                 'address' => "12 Factory Road\nKurunegala",
                 'phone' => '077 123 4567',
                 'email' => 'office@example.com',
@@ -48,14 +48,14 @@ class CompanyProfileTest extends TestCase
             ->assertRedirect(route('company.edit'));
 
         $profile = CompanyProfile::sole();
-        $this->assertSame('True Line Company', $profile->name);
+        $this->assertSame('Example Mills Company', $profile->name);
         $this->assertSame($admin->id, $profile->updated_by);
         $this->assertStringStartsWith('data:image/png;base64,', $profile->logo);
 
         $this->actingAs(User::factory()->create())
             ->get(route('dashboard'))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('company.name', 'True Line Company')
+                ->where('company.name', 'Example Mills Company')
                 ->where('company.phone', '077 123 4567')
                 ->where('company.logo_url', fn (?string $url) => str_starts_with((string) $url, '/company/logo')));
 
@@ -69,7 +69,7 @@ class CompanyProfileTest extends TestCase
     public function the_sign_in_screen_shows_the_logo_but_no_other_company_details(): void
     {
         $this->actingAs(User::factory()->admin()->create())->put(route('company.update'), [
-            'name' => 'True Line Company',
+            'name' => 'Example Mills Company',
             'phone' => '011 234 5678',
             'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
         ]);
@@ -87,15 +87,15 @@ class CompanyProfileTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->put(route('company.update'), [
-            'name' => 'True Line Company',
+            'name' => 'Example Mills Company',
             'logo' => UploadedFile::fake()->image('logo.jpg'),
         ]);
 
-        $this->actingAs($admin)->put(route('company.update'), ['name' => 'True Line Company (Pvt) Ltd']);
+        $this->actingAs($admin)->put(route('company.update'), ['name' => 'Example Mills Company (Pvt) Ltd']);
         $this->assertNotNull(CompanyProfile::sole()->logo);
-        $this->assertSame('True Line Company (Pvt) Ltd', CompanyProfile::sole()->name);
+        $this->assertSame('Example Mills Company (Pvt) Ltd', CompanyProfile::sole()->name);
 
-        $this->actingAs($admin)->put(route('company.update'), ['name' => 'True Line Company', 'remove_logo' => true]);
+        $this->actingAs($admin)->put(route('company.update'), ['name' => 'Example Mills Company', 'remove_logo' => true]);
         $this->assertNull(CompanyProfile::sole()->logo);
         $this->actingAs($admin)->get(route('company.logo'))->assertNotFound();
     }
@@ -105,7 +105,7 @@ class CompanyProfileTest extends TestCase
     {
         $this->actingAs(User::factory()->admin()->create())
             ->put(route('company.update'), [
-                'name' => 'True Line Company',
+                'name' => 'Example Mills Company',
                 'logo' => UploadedFile::fake()->create('logo.pdf', 10, 'application/pdf'),
             ])
             ->assertSessionHasErrors('logo');

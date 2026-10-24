@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/dashboard')->name('home');
 
 // The language switch — open to guests so the sign-in screen can be switched too.
-Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
+Route::post('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1,locale')->name('locale.update');
 
 // The company logo — open to guests so the sign-in screen can show it. It is what the company
 // prints on its own invoices, not business data.

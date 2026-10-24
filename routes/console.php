@@ -25,9 +25,25 @@ Schedule::command('reports:weekly-update')
     ->timezone(BusinessClock::timezone());
 
 /*
+ * The monthly report for last month, on the 1st at 8 AM Sri Lanka time: by email to everyone
+ * holding reports.monthly_email, and to the Telegram bots set to receive it. See docs/WEEKLY_UPDATE.md.
+ */
+Schedule::command('reports:monthly-update')
+    ->monthlyOn(1, '08:00')
+    ->timezone(BusinessClock::timezone());
+
+/*
  * Loan installment reminders, every morning at 8 AM Sri Lanka time: 7 days before, 2 days before
  * and on the due day, to everyone holding loans.reminders. See docs/LOANS.md.
  */
 Schedule::command('loans:remind')
     ->dailyAt('08:00')
     ->timezone(BusinessClock::timezone());
+
+/*
+ * Transaction alerts waiting for the Telegram transactions bot, sent every minute — never from
+ * the posting itself, so Telegram can never slow down or break one. See docs/TELEGRAM.md.
+ */
+Schedule::command('telegram:send-alerts')
+    ->everyMinute()
+    ->withoutOverlapping();

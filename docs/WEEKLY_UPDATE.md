@@ -54,3 +54,28 @@ Gmail limits a personal account to about 500 messages a day — far more than th
 
 Recipients must have a **real email address** on their user account; the installer's first
 administrator starts as `admin@example.com`, which receives nothing.
+
+## Monthly report (1.16.0)
+
+On the **1st of every month at 8 AM Sri Lanka time** `php artisan reports:monthly-update` reports
+the month before:
+
+- **By email** to every active user holding `reports.monthly_email` (administrators always do;
+  the Accountant role gets it with the other `reports.*` permissions), in their own language —
+  `App\Mail\MonthlyUpdate`, `mail/monthly-update(-text).blade.php`.
+- **By Telegram** to the chats of every bot whose "Also send the monthly report here" is ticked
+  (`telegram_settings.sends_monthly_report`; the reminders bot is ticked by default) —
+  `App\Services\Telegram\MonthlyUpdateMessage`, split into as few messages as Telegram's
+  4,096-character limit allows.
+
+`App\Services\Reporting\MonthlyUpdateReport` gathers the figures: everything in the weekly update
+for the whole month, plus the month before's profit and loss (shown as ▲ / ▼), expenses by account
+(the P&L), sales by customer (standing invoices dated in the month), goods bought by supplier
+(posted goods receipts — materials plus transport, loading and other costs), money in and out by
+kind (posted receipts, supplier payments, vouchers, salaries, advances, loan installments with
+their interest, maintenance), returns and damage, loans still owed, assets bought and sold, and
+bags with customers. Reversed, cancelled and draft documents count for nothing; nothing is stored.
+
+`--to=address` sends one email to that address only and nothing to Telegram; `--month=2026-09`
+reports another month. "Send last month's report now" on Administration → Telegram settings sends
+the Telegram version to one bot's chats straight away.

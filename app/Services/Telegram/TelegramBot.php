@@ -72,13 +72,20 @@ class TelegramBot
         try {
             $response = Http::timeout(15)->asJson()->post(self::API.$token.'/'.$method, $payload)->throw();
         } catch (RequestException $exception) {
+            if ($exception->response?->status() === 429) {
+                // Flood control: nothing is wrong, the message just has to wait.
+                throw new TelegramUnreachable(__('Telegram asked to slow down. Try again in :seconds seconds.', [
+                    'seconds' => (int) ($exception->response->json('parameters.retry_after') ?? 30),
+                ]));
+            }
+
             // Never repeat the token (it is in the URL) in a message that reaches a screen or log,
             // so the original exception is not chained.
             throw new RuntimeException(__('Telegram refused the request: :reason', [
                 'reason' => $exception->response?->json('description') ?? __('Telegram did not answer.'),
             ]));
         } catch (ConnectionException) {
-            throw new RuntimeException(__('Telegram could not be reached. Check the server\'s internet connection.'));
+            throw new TelegramUnreachable(__('Telegram could not be reached. Check the server\'s internet connection.'));
         }
 
         return (array) $response->json('result');

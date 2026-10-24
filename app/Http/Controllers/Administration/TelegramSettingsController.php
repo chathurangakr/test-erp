@@ -4,19 +4,28 @@ namespace App\Http\Controllers\Administration;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administration\UpdateTelegramSettingsRequest;
+use App\Models\CompanyProfile;
+use App\Models\TelegramAlert;
 use App\Models\TelegramSetting;
+use App\Services\Reporting\MonthlyUpdateReport;
+use App\Services\Telegram\MonthlyUpdateMessage;
 use App\Services\Telegram\TelegramBot;
+use App\Services\Telegram\TransactionAlertCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Sleep;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
 
 /**
- * Telegram settings — the bot loan reminders also go out through, the chats that receive them,
- * and a test message. The saved token never reaches the screen: the page only learns whether one
- * is saved and the bot's @username. See docs/LOANS.md.
+ * Telegram settings — two bots, each with its own token, chats and test message: the reminders
+ * bot (loan reminders) and the transactions bot (a message for every posting and reversal, with
+ * a choice of which kinds). Either may also get the monthly report. A saved token never reaches
+ * the screen: the page only learns whether one is saved and the bot's @username.
+ * See docs/TELEGRAM.md.
  */
 class TelegramSettingsController extends Controller
 {
@@ -24,23 +33,28 @@ class TelegramSettingsController extends Controller
 
     public function edit(Request $request): Response
     {
-        $settings = TelegramSetting::current();
-
         return Inertia::render('administration/telegram/Edit', [
-            'settings' => [
-                'is_enabled' => $settings->is_enabled,
-                'has_token' => $settings->bot_token !== null,
-                'bot_username' => $settings->bot_username,
-                'chats' => $settings->chats ?? [],
+            'bots' => collect(TelegramSetting::PURPOSES)
+                ->mapWithKeys(fn (string $purpose): array => [$purpose => $this->present(TelegramSetting::current($purpose))]),
+            'alertTypes' => collect(TransactionAlertCatalog::labels())
+                ->map(fn (string $label, string $value): array => ['value' => $value, 'label' => $label])
+                ->values(),
+            'alertQueue' => [
+                'pending' => TelegramAlert::query()->where('status', TelegramAlert::PENDING)->count(),
+                'failed' => TelegramAlert::query()->where('status', TelegramAlert::FAILED)->count(),
             ],
-            // Chats that have written to the bot, found with "Find chats" just now.
+            // Chats that have written to a bot, found with "Find chats" just now: {bot, chats}.
             'foundChats' => $request->session()->get('telegram_found_chats'),
         ]);
     }
 
     public function update(UpdateTelegramSettingsRequest $request): RedirectResponse
     {
-        $settings = TelegramSetting::query()->orderBy('id')->first() ?? new TelegramSetting;
+        $settings = TelegramSetting::query()->firstOrNew(
+            ['purpose' => $request->bot()],
+            // A new reminders bot gets the monthly report unless told otherwise.
+            ['sends_monthly_report' => $request->bot() === TelegramSetting::REMINDERS],
+        );
         $token = $request->validated('bot_token');
 
         if (filled($token)) {
@@ -50,6 +64,14 @@ class TelegramSettingsController extends Controller
 
         $settings->chats = array_values($request->validated('chats') ?? []);
         $settings->is_enabled = (bool) $request->validated('is_enabled', false);
+
+        if ($request->has('sends_monthly_report')) {
+            $settings->sends_monthly_report = (bool) $request->validated('sends_monthly_report');
+        }
+
+        if ($settings->purpose === TelegramSetting::TRANSACTIONS && $request->has('alert_types')) {
+            $settings->alert_types = array_values($request->validated('alert_types') ?? []);
+        }
 
         if ($settings->is_enabled && ($settings->bot_token === null || $settings->chats === [])) {
             throw ValidationException::withMessages(['is_enabled' => __('Save the bot token and choose at least one chat before switching Telegram on.')]);
@@ -64,40 +86,100 @@ class TelegramSettingsController extends Controller
     }
 
     /**
-     * Lists the private chats and groups that have messaged the bot, so they can be chosen.
+     * Lists the private chats and groups that have messaged a bot, so they can be chosen.
      */
     public function findChats(Request $request): RedirectResponse
     {
-        $token = TelegramSetting::current()->bot_token
-            ?? throw ValidationException::withMessages(['bot_token' => __('Save the bot token first.')]);
+        $bot = $this->purpose($request);
+        $token = TelegramSetting::current($bot)->bot_token
+            ?? throw ValidationException::withMessages([$bot.'_find' => __('Save the bot token first.')]);
 
-        $chats = $this->check(fn (): array => $this->bot->recentChats($token), 'find');
+        $chats = $this->check(fn (): array => $this->bot->recentChats($token), $bot.'_find');
 
         if ($chats === []) {
-            throw ValidationException::withMessages(['find' => __('Nobody has messaged the bot yet. Send it any message in Telegram, then try again.')]);
+            throw ValidationException::withMessages([$bot.'_find' => __('Nobody has messaged the bot yet. Send it any message in Telegram, then try again.')]);
         }
 
-        return back()->with('telegram_found_chats', $chats);
+        return back()->with('telegram_found_chats', ['bot' => $bot, 'chats' => $chats]);
     }
 
     /**
-     * Sends a short test message to every chosen chat.
+     * Sends a short test message to every chat a bot has chosen.
      */
-    public function test(): RedirectResponse
+    public function test(Request $request): RedirectResponse
     {
-        $settings = TelegramSetting::current();
-
-        if ($settings->bot_token === null || ($settings->chats ?? []) === []) {
-            throw ValidationException::withMessages(['test' => __('Save the bot token and choose at least one chat first.')]);
-        }
+        $settings = $this->usable($this->purpose($request), 'test');
+        $field = $settings->purpose.'_test';
+        $text = $settings->purpose === TelegramSetting::TRANSACTIONS
+            ? __(':app will send a message here for every transaction.', ['app' => config('app.name')])
+            : __(':app will send loan reminders here.', ['app' => config('app.name')]);
 
         foreach ($settings->chats as $chat) {
-            $this->check(fn () => $this->bot->send($settings->bot_token, $chat['id'], '✅ '.e(__(':app will send loan reminders here.', ['app' => config('app.name')]))), 'test');
+            $this->check(fn () => $this->bot->send((string) $settings->bot_token, $chat['id'], '✅ '.e($text)), $field);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Test message sent to :count chat(s).', ['count' => count($settings->chats)])]);
 
         return back();
+    }
+
+    /**
+     * Sends last month's report to a bot's chats now, to see what arrives on the 1st.
+     */
+    public function monthly(Request $request, MonthlyUpdateReport $reports): RedirectResponse
+    {
+        $settings = $this->usable($this->purpose($request), 'monthly');
+        $field = $settings->purpose.'_monthly';
+        [$from, $to] = MonthlyUpdateReport::lastMonth();
+        $messages = MonthlyUpdateMessage::forTelegram($reports->build($from, $to), CompanyProfile::current()->name);
+
+        foreach ($settings->chats as $chat) {
+            foreach ($messages as $i => $text) {
+                // A report in several parts stays under Telegram's one-message-a-second limit.
+                if ($i > 0) {
+                    Sleep::for(1100)->milliseconds();
+                }
+
+                $this->check(fn () => $this->bot->send((string) $settings->bot_token, $chat['id'], $text), $field);
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Last month\'s report sent to :count chat(s).', ['count' => count($settings->chats)])]);
+
+        return back();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function present(TelegramSetting $settings): array
+    {
+        return [
+            'is_enabled' => $settings->is_enabled,
+            'has_token' => $settings->bot_token !== null,
+            'bot_username' => $settings->bot_username,
+            'chats' => $settings->chats ?? [],
+            // No choice saved yet means every kind.
+            'alert_types' => $settings->alert_types ?? array_keys(TransactionAlertCatalog::labels()),
+            'sends_monthly_report' => $settings->sends_monthly_report,
+        ];
+    }
+
+    private function purpose(Request $request): string
+    {
+        return (string) ($request->validate(['bot' => ['sometimes', Rule::in(TelegramSetting::PURPOSES)]])['bot'] ?? TelegramSetting::REMINDERS);
+    }
+
+    /** A bot that has a token and chats; otherwise an error under "{bot}_{action}". */
+    private function usable(string $purpose, string $action): TelegramSetting
+    {
+        $settings = TelegramSetting::current($purpose);
+
+        if ($settings->bot_token === null || ($settings->chats ?? []) === []) {
+            throw ValidationException::withMessages([$purpose.'_'.$action => __('Save the bot token and choose at least one chat first.')]);
+        }
+
+        return $settings;
     }
 
     /**

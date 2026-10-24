@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Enums\Permission;
 use App\Models\MailSetting;
 use App\Models\User;
+use App\Observers\TransactionAlertObserver;
+use App\Services\Telegram\TransactionAlertCatalog;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\QueryException;
@@ -37,6 +39,18 @@ class AppServiceProvider extends ServiceProvider
         $this->configureAuthorization();
         $this->configureApiRateLimiting();
         $this->configureMail();
+        $this->configureTransactionAlerts();
+    }
+
+    /**
+     * Every reported document queues a Telegram alert when it is posted or reversed.
+     * See App\Services\Telegram\TransactionAlertCatalog and docs/TELEGRAM.md.
+     */
+    private function configureTransactionAlerts(): void
+    {
+        foreach (array_keys(TransactionAlertCatalog::MODELS) as $model) {
+            $model::observe(TransactionAlertObserver::class);
+        }
     }
 
     /**

@@ -15,6 +15,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,9 +38,10 @@ class TelegramSettingsTest extends TestCase
         parent::setUp();
 
         $this->admin = User::factory()->admin()->create();
+        Sleep::fake();
 
         Http::fake([
-            'api.telegram.org/bot'.self::TOKEN.'/getMe' => Http::response(['ok' => true, 'result' => ['username' => 'TrueLineRemindersBot']]),
+            'api.telegram.org/bot'.self::TOKEN.'/getMe' => Http::response(['ok' => true, 'result' => ['username' => 'FactoryRemindersBot']]),
             'api.telegram.org/bot'.self::TOKEN.'/getUpdates' => Http::response(['ok' => true, 'result' => [
                 ['update_id' => 1, 'message' => ['chat' => ['id' => 555111, 'type' => 'private', 'first_name' => 'Chathu']]],
                 ['update_id' => 2, 'message' => ['chat' => ['id' => -100777, 'type' => 'group', 'title' => 'Factory owners']]],
@@ -60,14 +62,14 @@ class TelegramSettingsTest extends TestCase
         $this->save(['bot_token' => self::TOKEN])->assertSessionHasNoErrors();
 
         $settings = TelegramSetting::current();
-        $this->assertSame('TrueLineRemindersBot', $settings->bot_username);
+        $this->assertSame('FactoryRemindersBot', $settings->bot_username);
         $this->assertSame(self::TOKEN, $settings->bot_token);
         $this->assertNotSame(self::TOKEN, DB::table('telegram_settings')->value('bot_token'));
 
         $this->actingAs($this->admin)->get(route('telegram-settings.edit'))
             ->assertOk()
             ->assertDontSee(self::TOKEN)
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('settings.has_token', true)->where('settings.bot_username', 'TrueLineRemindersBot'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('bots.reminders.has_token', true)->where('bots.reminders.bot_username', 'FactoryRemindersBot'));
 
         // A token Telegram refuses is not saved, and the error never repeats the token.
         $this->save(['bot_token' => '999:WrongToken'])->assertSessionHasErrors('bot_token');
@@ -83,8 +85,9 @@ class TelegramSettingsTest extends TestCase
         $this->actingAs($this->admin)->from(route('telegram-settings.edit'))->post(route('telegram-settings.find-chats'))->assertRedirect();
         $this->actingAs($this->admin)->get(route('telegram-settings.edit'))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('foundChats.0.title', 'Factory owners')
-                ->where('foundChats.1.title', 'Chathu'));
+                ->where('foundChats.bot', 'reminders')
+                ->where('foundChats.chats.0.title', 'Factory owners')
+                ->where('foundChats.chats.1.title', 'Chathu'));
 
         $this->save(['is_enabled' => true, 'chats' => []])->assertSessionHasErrors('is_enabled');
 
@@ -113,6 +116,65 @@ class TelegramSettingsTest extends TestCase
             && $request['chat_id'] === '555111'
             && str_contains($request['text'], 'People&#039;s Bank'));
         $this->assertSame(1, LoanReminder::count());
+    }
+
+    #[Test]
+    public function the_transactions_bot_is_set_up_separately_with_the_kinds_it_reports(): void
+    {
+        $this->save(['bot_token' => self::TOKEN, 'is_enabled' => true, 'chats' => [['id' => '555111', 'title' => 'Chathu']]]);
+        $this->save([
+            'bot' => 'transactions', 'bot_token' => self::TOKEN, 'is_enabled' => true,
+            'chats' => [['id' => '-100777', 'title' => 'Factory owners']],
+            'alert_types' => ['deliveries', 'sales_invoices'], 'sends_monthly_report' => false,
+        ])->assertSessionHasNoErrors();
+
+        $transactions = TelegramSetting::current(TelegramSetting::TRANSACTIONS);
+        $this->assertSame(['deliveries', 'sales_invoices'], $transactions->alert_types);
+        $this->assertTrue($transactions->wantsAlert('deliveries'));
+        $this->assertFalse($transactions->wantsAlert('loans'));
+        // The reminders bot is untouched, and keeps the monthly report.
+        $this->assertSame([['id' => '555111', 'title' => 'Chathu']], TelegramSetting::current()->chats);
+        $this->assertTrue(TelegramSetting::current()->sends_monthly_report);
+
+        $this->save(['bot' => 'transactions', 'alert_types' => ['not_a_kind']])->assertSessionHasErrors('alert_types.0');
+
+        $this->actingAs($this->admin)->get(route('telegram-settings.edit'))
+            ->assertDontSee(self::TOKEN)
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('bots.transactions.has_token', true)
+                ->where('bots.transactions.alert_types', ['deliveries', 'sales_invoices'])
+                ->where('bots.reminders.alert_types', fn ($types): bool => count($types) === 19)
+                ->has('alertTypes', 19));
+
+        $this->actingAs($this->admin)->post(route('telegram-settings.test'), ['bot' => 'transactions'])->assertSessionHasNoErrors();
+        Http::assertSent(fn (Request $request): bool => ($request['chat_id'] ?? null) === '-100777' && str_contains($request['text'], 'every transaction'));
+    }
+
+    #[Test]
+    public function last_months_report_can_be_sent_to_a_bot_now(): void
+    {
+        $this->actingAs($this->admin)->post(route('telegram-settings.monthly'), ['bot' => 'transactions'])->assertSessionHasErrors('transactions_monthly');
+
+        $this->save(['bot' => 'transactions', 'bot_token' => self::TOKEN, 'chats' => [['id' => '-100777', 'title' => 'Factory owners']]]);
+        $this->actingAs($this->admin)->post(route('telegram-settings.monthly'), ['bot' => 'transactions'])->assertSessionHasNoErrors();
+
+        Http::assertSent(fn (Request $request): bool => ($request['chat_id'] ?? null) === '-100777' && str_contains($request['text'], 'Monthly report — August 2026'));
+    }
+
+    #[Test]
+    public function clicks_on_other_buttons_never_use_up_the_monthly_report_button(): void
+    {
+        $this->save(['bot' => 'transactions', 'bot_token' => self::TOKEN, 'chats' => [['id' => '-100777', 'title' => 'Factory owners']]]);
+
+        foreach (range(1, 4) as $click) {
+            $this->actingAs($this->admin)->post(route('telegram-settings.test'), ['bot' => 'transactions'])->assertRedirect();
+            $this->actingAs($this->admin)->post(route('telegram-settings.find-chats'), ['bot' => 'transactions'])->assertRedirect();
+            $this->actingAs($this->admin)->post(route('locale.update'), ['locale' => 'en']);
+        }
+
+        $this->actingAs($this->admin)->post(route('telegram-settings.monthly'), ['bot' => 'transactions'])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
     }
 
     #[Test]

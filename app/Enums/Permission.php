@@ -136,6 +136,7 @@ enum Permission: string
     case ReportsInventory = 'reports.inventory';
     case ReportsManagement = 'reports.management';
     case ReportsWeeklyEmail = 'reports.weekly_email';
+    case ReportsMonthlyEmail = 'reports.monthly_email';
 
     // ------------------------------------------------------------- administration
     case UsersView = 'users.view';
@@ -279,6 +280,7 @@ enum Permission: string
             self::ReportsInventory => 'Inventory valuation and inventory-vs-GL reconciliation',
             self::ReportsManagement => 'Finance dashboard and operational product profitability',
             self::ReportsWeeklyEmail => 'Receive the weekly update email (Sunday evening)',
+            self::ReportsMonthlyEmail => 'Receive the monthly report email (the 1st of each month)',
             self::UsersView => 'View users',
             self::UsersManage => 'Assign roles to users and activate or deactivate them',
             self::RolesView => 'View roles and their permissions',
