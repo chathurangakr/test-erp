@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\RecordAttendanceRequest;
 use App\Models\Employee;
 use App\Models\EmployeeAttendance;
-use App\Services\Payroll\PayrollCalculator;
 use App\Support\BusinessClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -21,8 +20,6 @@ use Inertia\Response;
  */
 class AttendanceController extends Controller
 {
-    public function __construct(private readonly PayrollCalculator $calculator) {}
-
     public function index(Request $request): Response
     {
         $today = BusinessClock::today();
@@ -31,6 +28,7 @@ class AttendanceController extends Controller
             : $today;
 
         $recorded = EmployeeAttendance::query()
+            ->with('payrollRun:id,payroll_number')
             ->whereDate('work_date', $date->toDateString())
             ->get()
             ->keyBy('employee_id');
@@ -41,12 +39,9 @@ class AttendanceController extends Controller
             ->orderBy('name')
             ->get();
 
-        $paid = $this->calculator->paidPayrollCovering($date);
-
         return Inertia::render('payroll/attendance/Index', [
             'date' => $date->toDateString(),
             'today' => $today->toDateString(),
-            'paidPayroll' => $paid === null ? null : ['id' => $paid->id, 'payroll_number' => $paid->payroll_number],
             'statuses' => AttendanceStatus::options(),
             'rows' => $employees->map(function (Employee $employee) use ($recorded): array {
                 $day = $recorded->get($employee->id);
@@ -59,6 +54,11 @@ class AttendanceController extends Controller
                     'daily_rate' => (string) ($day?->daily_rate ?? $employee->daily_rate),
                     'status' => $day?->status->value,
                     'note' => $day?->note,
+                    // Paid days are read-only; everyone else's day stays open.
+                    'paid_payroll' => $day?->payrollRun === null ? null : [
+                        'id' => $day->payrollRun->id,
+                        'payroll_number' => $day->payrollRun->payroll_number,
+                    ],
                 ];
             })->values(),
         ]);

@@ -728,12 +728,15 @@ Full detail lives in `docs/PAYROLL.md`.
   leave and unrecorded days = nothing. Only days worked are paid. No EPF/ETF.
 - **Each attendance day keeps the rate it was recorded at.** Never re-price a recorded day.
 - **No balance on employees.** Earned, advanced and owed are derived (`PayrollCalculator`).
-- **Advances are taken back in full** from the next salary for a month ending on or after the
-  advance; whatever a salary cannot cover carries on. Employee Advances (a control account) in
+- **Pay any period, any people** (1.13.0): a payroll covers `period_start` … `period_end` (a day, a
+  few days, a month) for everyone with unpaid days or only the employees named. **A day is paid
+  once** — `employee_attendances.payroll_run_id` marks it — and a paid DAY is frozen until its
+  payroll is reversed; nothing else in the month is.
+- **The payer chooses how much advance to take back** per employee, 0 … min(owed as of the pay
+  date, earned); not named → the most (the old behaviour). Employee Advances (a control account) in
   the GL always equals what employees still owe.
-- **Advances and payrolls are paid in one step and immutable** — correct by reversal. One
-  payroll per month, paid on or after its last day; a paid month's attendance is frozen until
-  the payroll is reversed; an advance already taken back cannot be reversed.
+- **Advances and payrolls are paid in one step and immutable** — correct by reversal. A period is
+  paid on or after its last day; an advance already taken back cannot be reversed.
 - **Accounts are configuration:** `wages_account_id` and `employee_advances_account_id` in
   `accounting_settings`, never codes in payroll logic. Payroll journals need an open period,
   not the operational cutover.
@@ -826,8 +829,8 @@ one-time lot consolidation command, husk chipping with flexible KG / litre outpu
 backflushed at delivery into cost of goods sold, Cocopeat with its own accounts, the `L` unit,
 versioned recipes, and cash / cheque / bank-transfer payment methods with cheque details), and
 **payroll** (employees with daily rates, a daily attendance register with full / half day and
-unpaid leave, salary advances, and monthly salaries that take advances back and post to the
-ledger), and **damaged stock write-offs** (bags, coconuts or any product, valued by the ledger and
+unpaid leave, salary advances, and salaries for any period and any people — each day paid
+once, the advance taken back chosen each time — posted to the ledger), and **damaged stock write-offs** (bags, coconuts or any product, valued by the ledger and
 charged to a stock-loss expense), and **returnable bags lent to customers** (given, returned and
 lost per customer, with what each holds derived), and **coconut sizes** (large / small / immature
 whole and dehusked stock, one dehusking and copra recipe per size).

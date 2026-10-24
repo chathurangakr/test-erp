@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\RecordAttendanceRequest;
 use App\Models\Employee;
 use App\Models\EmployeeAttendance;
-use App\Services\Payroll\PayrollCalculator;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonImmutable;
@@ -23,8 +22,6 @@ use Illuminate\Http\Request;
  */
 class AttendanceController extends Controller
 {
-    public function __construct(private readonly PayrollCalculator $calculator) {}
-
     public function index(Request $request): JsonResponse
     {
         $request->validate(['date' => ['nullable', 'date']]);
@@ -50,6 +47,7 @@ class AttendanceController extends Controller
     private function register(CarbonImmutable $date): array
     {
         $recorded = EmployeeAttendance::query()
+            ->with('payrollRun:id,payroll_number')
             ->whereDate('work_date', $date->toDateString())
             ->get()
             ->keyBy('employee_id');
@@ -59,11 +57,13 @@ class AttendanceController extends Controller
             ->orderBy('name')
             ->get();
 
-        $paid = $this->calculator->paidPayrollCovering($date);
+        // Days are paid one by one now (1.13.0): each row says whether it was paid. The top-level
+        // field is kept for older apps and is set only when every recorded day was paid.
+        $allPaid = $recorded->isNotEmpty() && $recorded->every(fn (EmployeeAttendance $day): bool => $day->payroll_run_id !== null);
+        $paid = $allPaid ? $recorded->first()->payrollRun : null;
 
         return [
             'date' => $date->toDateString(),
-            // A paid month is frozen: the app should show the register read-only.
             'paid_payroll' => $paid === null ? null : ['id' => $paid->id, 'payroll_number' => $paid->payroll_number],
             'statuses' => AttendanceStatus::options(),
             'rows' => $employees->map(function (Employee $employee) use ($recorded): array {
@@ -76,6 +76,8 @@ class AttendanceController extends Controller
                     'status' => $day === null ? null : ['value' => $day->status->value, 'label' => $day->status->label()],
                     'pay' => $day === null ? null : DecimalMath::cost($day->pay()),
                     'note' => $day?->note,
+                    // Paid days are read-only; everyone else's day stays open.
+                    'paid_payroll' => $day?->payrollRun === null ? null : ['id' => $day->payrollRun->id, 'payroll_number' => $day->payrollRun->payroll_number],
                 ];
             })->values()->all(),
         ];

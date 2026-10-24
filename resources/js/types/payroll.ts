@@ -30,6 +30,8 @@ export type AttendanceRegisterRow = {
     daily_rate: string;
     status: AttendanceStatusValue | null;
     note: string | null;
+    /** Set when a payroll already paid this person for this day: the row is read-only. */
+    paid_payroll: { id: number; payroll_number: string } | null;
 };
 
 export type EmployeeDay = {
@@ -96,7 +98,12 @@ export type PayrollLineView = {
     advances_owed?: string;
     advances_deducted: string;
     net_pay: string;
+    /** Pay screen only: each unpaid day being paid. */
+    days?: { date: string; status: AttendanceStatusValue; pay: string }[];
 };
+
+/** A day in the chosen period that a payroll already paid. */
+export type PaidDay = { date: string; status: AttendanceStatusValue; payroll_id: number; payroll_number: string | null };
 
 export type PayrollDetail = PayrollRow & {
     payment_method_label: string;

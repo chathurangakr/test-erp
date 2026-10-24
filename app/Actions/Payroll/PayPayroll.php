@@ -19,16 +19,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Pays a month's salaries, in one step:
+ * Pays salaries for any period — a single day, a few days or a month — for everyone with unpaid
+ * days in it, or only the employees named, in one step:
  *
  *   Dr wages                       — everything earned (gross)
  *       Cr employee advances       — advances taken back
  *       Cr the cash / bank account — what was handed over (net)
  *
- * The figures are worked out again under lock at the moment of paying (PayrollCalculator), so a
- * preview that went stale can never be what gets paid. One payroll per month: a second is
- * refused while the first stands. Paying freezes the month's attendance days; reversing the
- * payroll releases them. Everything is written in one transaction with its journal.
+ * Only UNPAID days are paid, so a day is never paid twice; paying freezes those days and
+ * reversing the payroll releases them. How much advance to take back is the payer's choice per
+ * employee, from nothing up to min(advances owed, gross); a request that names none takes the
+ * most (the behaviour before 1.13.0). The figures are worked out again under lock at the moment
+ * of paying (PayrollCalculator), so a stale preview can never be what gets paid. Everything is
+ * written in one transaction with its journal. See docs/PAYROLL.md.
  */
 class PayPayroll
 {
@@ -40,38 +43,36 @@ class PayPayroll
     ) {}
 
     /**
-     * @param  array{month: string, pay_date: string, cash_bank_account_id: int, payment_method: string, reference?: string|null}  $data
+     * @param  array{month?: string|null, period_start?: string|null, period_end?: string|null, employee_ids?: list<int>|null, deductions?: list<array{employee_id: int, amount: string}>|null, pay_date: string, cash_bank_account_id: int, payment_method: string, reference?: string|null}  $data
      */
     public function handle(array $data, ?int $userId = null): PayrollRun
     {
-        [$start, $end] = $this->calculator->monthBounds($data['month']);
+        [$start, $end] = filled($data['period_start'] ?? null)
+            ? $this->calculator->periodBounds($data['period_start'], $data['period_end'] ?? $data['period_start'])
+            : $this->calculator->monthBounds((string) ($data['month'] ?? ''));
         $payDate = CarbonImmutable::parse($data['pay_date'])->startOfDay();
+        $only = isset($data['employee_ids']) ? array_map('intval', $data['employee_ids']) : null;
+        $chosen = collect($data['deductions'] ?? [])->mapWithKeys(fn (array $row): array => [(int) $row['employee_id'] => (string) $row['amount']]);
 
         if ($payDate->lessThan($end)) {
             throw ValidationException::withMessages([
-                'pay_date' => __('Salaries for a month can be paid from its last day (:date) onwards.', ['date' => $end->toDateString()]),
+                'pay_date' => __('Salaries for this period can be paid from its last day (:date) onwards.', ['date' => $end->toDateString()]),
             ]);
         }
 
-        return DB::transaction(function () use ($data, $start, $end, $payDate, $userId): PayrollRun {
-            // Lock everyone with a day in the month, so attendance, advances and a second
+        return DB::transaction(function () use ($data, $start, $end, $payDate, $only, $chosen, $userId): PayrollRun {
+            // Lock everyone with a day in the period, so attendance, advances and another
             // payroll for the same people wait for this one.
             $employeeIds = EmployeeAttendance::query()
                 ->whereDate('work_date', '>=', $start->toDateString())
                 ->whereDate('work_date', '<=', $end->toDateString())
+                ->when($only !== null, fn ($query) => $query->whereIn('employee_id', $only))
                 ->distinct()
                 ->pluck('employee_id');
             Employee::query()->whereIn('id', $employeeIds)->lockForUpdate()->get();
 
-            $existing = $this->calculator->paidPayrollCovering($start);
-
-            if ($existing !== null) {
-                throw ValidationException::withMessages([
-                    'month' => __('Salaries for this month are already paid (:reference).', ['reference' => $existing->payroll_number]),
-                ]);
-            }
-
-            $lines = $this->calculator->lines($start, $end);
+            $lines = $this->calculator->lines($start, $end, $only, $payDate)
+                ->map(fn (array $line): array => $this->applyDeduction($line, $chosen->get($line['employee']->id)));
             $gross = DecimalMath::zero();
             $deducted = DecimalMath::zero();
             $net = DecimalMath::zero();
@@ -84,7 +85,7 @@ class PayPayroll
 
             if (! DecimalMath::isPositive($gross)) {
                 throw ValidationException::withMessages([
-                    'month' => __('There is nothing to pay for this month: no full or half days are recorded.'),
+                    'period_start' => __('There is nothing to pay for this period: no unpaid full or half days are recorded.'),
                 ]);
             }
 
@@ -131,8 +132,9 @@ class PayPayroll
                 $run,
                 $payDate,
                 $period,
-                RecordText::of('Salaries for :month paid (:reference)', [
-                    'month' => $start->format('F Y'),
+                RecordText::of('Salaries for :from to :to paid (:reference)', [
+                    'from' => $start->toDateString(),
+                    'to' => $end->toDateString(),
                     'reference' => $run->payroll_number,
                 ]),
                 [
@@ -148,5 +150,39 @@ class PayPayroll
 
             return $run->refresh();
         });
+    }
+
+    /**
+     * The advance taken back from one employee: the payer's figure, or — when none was given —
+     * the most allowed. Never more than is owed, never more than was earned, never negative.
+     *
+     * @param  array<string, mixed>  $line
+     * @return array<string, mixed>
+     */
+    private function applyDeduction(array $line, ?string $chosen): array
+    {
+        $most = $line['advances_deducted'];
+
+        if ($chosen === null) {
+            return $line;
+        }
+
+        $amount = DecimalMath::money(DecimalMath::of($chosen));
+
+        if (DecimalMath::isNegative($amount) || DecimalMath::compare($amount, $most, 2) > 0) {
+            throw ValidationException::withMessages([
+                'deductions' => __('At most :most can be taken back from :employee (advances owed :owed, earned :earned).', [
+                    'most' => $most,
+                    'employee' => $line['employee']->name,
+                    'owed' => $line['advances_owed'],
+                    'earned' => $line['gross_pay'],
+                ]),
+            ]);
+        }
+
+        return array_merge($line, [
+            'advances_deducted' => $amount,
+            'net_pay' => DecimalMath::money(DecimalMath::sub($line['gross_pay'], $amount)),
+        ]);
     }
 }

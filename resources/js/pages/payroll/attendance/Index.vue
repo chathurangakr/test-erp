@@ -17,7 +17,6 @@ import { money } from '@/lib/money';
 const props = defineProps<{
     date: string;
     today: string;
-    paidPayroll: { id: number; payroll_number: string } | null;
     statuses: { value: AttendanceStatusValue; label: string }[];
     rows: AttendanceRegisterRow[];
 }>();
@@ -32,7 +31,11 @@ const form = useForm({
     entries: props.rows.map((row) => ({ employee_id: row.employee_id, status: row.status, note: row.note ?? '' })),
 });
 
-const locked = computed(() => props.paidPayroll !== null || !can('payroll.attendance_record'));
+const locked = computed(() => !can('payroll.attendance_record'));
+
+/** A day a payroll already paid stays as it was paid. */
+const rowLocked = (i: number) => locked.value || props.rows[i].paid_payroll !== null;
+const paidCount = computed(() => props.rows.filter((row) => row.paid_payroll !== null).length);
 
 const day = ref(props.date);
 watch(day, (value) => {
@@ -48,8 +51,8 @@ function shift(days: number): void {
 }
 
 function markEveryone(status: AttendanceStatusValue): void {
-    form.entries.forEach((entry) => {
-        if (entry.status === null) {
+    form.entries.forEach((entry, i) => {
+        if (entry.status === null && !rowLocked(i)) {
             entry.status = status;
         }
     });
@@ -96,9 +99,8 @@ const tone: Record<AttendanceStatusValue, string> = {
             <Button v-if="date !== today" variant="ghost" @click="day = today">{{ t('Today') }}</Button>
         </div>
 
-        <div v-if="paidPayroll" class="rounded-xl border border-dashed p-4 text-sm">
-            {{ t('Salaries for this month are already paid, so this day cannot be changed.') }}
-            <Link :href="payrollShow(paidPayroll.id)" class="font-mono hover:underline">{{ paidPayroll.payroll_number }}</Link>
+        <div v-if="paidCount > 0" class="rounded-xl border border-dashed p-4 text-sm">
+            {{ t(':count people were already paid for this day. Their rows cannot be changed unless that payroll is reversed.', { count: paidCount }) }}
         </div>
 
         <div class="grid gap-3 sm:grid-cols-5">
@@ -132,6 +134,9 @@ const tone: Record<AttendanceStatusValue, string> = {
                                     {{ row.code }} · {{ money(row.daily_rate) }}
                                     <span v-if="!row.is_active"> · {{ t('Inactive') }}</span>
                                 </span>
+                                <Link v-if="row.paid_payroll" :href="payrollShow(row.paid_payroll.id)" class="mt-1 inline-block rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 hover:underline dark:bg-green-950 dark:text-green-200">
+                                    {{ t('Paid — :reference', { reference: row.paid_payroll.payroll_number }) }}
+                                </Link>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-1">
@@ -139,7 +144,7 @@ const tone: Record<AttendanceStatusValue, string> = {
                                         v-for="status in statuses"
                                         :key="status.value"
                                         type="button"
-                                        :disabled="locked"
+                                        :disabled="rowLocked(i)"
                                         class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                                         :class="form.entries[i].status === status.value ? tone[status.value] : 'hover:bg-muted'"
                                         @click="form.entries[i].status = form.entries[i].status === status.value ? null : status.value"
@@ -148,9 +153,10 @@ const tone: Record<AttendanceStatusValue, string> = {
                                     </button>
                                 </div>
                                 <InputError :message="(form.errors as Record<string, string | undefined>)[`entries.${i}.employee_id`]" />
+                                <InputError :message="(form.errors as Record<string, string | undefined>)[`entries.${i}.status`]" />
                             </td>
                             <td class="px-4 py-3">
-                                <Input v-model="form.entries[i].note" :disabled="locked" maxlength="255" class="min-w-32" />
+                                <Input v-model="form.entries[i].note" :disabled="rowLocked(i)" maxlength="255" class="min-w-32" />
                             </td>
                             <td class="px-4 py-3 text-right font-mono">{{ money(String(pay(row, form.entries[i].status))) }}</td>
                         </tr>

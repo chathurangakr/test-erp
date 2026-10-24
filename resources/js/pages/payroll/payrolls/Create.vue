@@ -1,74 +1,124 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, reactive } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import SearchableSelect from '@/components/SearchableSelect.vue';
 import { create, index, show, store } from '@/routes/payrolls';
-import type { CashBankAccountOption, PaymentMethodOption, PayrollLineView } from '@/types';
+import type { AttendanceStatusValue, CashBankAccountOption, PaidDay, PaymentMethodOption, PayrollLineView } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 
 const props = defineProps<{
-    month: string;
     periodStart: string;
     periodEnd: string;
+    today: string;
+    employeeId: number | null;
+    employees: { id: number; code: string; name: string; is_active: boolean }[];
     payDate: string;
     lines: PayrollLineView[];
-    totals: { gross_pay: string; advances_deducted: string; net_pay: string };
-    paidPayroll: { id: number; payroll_number: string } | null;
+    paidDays: Record<string, PaidDay[]>;
     accounts: CashBankAccountOption[];
     paymentMethods: PaymentMethodOption[];
     currency: string;
 }>();
 
-defineOptions({ layout: { breadcrumbs: [{ title: 'Monthly salaries', href: index() }] } });
+defineOptions({ layout: { breadcrumbs: [{ title: 'Salaries', href: index() }] } });
 
 const { t } = useT();
 
-const month = ref(props.month);
-watch(month, (value) => {
-    if (value) {
-        router.get(create().url, { month: value }, { preserveState: false });
-    }
-});
+/** The period and person being looked at. Changing either reloads the figures from the server. */
+const scope = reactive({ from: props.periodStart, to: props.periodEnd, employee: props.employeeId ? String(props.employeeId) : '' });
+
+function load(from: string, to: string, employee = scope.employee): void {
+    router.get(create().url, { from, to, employee_id: employee || undefined }, { preserveState: false });
+}
+
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayDate = new Date(`${props.today}T00:00:00`);
+const shortcuts = computed(() => [
+    { label: t('Today'), from: props.today, to: props.today },
+    { label: t('This month'), from: iso(new Date(todayDate.getFullYear(), todayDate.getMonth(), 1)), to: props.today },
+    { label: t('Last month'), from: iso(new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1)), to: iso(new Date(todayDate.getFullYear(), todayDate.getMonth(), 0)) },
+]);
+
+/** How much advance to take back from each person — up to the most allowed, chosen each time. */
+const takeBack = reactive<Record<number, string>>(Object.fromEntries(props.lines.map((line) => [line.employee_id, line.advances_deducted])));
+
+const net = (line: PayrollLineView) => Number(line.gross_pay) - Number(takeBack[line.employee_id] || 0);
+const tooMuch = (line: PayrollLineView) => Number(takeBack[line.employee_id] || 0) > Number(line.advances_deducted) || Number(takeBack[line.employee_id] || 0) < 0;
+
+const totals = computed(() => ({
+    gross: props.lines.reduce((sum, line) => sum + Number(line.gross_pay), 0),
+    taken: props.lines.reduce((sum, line) => sum + Number(takeBack[line.employee_id] || 0), 0),
+    net: props.lines.reduce((sum, line) => sum + net(line), 0),
+}));
+
+/** People in scope whose every recorded day in the period was already paid. */
+const fullyPaid = computed(() =>
+    Object.keys(props.paidDays)
+        .map(Number)
+        .filter((id) => !props.lines.some((line) => line.employee_id === id))
+        .map((id) => ({ id, name: props.employees.find((e) => e.id === id)?.name ?? '', days: props.paidDays[id] })),
+);
+
+const statusShort: Record<AttendanceStatusValue, string> = { FULL_DAY: 'Full', HALF_DAY: 'Half', LEAVE: 'Leave' };
+const dayLabel = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 const form = useForm({
-    month: props.month,
     pay_date: props.payDate,
     payment_method: 'CASH',
     cash_bank_account_id: null as number | null,
     reference: '',
 });
 
-function submit(): void {
-    if (confirm(t('Pay :amount in salaries for :month? The money leaves the chosen account now.', { amount: money(props.totals.net_pay), month: props.month }))) {
-        form.submit(store());
-    }
-}
+const errors = computed(() => form.errors as Record<string, string | undefined>);
 
+function submit(): void {
+    if (!confirm(t('Pay :amount in salaries for :from to :to? The money leaves the chosen account now.', { amount: money(totals.value.net), from: props.periodStart, to: props.periodEnd }))) {
+        return;
+    }
+
+    form.transform((data) => ({
+        ...data,
+        period_start: props.periodStart,
+        period_end: props.periodEnd,
+        employee_ids: props.employeeId ? [props.employeeId] : undefined,
+        deductions: props.lines.map((line) => ({ employee_id: line.employee_id, amount: takeBack[line.employee_id] || '0' })),
+    })).submit(store());
+}
 </script>
 
 <template>
-    <Head :title="t('Pay a month')" />
+    <Head :title="t('Pay salaries')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading title="Pay a month" description="Check each person's days and pay, then pay everyone in one step. Advances still owed are taken back from this pay." />
+        <Heading title="Pay salaries" description="Pay for any period — one day, a few days or a month — for everyone or one person. Days already paid are shown and never paid again." />
 
         <div class="flex flex-wrap items-end gap-4">
             <div class="grid gap-2">
-                <Label for="month">{{ t('Month') }}</Label>
-                <Input id="month" v-model="month" type="month" class="w-48" />
+                <Label for="from">{{ t('From') }}</Label>
+                <Input id="from" v-model="scope.from" type="date" :max="today" class="w-44" @change="load(scope.from, scope.to < scope.from ? scope.from : scope.to)" />
             </div>
-            <p class="text-muted-foreground pb-2 text-sm">{{ periodStart }} — {{ periodEnd }}</p>
-        </div>
-
-        <div v-if="paidPayroll" class="rounded-xl border border-dashed p-4 text-sm">
-            {{ t('Salaries for this month are already paid.') }}
-            <Link :href="show(paidPayroll.id)" class="font-mono hover:underline">{{ paidPayroll.payroll_number }}</Link>
+            <div class="grid gap-2">
+                <Label for="to">{{ t('To') }}</Label>
+                <Input id="to" v-model="scope.to" type="date" :min="scope.from" :max="today" class="w-44" @change="load(scope.from, scope.to)" />
+            </div>
+            <div class="grid min-w-64 gap-2">
+                <Label for="employee">{{ t('Employee') }}</Label>
+                <SearchableSelect
+                    id="employee"
+                    v-model="scope.employee"
+                    :options="[{ value: '', label: t('Everyone') }, ...employees.map((e) => ({ value: String(e.id), label: `${e.code} — ${e.name}` }))]"
+                    @update:model-value="(value) => load(scope.from, scope.to, String(value ?? ''))"
+                />
+            </div>
+            <div class="flex flex-wrap gap-2 pb-0.5">
+                <Button v-for="s in shortcuts" :key="s.label" type="button" variant="outline" size="sm" @click="load(s.from, s.to)">{{ s.label }}</Button>
+            </div>
         </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
@@ -78,48 +128,84 @@ function submit(): void {
                         <th class="px-4 py-3 font-medium">{{ t('Employee') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Full day') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Half day') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Leave') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Earned') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Advance owed') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Taken back') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ t('Take back') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('To pay') }}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="line in lines" :key="line.employee_id" class="border-sidebar-border/70 dark:border-sidebar-border border-t">
-                        <td class="px-4 py-3">
-                            {{ line.name }}
-                            <span class="text-muted-foreground block font-mono text-xs">{{ line.code }}</span>
+                    <template v-for="line in lines" :key="line.employee_id">
+                        <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
+                            <td class="px-4 pt-3">
+                                {{ line.name }}
+                                <span class="text-muted-foreground block font-mono text-xs">{{ line.code }}</span>
+                            </td>
+                            <td class="px-4 pt-3 text-right">{{ line.full_days }}</td>
+                            <td class="px-4 pt-3 text-right">{{ line.half_days }}</td>
+                            <td class="px-4 pt-3 text-right font-mono">{{ money(line.gross_pay) }}</td>
+                            <td class="px-4 pt-3 text-right font-mono">{{ money(line.advances_owed ?? '0') }}</td>
+                            <td class="px-4 pt-3 text-right">
+                                <Input
+                                    v-model="takeBack[line.employee_id]"
+                                    inputmode="decimal"
+                                    class="ml-auto w-28 text-right font-mono"
+                                    :disabled="Number(line.advances_deducted) === 0"
+                                    :aria-label="t('Advance to take back from :name', { name: line.name ?? '' })"
+                                />
+                                <span v-if="Number(line.advances_deducted) > 0" class="block text-xs" :class="tooMuch(line) ? 'text-destructive' : 'text-muted-foreground'">
+                                    {{ t('up to :amount', { amount: money(line.advances_deducted) }) }}
+                                </span>
+                            </td>
+                            <td class="px-4 pt-3 text-right font-mono font-medium">{{ money(net(line)) }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="7" class="px-4 pt-2 pb-3">
+                                <div class="flex flex-wrap gap-1.5 text-xs">
+                                    <span v-for="day in line.days" :key="day.date" class="rounded border border-green-300 bg-green-50 px-2 py-0.5 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+                                        {{ dayLabel(day.date) }} · {{ t(statusShort[day.status]) }}
+                                    </span>
+                                    <Link
+                                        v-for="day in paidDays[line.employee_id] ?? []"
+                                        :key="`p-${day.date}`"
+                                        :href="show(day.payroll_id)"
+                                        class="text-muted-foreground rounded border border-dashed px-2 py-0.5 line-through decoration-1 hover:underline"
+                                        :title="t('Already paid — :reference', { reference: day.payroll_number ?? '' })"
+                                    >
+                                        {{ dayLabel(day.date) }} · {{ t('Paid') }}
+                                    </Link>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr v-for="person in fullyPaid" :key="`paid-${person.id}`" class="border-sidebar-border/70 dark:border-sidebar-border border-t">
+                        <td class="px-4 py-3">{{ person.name }}</td>
+                        <td colspan="6" class="text-muted-foreground px-4 py-3 text-xs">
+                            {{ t('Every day in this period is already paid:') }}
+                            <Link v-for="day in person.days" :key="day.date" :href="show(day.payroll_id)" class="ml-1 hover:underline">{{ dayLabel(day.date) }} ({{ day.payroll_number }})</Link>
                         </td>
-                        <td class="px-4 py-3 text-right">{{ line.full_days }}</td>
-                        <td class="px-4 py-3 text-right">{{ line.half_days }}</td>
-                        <td class="px-4 py-3 text-right">{{ line.leave_days }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(line.gross_pay) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(line.advances_owed ?? '0') }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(line.advances_deducted) }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-medium">{{ money(line.net_pay) }}</td>
                     </tr>
-                    <tr v-if="lines.length === 0">
-                        <td colspan="8" class="text-muted-foreground px-4 py-8 text-center">{{ t('No unpaid attendance in this month.') }}</td>
+                    <tr v-if="lines.length === 0 && fullyPaid.length === 0">
+                        <td colspan="7" class="text-muted-foreground px-4 py-8 text-center">{{ t('No unpaid attendance in this period.') }}</td>
                     </tr>
                 </tbody>
                 <tfoot v-if="lines.length > 0" class="bg-muted/30 font-medium">
                     <tr class="border-t">
-                        <td class="px-4 py-3" colspan="4">{{ t('Total (:currency)', { currency }) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.gross_pay) }}</td>
+                        <td class="px-4 py-3" colspan="3">{{ t('Total (:currency)', { currency }) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.gross) }}</td>
                         <td></td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.advances_deducted) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.net_pay) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.taken) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money(totals.net) }}</td>
                     </tr>
                 </tfoot>
             </table>
         </div>
 
         <p class="text-muted-foreground text-xs">
-            {{ t('An advance a salary cannot fully cover is taken back as far as the salary allows; the rest is taken from the next month.') }}
+            {{ t('Only days not yet paid are included. Choose how much advance to take back from each person; whatever is not taken back stays owed.') }}
         </p>
 
-        <form v-if="!paidPayroll && lines.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl space-y-6 rounded-xl border p-4 sm:p-6" @submit.prevent="submit">
+        <form v-if="lines.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl space-y-6 rounded-xl border p-4 sm:p-6" @submit.prevent="submit">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="pay_date">{{ t('Paid on') }}</Label>
@@ -128,11 +214,7 @@ function submit(): void {
                 </div>
                 <div class="grid gap-2">
                     <Label for="payment_method">{{ t('Paid by') }}</Label>
-                    <SearchableSelect
-                        id="payment_method"
-                        v-model="form.payment_method"
-                        :options="[...(paymentMethods).map((m) => ({ value: m.value, label: `${(m.label) ?? ''}` }))]"
-                    />
+                    <SearchableSelect id="payment_method" v-model="form.payment_method" :options="paymentMethods.map((m) => ({ value: m.value, label: m.label ?? '' }))" />
                 </div>
                 <div class="grid gap-2">
                     <Label for="cash_bank_account_id">{{ t('Paid from') }}</Label>
@@ -140,7 +222,7 @@ function submit(): void {
                         id="cash_bank_account_id"
                         v-model="form.cash_bank_account_id"
                         required
-                        :options="[...(accounts).map((a) => ({ value: a.id, label: `${a.code} — ${a.name} (${a.kind})` }))]"
+                        :options="accounts.map((a) => ({ value: a.id, label: `${a.code} — ${a.name} (${a.kind})` }))"
                         :placeholder="t('Select a cash or bank account…')"
                     />
                     <InputError :message="form.errors.cash_bank_account_id" />
@@ -151,11 +233,13 @@ function submit(): void {
                 </div>
             </div>
 
-            <InputError :message="form.errors.month" />
-            <InputError :message="(form.errors as Record<string, string | undefined>).wages_account_id" />
-            <InputError :message="(form.errors as Record<string, string | undefined>).employee_advances_account_id" />
+            <InputError :message="errors.period_start" />
+            <InputError :message="errors.period_end" />
+            <InputError :message="errors.deductions" />
+            <InputError :message="errors.wages_account_id" />
+            <InputError :message="errors.employee_advances_account_id" />
 
-            <Button type="submit" :disabled="form.processing">{{ t('Pay salaries') }}</Button>
+            <Button type="submit" :disabled="form.processing || lines.some(tooMuch)">{{ t('Pay salaries') }}</Button>
         </form>
     </div>
 </template>

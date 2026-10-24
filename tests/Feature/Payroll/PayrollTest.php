@@ -22,6 +22,7 @@ use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\TestCase;
@@ -171,22 +172,133 @@ class PayrollTest extends TestCase
     }
 
     #[Test]
-    public function a_paid_month_is_frozen_until_its_payroll_is_reversed(): void
+    public function a_paid_day_is_frozen_but_the_rest_of_the_month_stays_open(): void
     {
         $saman = Employee::factory()->create(['daily_rate' => '2000.00']);
         $this->advance($saman, '2026-08-01', '500');
         $this->attend($saman, ['2026-08-03' => 'FULL_DAY']);
-        $run = $this->pay('2026-08', '2026-09-05');
+        $this->pay('2026-08', '2026-09-05');
 
+        // The paid day cannot change…
         try {
-            $this->attend($saman, ['2026-08-04' => 'FULL_DAY']);
-            $this->fail('Attendance was changed in a paid month.');
+            $this->attend($saman, ['2026-08-03' => 'HALF_DAY']);
+            $this->fail('A paid day was changed.');
         } catch (ValidationException $e) {
-            $this->assertArrayHasKey('work_date', $e->errors());
+            $this->assertArrayHasKey('entries.0.status', $e->errors());
         }
 
+        // …re-sending it unchanged is harmless, and a day not yet paid can still be recorded.
+        $this->attend($saman, ['2026-08-03' => 'FULL_DAY', '2026-08-04' => 'FULL_DAY']);
+        $this->assertNull(EmployeeAttendance::query()->whereDate('work_date', '2026-08-04')->value('payroll_run_id'));
+
         $this->expectExceptionObject(new RuntimeException('A paid attendance day is immutable. Reverse its payroll first.'));
-        EmployeeAttendance::query()->firstOrFail()->update(['status' => 'LEAVE']);
+        EmployeeAttendance::query()->whereDate('work_date', '2026-08-03')->firstOrFail()->update(['status' => 'LEAVE']);
+    }
+
+    /**
+     * @param  list<int>|null  $employeeIds
+     * @param  list<array{employee_id: int, amount: string}>|null  $deductions
+     */
+    private function payPeriod(string $from, string $to, string $payDate, ?array $employeeIds = null, ?array $deductions = null): PayrollRun
+    {
+        return app(PayPayroll::class)->handle(array_filter([
+            'period_start' => $from,
+            'period_end' => $to,
+            'employee_ids' => $employeeIds,
+            'deductions' => $deductions,
+            'pay_date' => $payDate,
+            'cash_bank_account_id' => $this->cash->id,
+            'payment_method' => 'CASH',
+        ], fn ($value): bool => $value !== null), $this->user->id);
+    }
+
+    #[Test]
+    public function one_person_can_be_paid_for_a_single_day_after_work(): void
+    {
+        $kamal = Employee::factory()->create(['name' => 'Kamal', 'daily_rate' => '2000.00']);
+        $nimal = Employee::factory()->create(['name' => 'Nimal', 'daily_rate' => '1800.00']);
+        $this->attend($kamal, ['2026-09-14' => 'FULL_DAY']);
+        $this->attend($nimal, ['2026-09-14' => 'FULL_DAY']);
+
+        $run = $this->payPeriod('2026-09-14', '2026-09-14', '2026-09-14', [$kamal->id]);
+
+        $this->assertSame('2000.000000', $run->total('gross_pay'));
+        $this->assertSame(1, $run->lines()->count());
+        // Nimal's day that same date is still unpaid, and is paid on its own later.
+        $this->assertNull(EmployeeAttendance::query()->where('employee_id', $nimal->id)->value('payroll_run_id'));
+        $this->assertSame('1800.000000', $this->payPeriod('2026-09-14', '2026-09-14', '2026-09-15')->total('gross_pay'));
+    }
+
+    #[Test]
+    public function a_worked_period_is_paid_once_and_the_rest_of_the_month_later(): void
+    {
+        $kamal = Employee::factory()->create(['daily_rate' => '2000.00']);
+        $this->attend($kamal, ['2026-08-03' => 'FULL_DAY', '2026-08-04' => 'HALF_DAY', '2026-08-20' => 'FULL_DAY']);
+
+        $first = $this->payPeriod('2026-08-03', '2026-08-04', '2026-08-05');
+        $this->assertSame('3000.000000', $first->total('gross_pay'));
+
+        // Paying the whole month later pays only the day not yet paid.
+        $this->assertSame('2000.000000', $this->pay('2026-08', '2026-09-01')->total('gross_pay'));
+
+        // And then nothing is left to pay.
+        $this->expectException(ValidationException::class);
+        $this->payPeriod('2026-08-01', '2026-08-31', '2026-09-02');
+    }
+
+    #[Test]
+    public function the_payer_chooses_how_much_advance_to_take_back(): void
+    {
+        $kamal = Employee::factory()->create(['daily_rate' => '2000.00']);
+        $this->advance($kamal, '2026-09-01', '1500');
+        $this->attend($kamal, ['2026-09-10' => 'FULL_DAY']);
+
+        // At most min(owed 1,500, earned 2,000) = 1,500 may be taken back.
+        try {
+            $this->payPeriod('2026-09-10', '2026-09-10', '2026-09-10', null, [['employee_id' => $kamal->id, 'amount' => '1500.01']]);
+            $this->fail('More advance was taken back than is owed.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('deductions', $e->errors());
+        }
+
+        $run = $this->payPeriod('2026-09-10', '2026-09-10', '2026-09-10', null, [['employee_id' => $kamal->id, 'amount' => '500']]);
+
+        $this->assertSame('500.000000', $run->total('advances_deducted'));
+        $this->assertSame('1500.000000', $run->total('net_pay'));
+        // The rest stays owed, and the books agree.
+        $this->assertSame('1000.000000', app(PayrollCalculator::class)->outstandingAdvances($kamal->id));
+        $this->assertSame('1000.000000', $this->balance('1220'));
+    }
+
+    #[Test]
+    public function the_pay_screen_shows_the_days_to_pay_and_marks_the_days_already_paid(): void
+    {
+        $kamal = Employee::factory()->create(['name' => 'Kamal', 'daily_rate' => '2000.00']);
+        $this->attend($kamal, ['2026-09-14' => 'FULL_DAY', '2026-09-15' => 'HALF_DAY']);
+        $first = $this->payPeriod('2026-09-14', '2026-09-14', '2026-09-14');
+
+        $this->actingAs($this->user)
+            ->get(route('payrolls.create', ['from' => '2026-09-14', 'to' => '2026-09-15', 'employee_id' => $kamal->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('payroll/payrolls/Create')
+                ->has('lines', 1)
+                ->where('lines.0.gross_pay', '1000.000000')
+                ->where('lines.0.days.0.date', '2026-09-15')
+                ->where("paidDays.{$kamal->id}.0.date", '2026-09-14')
+                ->where("paidDays.{$kamal->id}.0.payroll_number", $first->payroll_number));
+
+        $this->actingAs($this->user)->post(route('payrolls.store'), [
+            'period_start' => '2026-09-14',
+            'period_end' => '2026-09-15',
+            'employee_ids' => [$kamal->id],
+            'deductions' => [['employee_id' => $kamal->id, 'amount' => '0']],
+            'pay_date' => '2026-09-15',
+            'cash_bank_account_id' => $this->cash->id,
+            'payment_method' => 'CASH',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertSame(0, EmployeeAttendance::query()->whereNull('payroll_run_id')->count());
     }
 
     #[Test]

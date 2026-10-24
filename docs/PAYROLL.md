@@ -1,4 +1,4 @@
-# Payroll — employees, attendance, salary advances and monthly salaries
+# Payroll — employees, attendance, salary advances and salaries
 
 Added in 1.5.0. The factory pays its workers **by the day**. Payroll records who worked, works
 out each month's pay, takes back salary advances, and posts every payment to the general ledger.
@@ -12,7 +12,9 @@ out each month's pay, takes back salary advances, and posts every payment to the
 | Half day | Pays **half** the day's rate, rounded half up to the cent. |
 | Leave | **Unpaid.** A day with no attendance row is not paid either. |
 | Paid days | **Only days worked.** Sundays, Poya and holidays are paid only if worked. |
-| Salary advances | Taken back **in full at month end**. What a salary cannot cover **carries to the next month**. |
+| Salary advances | The payer **chooses each time** how much to take back (2026-10-24), from nothing up to min(owed, earned). Whatever is not taken back stays owed. (Until 1.13.0: taken back in full at month end.) |
+| Pay period | **Any period, any people** (2026-10-24): a single day after work, the few days someone worked, or a month — for one person or everyone. |
+| Paid days | A day is paid **once**: days already paid are shown as paid and never included again. |
 | Accounting | Payroll **posts to the accounts** (cash book, profit and loss). |
 | EPF / ETF | **None.** Not modelled. |
 
@@ -29,17 +31,18 @@ out each month's pay, takes back salary advances, and posts every payment to the
   inactive employee.
 - **Salary advance** (`salary_advances`, `ADV-YYYYMMDD-000001`) — paid and journalled in one
   step (`RecordSalaryAdvance`). Immutable; corrected by reversal (`ReverseSalaryAdvance`).
-- **Payroll** (`payroll_runs` + `payroll_lines`, `PAY-YYYYMMDD-000001`) — one calendar month,
-  paid in one step (`PayPayroll`). Each line stores what one employee was paid: full / half /
+- **Payroll** (`payroll_runs` + `payroll_lines`, `PAY-YYYYMMDD-000001`) — any period
+  (`period_start` … `period_end`) for everyone with unpaid days or only the employees chosen, paid
+  in one step (`PayPayroll`). Each line stores what one employee was paid: full / half /
   leave days, gross, advances taken back, net. Immutable; corrected by reversal
   (`ReversePayroll`).
 
 ## The calculation (`App\Services\Payroll\PayrollCalculator`)
 
 ```
-gross    = Σ each unpaid attendance day in the month (full = rate, half = rate ÷ 2, leave = 0)
-owed     = paid advances dated up to the month's last day − advances taken back by standing payrolls
-deducted = min(owed, gross)
+gross    = Σ each UNPAID attendance day in the period (full = rate, half = rate ÷ 2, leave = 0)
+owed     = paid advances dated up to the pay date − advances taken back by standing payrolls
+deducted = the payer's choice, 0 … min(owed, gross)   (none given → the most)
 net      = gross − deducted
 ```
 
@@ -65,11 +68,12 @@ employees still owe.
 
 ## Guards
 
-- **One payroll per month.** A second is refused while the first stands.
-- A month is paid **on or after its last day**.
-- **A paid month is frozen:** its attendance cannot be added to or changed (`RecordAttendance`
-  refuses, and the model refuses to change a paid day). Reversing the payroll releases the days
-  and makes its deducted advances owed again; the month can then be corrected and paid again.
+- **A day is paid once.** Each attendance day records the payroll that paid it; a payroll takes
+  only days with none, so periods may overlap and a month can be paid in several goes.
+- A period is paid **on or after its last day** (a single day can be paid the same evening).
+- **A paid day is frozen:** it cannot be changed (`RecordAttendance` refuses, and the model refuses
+  to change a paid day), while other people's days and this person's unpaid days stay open.
+  Reversing the payroll releases its days and makes its deducted advances owed again.
 - **An advance a salary already took back cannot be reversed** — reverse that payroll first.
 - Money leaves only through a **configured** cash or bank account, by **cash** (a cash account)
   or **bank transfer** (a bank account). Cheques are not offered: payroll records no cheque

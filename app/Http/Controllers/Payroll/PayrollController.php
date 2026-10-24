@@ -6,23 +6,24 @@ use App\Actions\Payroll\PayPayroll;
 use App\Actions\Payroll\ReversePayroll;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\PayPayrollRequest;
+use App\Models\Employee;
 use App\Models\JournalEntry;
 use App\Models\PayrollLine;
 use App\Models\PayrollRun;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Services\Payroll\PayrollCalculator;
 use App\Support\BusinessClock;
-use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Monthly salaries — preview a month, then pay it in one step.
+ * Salaries — preview any period (a day, a few days, a month) for everyone or one person, then
+ * pay it in one step.
  *
  * The preview is only a preview: PayPayroll works everything out again at the moment of
- * paying. A paid month is corrected by reversing it, never by editing.
+ * paying. A payment is corrected by reversing it, never by editing.
  */
 class PayrollController extends Controller
 {
@@ -51,10 +52,15 @@ class PayrollController extends Controller
     public function create(Request $request): Response
     {
         $today = BusinessClock::today();
-        $month = (string) $request->string('month', $today->subMonthNoOverflow()->format('Y-m'));
-        [$start, $end] = $this->calculator->monthBounds($month);
+        [$start, $end] = $this->calculator->periodBounds(
+            (string) $request->string('from', $today->startOfMonth()->toDateString()),
+            (string) $request->string('to', $today->toDateString()),
+        );
+        $employeeId = $request->integer('employee_id') ?: null;
+        $only = $employeeId === null ? null : [$employeeId];
+        $payDate = $today->greaterThan($end) ? $today : $end;
 
-        $lines = $this->calculator->lines($start, $end)->map(fn (array $line): array => [
+        $lines = $this->calculator->lines($start, $end, $only, $payDate)->map(fn (array $line): array => [
             'employee_id' => $line['employee']->id,
             'code' => $line['employee']->code,
             'name' => $line['employee']->name,
@@ -63,24 +69,22 @@ class PayrollController extends Controller
             'leave_days' => $line['leave_days'],
             'gross_pay' => $line['gross_pay'],
             'advances_owed' => $line['advances_owed'],
+            // The most that may be taken back; the payer chooses up to this.
             'advances_deducted' => $line['advances_deducted'],
             'net_pay' => $line['net_pay'],
+            'days' => $line['days'],
         ])->values();
 
-        $paid = $this->calculator->paidPayrollCovering($start);
-
         return Inertia::render('payroll/payrolls/Create', [
-            'month' => $month,
             'periodStart' => $start->toDateString(),
             'periodEnd' => $end->toDateString(),
-            'payDate' => $today->greaterThan($end) ? $today->toDateString() : $end->toDateString(),
+            'today' => $today->toDateString(),
+            'employeeId' => $employeeId,
+            'employees' => Employee::query()->orderBy('name')->get(['id', 'code', 'name', 'is_active']),
+            'payDate' => $payDate->toDateString(),
             'lines' => $lines,
-            'totals' => [
-                'gross_pay' => $this->sum($lines->pluck('gross_pay')->all()),
-                'advances_deducted' => $this->sum($lines->pluck('advances_deducted')->all()),
-                'net_pay' => $this->sum($lines->pluck('net_pay')->all()),
-            ],
-            'paidPayroll' => $paid === null ? null : ['id' => $paid->id, 'payroll_number' => $paid->payroll_number],
+            // Days in the period already paid, so nobody tries to pay them again.
+            'paidDays' => $this->calculator->paidDays($start, $end, $only),
             'accounts' => $this->options->cashBankAccounts(),
             'paymentMethods' => PayPayrollRequest::paymentMethodOptions(),
             'currency' => config('accounting.base_currency'),
@@ -184,13 +188,5 @@ class PayrollController extends Controller
             'status' => $run->status->value,
             'status_label' => $run->status->label(),
         ];
-    }
-
-    /**
-     * @param  list<string>  $amounts
-     */
-    private function sum(array $amounts): string
-    {
-        return DecimalMath::money(array_reduce($amounts, fn (string $carry, string $amount): string => DecimalMath::add($carry, $amount), DecimalMath::zero()));
     }
 }

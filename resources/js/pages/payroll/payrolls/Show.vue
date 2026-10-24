@@ -14,13 +14,13 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{ payroll: PayrollDetail; currency: string }>();
 
-defineOptions({ layout: { breadcrumbs: [{ title: 'Monthly salaries', href: index() }] } });
+defineOptions({ layout: { breadcrumbs: [{ title: 'Salaries', href: index() }] } });
 
 const { t } = useT();
 const { can } = usePermissions();
 
 function reversePayroll(): void {
-    if (confirm(t("Reverse this month's salaries? The money is put back, the attendance days can be changed again, and the advances taken back are owed again."))) {
+    if (confirm(t('Reverse this payment? The money is put back, its attendance days can be changed and paid again, and the advances taken back are owed again.'))) {
         router.patch(reverse(props.payroll.id).url, {}, { preserveScroll: true });
     }
 }
@@ -34,7 +34,7 @@ function reversePayroll(): void {
             <div class="flex flex-col gap-2">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <Heading
-                        :title="t('Salaries for :month', { month: payroll.month })"
+                        :title="t('Salaries for :from to :to', { from: payroll.period_start, to: payroll.period_end })"
                         :description="`${payroll.payroll_number} · ${payroll.pay_date} · ${payroll.payment_account ?? ''}`"
                     />
                     <PrintButton />

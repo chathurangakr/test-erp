@@ -61,10 +61,23 @@ class PayrollController extends Controller
     public function preview(Request $request, CashDocumentOptions $options): JsonResponse
     {
         $today = BusinessClock::today();
-        $month = (string) $request->string('month', $today->subMonthNoOverflow()->format('Y-m'));
-        [$start, $end] = $this->calculator->monthBounds($month);
-        $lines = $this->calculator->lines($start, $end);
-        $paid = $this->calculator->paidPayrollCovering($start);
+
+        // Any period (period_start … period_end) for everyone or `employee_id`; or, as before
+        // 1.13.0, a whole `month` (last month when nothing is named).
+        if ($request->filled('period_start')) {
+            [$start, $end] = $this->calculator->periodBounds((string) $request->string('period_start'), (string) $request->string('period_end', (string) $request->string('period_start')));
+            $month = null;
+        } else {
+            $month = (string) $request->string('month', $today->subMonthNoOverflow()->format('Y-m'));
+            [$start, $end] = $this->calculator->monthBounds($month);
+        }
+
+        $only = $request->integer('employee_id') ? [$request->integer('employee_id')] : null;
+        $payDate = $today->greaterThan($end) ? $today : $end;
+        $lines = $this->calculator->lines($start, $end, $only, $payDate);
+        $paidDays = $this->calculator->paidDays($start, $end, $only);
+        // Kept for older apps: a payroll that paid every recorded day of the period, if one did.
+        $paid = $paidDays->isNotEmpty() && $lines->isEmpty() ? $this->calculator->paidPayrollCovering($start) : null;
 
         $total = fn (string $key): string => DecimalMath::cost(DecimalMath::money($lines->reduce(
             fn (string $carry, array $line): string => DecimalMath::add($carry, $line[$key]),
@@ -75,7 +88,7 @@ class PayrollController extends Controller
             'month' => $month,
             'period_start' => $start->toDateString(),
             'period_end' => $end->toDateString(),
-            'suggested_pay_date' => $today->greaterThan($end) ? $today->toDateString() : $end->toDateString(),
+            'suggested_pay_date' => $payDate->toDateString(),
             'paid_payroll' => $paid === null ? null : ['id' => $paid->id, 'payroll_number' => $paid->payroll_number],
             'lines' => $lines->map(fn (array $line): array => [
                 'employee' => ['id' => $line['employee']->id, 'code' => $line['employee']->code, 'name' => $line['employee']->name],
@@ -84,9 +97,13 @@ class PayrollController extends Controller
                 'leave_days' => $line['leave_days'],
                 'gross_pay' => DecimalMath::cost($line['gross_pay']),
                 'advances_owed' => DecimalMath::cost($line['advances_owed']),
+                // The most that may be taken back — and what is taken when the payment names no
+                // amount for this employee in `deductions`.
                 'advances_deducted' => DecimalMath::cost($line['advances_deducted']),
                 'net_pay' => DecimalMath::cost($line['net_pay']),
+                'days' => array_map(fn (array $day): array => ['pay' => DecimalMath::cost($day['pay'])] + $day, $line['days']),
             ])->values(),
+            'paid_days' => $paidDays,
             'totals' => [
                 'gross_pay' => $total('gross_pay'),
                 'advances_deducted' => $total('advances_deducted'),

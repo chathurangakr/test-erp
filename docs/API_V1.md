@@ -594,26 +594,34 @@ order:
 
 As on the website, saved records stay English whatever the language.
 
-## 19. Payroll (version 1.11.0)
+## 19. Payroll (version 1.11.0; any-period pay since 1.13.0)
 
-Employees, the daily attendance register, salary advances and monthly salaries — the same
+Employees, the daily attendance register, salary advances and salaries — the same
 actions, validation and rules as the website (`docs/PAYROLL.md`); permissions in §13.
 
 - **Employees** are numbered automatically (`EMP-001`…; a sent `code` is ignored) and never
   deleted — send `is_active: false` on `PUT` to deactivate. `advances_owed` is derived.
 - **Attendance:** `GET /payroll/attendance?date=YYYY-MM-DD` returns every active employee with
   that day's `status` (`FULL_DAY`, `HALF_DAY`, `LEAVE` or `null`), `daily_rate` and `pay`;
-  `paid_payroll` is set when the month is already paid — the register is then frozen and saving
-  is refused. `PUT` takes `{work_date, entries: [{employee_id, status, note}]}`; a `null` status
+  each row's `paid_payroll` (`{id, payroll_number}` or `null`) says whether a payroll already paid
+  that person for that day — **that row is read-only**; changing it is refused, re-sending it
+  unchanged is fine. The top-level `paid_payroll` is kept for older apps and is set only when every
+  recorded day of the date was paid. `PUT` takes `{work_date, entries: [{employee_id, status, note}]}`; a `null` status
   clears a day. It sets each day to what is sent, so repeating it is harmless.
 - **Paying moves money in one step**, so `POST /payroll/salary-advances` and
   `POST /payroll/salaries` require an **`Idempotency-Key`** UUID header and are recorded exactly
   once per key, as in §17: the same key with the same body replays the first result
   (`Idempotent-Replayed: true`); a refused request stores no key.
-- **Salaries:** `GET /payroll/salaries/preview?month=YYYY-MM` shows what each employee would be
-  paid now, the totals, the suggested pay date and the accounts / methods to pay from. `POST`
-  sends only `{month, pay_date, cash_bank_account_id, payment_method, reference}` — **never
-  amounts**: the server works them out again under lock when paying.
+- **Salaries — any period, any people (1.13.0):** `GET /payroll/salaries/preview` takes
+  `period_start` + `period_end` (one day, a few days, a month) and optionally `employee_id`, or —
+  as before — `month=YYYY-MM`. It returns, per employee with UNPAID days, the earnings, `days`
+  (each unpaid day), `advances_owed` and `advances_deducted` (**the most that may be taken
+  back**), plus `paid_days` (days in the period already paid, with their payroll), the totals, the
+  suggested pay date and the accounts / methods. `POST` sends `{period_start, period_end` (or
+  `month`)`, employee_ids?, deductions?: [{employee_id, amount}], pay_date, cash_bank_account_id,
+  payment_method, reference}`. **Earnings are never sent** — the server works them out again under
+  lock, paying only days not yet paid. `deductions` is how much advance to take back per employee
+  (0 … the most allowed; more is a 422); an employee not named gives the most, as before.
 - Payment methods are `CASH` (a cash account) or `BANK_TRANSFER` (a bank account); cheques are not
   offered, as on the website. Corrections are reversals (`…/reverse`); reversing twice is a 409.
 

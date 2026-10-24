@@ -4,6 +4,17 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.13.0 — 24 October 2026
+
+- **Pay staff for any period** (Payroll → Salaries, formerly Monthly salaries). Pay one person
+  for a single day after work, the few days someone worked, or everyone for a month. Days already
+  paid are shown as paid and are never paid twice; paying the rest of a month later pays only the
+  days not yet paid.
+- **You choose how much salary advance to take back** from each person, from nothing up to what
+  they owe (and no more than they earned). Whatever is not taken back stays owed.
+- **Only paid days are locked** on the attendance register: a paid day shows "Paid" and cannot be
+  changed, while everyone else's days stay open.
+
 ## 1.12.0 — 24 October 2026
 
 - **Coconut shell has no cost.** When copra is made, the whole coconut cost goes to the copra and

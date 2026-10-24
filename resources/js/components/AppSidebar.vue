@@ -426,7 +426,7 @@ const payrollNavItems: NavItem[] = [
         icon: HandCoins,
     },
     {
-        title: 'Monthly salaries',
+        title: 'Salaries',
         href: payrollsIndex(),
         permission: 'payroll.view',
         icon: BadgeDollarSign,

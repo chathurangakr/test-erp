@@ -12,20 +12,20 @@ import { money } from '@/lib/money';
 
 defineProps<{ payrolls: Paginated<PayrollRow>; currency: string }>();
 
-defineOptions({ layout: { breadcrumbs: [{ title: 'Monthly salaries', href: index() }] } });
+defineOptions({ layout: { breadcrumbs: [{ title: 'Salaries', href: index() }] } });
 
 const { t } = useT();
 const { can } = usePermissions();
 </script>
 
 <template>
-    <Head :title="t('Monthly salaries')" />
+    <Head :title="t('Salaries')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <Heading title="Monthly salaries" description="Each month's salaries, worked out from attendance and paid in one step." />
+            <Heading title="Salaries" description="Every salary payment — a day, a few days or a month — worked out from attendance and paid in one step." />
             <Button v-if="can('payroll.salary_pay')" as-child>
-                <Link :href="create()"><Plus class="size-4" />{{ t('Pay a month') }}</Link>
+                <Link :href="create()"><Plus class="size-4" />{{ t('Pay salaries') }}</Link>
             </Button>
         </div>
 
@@ -33,7 +33,7 @@ const { can } = usePermissions();
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Month') }}</th>
+                        <th class="px-4 py-3 font-medium">{{ t('Period') }}</th>
                         <th class="px-4 py-3 font-medium">{{ t('Paid on') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Employees') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Earned') }}</th>
@@ -45,7 +45,7 @@ const { can } = usePermissions();
                 <tbody>
                     <tr v-for="run in payrolls.data" :key="run.id" class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t">
                         <td class="px-4 py-3">
-                            <Link :href="show(run.id)" class="font-medium hover:underline">{{ run.month }}</Link>
+                            <Link :href="show(run.id)" class="font-medium hover:underline">{{ run.period_start === run.period_end ? run.period_start : `${run.period_start} — ${run.period_end}` }}</Link>
                             <span class="text-muted-foreground block font-mono text-xs">{{ run.payroll_number }}</span>
                         </td>
                         <td class="px-4 py-3">{{ run.pay_date }}</td>
