@@ -25,6 +25,9 @@ class AccountingSetting extends Model
         'production_labour_account_id',
         'wages_account_id',
         'stock_loss_account_id',
+        'loans_account_id',
+        'loan_interest_account_id',
+        'opening_balance_account_id',
         'employee_advances_account_id',
         'updated_by',
     ];
@@ -108,6 +111,37 @@ class AccountingSetting extends Model
     public function stockLossAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'stock_loss_account_id');
+    }
+
+    /**
+     * The liability every loan sits in (a control account: only loan documents post to it).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function loansAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'loans_account_id');
+    }
+
+    /**
+     * The expense loan interest is charged to.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function loanInterestAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'loan_interest_account_id');
+    }
+
+    /**
+     * The equity that balances a liability brought in already running (a loan taken before the
+     * system), until the accountant reclassifies it.
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function openingBalanceAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'opening_balance_account_id');
     }
 
     /**

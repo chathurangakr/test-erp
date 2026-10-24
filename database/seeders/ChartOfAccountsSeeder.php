@@ -69,11 +69,16 @@ class ChartOfAccountsSeeder extends Seeder
 
         ['2200', 'Accrued Expenses', AccountType::Liability, false, false],
         ['2300', 'Taxes Payable', AccountType::Liability, false, false],
+        // Every loan the factory owes; the loan records are its subsidiary ledger, so only loan
+        // documents post here.
+        ['2400', 'Loans Payable', AccountType::Liability, false, true],
 
         // ---------------------------------------------------------------- equity
         ['3000', 'Equity', AccountType::Equity, true, false],
         ['3100', 'Owner Capital', AccountType::Equity, false, false],
         ['3200', 'Retained Earnings', AccountType::Equity, false, false],
+        // Balances what is brought in already running (a loan taken before the system).
+        ['3300', 'Opening Balance Equity', AccountType::Equity, false, false],
 
         // --------------------------------------------------------------- revenue
         ['4000', 'Revenue', AccountType::Revenue, true, false],
@@ -115,6 +120,7 @@ class ChartOfAccountsSeeder extends Seeder
         ['6800', 'Administrative Expenses', AccountType::Expense, false, false],
         // Damaged stock written off. The system's to post (StockDamage), so a control account.
         ['6900', 'Stock Damage and Losses', AccountType::Expense, false, true],
+        ['6950', 'Loan Interest', AccountType::Expense, false, false],
     ];
 
     /**

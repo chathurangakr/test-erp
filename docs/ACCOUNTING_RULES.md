@@ -1041,3 +1041,50 @@ Owner's decision (2026-10-04): **money has two decimal places**, on screen and w
   exact.
 - Stored columns stay `decimal(20,6)`; nothing about storage changed and no migration was needed.
 
+## 32. Sales returns — ✅ **CONFIRMED** (2026-10-24)
+
+The owner's rules: returns are mostly coconuts; the customer is paid back **the price charged**;
+good goods go back to sellable stock (and are later sold or made into copra), damaged ones are
+thrown away; the customer is paid back by **reducing what they owe**, **money back**, or **other
+goods of the same value** (for example husk). Returned goods are never sent back to a supplier.
+
+**The document** — `SalesReturn` (`RET-YYYYMMDD-000001`, Sales → Returns, permissions
+`sales.return_record` / `sales.return_reverse`), recorded in one step against **one invoiced
+delivery line**:
+
+| Figure | Rule |
+| --- | --- |
+| Quantity | good + damaged ≤ delivered − earlier returns |
+| Credit | price charged × quantity returned (× the weight returned for a line priced per KG), rounded to the cent; ≤ billed − credited for the line |
+| Cost | the line's `inventory_unit_cost` × each quantity — what the goods left with |
+| Stock | good goods: `SALES_RETURN` IN at that cost, into the line's lot; damaged: no stock |
+
+**Settlement:**
+
+| Kind | Effect | Guard |
+| --- | --- | --- |
+| `CREDIT` | reduces an invoice of the customer (normally the one that billed the goods) | ≤ its outstanding |
+| `EXCHANGE` | reduces the invoice for the replacement goods — deliver and invoice them first | ≤ its outstanding |
+| `REFUND` | money back from a configured cash / bank account | ≤ paid on the original invoice − earlier refunds |
+
+**Journal** (one entry, source the return):
+
+```
+Dr revenue (the product's mapping)        credit
+    Cr trade receivables (credit / exchange)  or  the cash/bank account (refund)
+Dr inventory (the product's)               good cost
+Dr stock damage and losses                 damaged cost
+    Cr cost of sales (the product's)          good + damaged cost
+```
+
+**Receivables:** an invoice's outstanding is now **total − receipts − returns crediting it**
+(`AccountsReceivableService::settledAmount`), and its PARTIALLY_PAID / PAID status follows. The
+invariant *Trade Receivables == total outstanding* keeps holding: the credit leaves both by the
+same amount. An invoice cannot be reversed while a standing return credits it or returns goods
+it billed.
+
+**Not covered:** returns of goods whose delivery backflushed raw husk (chips, cocopeat) — refused
+until the owner decides what happens to the husk; returns before invoicing (reverse the delivery
+if it all came back); discounts and quality allowances. Operational product profitability still
+reads delivery lines and does not net returns off.
+

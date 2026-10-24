@@ -21,6 +21,9 @@ class UpdateAccountingSettingsRequest extends FormRequest
             'wages_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
             'employee_advances_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
             'stock_loss_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
+            'loans_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
+            'loan_interest_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
+            'opening_balance_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('is_active', 1)],
         ];
     }
 }

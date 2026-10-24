@@ -17,6 +17,7 @@ import {
     Layers,
     PackageX,
     ShoppingBag,
+    Undo2,
     Package,
     Factory,
     Grid2x2,
@@ -72,7 +73,9 @@ import { index as goodsReceiptsIndex } from '@/routes/goods-receipts';
 import { index as purchaseOrdersIndex } from '@/routes/purchase-orders';
 import { index as customerBagsIndex } from '@/routes/customer-bags';
 import { index as deliveriesIndex } from '@/routes/deliveries';
+import { index as loansIndex } from '@/routes/loans';
 import { index as salesOrdersIndex } from '@/routes/sales-orders';
+import { index as salesReturnsIndex } from '@/routes/sales-returns';
 import { index as dehuskingIndex } from '@/routes/dehusking';
 import { index as huskChippingIndex } from '@/routes/husk-chipping';
 import { index as copraIndex } from '@/routes/copra';
@@ -211,6 +214,12 @@ const salesNavItems: NavItem[] = [
         href: deliveriesIndex(),
         permission: 'sales.view',
         icon: TruckIcon,
+    },
+    {
+        title: 'Returns',
+        href: salesReturnsIndex(),
+        permission: 'sales.view',
+        icon: Undo2,
     },
     {
         title: 'Customer bags',
@@ -403,6 +412,12 @@ const cashNavItems: NavItem[] = [
         href: fundTransfersIndex(),
         permission: 'finance.cash.view',
         icon: ArrowLeftRight,
+    },
+    {
+        title: 'Loans',
+        href: loansIndex(),
+        permission: 'loans.view',
+        icon: Landmark,
     },
 ];
 

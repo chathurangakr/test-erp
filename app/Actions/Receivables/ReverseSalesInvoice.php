@@ -5,7 +5,9 @@ namespace App\Actions\Receivables;
 use App\Actions\Accounting\ReverseJournalEntry;
 use App\Enums\CustomerReceiptStatus;
 use App\Enums\SalesInvoiceStatus;
+use App\Enums\SalesReturnStatus;
 use App\Models\SalesInvoice;
+use App\Models\SalesReturn;
 use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -55,6 +57,7 @@ class ReverseSalesInvoice
             }
 
             $this->assertNotReceipted($locked);
+            $this->assertNoReturns($locked);
 
             $journal = $locked->journalEntry()->first();
 
@@ -97,6 +100,28 @@ class ReverseSalesInvoice
                 'status' => __('Sales invoice :reference has :received of receipts allocated to it. Reverse the associated customer receipt(s) first.', [
                     'reference' => $invoice->invoice_number,
                     'received' => $received,
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * A standing sales return blocks the reversal — one crediting this invoice, or one against
+     * goods it billed. Undoing the invoice would leave the return crediting what no longer
+     * exists. Reverse the return first.
+     */
+    private function assertNoReturns(SalesInvoice $invoice): void
+    {
+        $return = SalesReturn::query()
+            ->where('status', SalesReturnStatus::Posted->value)
+            ->where(fn ($query) => $query->where('credit_invoice_id', $invoice->getKey())->orWhere('original_invoice_id', $invoice->getKey()))
+            ->first();
+
+        if ($return !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('Sales invoice :reference is linked to sales return :return. Reverse the return first.', [
+                    'reference' => $invoice->invoice_number,
+                    'return' => $return->return_number,
                 ]),
             ]);
         }

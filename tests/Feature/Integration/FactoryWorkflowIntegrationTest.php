@@ -36,6 +36,7 @@ use App\Models\PurchaseOrderLine;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
+use App\Models\SalesReturn;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
@@ -1142,7 +1143,7 @@ class FactoryWorkflowIntegrationTest extends TestCase
         foreach ([
             'journals', 'journal_lines', 'general_ledger', 'ledger_accounts',
             'payables', 'receivables', 'payments', 'customer_payments',
-            'credit_notes', 'sales_returns', 'tax_rates', 'vat_returns',
+            'credit_notes', 'tax_rates', 'vat_returns',
             'production_costs', 'labour_costs', 'overheads',
         ] as $table) {
             $this->assertFalse(
@@ -1158,6 +1159,8 @@ class FactoryWorkflowIntegrationTest extends TestCase
         $this->assertSame(0, JournalEntryLine::count());
         $this->assertSame(0, SupplierInvoice::count());
         $this->assertSame(0, SupplierPayment::count());
+        // Returns exist since 2026-10-24, but only as a document someone records.
+        $this->assertSame(0, SalesReturn::count());
         $this->assertSame(0, SalesInvoice::count());
         $this->assertSame(0, CustomerReceipt::count());
     }

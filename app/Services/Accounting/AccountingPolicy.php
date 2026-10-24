@@ -207,6 +207,37 @@ class AccountingPolicy
         return $account;
     }
 
+    /** The liability loans sit in. See docs/LOANS.md. */
+    public function loansAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->loansAccount, 'loans_account_id', AccountType::Liability, __('Loans'));
+    }
+
+    /** The expense loan interest is charged to. */
+    public function loanInterestAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->loanInterestAccount, 'loan_interest_account_id', AccountType::Expense, __('Loan interest'));
+    }
+
+    /** The equity that balances a loan entered already running. */
+    public function openingBalanceAccount(): Account
+    {
+        return $this->configured(AccountingSetting::current()?->openingBalanceAccount, 'opening_balance_account_id', AccountType::Equity, __('Opening balances'));
+    }
+
+    private function configured(?Account $account, string $field, AccountType $type, string $subject): Account
+    {
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                $field => __('No :subject account is configured. Choose one in Accounting Setup first.', ['subject' => $subject]),
+            ]);
+        }
+
+        $this->assertUsable($account, $type, $subject);
+
+        return $account;
+    }
+
     /**
      * The asset salary advances sit in until a payroll takes them back. A control account:
      * only payroll's own journals reach it, so its balance always equals what employees owe.

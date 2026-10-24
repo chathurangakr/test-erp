@@ -235,7 +235,7 @@ class NoOperationalAccountingTest extends TestCase
     #[Test]
     public function the_chart_of_accounts_exists_but_the_books_start_empty(): void
     {
-        $this->assertSame(58, Account::count());
+        $this->assertSame(61, Account::count());
         $this->assertSame(0, JournalEntry::count());
         $this->assertSame(0, JournalEntryLine::count());
         $this->assertSame(0, FiscalPeriod::count());

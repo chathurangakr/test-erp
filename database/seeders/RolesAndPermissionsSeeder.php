@@ -145,6 +145,7 @@ class RolesAndPermissionsSeeder extends Seeder
                         P::cases(),
                         fn (P $permission): bool => str_starts_with($permission->value, 'finance.')
                             || str_starts_with($permission->value, 'payroll.')
+                            || str_starts_with($permission->value, 'loans.')
                             || str_starts_with($permission->value, 'reports.'),
                     )),
                 ],

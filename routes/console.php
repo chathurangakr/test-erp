@@ -23,3 +23,11 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 Schedule::command('reports:weekly-update')
     ->weeklyOn(0, '20:00')
     ->timezone(BusinessClock::timezone());
+
+/*
+ * Loan installment reminders, every morning at 8 AM Sri Lanka time: 7 days before, 2 days before
+ * and on the due day, to everyone holding loans.reminders. See docs/LOANS.md.
+ */
+Schedule::command('loans:remind')
+    ->dailyAt('08:00')
+    ->timezone(BusinessClock::timezone());

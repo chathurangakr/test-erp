@@ -4,9 +4,11 @@ namespace App\Services\Accounting;
 
 use App\Enums\CustomerReceiptStatus;
 use App\Enums\SalesInvoiceStatus;
+use App\Enums\SalesReturnStatus;
 use App\Models\Customer;
 use App\Models\CustomerReceiptAllocation;
 use App\Models\SalesInvoice;
+use App\Models\SalesReturn;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
 use Carbon\CarbonInterface;
@@ -17,7 +19,8 @@ use Illuminate\Support\Collection;
  * What customers owe the factory.
  *
  * **Nothing here is stored.** An invoice's outstanding balance is its total less the receipts
- * allocated to it, computed on request — the same rule that keeps accounts without balances,
+ * allocated to it and the returns credited against it (docs/ACCOUNTING_RULES.md §32), computed
+ * on request — the same rule that keeps accounts without balances,
  * products without stock and suppliers without payables. A customer has no receivable column
  * and must never grow one.
  *
@@ -45,6 +48,27 @@ class AccountsReceivableService
     }
 
     /**
+     * How much of this invoice standing sales returns have credited — goods brought back, or
+     * an exchange paid for by them.
+     */
+    public function creditedAmount(SalesInvoice $invoice, ?CarbonInterface $asOf = null): string
+    {
+        return DecimalMath::cost((string) SalesReturn::query()
+            ->where('credit_invoice_id', $invoice->getKey())
+            ->where('status', SalesReturnStatus::Posted->value)
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('return_date', '<=', $date->toDateString()))
+            ->sum('credit_amount'));
+    }
+
+    /**
+     * Received and credited together: everything that has settled the invoice.
+     */
+    public function settledAmount(SalesInvoice $invoice, ?CarbonInterface $asOf = null): string
+    {
+        return DecimalMath::cost(DecimalMath::add($this->receivedAmount($invoice, $asOf), $this->creditedAmount($invoice, $asOf)));
+    }
+
+    /**
      * What the invoice is still owed.
      *
      * A reversed or cancelled invoice is owed nothing regardless of what was allocated to it
@@ -58,7 +82,7 @@ class AccountsReceivableService
 
         return DecimalMath::cost(DecimalMath::sub(
             $this->invoiceTotal($invoice),
-            $this->receivedAmount($invoice, $asOf),
+            $this->settledAmount($invoice, $asOf),
         ));
     }
 

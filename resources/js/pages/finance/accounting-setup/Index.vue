@@ -35,6 +35,7 @@ defineProps<{
         liability: AccountOption[];
         expense: AccountOption[];
         asset: AccountOption[];
+        equity: AccountOption[];
     };
 }>();
 
@@ -220,6 +221,48 @@ const { t } = useT();
                             {{ t('The expense damaged stock is written off to.') }}
                         </p>
                         <InputError :message="errors.stock_loss_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="loans">{{ t('Loans') }}</Label>
+                        <SearchableSelect
+                            id="loans"
+                            name="loans_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.liability).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.loans_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('The liability every loan sits in until it is paid off.') }}
+                        </p>
+                        <InputError :message="errors.loans_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="loan_interest">{{ t('Loan interest') }}</Label>
+                        <SearchableSelect
+                            id="loan_interest"
+                            name="loan_interest_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.expense).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.loan_interest_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('The expense the interest part of each loan payment is charged to.') }}
+                        </p>
+                        <InputError :message="errors.loan_interest_account_id" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="opening_balances">{{ t('Opening balances') }}</Label>
+                        <SearchableSelect
+                            id="opening_balances"
+                            name="opening_balance_account_id"
+                            :disabled="!can('finance.setup_manage')"
+                            :options="[{ value: '', label: t('Not configured') }, ...(accountOptions.equity).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` }))]"
+                            :default-value="(settings.opening_balance_account?.id) ?? ''"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            {{ t('Balances a loan entered already running, until your accountant moves it.') }}
+                        </p>
+                        <InputError :message="errors.opening_balance_account_id" />
                     </div>
                 </div>
 

@@ -23,6 +23,8 @@ enum InventoryTransactionType: string
     case BackflushIssue = 'BACKFLUSH_ISSUE';
     /** Moves a pooled product's old lot balances into its lot-free stock. Value-neutral. */
     case LotConsolidation = 'LOT_CONSOLIDATION';
+    /** Goods a customer brought back, returning at the cost they left with. */
+    case SalesReturn = 'SALES_RETURN';
 
     /**
      * The display name, in the reader's language. Never save it — see App\Support\RecordText.
@@ -41,6 +43,7 @@ enum InventoryTransactionType: string
             self::Reversal => 'Reversal',
             self::BackflushIssue => 'Raw material backflush',
             self::LotConsolidation => 'Lot consolidation',
+            self::SalesReturn => 'Sales return',
         });
     }
 

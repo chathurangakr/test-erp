@@ -6,6 +6,7 @@ use App\Http\Controllers\Sales\DeliveryActionController;
 use App\Http\Controllers\Sales\DeliveryController;
 use App\Http\Controllers\Sales\SalesOrderApprovalController;
 use App\Http\Controllers\Sales\SalesOrderController;
+use App\Http\Controllers\Sales\SalesReturnController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,4 +57,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('customer-bags/{customerBag}/reverse', [CustomerBagController::class, 'reverse'])
         ->name('customer-bags.reverse')
         ->can(Permission::SalesBagsReverse);
+
+    // Goods customers brought back — recorded in one step, corrected by reversal.
+    Route::resource('sales-returns', SalesReturnController::class)
+        ->parameters(['sales-returns' => 'salesReturn'])
+        ->only(['index', 'create', 'store', 'show'])
+        ->middlewareFor(['index', 'show'], Permission::SalesView->middleware())
+        ->middlewareFor(['create', 'store'], Permission::SalesReturnRecord->middleware());
+    Route::patch('sales-returns/{salesReturn}/reverse', [SalesReturnController::class, 'reverse'])
+        ->name('sales-returns.reverse')
+        ->can(Permission::SalesReturnReverse);
 });

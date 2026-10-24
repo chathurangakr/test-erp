@@ -8,6 +8,7 @@ use Database\Factories\DeliveryLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DeliveryLine extends Model
 {
@@ -128,5 +129,15 @@ class DeliveryLine extends Model
         }
 
         return DecimalMath::round(DecimalMath::mul(DecimalMath::div($profit, $sales), '100'), 2);
+    }
+
+    /**
+     * The invoice lines that billed this delivery line.
+     *
+     * @return HasMany<SalesInvoiceLine, $this>
+     */
+    public function invoiceLines(): HasMany
+    {
+        return $this->hasMany(SalesInvoiceLine::class);
     }
 }

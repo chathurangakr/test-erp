@@ -15,6 +15,8 @@ use App\Models\FiscalPeriod;
 use App\Models\FundTransfer;
 use App\Models\GoodsReceipt;
 use App\Models\JournalEntry;
+use App\Models\Loan;
+use App\Models\LoanPayment;
 use App\Models\PayrollRun;
 use App\Models\Product;
 use App\Models\ProductionOrder;
@@ -23,6 +25,7 @@ use App\Models\Role;
 use App\Models\SalaryAdvance;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
+use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
@@ -322,6 +325,9 @@ class RouteAuthorizationTest extends TestCase
                 'salaryAdvance' => SalaryAdvance::factory()->create(),
                 'stockDamage' => StockDamage::factory()->create(),
                 'customerBag' => CustomerBagMovement::factory()->create(),
+                'salesReturn' => SalesReturn::factory()->create(),
+                'loan' => Loan::factory()->create(),
+                'loanPayment' => LoanPayment::factory()->create(),
                 'payroll' => PayrollRun::factory()->create(),
                 'user' => User::factory()->create(),
                 'role' => Role::factory()->create(),

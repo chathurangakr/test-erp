@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Pencil } from '@lucide/vue';
+import { Pencil, Undo2 } from '@lucide/vue';
 import DeliveryActionController from '@/actions/App/Http/Controllers/Sales/DeliveryActionController';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
+import { create as createReturn } from '@/routes/sales-returns';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type { DeliveryDetail } from '@/types';
 import { money } from '@/lib/money';
@@ -49,6 +50,16 @@ function badgeVariant(
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
+                <Button
+                    v-if="delivery.status === 'POSTED' && delivery.lines.length > 0 && can('sales.return_record')"
+                    variant="outline"
+                    as-child
+                >
+                    <Link :href="createReturn({ query: { delivery_line_id: delivery.lines[0].id } })">
+                        <Undo2 class="size-4" />
+                        {{ t('Record a return') }}
+                    </Link>
+                </Button>
                 <Button
                     v-if="delivery.can_edit && can('sales.delivery_create')"
                     variant="outline"

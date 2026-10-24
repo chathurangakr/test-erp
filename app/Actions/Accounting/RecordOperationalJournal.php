@@ -3,6 +3,7 @@
 namespace App\Actions\Accounting;
 
 use App\Enums\JournalEntryStatus;
+use App\Models\CashBankAccount;
 use App\Models\CustomerBagMovement;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
@@ -10,6 +11,7 @@ use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
 use App\Models\JournalEntry;
 use App\Models\ProductionOrder;
+use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
@@ -35,6 +37,8 @@ use Illuminate\Validation\ValidationException;
  *   PRODUCTION      Dr output inventory         Cr input inventory
  *   STOCK DAMAGE    Dr stock damage and losses  Cr product inventory
  *   BAGS LOST       Dr stock damage and losses  Cr product inventory
+ *   SALES RETURN    Dr revenue (credit) Cr receivables or cash/bank; and
+ *                   Dr inventory (good) + stock loss (damaged)  Cr cost of sales
  *
  * A **warehouse transfer posts nothing**: the company owns the same product, valued the
  * same, in the same account, before and after.
@@ -314,6 +318,79 @@ class RecordOperationalJournal
                 'reference' => $movement->movement_number,
             ]),
             $lines,
+            $userId,
+        );
+    }
+
+    /**
+     * Goods a customer brought back: the sale is undone at the price charged and the cost of
+     * sales at the cost the goods left with.
+     *
+     *   Dr revenue (the product's)          credit           Cr trade receivables   (credit / exchange)
+     *                                                        Cr the cash/bank        (money back)
+     *   Dr inventory           good cost    Dr stock damage and losses  damaged cost
+     *       Cr cost of sales (the product's)    good + damaged cost
+     *
+     * Written whatever the cutover — a returned line was invoiced, so the books are already on.
+     */
+    public function forSalesReturn(SalesReturn $return, ?CashBankAccount $refundAccount, ?int $userId = null): JournalEntry
+    {
+        $product = $return->product;
+        $credit = DecimalMath::cost((string) $return->credit_amount);
+        $good = DecimalMath::cost((string) $return->good_cost);
+        $damaged = DecimalMath::cost((string) $return->damaged_cost);
+        $zero = DecimalMath::cost('0');
+
+        $lines = [
+            [
+                'account_id' => $this->policy->revenueAccountFor($product)->id,
+                'description' => RecordText::of(':product returned', ['product' => $product->code]),
+                'debit' => $credit,
+                'credit' => $zero,
+            ],
+            [
+                'account_id' => $refundAccount === null ? $this->policy->tradeReceivablesAccount()->id : $refundAccount->account_id,
+                'description' => $refundAccount === null
+                    ? RecordText::of('Credit to :customer', ['customer' => $return->customer?->code ?? RecordText::of('customer')])
+                    : RecordText::of('Money back to :customer', ['customer' => $return->customer?->code ?? RecordText::of('customer')]),
+                'debit' => $zero,
+                'credit' => $credit,
+            ],
+            [
+                'account_id' => $this->policy->inventoryAccountFor($product)->id,
+                'description' => RecordText::of('Returned :product back in stock', ['product' => $product->code]),
+                'debit' => $good,
+                'credit' => $zero,
+            ],
+        ];
+
+        if (DecimalMath::isPositive($damaged)) {
+            $lines[] = [
+                'account_id' => $this->policy->stockLossAccount()->id,
+                'description' => RecordText::of('Returned :product damaged', ['product' => $product->code]),
+                'debit' => $damaged,
+                'credit' => $zero,
+            ];
+        }
+
+        $lines[] = [
+            'account_id' => $this->policy->cogsAccountFor($product)->id,
+            'description' => RecordText::of('Cost of :product returned', ['product' => $product->code]),
+            'debit' => $zero,
+            'credit' => DecimalMath::cost(DecimalMath::add($good, $damaged)),
+        ];
+
+        return $this->record(
+            $return,
+            $return->return_date,
+            RecordText::of('Sales return :reference — :reason', [
+                'reference' => $return->return_number,
+                'reason' => $return->reason,
+            ]),
+            array_values(array_filter(
+                $lines,
+                fn (array $line): bool => DecimalMath::isPositive($line['debit']) || DecimalMath::isPositive($line['credit']),
+            )),
             $userId,
         );
     }

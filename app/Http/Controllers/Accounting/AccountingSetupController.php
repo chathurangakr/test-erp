@@ -55,6 +55,9 @@ class AccountingSetupController extends Controller
                 'wages_account' => $this->accountRef($settings?->wagesAccount),
                 'employee_advances_account' => $this->accountRef($settings?->employeeAdvancesAccount),
                 'stock_loss_account' => $this->accountRef($settings?->stockLossAccount),
+                'loans_account' => $this->accountRef($settings?->loansAccount),
+                'loan_interest_account' => $this->accountRef($settings?->loanInterestAccount),
+                'opening_balance_account' => $this->accountRef($settings?->openingBalanceAccount),
                 // Once an operational journal exists the cutover is frozen: moving it would
                 // leave the ledger and the books permanently disagreeing.
                 'cutover_locked' => JournalEntry::query()->whereNotNull('source_type')->exists(),
@@ -73,6 +76,7 @@ class AccountingSetupController extends Controller
                 'liability' => $this->optionsFor(AccountType::Liability),
                 'expense' => $this->optionsFor(AccountType::Expense),
                 'asset' => $this->optionsFor(AccountType::Asset),
+                'equity' => $this->optionsFor(AccountType::Equity),
             ],
         ]);
     }

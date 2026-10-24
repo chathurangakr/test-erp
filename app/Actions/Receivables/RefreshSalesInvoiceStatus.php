@@ -25,7 +25,8 @@ class RefreshSalesInvoiceStatus
         }
 
         $total = $this->receivables->invoiceTotal($invoice);
-        $received = $this->receivables->receivedAmount($invoice);
+        // Receipts and returns credited against it both settle an invoice.
+        $received = $this->receivables->settledAmount($invoice);
 
         $status = match (true) {
             DecimalMath::compare($received, $total) >= 0 => SalesInvoiceStatus::Paid,

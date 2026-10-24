@@ -28,7 +28,7 @@ use Illuminate\Validation\ValidationException;
 class UpdateAccountingSettings
 {
     /**
-     * @param  array{operational_accounting_start_date?: string|null, grni_account_id?: int|null, wages_account_id?: int|null, employee_advances_account_id?: int|null, stock_loss_account_id?: int|null}  $attributes
+     * @param  array{operational_accounting_start_date?: string|null, grni_account_id?: int|null, wages_account_id?: int|null, employee_advances_account_id?: int|null, stock_loss_account_id?: int|null, loans_account_id?: int|null, loan_interest_account_id?: int|null, opening_balance_account_id?: int|null}  $attributes
      */
     public function handle(array $attributes, ?int $userId = null): AccountingSetting
     {
@@ -91,6 +91,16 @@ class UpdateAccountingSettings
                     __('Stock damage and losses'),
                     AccountType::Expense,
                 );
+            }
+
+            foreach ([
+                'loans_account_id' => [__('Loans'), AccountType::Liability],
+                'loan_interest_account_id' => [__('Loan interest'), AccountType::Expense],
+                'opening_balance_account_id' => [__('Opening balances'), AccountType::Equity],
+            ] as $field => [$subject, $type]) {
+                if (array_key_exists($field, $attributes)) {
+                    $settings->{$field} = $this->validAccountId($attributes[$field], $field, $subject, $type);
+                }
             }
 
             $settings->updated_by = $userId ?? auth()->id();

@@ -184,3 +184,41 @@ export type CustomerBagHolding = {
     product_name: string | null;
     quantity: string;
 };
+
+export type SalesReturnRow = {
+    id: number;
+    return_number: string;
+    return_date: string;
+    customer_name: string | null;
+    customer_code: string | null;
+    product_name: string | null;
+    delivery_number: string | null;
+    quantity: string;
+    credit_amount: string;
+    settlement: 'CREDIT' | 'EXCHANGE' | 'REFUND';
+    settlement_label: string;
+    reason: string;
+    status: string;
+    status_label: string;
+    is_reversed: boolean;
+};
+
+export type ReturnableLine = {
+    id: number;
+    delivery_id: number;
+    delivery_number: string;
+    delivery_date: string;
+    warehouse_id: number;
+    customer_id: number;
+    customer_name: string | null;
+    customer_code: string | null;
+    product_code: string;
+    product_name: string;
+    uom: string | null;
+    secondary_uom: string | null;
+    priced_by_weight: boolean;
+    quantity: string;
+    returnable: string;
+    unit_price: string;
+    invoice: { id: number; invoice_number: string; invoice_date: string; received: string; outstanding: string } | null;
+};

@@ -52,6 +52,8 @@ enum Permission: string
     case SalesDeliveryCancel = 'sales.delivery_cancel';
     case SalesBagsRecord = 'sales.bags_record';
     case SalesBagsReverse = 'sales.bags_reverse';
+    case SalesReturnRecord = 'sales.return_record';
+    case SalesReturnReverse = 'sales.return_reverse';
 
     // ------------------------------------------------------------- production
     case ProductionView = 'production.view';
@@ -113,6 +115,14 @@ enum Permission: string
     case PayrollSalaryPay = 'payroll.salary_pay';
     case PayrollSalaryReverse = 'payroll.salary_reverse';
 
+    // ------------------------------------------------------------------ loans
+    case LoansView = 'loans.view';
+    case LoansManage = 'loans.manage';
+    case LoansReverse = 'loans.reverse';
+    case LoansPaymentRecord = 'loans.payment_record';
+    case LoansPaymentReverse = 'loans.payment_reverse';
+    case LoansReminders = 'loans.reminders';
+
     // ------------------------------------------------------------- reports
     case ReportsFinance = 'reports.finance';
     case ReportsInventory = 'reports.inventory';
@@ -147,6 +157,7 @@ enum Permission: string
             str_starts_with($this->value, 'finance.cash.') => 'Cash & Bank',
             str_starts_with($this->value, 'finance.') => 'Finance',
             str_starts_with($this->value, 'payroll.') => 'Payroll',
+            str_starts_with($this->value, 'loans.') => 'Loans',
             str_starts_with($this->value, 'reports.') => 'Reports',
             str_starts_with($this->value, 'users.'), str_starts_with($this->value, 'roles.'), str_starts_with($this->value, 'company.'), str_starts_with($this->value, 'mail.') => 'Administration',
             str_starts_with($this->value, 'inventory.') => 'Inventory',
@@ -182,7 +193,7 @@ enum Permission: string
             self::PurchasingGrnPost => 'Post goods receipts (stock in)',
             self::PurchasingGrnReverse => 'Reverse posted goods receipts',
             self::PurchasingGrnCancel => 'Cancel draft goods receipts',
-            self::SalesView => 'View sales orders, deliveries and customer bags',
+            self::SalesView => 'View sales orders, deliveries, customer bags and returns',
             self::SalesOrderCreate => 'Create and edit draft sales orders',
             self::SalesOrderApprove => 'Approve sales orders',
             self::SalesOrderCancel => 'Cancel sales orders',
@@ -192,6 +203,8 @@ enum Permission: string
             self::SalesDeliveryCancel => 'Cancel draft deliveries',
             self::SalesBagsRecord => 'Record bags given to, returned by or lost by customers',
             self::SalesBagsReverse => 'Reverse customer bag records',
+            self::SalesReturnRecord => 'Record goods returned by customers, with credit or money back',
+            self::SalesReturnReverse => 'Reverse sales returns',
             self::ProductionView => 'View dehusking, husk chipping and copra runs',
             self::ProductionCreate => 'Create and edit draft production runs',
             self::ProductionPost => 'Post production runs',
@@ -240,6 +253,12 @@ enum Permission: string
             self::PayrollAdvanceReverse => 'Reverse salary advances',
             self::PayrollSalaryPay => 'Pay monthly salaries',
             self::PayrollSalaryReverse => 'Reverse paid salaries',
+            self::LoansView => 'View loans, their payments and what is still owed',
+            self::LoansManage => 'Add loans and edit their reminder details',
+            self::LoansReverse => 'Reverse loans recorded by mistake',
+            self::LoansPaymentRecord => 'Record loan installments paid',
+            self::LoansPaymentReverse => 'Reverse loan payments',
+            self::LoansReminders => 'Receive loan installment reminders by email',
             self::ReportsFinance => 'Profit & loss, balance sheet and cash/bank position',
             self::ReportsInventory => 'Inventory valuation and inventory-vs-GL reconciliation',
             self::ReportsManagement => 'Finance dashboard and operational product profitability',
@@ -262,7 +281,7 @@ enum Permission: string
     {
         return [
             'Master Data', 'Inventory', 'Purchasing', 'Sales', 'Production', 'Finance',
-            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Payroll', 'Reports', 'Administration',
+            'Accounts Payable', 'Accounts Receivable', 'Cash & Bank', 'Loans', 'Payroll', 'Reports', 'Administration',
         ];
     }
 }

@@ -421,9 +421,18 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Two more mutual blocks:** an invoice cannot be reversed while a posted receipt is
   allocated to it, and a delivery cannot be reversed once a posted invoice has billed it.
 - **Reversal is an audit correction, NOT a credit note.** Reversing says the invoice should
-  never have existed. Returns, post-hoc discounts and quality allowances are commercial
-  events needing credit notes, which are **not built** — never use a reversal in their
-  place. See `docs/ACCOUNTING_RULES.md` §19.
+  never have existed. Returned goods are a **sales return** (below); post-hoc discounts and
+  quality allowances are still **not built** — never use a reversal in their place. See
+  `docs/ACCOUNTING_RULES.md` §19.
+- **Sales returns are implemented** (`RecordSalesReturn`, Sales → Returns, §32): against an
+  INVOICED delivery line, never more than delivered nor credited beyond what was billed. The
+  credit is the PRICE CHARGED; good goods re-enter stock (`SALES_RETURN`) at the line's
+  `inventory_unit_cost` into its lot, damaged ones are a stock loss. Settled by reducing an
+  invoice of the customer (`CREDIT`; `EXCHANGE` = the invoice for replacement goods) or money back
+  (`REFUND`, capped at what was paid on the original invoice). Journal: `Dr revenue / Cr trade
+  receivables or cash`, `Dr inventory + stock loss / Cr cost of sales`. An invoice's outstanding
+  is total − receipts − returns credited (`AccountsReceivableService::settledAmount`); an invoice
+  linked to a standing return cannot be reversed. Backflushed lines (chips) cannot be returned.
 - **Receipts are always allocated to invoices** — no customer advances, deposits or
   on-account credits — and the allocations must total the receipt exactly.
 - **AR balances are derived, never stored.** A customer has no receivable column.
@@ -471,8 +480,8 @@ The inventory engine exists and is tested. These rules are permanent:
   adding one later is a visible change. See `docs/ACCOUNTING_RULES.md` §23.
 - **`Rule::exists()->where($column, false)` matches nothing** — the value is stringified, and
   `(string) false` is `''`. Use `0` and `1` in exists/unique rules, never booleans.
-- **Do not start bank reconciliation, cheque lifecycle, credit notes, sales returns, customer
-  or supplier advances, VAT/SVAT, loans, fixed assets or production overhead accounting**
+- **Do not start bank reconciliation, cheque lifecycle, discount / allowance credit notes, customer
+  or supplier advances, VAT/SVAT, fixed assets or production overhead accounting**
   without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
@@ -743,6 +752,22 @@ Full detail lives in `docs/PAYROLL.md`.
 
 ---
 
+## Loans (implemented — 2026-10-24)
+
+Full detail lives in `docs/LOANS.md`.
+
+- **No balance on a loan.** Still owed = amount − principal of standing payments (`LoanBalances`);
+  the invariant is Loans Payable (a control account) == total still owed.
+- **Each payment states what was actually paid and its interest** (from the bank slip); the rest
+  reduces the loan, never below zero. Interest-free loans (machinery) refuse interest.
+- **A running loan comes in at what is still owed** — `Dr opening balance equity / Cr loans`; a new
+  one `Dr cash/bank / Cr loans`. Accounts are `accounting_settings` configuration.
+- **Money is corrected by reversal**; only the description and reminder schedule
+  (`Loan::EDITABLE`) are edited.
+- **`loans:remind`** daily 08:00 Sri Lanka time: 7, 2 and 0 days before the due day, unless that
+  installment is paid, to users holding `loans.reminders`; each reminder sent once
+  (`loan_reminders`).
+
 ## Weekly update email (implemented — 1.10.0)
 
 Full detail lives in `docs/WEEKLY_UPDATE.md`.
@@ -816,7 +841,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (87 permissions, seven editable starting roles, multiple roles per user, every route
+control** (95 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -833,12 +858,15 @@ unpaid leave, salary advances, and salaries for any period and any people — ea
 once, the advance taken back chosen each time — posted to the ledger), and **damaged stock write-offs** (bags, coconuts or any product, valued by the ledger and
 charged to a stock-loss expense), and **returnable bags lent to customers** (given, returned and
 lost per customer, with what each holds derived), and **coconut sizes** (large / small / immature
-whole and dehusked stock, one dehusking and copra recipe per size).
+whole and dehusked stock, one dehusking and copra recipe per size), and **sales returns**
+(credited at the price charged, good goods back in stock, damaged ones a loss, settled by
+credit, exchange or money back), and **loans** (running and new loans, installments with interest
+from the bank slip, what is still owed derived, and email reminders before each due day).
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
-credit notes, sales returns and allowances, customer and supplier advances, production expense
-accounting, VAT/SVAT, EPF/ETF and payslips, loans, fixed assets, depreciation, cash flow statement, report
+discount and allowance credit notes, customer and supplier advances, production expense
+accounting, VAT/SVAT, EPF/ETF and payslips, Telegram reminders, fixed assets, depreciation, cash flow statement, report
 export, year-end closing, the permanent joint-product costing method, production planning,
 BOM editor, maintenance, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.

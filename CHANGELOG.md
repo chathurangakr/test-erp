@@ -4,6 +4,18 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.14.0 — 24 October 2026
+
+- **Customer returns** (Sales → Returns, or "Record a return" on a delivery). The customer is
+  credited at the price charged; good goods go back into stock at what they cost and damaged ones
+  are written off as a loss. Pay them back by reducing what they owe, with money back, or with
+  other goods of the same value (record that delivery and invoice, and the return pays it).
+- **Loans** (Cash & bank → Loans). Add loans already running (at what is still owed) or new ones,
+  record each installment with its interest from the bank slip — more or less than usual — and see
+  what is still owed on every loan.
+- **Loan reminders by email** to administrators 7 days before, 2 days before and on the due day,
+  unless that month's installment is already recorded.
+
 ## 1.13.0 — 24 October 2026
 
 - **Pay staff for any period** (Payroll → Salaries, formerly Monthly salaries). Pay one person
