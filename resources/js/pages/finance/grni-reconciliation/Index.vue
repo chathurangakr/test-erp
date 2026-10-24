@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { index } from '@/routes/grni-reconciliation';
 import type { ControlAccountCheck, GrniReconciliationReport } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/grni-reconciliation';
 
 defineProps<{
     report: GrniReconciliationReport;
@@ -38,6 +40,7 @@ const { t } = useT();
                 title="Goods Received Not Invoiced"
                 :description="t('Stock received but not yet invoiced, in :currency.', { currency })"
             />
+            <ExportButtons :url="exportReport.url" />
             <PrintButton />
         </div>
 

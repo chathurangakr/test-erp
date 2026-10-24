@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.19.0 — 25 October 2026
+
+- **Download any report as PDF or Excel.** Every report — profit and loss, balance sheet, trial
+  balance, general ledger, cash and bank, money owed by customers and to suppliers, stock and
+  inventory value, product profitability — has **PDF** and **Excel** buttons next to Print. The file
+  shows exactly what is on screen, with your letterhead on the PDF; in Excel the figures are real
+  numbers you can add up. Only people who may see a report can download it.
+
 ## 1.18.0 — 25 October 2026
 
 - **New accounting months open by themselves.** Every night the system makes sure this month and

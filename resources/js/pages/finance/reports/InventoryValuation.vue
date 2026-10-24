@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import ChartsButton from '@/components/charts/ChartsButton.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
@@ -14,6 +15,7 @@ import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports'
 import type { InventoryValuationReport, OptionRef } from '@/types';
 import { addDecimals } from '@/lib/charts';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/inventory-valuation';
 
 const props = defineProps<{
     report: InventoryValuationReport;
@@ -79,6 +81,7 @@ const valueByProduct = computed(() => {
             />
             <div class="flex gap-2">
                 <ChartsButton />
+                <ExportButtons :url="exportReport.url" :query="filters" />
                 <PrintButton />
             </div>
         </div>

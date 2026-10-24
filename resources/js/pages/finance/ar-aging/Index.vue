@@ -2,11 +2,13 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { index } from '@/routes/ar-aging';
 import type { ArAgingReport, ControlAccountCheck } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/ar-aging';
 
 const props = defineProps<{
     report: ArAgingReport;
@@ -38,6 +40,7 @@ const { t } = useT();
                 title="Accounts receivable aging"
                 :description="t('What each customer owes, in :currency, bucketed by how overdue it is.', { currency })"
             />
+            <ExportButtons :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

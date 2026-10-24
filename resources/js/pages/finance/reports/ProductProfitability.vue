@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import ChartsButton from '@/components/charts/ChartsButton.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { show as deliveryShow } from '@/routes/deliveries';
 import { productProfitability, profitLoss } from '@/routes/reports';
 import type { OptionRef, ProductProfitabilityReport } from '@/types';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/product-profitability';
 
 const props = defineProps<{
     report: ProductProfitabilityReport;
@@ -82,6 +84,7 @@ const profitByProduct = computed(() =>
             />
             <div class="flex gap-2">
                 <ChartsButton />
+                <ExportButtons :url="exportReport.url" :query="filters" />
                 <PrintButton />
             </div>
         </div>

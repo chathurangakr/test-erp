@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import type { CashBankBook } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/cash-bank-book';
 
 const props = defineProps<{
     accounts: { id: number; display_name: string; account_code: string | null; kind_label: string }[];
@@ -59,6 +61,7 @@ watch([accountId, from, to], () => {
                 title="Cash / bank book"
                 description="Every posted movement through one account, whatever recorded it."
             />
+            <ExportButtons :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

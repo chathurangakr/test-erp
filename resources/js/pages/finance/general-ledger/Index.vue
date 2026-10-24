@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index } from '@/routes/general-ledger';
@@ -9,6 +10,7 @@ import { index as journalsIndex } from '@/routes/journals';
 import type { AccountOption, GeneralLedgerReport } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/general-ledger';
 
 const props = defineProps<{
     accounts: AccountOption[];
@@ -59,6 +61,7 @@ const { t } = useT();
                 title="General ledger"
                 :description="t('Every posted line for one account, with a running balance. Amounts in :currency.', { currency })"
             />
+            <ExportButtons v-if="filters.account_id" :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

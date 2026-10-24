@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import SearchableSelect from '@/components/SearchableSelect.vue';
@@ -9,6 +10,7 @@ import { index as stockIndex } from '@/routes/inventory/stock';
 import type { OptionRef, StockRow } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/inventory/stock';
 
 const props = defineProps<{
     rows: StockRow[];
@@ -68,6 +70,7 @@ const totalValue = computed(() =>
                 title="Stock on hand"
                 description="Derived from posted inventory movements. There is no stored stock figure."
             />
+            <ExportButtons :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

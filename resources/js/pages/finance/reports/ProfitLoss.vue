@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import WaterfallChart from '@/components/charts/WaterfallChart.vue';
 import Heading from '@/components/Heading.vue';
 import ChartsButton from '@/components/charts/ChartsButton.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { useT } from '@/lib/i18n';
 import { profitLoss } from '@/routes/reports';
 import type { ProfitLossStatement } from '@/types';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/profit-loss';
 
 const props = defineProps<{
     statement: ProfitLossStatement;
@@ -69,6 +71,7 @@ const bridge = computed(() => [
             />
             <div class="flex gap-2">
                 <ChartsButton />
+                <ExportButtons :url="exportReport.url" :query="filters" />
                 <PrintButton />
             </div>
         </div>

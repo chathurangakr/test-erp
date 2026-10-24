@@ -525,7 +525,10 @@ The inventory engine exists and is tested. These rules are permanent:
 - **The dashboard fetches every figure from the owning service** and takes an explicit fiscal
   period or date range — never an assumed "current month" in the service.
 - **Report routes are GET-only.** A test asserts nothing in the reporting area writes.
-- **Not built:** cash flow statement, year-end closing, PDF/Excel export, comparative periods,
+- **Exports (1.19.0):** every report downloads as PDF or Excel (`ReportExports` → dompdf / `XlsxWriter`)
+  through its own export route with the SAME permission as the report, built from the same
+  services and filters as the screen — never a second calculation. See `docs/REPORT_EXPORTS.md`.
+- **Not built:** cash flow statement, year-end closing, comparative periods,
   historical inventory valuation.
 
 ---

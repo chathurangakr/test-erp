@@ -2443,5 +2443,7 @@
     "Commands are off.": "විධාන අක්‍රියයි.",
     "Telegram unlinked.": "ටෙලිග්‍රෑම් සම්බන්ධය ඉවත් කළා.",
     "Telegram cannot reach this computer (:address is not on the internet). Switch commands on from the cloud server instead.": "ටෙලිග්‍රෑම් හට මෙම පරිගණකයට ළඟා විය නොහැක (:address අන්තර්ජාලයේ නැත). ඒ වෙනුවට cloud සේවාදායකයෙන් විධාන ක්‍රියාත්මක කරන්න.",
-    "Off. Switch on (from the cloud server — Telegram must be able to reach it) to let people ask the bot for figures in a private chat.": "අක්‍රියයි. පුද්ගලික චැට් එකක බොට්ගෙන් සංඛ්‍යා විමසීමට ඉඩ දීමට (ටෙලිග්‍රෑම් හට ළඟා විය හැකි cloud සේවාදායකයෙන්) ක්‍රියාත්මක කරන්න."
+    "Off. Switch on (from the cloud server — Telegram must be able to reach it) to let people ask the bot for figures in a private chat.": "අක්‍රියයි. පුද්ගලික චැට් එකක බොට්ගෙන් සංඛ්‍යා විමසීමට ඉඩ දීමට (ටෙලිග්‍රෑම් හට ළඟා විය හැකි cloud සේවාදායකයෙන්) ක්‍රියාත්මක කරන්න.",
+    "PDF": "PDF",
+    "Excel": "Excel"
 }

@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import StatementSection from '@/components/reports/StatementSection.vue';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { balanceSheet, profitLoss } from '@/routes/reports';
 import type { BalanceSheetStatement, ProfitLossStatement } from '@/types';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/balance-sheet';
 
 const props = defineProps<{
     statement: BalanceSheetStatement;
@@ -38,6 +40,7 @@ watch(asOf, () => {
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <Heading title="Balance sheet" :description="t('As at :date', { date: statement.as_of })" />
+            <ExportButtons :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

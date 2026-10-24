@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as accountsIndex } from '@/routes/accounts';
@@ -9,6 +10,7 @@ import { index } from '@/routes/trial-balance';
 import type { TrialBalanceReport } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/trial-balance';
 
 const props = defineProps<{
     report: TrialBalanceReport;
@@ -50,6 +52,7 @@ const { t } = useT();
                 title="Trial balance"
                 :description="t('Every account with a balance, in :currency. The two totals must be identical.', { currency })"
             />
+            <ExportButtons :url="exportReport.url" :query="filters" />
             <PrintButton />
         </div>
 

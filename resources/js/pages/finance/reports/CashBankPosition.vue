@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import BarList from '@/components/charts/BarList.vue';
 import Heading from '@/components/Heading.vue';
 import ChartsButton from '@/components/charts/ChartsButton.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
 import { cashBankPosition } from '@/routes/reports';
 import type { CashBankAccountRow, CashBankSummary } from '@/types';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/cash-bank-position';
 
 const props = defineProps<{
     summary: CashBankSummary;
@@ -72,6 +74,7 @@ const balances = computed(() =>
             />
             <div class="flex gap-2">
                 <ChartsButton />
+                <ExportButtons :url="exportReport.url" :query="filters" />
                 <PrintButton />
             </div>
         </div>

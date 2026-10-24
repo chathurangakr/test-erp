@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { useT } from '@/lib/i18n';
@@ -8,6 +9,7 @@ import { index as generalLedgerIndex } from '@/routes/general-ledger';
 import { inventoryGlReconciliation, inventoryValuation } from '@/routes/reports';
 import type { InventoryGlReconciliationReport } from '@/types';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/reports/inventory-gl-reconciliation';
 
 defineProps<{ report: InventoryGlReconciliationReport; currency: string }>();
 
@@ -26,6 +28,7 @@ const { t } = useT();
                     title="Inventory vs general ledger"
                     description="Two independent records of the same value, compared to six decimals."
                 />
+                <ExportButtons :url="exportReport.url" />
                 <PrintButton />
             </div>
             <Badge :variant="report.reconciled ? 'default' : 'destructive'" class="w-fit">

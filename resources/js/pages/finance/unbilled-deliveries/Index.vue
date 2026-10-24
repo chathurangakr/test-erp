@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/composables/usePermissions';
@@ -9,6 +10,7 @@ import { index } from '@/routes/unbilled-deliveries';
 import type { UnbilledDeliveryReport } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
+import { exportMethod as exportReport } from '@/routes/unbilled-deliveries';
 
 defineProps<{
     report: UnbilledDeliveryReport;
@@ -41,6 +43,7 @@ const { t } = useT();
                 title="Unbilled deliveries"
                 :description="t('Goods delivered but not yet invoiced, in :currency.', { currency })"
             />
+            <ExportButtons :url="exportReport.url" />
             <PrintButton />
         </div>
 
