@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.30.2 — 25 October 2026
+
+- **Build tools brought fully up to date** (vite-plus 1.3, vue-tsc 3): the package check now finds
+  no known problems at all. This changes nothing on screen.
+- **Fix for the installer:** on a computer whose Node.js came with Ubuntu (npm 9), the installer
+  now switches to the official Node.js first, so building the screens cannot fail there.
+
 ## 1.30.1 — 25 October 2026
 
 - **Fix: fail2ban now also blocks bots that try SSH keys.** With password sign-in off, most bots

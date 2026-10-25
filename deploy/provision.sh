@@ -221,16 +221,21 @@ apt-get install -y -q "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_
 update-alternatives --set php "/usr/bin/php${PHP_VERSION}" >/dev/null 2>&1 || true
 ok "$(php -v | head -n1)"
 
-if ! command -v node >/dev/null 2>&1 || (( $(node -p 'process.versions.node.split(".")[0]') < NODE_MAJOR )); then
+# NodeSource's Node.js, which brings npm 10+. Ubuntu's own nodejs package comes with npm 9, which
+# cannot read package.json's "overrides" (the vite alias of vite-plus) and fails at `npm ci`.
+npm_major="$(npm -v 2>/dev/null | cut -d. -f1)"
+if ! command -v node >/dev/null 2>&1 || (( $(node -p 'process.versions.node.split(".")[0]') < NODE_MAJOR )) \
+    || (( ${npm_major:-0} < 10 )); then
     install -d -m 755 /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list
+    printf 'Package: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 600\n' > /etc/apt/preferences.d/nodesource
     apt-get update -q
     apt-get install -y -q nodejs
 fi
-ok "Node.js $(node -v)"
+ok "Node.js $(node -v), npm $(npm -v)"
 
 if ! command -v composer >/dev/null 2>&1; then
     tmp="$(mktemp -d)"

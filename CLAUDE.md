@@ -891,8 +891,12 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
   (no root login, no X11; password sign-in untouched), the sshd jail in `mode = aggressive` (key-only bots never fail a password), rpcbind off, MariaDB `local_infile = 0`,
   unattended security upgrades, Mozilla-intermediate TLS and the security headers repeated in
   `/build/`. Keep it idempotent.
-- **npm on the build machine:** `package.json` `overrides` pin patched sub-packages of vite-plus
-  0.3.0. Moving to vite-plus 1.x is a separate toolchain migration (vite alias, npm 12, vue-tsc 3).
+- **Build toolchain (1.30.2): vite-plus 1.x**, where `vite` is an alias of
+  `@voidzero-dev/vite-plus-core` in both `devDependencies` and `overrides` (`vp` refuses a plain
+  vite), with vue-tsc 3. It needs **npm 10 or newer** — Ubuntu's apt npm 9 fails on the alias
+  ("Invalid comparator") — so the installer switches such a computer to NodeSource's Node.js.
+- **Off-site backups stay unencrypted** (the owner's choice, 2026-10-25): an encrypted copy would
+  be lost with its password. Protect the Google account instead.
 
 ## Master data rules
 
