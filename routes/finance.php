@@ -11,8 +11,10 @@ use App\Http\Controllers\Accounting\TrialBalanceController;
 use App\Http\Controllers\Accounting\YearEndClosingController;
 use App\Http\Controllers\Advances\CustomerAdvanceController;
 use App\Http\Controllers\Advances\SupplierAdvanceController;
+use App\Http\Controllers\Cash\BankReconciliationController;
 use App\Http\Controllers\Cash\CashBankAccountController;
 use App\Http\Controllers\Cash\CashBankBookController;
+use App\Http\Controllers\Cash\ChequeController;
 use App\Http\Controllers\Cash\ExpenseVoucherActionController;
 use App\Http\Controllers\Cash\ExpenseVoucherController;
 use App\Http\Controllers\Cash\FundTransferActionController;
@@ -238,6 +240,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['destroy', 'show'])
         ->middlewareFor(['index'], Permission::CashView->middleware())
         ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::CashAccountsManage->middleware());
+
+    // Cheques and bank reconciliation — docs/ACCOUNTING_RULES.md §35-§36.
+    Route::get('finance/cheques', [ChequeController::class, 'index'])
+        ->name('cheques.index')
+        ->can(Permission::CashView);
+    Route::post('finance/cheques/clear', [ChequeController::class, 'clear'])
+        ->name('cheques.clear')
+        ->can(Permission::CashChequeManage);
+    Route::post('finance/cheques/undo-clear', [ChequeController::class, 'undoClear'])
+        ->name('cheques.undo-clear')
+        ->can(Permission::CashChequeManage);
+    Route::post('finance/cheques/bounce', [ChequeController::class, 'bounce'])
+        ->name('cheques.bounce')
+        ->can(Permission::CashChequeManage);
+    Route::get('finance/bank-reconciliation', [BankReconciliationController::class, 'index'])
+        ->name('bank-reconciliation.index')
+        ->can(Permission::CashView);
+    Route::post('finance/bank-reconciliation', [BankReconciliationController::class, 'store'])
+        ->name('bank-reconciliation.store')
+        ->can(Permission::CashReconcile);
+    Route::patch('finance/bank-reconciliation/{bankReconciliation}/reverse', [BankReconciliationController::class, 'reverse'])
+        ->name('bank-reconciliation.reverse')
+        ->can(Permission::CashReconcile);
 
     Route::get('finance/cash-bank-book', [CashBankBookController::class, 'index'])
         ->name('cash-bank-book.index')

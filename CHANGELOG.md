@@ -4,6 +4,16 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.23.0 — 25 October 2026
+
+- **Cheques** (Cash & bank → Cheques). Every cheque you received or issued, with where it stands:
+  waiting (and "not yet due" for a post-dated one), cleared or bounced. Mark one cleared when the
+  bank has it. Mark one **bounced** and its receipt, payment or advance is reversed for you — the
+  customer owes the invoice again.
+- **Bank reconciliation** (Cash & bank → Bank reconciliation). Enter your bank statement's date and
+  closing balance, tick the lines the statement shows, and finish when the difference is zero. A
+  ticked cheque counts as cleared. The latest statement can be undone.
+
 ## 1.22.0 — 25 October 2026
 
 - **Customer advances** (Finance → Customer advances). Record money a customer pays before there is

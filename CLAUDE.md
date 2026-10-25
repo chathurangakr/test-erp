@@ -365,7 +365,11 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Payments record how money moved: `CASH`, `CHEQUE` or `BANK_TRANSFER`** (`PaymentMethod`).
   Cash goes through a CASH-kind cash/bank account; a cheque or transfer through a BANK-kind one
   (`AccountingPolicy::assertMethodFitsAccount`, request and posting). A cheque records number,
-  date and bank — **no status, no clearing account** (cheque lifecycle is still not started).
+  date and bank — **no clearing account**. Its status (waiting / cleared / bounced / void) is
+  DERIVED by `ChequeRegister` from `cheque_events` and bank reconciliations (1.23.0, §35); a
+  bounce reverses the cheque's document through its own reversal action. Bank statements are
+  agreed by `RecordBankReconciliation` (§36): ticked lines must leave the statement balance to
+  the cent; neither feature writes a journal.
   **"Credit" is not a method**: it is an invoice left outstanding. See
   `docs/ACCOUNTING_RULES.md` §29-§30.
 - **A delivery recognises NO revenue.** It is a physical issue; revenue and the debt belong
@@ -492,8 +496,7 @@ The inventory engine exists and is tested. These rules are permanent:
   adding one later is a visible change. See `docs/ACCOUNTING_RULES.md` §23.
 - **`Rule::exists()->where($column, false)` matches nothing** — the value is stringified, and
   `(string) false` is `''`. Use `0` and `1` in exists/unique rules, never booleans.
-- **Do not start bank reconciliation, cheque lifecycle, VAT/SVAT, depreciation or production
-  overhead accounting**
+- **Do not start VAT/SVAT, depreciation or production overhead accounting**
   without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
@@ -894,7 +897,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (111 permissions, seven editable starting roles, multiple roles per user, every route
+control** (113 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -919,11 +922,11 @@ from the bank slip, what is still owed derived, and email reminders before each 
 loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
 every posting and reversal) with a **monthly report** by email and Telegram on the 1st, **report
 exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March), and **credit notes**
-for discounts and quality allowances, and **customer and supplier advances**.
+for discounts and quality allowances, and **customer and supplier advances**, and **cheques** (waiting / cleared / bounced) with
+**bank reconciliation**.
 
-**Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
-(cheque status, clearing account, bounced-cheque handling),
-production expense
+**Not yet started — do not begin without instruction:** a cheque clearing account and bounce
+bank charges, refunding unused advances, money back for a discount, production expense
 accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, the permanent joint-product costing method, production planning,
 BOM editor, maintenance planning, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.

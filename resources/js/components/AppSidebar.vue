@@ -52,6 +52,8 @@ import {
     BadgeDollarSign,
     BadgePercent,
     PiggyBank,
+    FileCheck,
+    ListChecks,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -104,7 +106,9 @@ import { index as customerReceiptsIndex } from '@/routes/customer-receipts';
 import { index as arAgingIndex } from '@/routes/ar-aging';
 import { index as unbilledDeliveriesIndex } from '@/routes/unbilled-deliveries';
 import { index as cashBankAccountsIndex } from '@/routes/cash-bank-accounts';
+import { index as bankReconciliationIndex } from '@/routes/bank-reconciliation';
 import { index as cashBankBookIndex } from '@/routes/cash-bank-book';
+import { index as chequesIndex } from '@/routes/cheques';
 import { index as expenseVouchersIndex } from '@/routes/expense-vouchers';
 import { index as fundTransfersIndex } from '@/routes/fund-transfers';
 import { index as employeesIndex } from '@/routes/employees';
@@ -434,6 +438,18 @@ const cashNavItems: NavItem[] = [
         href: cashBankBookIndex(),
         permission: 'finance.cash.view',
         icon: BookOpenCheck,
+    },
+    {
+        title: 'Cheques',
+        href: chequesIndex(),
+        permission: 'finance.cash.view',
+        icon: FileCheck,
+    },
+    {
+        title: 'Bank reconciliation',
+        href: bankReconciliationIndex(),
+        permission: 'finance.cash.view',
+        icon: ListChecks,
     },
     {
         title: 'Expense Vouchers',

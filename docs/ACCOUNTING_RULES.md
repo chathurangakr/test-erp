@@ -1160,3 +1160,39 @@ supplier advance        Dr supplier advances (1230, ASSET, control)   Cr cash or
 - Permissions `finance.ar.advance_record` / `finance.ar.advance_reverse` and
   `finance.ap.advance_record` / `finance.ap.advance_reverse`; viewing with `finance.ar.view` /
   `finance.ap.view`.
+
+## 35. Cheques — ✅ **CONFIRMED** (2026-10-25, built overnight on the owner's go-ahead)
+
+Finance → Cheques lists every cheque recorded on a **customer receipt, supplier payment, customer
+advance or supplier advance** (payment method CHEQUE), received or issued. **Nothing about how
+money is journalled changes** — a cheque was already journalled into the bank when its document was
+posted; there is still no clearing account.
+
+- **Status is derived** (`App\Services\Accounting\ChequeRegister`), never stored on the document:
+  BOUNCED (a standing bounce event) → VOID (the document was reversed otherwise) → CLEARED (a
+  standing "cleared" event, or its bank journal line ticked in a bank reconciliation) → WAITING.
+  A waiting cheque dated after today shows "Not yet due".
+- **Mark cleared** (`MarkChequeCleared`, a day on or after the document) writes a `cheque_events`
+  row; a mistake is undone (`UndoChequeCleared`, the row is kept and marked reversed).
+- **Mark bounced** (`BounceCheque`, a day and a reason) REVERSES the cheque's document with that
+  document's own reversal action, in the same transaction — the money never moved, so the invoice
+  it paid is owed again (an advance still applied must be unapplied first). A cheque marked cleared
+  must be un-cleared before it can bounce. **Bank charges for a bounce are not modelled (TBD)** —
+  record them as an expense voucher.
+- Permission `finance.cash.cheque_manage`; viewing with `finance.cash.view`.
+
+## 36. Bank reconciliation — ✅ **CONFIRMED** (2026-10-25)
+
+Finance → Bank reconciliation agrees a **bank statement** with the books. For one BANK-kind
+cash/bank account: enter the statement's date and closing balance, tick each journal line on that
+account the statement shows, and finish only when **the reconciled balance (every line ticked by
+earlier statements, plus these) equals the statement balance to the cent**.
+
+- `RecordBankReconciliation` — statements in date order; each line once; only lines dated up to
+  the statement. Changes no journal (`bank_reconciliations` + `bank_reconciliation_lines`).
+- `ReverseBankReconciliation` — the latest statement of an account only; kept, marked reversed,
+  its lines free to tick again.
+- A ticked line of a cheque document makes that cheque CLEARED (§35).
+- The book balance at the statement date is shown beside it; the difference between books and
+  bank is exactly the unticked lines (money in transit, cheques not yet presented).
+- Permission `finance.cash.reconcile`; viewing with `finance.cash.view`.

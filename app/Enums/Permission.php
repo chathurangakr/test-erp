@@ -113,6 +113,8 @@ enum Permission: string
     case CashTransferPost = 'finance.cash.transfer_post';
     case CashTransferReverse = 'finance.cash.transfer_reverse';
     case CashTransferCancel = 'finance.cash.transfer_cancel';
+    case CashChequeManage = 'finance.cash.cheque_manage';
+    case CashReconcile = 'finance.cash.reconcile';
 
     // ------------------------------------------------------------- payroll
     case PayrollView = 'payroll.view';
@@ -273,6 +275,8 @@ enum Permission: string
             self::CashTransferPost => 'Post fund transfers',
             self::CashTransferReverse => 'Reverse posted fund transfers',
             self::CashTransferCancel => 'Cancel draft fund transfers',
+            self::CashChequeManage => 'Mark cheques cleared or bounced',
+            self::CashReconcile => 'Reconcile bank statements',
             self::PayrollView => 'View employees, attendance, salary advances and paid salaries',
             self::PayrollEmployeesManage => 'Add and edit employees and their daily rates',
             self::PayrollAttendanceRecord => 'Record daily attendance and leave',

@@ -5,6 +5,7 @@ namespace Tests\Feature\Authorization;
 use App\Enums\Permission;
 use App\Models\Account;
 use App\Models\AssetMaintenance;
+use App\Models\BankReconciliation;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerAdvance;
@@ -327,6 +328,10 @@ class RouteAuthorizationTest extends TestCase
                 'supplierAdvance' => SupplierAdvance::factory()->create(),
                 'customerAdvanceApplication' => CustomerAdvanceApplication::factory()->create(),
                 'supplierAdvanceApplication' => SupplierAdvanceApplication::factory()->create(),
+                'bankReconciliation' => BankReconciliation::create([
+                    'cash_bank_account_id' => CashBankAccount::factory()->create()->id,
+                    'statement_date' => '2026-09-30', 'statement_balance' => '0', 'status' => BankReconciliation::COMPLETED,
+                ]),
                 'cashBankAccount' => CashBankAccount::factory()->create(),
                 'supplier_invoice' => SupplierInvoice::factory()->create(),
                 'supplier_payment' => SupplierPayment::factory()->create(),
