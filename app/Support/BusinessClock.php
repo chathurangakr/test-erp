@@ -59,6 +59,20 @@ final class BusinessClock
     }
 
     /**
+     * Whether a calendar date lies after today in the business calendar.
+     *
+     * Compares calendar dates, not instants: a date string parsed in the app timezone (UTC) is
+     * midnight UTC, which is already 05:30 in Sri Lanka — later than BusinessClock::today()'s
+     * midnight — so comparing the instants would call today "the future".
+     */
+    public static function isFuture(CarbonInterface|string $date): bool
+    {
+        $day = $date instanceof CarbonInterface ? $date->toDateString() : CarbonImmutable::parse($date)->toDateString();
+
+        return $day > self::todayString();
+    }
+
+    /**
      * A stored UTC moment as people should read it on screen, in the business timezone.
      */
     public static function display(?CarbonInterface $moment): ?string

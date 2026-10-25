@@ -104,7 +104,9 @@ class YearEndClosingTest extends TestCase
     #[Test]
     public function a_year_closes_once_in_order_after_it_ends_while_its_last_month_is_open(): void
     {
-        // Still running.
+        // Still running — on its last day too, even late in the Sri Lankan evening.
+        $this->expectRefusal(fn () => $this->close(), 'can be closed from the next day');
+        $this->travelTo(Carbon::parse('2027-03-31 23:30', 'Asia/Colombo'));
         $this->expectRefusal(fn () => $this->close(), 'can be closed from the next day');
 
         $this->travelTo(Carbon::parse('2027-04-02 09:00', 'Asia/Colombo'));

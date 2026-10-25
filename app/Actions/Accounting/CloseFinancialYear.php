@@ -53,7 +53,7 @@ class CloseFinancialYear
             throw ValidationException::withMessages(['year_end_date' => __('A financial year ends on :date.', ['date' => $end->toDateString()])]);
         }
 
-        if (! BusinessClock::today()->greaterThan($end)) {
+        if ($end->toDateString() >= BusinessClock::todayString()) {
             throw ValidationException::withMessages(['status' => __('The financial year ending :date can be closed from the next day.', ['date' => $end->toDateString()])]);
         }
 

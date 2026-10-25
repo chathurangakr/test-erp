@@ -724,6 +724,9 @@ Full detail lives in `docs/KIOSK.md` and `docs/DATA_MODEL.md` T-1.
   overdue checks, form defaults (`businessToday` shared prop / `@/lib/businessDate`) and for
   displaying times (`BusinessClock::display()`). Never write `BusinessClock::now()` into a
   timestamp column, and never use `new Date().toISOString()` for a default date.
+- **Judge "future" and "overdue" by calendar DATE** — `BusinessClock::isFuture()` / `isPastDue()`.
+  Never compare a parsed date string (midnight UTC = 05:30 in Colombo) with `BusinessClock::today()`
+  (midnight Colombo) as instants: today then counts as the future (1.30.3: attendance and cheques).
 - **Simple mode (`/kiosk`) is a second front door, not a second system.** Done composes the
   existing `Save*` and `Post*` actions in ONE transaction (`RecordKioskEntry`) — a failed post
   leaves nothing behind. Kiosk FormRequests extend the web ones and only force today's date.

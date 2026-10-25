@@ -21,6 +21,7 @@ use App\Services\Payroll\PayrollCalculator;
 use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -386,6 +387,29 @@ class PayrollTest extends TestCase
 
         $this->expectException(ValidationException::class);
         app(RecordAttendance::class)->handle('2026-09-01', [['employee_id' => $gone->id, 'status' => 'FULL_DAY']]);
+    }
+
+    #[Test]
+    public function today_is_recorded_at_any_hour_of_the_sri_lankan_day_and_tomorrow_is_refused(): void
+    {
+        $employee = Employee::factory()->create();
+
+        // 10:00 in Colombo, and 00:30 in Colombo (still the previous day in UTC).
+        foreach ([['2026-09-20 10:00', '2026-09-20'], ['2026-09-21 00:30', '2026-09-21']] as [$moment, $today]) {
+            $this->travelTo(Carbon::parse($moment, 'Asia/Colombo'));
+
+            $this->actingAs($this->user)->put(route('attendance.update'), [
+                'work_date' => $today,
+                'entries' => [['employee_id' => $employee->id, 'status' => 'FULL_DAY']],
+            ])->assertSessionHasNoErrors();
+
+            $this->actingAs($this->user)->put(route('attendance.update'), [
+                'work_date' => Carbon::parse($today)->addDay()->toDateString(),
+                'entries' => [['employee_id' => $employee->id, 'status' => 'FULL_DAY']],
+            ])->assertSessionHasErrors('work_date');
+        }
+
+        $this->assertSame(2, EmployeeAttendance::count());
     }
 
     #[Test]

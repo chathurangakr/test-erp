@@ -27,7 +27,7 @@ class RecordAttendance
     {
         $day = CarbonImmutable::parse($date)->startOfDay();
 
-        if ($day->greaterThan(BusinessClock::today())) {
+        if (BusinessClock::isFuture($day)) {
             throw ValidationException::withMessages([
                 'work_date' => __('Attendance cannot be recorded for a future date.'),
             ]);

@@ -27,6 +27,7 @@ use Database\Seeders\CashBankAccountSeeder;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\ProductAccountMappingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -80,6 +81,10 @@ class ChequesAndBankReconciliationTest extends TestCase
         $this->assertSame(['ISSUED', 'RECEIVED'], $cheques->pluck('direction')->all());
         $this->assertSame([ChequeStatus::Waiting->value], $cheques->pluck('status')->unique()->values()->all());
         $this->assertTrue($this->row($this->issued)['not_yet_due'], 'Dated 25 September; the suite runs before it.');
+        $this->travelTo(Carbon::parse('2026-09-25 10:00', 'Asia/Colombo'));
+        $this->assertFalse($this->row($this->issued)['not_yet_due'], 'Due on its own date in Sri Lanka.');
+        $this->travelBack();
+        $this->travelTo(Carbon::parse(self::FIXED_NOW, 'UTC'));
 
         $this->assertRefused(fn () => app(MarkChequeCleared::class)->handle(CustomerAdvance::class, $this->received->id, '2026-09-04'), 'event_date', 'before it was recorded');
 

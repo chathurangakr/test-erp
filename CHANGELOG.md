@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.30.3 — 25 October 2026
+
+- **Fix: today's attendance can be saved again**, on the website and the phone app. It was refused
+  as "a future date", because Sri Lanka's day starts 5½ hours before the server's.
+- **Fix: a cheque dated today no longer shows "not yet due"** in the cheque register.
+
 ## 1.30.2 — 25 October 2026
 
 - **Build tools brought fully up to date** (vite-plus 1.3, vue-tsc 3): the package check now finds

@@ -114,7 +114,7 @@ class ChequeRegister
             'cheque_date' => $document->cheque_date?->toDateString(),
             'cheque_bank' => $document->cheque_bank,
             'amount' => (string) $document->amount,
-            'not_yet_due' => $document->cheque_date !== null && $document->cheque_date->greaterThan(BusinessClock::today()),
+            'not_yet_due' => $document->cheque_date !== null && BusinessClock::isFuture($document->cheque_date),
             'status' => $status->value,
             'status_label' => $status->label(),
             'status_date' => $statusDate,
