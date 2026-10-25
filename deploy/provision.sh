@@ -301,7 +301,7 @@ ok "Database '${DB_NAME}' and account '${DB_USER}' ready; MariaDB listens on thi
 # Memory for the database's working cache: about a third of this computer's memory, in place of
 # MariaDB's 128 MB default. Balances, statements and stock are summed from the ledgers, so keeping
 # the ledgers in memory is what keeps them fast as years of history build up. Recalculated on every
-# install and update, applied at once without a restart (the file keeps it after one). Queries
+# install and update; MariaDB is restarted once when its running cache is smaller. Queries
 # slower than 2 seconds are logged to /var/log/mysql/coconut-erp-slow.log.
 say "Sizing the database cache"
 ram_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
@@ -321,11 +321,17 @@ CNF
 if ! cmp -s "$perf_new" "$perf_cnf"; then
     install -m 644 "$perf_new" "$perf_cnf"
     install -d -o mysql -g adm -m 2750 /var/log/mysql
-    mariadb -e "SET GLOBAL innodb_buffer_pool_size = ${pool_mb} * 1024 * 1024" \
-        || warn "The new cache size takes effect when MariaDB next restarts"
     mariadb -e "SET GLOBAL innodb_log_file_size = 512 * 1024 * 1024" >/dev/null 2>&1 || true
     mariadb -e "SET GLOBAL slow_query_log_file = '/var/log/mysql/coconut-erp-slow.log'; SET GLOBAL long_query_time = 2; SET GLOBAL slow_query_log = 1" \
         || warn "Slow-query logging starts when MariaDB next restarts"
+fi
+# Newer MariaDB cannot grow its cache beyond its start-up size while running; when the running
+# cache is smaller than the file says, restart it once (a few seconds) so the file takes effect.
+running_mb="$(mariadb -N -B -e 'SELECT @@innodb_buffer_pool_size DIV 1048576' 2>/dev/null || echo 0)"
+if (( running_mb + 128 < pool_mb )); then
+    systemctl restart mariadb
+    for _ in $(seq 1 30); do mariadb -e 'SELECT 1' >/dev/null 2>&1 && break; sleep 1; done
+    mariadb -e 'SELECT 1' >/dev/null 2>&1 || die "MariaDB did not come back after resizing its cache."
 fi
 rm -f "$perf_new"
 ok "Database cache: ${pool_mb} MB of ${ram_mb} MB memory; slow queries are logged"

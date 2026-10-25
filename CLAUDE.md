@@ -871,7 +871,8 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
   `je_date_status_index`): keep the summed columns in them. Relations that list lines order by
   `id` explicitly — never rely on whichever index the database reads.
 - **The installer sizes MariaDB's cache** to about a third of the computer's memory
-  (`98-coconut-erp-performance.cnf`, applied without a restart) and logs queries over 2 s to
+  (`98-coconut-erp-performance.cnf`; MariaDB is restarted once when its running cache is smaller —
+  newer versions cannot grow it live) and logs queries over 2 s to
   `/var/log/mysql/coconut-erp-slow.log`.
 
 ## Master data rules

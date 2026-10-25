@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.29.1 — 25 October 2026
+
+- **Fix: the bigger database cache now always takes effect.** This MariaDB version can't enlarge
+  its cache while running, so an install or update now restarts the database once (a few seconds)
+  when the cache is smaller than it should be. The cloud server already has its 4 GB.
+
 ## 1.29.0 — 25 October 2026
 
 - **Ready for many years of data.** Tested with about ten years of a busy factory's records
