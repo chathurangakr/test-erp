@@ -4,6 +4,8 @@ namespace App\Services\Telegram;
 
 use App\Enums\LoanFunding;
 use App\Models\AssetMaintenance;
+use App\Models\CustomerAdvance;
+use App\Models\CustomerAdvanceApplication;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -21,6 +23,8 @@ use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
+use App\Models\SupplierAdvance;
+use App\Models\SupplierAdvanceApplication;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use Illuminate\Database\Eloquent\Model;
@@ -46,6 +50,10 @@ final class TransactionAlertCatalog
         CustomerReceipt::class => 'customer_receipts',
         SalesReturn::class => 'sales_returns',
         SalesCreditNote::class => 'credit_notes',
+        CustomerAdvance::class => 'customer_advances',
+        CustomerAdvanceApplication::class => 'customer_advances',
+        SupplierAdvance::class => 'supplier_advances',
+        SupplierAdvanceApplication::class => 'supplier_advances',
         CustomerBagMovement::class => 'customer_bags',
         SupplierInvoice::class => 'supplier_invoices',
         SupplierPayment::class => 'supplier_payments',
@@ -76,6 +84,8 @@ final class TransactionAlertCatalog
             'customer_receipts' => 'Customer receipts',
             'sales_returns' => 'Sales returns',
             'credit_notes' => 'Discounts and quality allowances',
+            'customer_advances' => 'Customer advances received and applied',
+            'supplier_advances' => 'Supplier advances paid and applied',
             'customer_bags' => 'Bags given to and returned by customers',
             'supplier_invoices' => 'Supplier invoices',
             'supplier_payments' => 'Supplier payments',

@@ -7,6 +7,8 @@ use App\Models\Account;
 use App\Models\AssetMaintenance;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
+use App\Models\CustomerAdvance;
+use App\Models\CustomerAdvanceApplication;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -32,6 +34,8 @@ use App\Models\SalesOrder;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Models\Supplier;
+use App\Models\SupplierAdvance;
+use App\Models\SupplierAdvanceApplication;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Models\User;
@@ -319,6 +323,10 @@ class RouteAuthorizationTest extends TestCase
                 'fiscalPeriod' => FiscalPeriod::factory()->create(),
                 'closing' => FinancialYearClosing::factory()->create(),
                 'creditNote' => SalesCreditNote::factory()->create(),
+                'customerAdvance' => CustomerAdvance::factory()->create(),
+                'supplierAdvance' => SupplierAdvance::factory()->create(),
+                'customerAdvanceApplication' => CustomerAdvanceApplication::factory()->create(),
+                'supplierAdvanceApplication' => SupplierAdvanceApplication::factory()->create(),
                 'cashBankAccount' => CashBankAccount::factory()->create(),
                 'supplier_invoice' => SupplierInvoice::factory()->create(),
                 'supplier_payment' => SupplierPayment::factory()->create(),

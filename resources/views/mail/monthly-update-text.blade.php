@@ -24,6 +24,8 @@
 
 {{ __('Money in & out') }}
 - {{ __('Received from customers') }}: {{ DisplayNumber::money($m['from_customers']) }}
+- {{ __('Advances from customers') }}: {{ DisplayNumber::money($m['advances_from_customers']) }}
+- {{ __('Advances paid to suppliers') }}: {{ DisplayNumber::money($m['advances_to_suppliers']) }}
 - {{ __('Paid to suppliers') }}: {{ DisplayNumber::money($m['to_suppliers']) }}
 - {{ __('Expenses paid') }}: {{ DisplayNumber::money($m['expenses']) }}
 - {{ __('Salaries paid') }}: {{ DisplayNumber::money($m['salaries']) }}

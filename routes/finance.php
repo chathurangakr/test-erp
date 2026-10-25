@@ -9,6 +9,8 @@ use App\Http\Controllers\Accounting\JournalEntryActionController;
 use App\Http\Controllers\Accounting\JournalEntryController;
 use App\Http\Controllers\Accounting\TrialBalanceController;
 use App\Http\Controllers\Accounting\YearEndClosingController;
+use App\Http\Controllers\Advances\CustomerAdvanceController;
+use App\Http\Controllers\Advances\SupplierAdvanceController;
 use App\Http\Controllers\Cash\CashBankAccountController;
 use App\Http\Controllers\Cash\CashBankBookController;
 use App\Http\Controllers\Cash\ExpenseVoucherActionController;
@@ -161,6 +163,50 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('customer-receipts.cancel')
         ->can(Permission::ArReceiptCancel);
 
+    // Customer advances — docs/ACCOUNTING_RULES.md §34.
+    Route::get('finance/customer-advances', [CustomerAdvanceController::class, 'index'])
+        ->name('customer-advances.index')
+        ->can(Permission::ArView);
+    Route::get('finance/customer-advances/create', [CustomerAdvanceController::class, 'create'])
+        ->name('customer-advances.create')
+        ->can(Permission::ArAdvanceRecord);
+    Route::post('finance/customer-advances', [CustomerAdvanceController::class, 'store'])
+        ->name('customer-advances.store')
+        ->can(Permission::ArAdvanceRecord);
+    Route::get('finance/customer-advances/{customerAdvance}', [CustomerAdvanceController::class, 'show'])
+        ->name('customer-advances.show')
+        ->can(Permission::ArView);
+    Route::patch('finance/customer-advances/{customerAdvance}/reverse', [CustomerAdvanceController::class, 'reverse'])
+        ->name('customer-advances.reverse')
+        ->can(Permission::ArAdvanceReverse);
+    Route::post('finance/customer-advances/{customerAdvance}/applications', [CustomerAdvanceController::class, 'apply'])
+        ->name('customer-advances.apply')
+        ->can(Permission::ArAdvanceRecord);
+    Route::patch('finance/customer-advance-applications/{customerAdvanceApplication}/reverse', [CustomerAdvanceController::class, 'reverseApplication'])
+        ->name('customer-advances.reverse-application')
+        ->can(Permission::ArAdvanceReverse);
+    // Supplier advances — docs/ACCOUNTING_RULES.md §34.
+    Route::get('finance/supplier-advances', [SupplierAdvanceController::class, 'index'])
+        ->name('supplier-advances.index')
+        ->can(Permission::ApView);
+    Route::get('finance/supplier-advances/create', [SupplierAdvanceController::class, 'create'])
+        ->name('supplier-advances.create')
+        ->can(Permission::ApAdvanceRecord);
+    Route::post('finance/supplier-advances', [SupplierAdvanceController::class, 'store'])
+        ->name('supplier-advances.store')
+        ->can(Permission::ApAdvanceRecord);
+    Route::get('finance/supplier-advances/{supplierAdvance}', [SupplierAdvanceController::class, 'show'])
+        ->name('supplier-advances.show')
+        ->can(Permission::ApView);
+    Route::patch('finance/supplier-advances/{supplierAdvance}/reverse', [SupplierAdvanceController::class, 'reverse'])
+        ->name('supplier-advances.reverse')
+        ->can(Permission::ApAdvanceReverse);
+    Route::post('finance/supplier-advances/{supplierAdvance}/applications', [SupplierAdvanceController::class, 'apply'])
+        ->name('supplier-advances.apply')
+        ->can(Permission::ApAdvanceRecord);
+    Route::patch('finance/supplier-advance-applications/{supplierAdvanceApplication}/reverse', [SupplierAdvanceController::class, 'reverseApplication'])
+        ->name('supplier-advances.reverse-application')
+        ->can(Permission::ApAdvanceReverse);
     // Discounts and quality allowances — docs/ACCOUNTING_RULES.md §33.
     Route::get('finance/credit-notes', [SalesCreditNoteController::class, 'index'])
         ->name('credit-notes.index')

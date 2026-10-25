@@ -10,6 +10,7 @@ use App\Enums\SalesReturnStatus;
 use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
+use App\Services\Accounting\AdvanceBalances;
 use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -102,6 +103,14 @@ class ReverseSalesInvoice
                 'status' => __('Sales invoice :reference has :received of receipts allocated to it. Reverse the associated customer receipt(s) first.', [
                     'reference' => $invoice->invoice_number,
                     'received' => $received,
+                ]),
+            ]);
+        }
+
+        if (DecimalMath::isPositive(app(AdvanceBalances::class)->appliedToSalesInvoice($invoice))) {
+            throw ValidationException::withMessages([
+                'status' => __('Sales invoice :reference has a customer advance applied to it. Reverse that application first.', [
+                    'reference' => $invoice->invoice_number,
                 ]),
             ]);
         }

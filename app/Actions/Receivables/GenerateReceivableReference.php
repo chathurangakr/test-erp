@@ -2,6 +2,7 @@
 
 namespace App\Actions\Receivables;
 
+use App\Models\CustomerAdvance;
 use App\Models\CustomerReceipt;
 use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
@@ -36,6 +37,11 @@ class GenerateReceivableReference
             'credit_note_number',
             $date === null ? null : Carbon::instance($date),
         );
+    }
+
+    public function forCustomerAdvance(?CarbonInterface $date = null): string
+    {
+        return $this->sequence->next('CADV', CustomerAdvance::class, 'advance_number', $date === null ? null : Carbon::instance($date));
     }
 
     public function forReceipt(?CarbonInterface $date = null): string

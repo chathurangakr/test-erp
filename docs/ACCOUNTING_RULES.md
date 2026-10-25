@@ -1127,3 +1127,36 @@ Dr  Sales Discounts and Allowances   (accounting_settings.sales_discount_account
   amount again). An invoice cannot be reversed while a standing credit note is against it.
 - Permissions `finance.ar.credit_note_record` / `finance.ar.credit_note_reverse`; viewing with
   `finance.ar.view`.
+
+## 34. Customer and supplier advances — ✅ **CONFIRMED** (2026-10-25, built overnight on the owner's go-ahead)
+
+Money received from a customer, or paid to a supplier, **before the invoice exists**. Finance →
+Customer advances (`CADV-…`) / Supplier advances (`SADV-…`).
+
+```
+customer advance        Dr cash or bank          Cr customer advances (2130, LIABILITY, control)
+  applied to an invoice Dr customer advances     Cr trade receivables
+supplier advance        Dr supplier advances (1230, ASSET, control)   Cr cash or bank
+  applied to an invoice Dr trade payables        Cr supplier advances
+```
+
+- Accounts are `accounting_settings.customer_advances_account_id` / `supplier_advances_account_id`.
+  Both are control accounts — only these documents post to them.
+- **What is left of an advance is derived** (`AdvanceBalances::remaining`: amount − standing
+  applications), never stored. The invariants: **Customer Advances == unapplied customer
+  advances**, **Supplier Advances == unapplied supplier advances**; Trade Receivables / Payables ==
+  invoice outstanding keep holding, because an application counts as money received
+  (`AccountsReceivableService::receivedAmount`) or paid (`AccountsPayableService::paidAmount`).
+- An advance is recorded in one step with its cash or bank account and method (cash, cheque with
+  number / date / bank, or bank transfer), checked like a receipt or payment.
+- **An application** sets part of an advance against ONE invoice of the same party that is still
+  owed: never more than is left of the advance, never more than the invoice owes, never dated
+  before the advance or the invoice. The invoice's status follows.
+- **Corrections are reversals.** An application is reversed (the invoice is owed the amount again,
+  the advance has it back); an advance is reversed only when none of it stands applied. An invoice
+  with a standing application cannot be reversed.
+- **Not built (TBD):** refunding an unused customer advance, or recovering an unused supplier
+  advance, as money — reverse the advance if it was a mistake; otherwise apply it.
+- Permissions `finance.ar.advance_record` / `finance.ar.advance_reverse` and
+  `finance.ap.advance_record` / `finance.ap.advance_reverse`; viewing with `finance.ar.view` /
+  `finance.ap.view`.

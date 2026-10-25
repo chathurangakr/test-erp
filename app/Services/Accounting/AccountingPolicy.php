@@ -192,6 +192,24 @@ class AccountingPolicy
     /**
      * The expense damaged stock is written off to. See docs/INVENTORY_RULES.md §17.
      */
+    public function customerAdvancesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->customerAdvancesAccount
+            ?? throw ValidationException::withMessages(['customer_advances_account_id' => __('No customer advances account is configured. Choose one in Accounting Setup first.')]);
+        $this->assertUsable($account, AccountType::Liability, __('Customer advances'));
+
+        return $account;
+    }
+
+    public function supplierAdvancesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->supplierAdvancesAccount
+            ?? throw ValidationException::withMessages(['supplier_advances_account_id' => __('No supplier advances account is configured. Choose one in Accounting Setup first.')]);
+        $this->assertUsable($account, AccountType::Asset, __('Supplier advances'));
+
+        return $account;
+    }
+
     public function salesDiscountAccount(): Account
     {
         $account = AccountingSetting::current()?->salesDiscountAccount;

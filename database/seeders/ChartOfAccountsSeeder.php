@@ -46,6 +46,8 @@ class ChartOfAccountsSeeder extends Seeder
         ['1210', 'Trade Receivables', AccountType::Asset, false, true],
         // Salary advances employees owe back until a payroll takes them. Payroll's to post to.
         ['1220', 'Employee Advances', AccountType::Asset, false, true],
+        // Money paid to suppliers before their invoice; only supplier advance documents post here.
+        ['1230', 'Supplier Advances', AccountType::Asset, false, true],
 
         ['1300', 'Inventory', AccountType::Asset, true, false],
         ['1310', 'Whole Coconut Inventory', AccountType::Asset, false, true],
@@ -66,6 +68,8 @@ class ChartOfAccountsSeeder extends Seeder
         ['2110', 'Trade Payables', AccountType::Liability, false, true],
         // The liability a goods receipt creates before the supplier's invoice is recorded.
         ['2120', 'Goods Received Not Invoiced', AccountType::Liability, false, true],
+        // Money received from customers before their invoice; only customer advance documents post here.
+        ['2130', 'Customer Advances', AccountType::Liability, false, true],
 
         ['2200', 'Accrued Expenses', AccountType::Liability, false, false],
         ['2300', 'Taxes Payable', AccountType::Liability, false, false],

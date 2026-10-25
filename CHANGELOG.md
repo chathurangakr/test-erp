@@ -4,6 +4,16 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.22.0 — 25 October 2026
+
+- **Customer advances** (Finance → Customer advances). Record money a customer pays before there is
+  an invoice — it is held as owed to them, then applied to their invoices as you raise them.
+- **Supplier advances** (Finance → Supplier advances). Record money paid to a supplier before their
+  invoice — it is held as owed by them, then applied to their invoice when it arrives.
+- Cash, cheque (with its number, date and bank) or bank transfer; what is left of each advance is
+  always shown; applications and advances are undone with Reverse. Money in and out on the monthly
+  report and the Telegram /today answer now include advances.
+
 ## 1.21.0 — 25 October 2026
 
 - **Discounts and quality allowances** (Finance → Credit notes). Reduce what a customer owes on an

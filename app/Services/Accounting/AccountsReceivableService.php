@@ -40,13 +40,17 @@ class AccountsReceivableService
     }
 
     /**
-     * How much of this invoice has been received by receipts that are still posted.
+     * How much of this invoice has been received: by receipts still posted, and by standing
+     * customer advances applied to it.
      */
     public function receivedAmount(SalesInvoice $invoice, ?CarbonInterface $asOf = null): string
     {
-        return DecimalMath::cost((string) $this->allocationQuery($asOf)
+        $receipts = (string) $this->allocationQuery($asOf)
             ->where('sales_invoice_id', $invoice->getKey())
-            ->sum('amount'));
+            ->sum('amount');
+
+        // Money received before the invoice, set against it later, is money received too.
+        return DecimalMath::cost(DecimalMath::add(DecimalMath::of($receipts), app(AdvanceBalances::class)->appliedToSalesInvoice($invoice, $asOf)));
     }
 
     /**

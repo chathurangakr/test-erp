@@ -5,6 +5,8 @@ namespace App\Services\Telegram;
 use App\Enums\CustomerBagMovementKind;
 use App\Enums\SalesReturnSettlement;
 use App\Models\AssetMaintenance;
+use App\Models\CustomerAdvance;
+use App\Models\CustomerAdvanceApplication;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -31,6 +33,8 @@ use App\Models\SalesInvoiceLine;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Models\StockDamageLine;
+use App\Models\SupplierAdvance;
+use App\Models\SupplierAdvanceApplication;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceLine;
 use App\Models\SupplierPayment;
@@ -88,6 +92,8 @@ class TransactionAlertMessage
             $model instanceof CustomerReceipt => $this->customerReceipt($model),
             $model instanceof SalesReturn => $this->salesReturn($model),
             $model instanceof SalesCreditNote => $this->creditNote($model),
+            $model instanceof CustomerAdvance, $model instanceof SupplierAdvance => $this->partyAdvance($model),
+            $model instanceof CustomerAdvanceApplication, $model instanceof SupplierAdvanceApplication => $this->advanceApplication($model),
             $model instanceof CustomerBagMovement => $this->bags($model),
             $model instanceof SupplierInvoice => $this->supplierInvoice($model),
             $model instanceof SupplierPayment => $this->supplierPayment($model),
@@ -196,6 +202,31 @@ class TransactionAlertMessage
             DecimalMath::isPositive((string) $return->good_quantity) ? __('Back in stock').': '.$this->quantityLine($return->product, (string) $return->good_quantity) : null,
             DecimalMath::isPositive((string) $return->damaged_quantity) ? __('Damaged').': '.$this->quantityLine($return->product, (string) $return->damaged_quantity) : null,
         ]), [__('Credited'), (string) $return->credit_amount], route('sales-returns.show', $return));
+    }
+
+    private function partyAdvance(CustomerAdvance|SupplierAdvance $advance): array
+    {
+        $customer = $advance instanceof CustomerAdvance;
+        $advance->load([$customer ? 'customer' : 'supplier', 'cashBankAccount']);
+        $party = $customer ? $advance->customer : $advance->supplier;
+
+        return $this->make($customer ? '💵' : '💸', $customer ? __('Advance received from a customer') : __('Advance paid to a supplier'), $advance->advance_number, $advance->advance_date, [
+            [$customer ? __('Customer') : __('Supplier'), $party?->name],
+            [$customer ? __('Received into') : __('Paid from'), $advance->cashBankAccount?->display_name],
+            [__('Method'), $advance->payment_method->label().($advance->cheque_number ? ' #'.$advance->cheque_number : '')],
+            [__('Note'), $advance->note],
+        ], [], [__('Amount'), (string) $advance->amount], route($customer ? 'customer-advances.show' : 'supplier-advances.show', $advance));
+    }
+
+    private function advanceApplication(CustomerAdvanceApplication|SupplierAdvanceApplication $application): array
+    {
+        $customer = $application instanceof CustomerAdvanceApplication;
+        $application->load(['advance', 'invoice']);
+        $invoice = $customer ? $application->invoice?->invoice_number : $application->invoice?->internal_invoice_number;
+
+        return $this->make('🔗', __('Advance applied to an invoice'), (string) $application->advance?->advance_number, $application->application_date, [
+            [__('Invoice'), $invoice],
+        ], [], [__('Applied'), (string) $application->amount], route($customer ? 'customer-advances.show' : 'supplier-advances.show', $application->advance));
     }
 
     private function creditNote(SalesCreditNote $note): array

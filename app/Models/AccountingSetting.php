@@ -27,6 +27,8 @@ class AccountingSetting extends Model
         'wages_account_id',
         'stock_loss_account_id',
         'sales_discount_account_id',
+        'customer_advances_account_id',
+        'supplier_advances_account_id',
         'loans_account_id',
         'loan_interest_account_id',
         'opening_balance_account_id',
@@ -128,6 +130,26 @@ class AccountingSetting extends Model
     public function salesDiscountAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'sales_discount_account_id');
+    }
+
+    /**
+     * What the factory owes customers who paid before their invoice (a control account).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function customerAdvancesAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'customer_advances_account_id');
+    }
+
+    /**
+     * What suppliers owe the factory for money paid before their invoice (a control account).
+     *
+     * @return BelongsTo<Account, $this>
+     */
+    public function supplierAdvancesAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'supplier_advances_account_id');
     }
 
     /**

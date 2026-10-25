@@ -6,6 +6,7 @@ use App\Actions\Accounting\ReverseJournalEntry;
 use App\Enums\SupplierInvoiceStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Models\SupplierInvoice;
+use App\Services\Accounting\AdvanceBalances;
 use App\Support\DecimalMath;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -96,6 +97,14 @@ class ReverseSupplierInvoice
                 'status' => __('Supplier invoice :reference has :paid of payments allocated to it. Reverse the associated supplier payment(s) first.', [
                     'reference' => $invoice->internal_invoice_number,
                     'paid' => $paid,
+                ]),
+            ]);
+        }
+
+        if (DecimalMath::isPositive(app(AdvanceBalances::class)->appliedToSupplierInvoice($invoice))) {
+            throw ValidationException::withMessages([
+                'status' => __('Supplier invoice :reference has a supplier advance applied to it. Reverse that application first.', [
+                    'reference' => $invoice->internal_invoice_number,
                 ]),
             ]);
         }

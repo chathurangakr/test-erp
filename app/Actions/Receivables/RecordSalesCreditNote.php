@@ -10,6 +10,7 @@ use App\Models\SalesCreditNote;
 use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\DecimalMath;
+use App\Support\DisplayNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -67,7 +68,7 @@ class RecordSalesCreditNote
                 throw ValidationException::withMessages([
                     'amount' => __('Invoice :reference is owed only :outstanding.', [
                         'reference' => $invoice->invoice_number,
-                        'outstanding' => DecimalMath::money($outstanding),
+                        'outstanding' => DisplayNumber::money($outstanding),
                     ]),
                 ]);
             }

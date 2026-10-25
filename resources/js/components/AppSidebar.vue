@@ -51,6 +51,7 @@ import {
     CalendarCheck,
     BadgeDollarSign,
     BadgePercent,
+    PiggyBank,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -97,6 +98,8 @@ import { index as apAgingIndex } from '@/routes/ap-aging';
 import { index as grniReconciliationIndex } from '@/routes/grni-reconciliation';
 import { index as salesInvoicesIndex } from '@/routes/sales-invoices';
 import { index as creditNotesIndex } from '@/routes/credit-notes';
+import { index as customerAdvancesIndex } from '@/routes/customer-advances';
+import { index as supplierAdvancesIndex } from '@/routes/supplier-advances';
 import { index as customerReceiptsIndex } from '@/routes/customer-receipts';
 import { index as arAgingIndex } from '@/routes/ar-aging';
 import { index as unbilledDeliveriesIndex } from '@/routes/unbilled-deliveries';
@@ -316,6 +319,12 @@ const payablesNavItems: NavItem[] = [
         icon: Banknote,
     },
     {
+        title: 'Supplier advances',
+        href: supplierAdvancesIndex(),
+        permission: 'finance.ap.view',
+        icon: PiggyBank,
+    },
+    {
         title: 'AP Aging',
         href: apAgingIndex(),
         permission: 'finance.ap.view',
@@ -341,6 +350,12 @@ const receivablesNavItems: NavItem[] = [
         href: creditNotesIndex(),
         permission: 'finance.ar.view',
         icon: BadgePercent,
+    },
+    {
+        title: 'Customer advances',
+        href: customerAdvancesIndex(),
+        permission: 'finance.ar.view',
+        icon: PiggyBank,
     },
     {
         title: 'Customer Receipts',

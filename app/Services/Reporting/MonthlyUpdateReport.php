@@ -2,6 +2,7 @@
 
 namespace App\Services\Reporting;
 
+use App\Enums\AdvanceStatus;
 use App\Enums\CustomerReceiptStatus;
 use App\Enums\ExpenseVoucherStatus;
 use App\Enums\FixedAssetStatus;
@@ -13,6 +14,7 @@ use App\Enums\SalesReturnStatus;
 use App\Enums\StockDamageStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Models\AssetMaintenance;
+use App\Models\CustomerAdvance;
 use App\Models\CustomerReceipt;
 use App\Models\ExpenseVoucherLine;
 use App\Models\FixedAsset;
@@ -25,6 +27,7 @@ use App\Models\SalaryAdvance;
 use App\Models\SalesInvoice;
 use App\Models\SalesReturn;
 use App\Models\StockDamageLine;
+use App\Models\SupplierAdvance;
 use App\Models\SupplierPayment;
 use App\Services\Accounting\FinanceDashboardService;
 use App\Services\Accounting\ProfitLossService;
@@ -192,6 +195,8 @@ class MonthlyUpdateReport
             'loan_payments' => $this->column(clone $loanPayments, 'amount'),
             'loan_interest' => $this->column(clone $loanPayments, 'interest_amount'),
             'maintenance' => $this->column(AssetMaintenance::query()->where('status', LoanDocumentStatus::Posted)->whereBetween('maintenance_date', $between), 'cost'),
+            'advances_from_customers' => $this->column(CustomerAdvance::query()->where('status', AdvanceStatus::Posted)->whereBetween('advance_date', $between), 'amount'),
+            'advances_to_suppliers' => $this->column(SupplierAdvance::query()->where('status', AdvanceStatus::Posted)->whereBetween('advance_date', $between), 'amount'),
         ];
     }
 

@@ -438,8 +438,15 @@ The inventory engine exists and is tested. These rules are permanent:
   receivables or cash`, `Dr inventory + stock loss / Cr cost of sales`. An invoice's outstanding
   is total − receipts − returns and credit notes credited (`AccountsReceivableService::settledAmount`); an invoice
   linked to a standing return cannot be reversed. Backflushed lines (chips) cannot be returned.
-- **Receipts are always allocated to invoices** — no customer advances, deposits or
-  on-account credits — and the allocations must total the receipt exactly.
+- **Receipts are always allocated to invoices**, and the allocations must total the receipt
+  exactly. Money received BEFORE an invoice is a **customer advance** (below), never an
+  unallocated receipt.
+- **Customer and supplier advances are implemented** (§34, 1.22.0): `RecordCustomerAdvance`
+  (`Dr cash/bank / Cr customer advances 2130`) and `RecordSupplierAdvance` (`Dr supplier advances
+  1230 / Cr cash/bank`), set against invoices by `Apply…Advance` (`Dr 2130 / Cr trade receivables`;
+  `Dr trade payables / Cr 1230`). What is left is derived (`AdvanceBalances`); applications count
+  in `receivedAmount` / `paidAmount`. Invariants: each advances account == its unapplied advances.
+  Refunding an unused advance is TBD.
 - **AR balances are derived, never stored.** A customer has no receivable column.
   `credit_limit` and `credit_days` are agreed terms; the credit days only suggest a due
   date, which stays editable.
@@ -485,8 +492,8 @@ The inventory engine exists and is tested. These rules are permanent:
   adding one later is a visible change. See `docs/ACCOUNTING_RULES.md` §23.
 - **`Rule::exists()->where($column, false)` matches nothing** — the value is stringified, and
   `(string) false` is `''`. Use `0` and `1` in exists/unique rules, never booleans.
-- **Do not start bank reconciliation, cheque lifecycle, customer
-  or supplier advances, VAT/SVAT, depreciation or production overhead accounting**
+- **Do not start bank reconciliation, cheque lifecycle, VAT/SVAT, depreciation or production
+  overhead accounting**
   without instruction.
 - Financial records must remain **auditable** — every posting traceable to its source
   document and user.
@@ -887,7 +894,7 @@ cash/bank book that reconciles exactly to the general ledger), and **financial s
 management reports** (profit and loss, balance sheet with computed Current Earnings, inventory
 valuation, inventory-to-GL reconciliation, cash/bank position, operational product
 profitability and a finance dashboard — all derived, none stored), and **role-based access
-control** (107 permissions, seven editable starting roles, multiple roles per user, every route
+control** (111 permissions, seven editable starting roles, multiple roles per user, every route
 enforced server-side, user deactivation and last-administrator protection), and a **versioned
 mobile REST API** (`/api/v1`, Sanctum bearer tokens per device, the same RBAC and domain actions
 as the website, decimals as strings, JSON errors with 409 for state conflicts, and offline entries
@@ -912,11 +919,11 @@ from the bank slip, what is still owed derived, and email reminders before each 
 loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
 every posting and reversal) with a **monthly report** by email and Telegram on the 1st, **report
 exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March), and **credit notes**
-for discounts and quality allowances.
+for discounts and quality allowances, and **customer and supplier advances**.
 
 **Not yet started — do not begin without instruction:** bank reconciliation, cheque lifecycle
 (cheque status, clearing account, bounced-cheque handling),
-customer and supplier advances, production expense
+production expense
 accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, the permanent joint-product costing method, production planning,
 BOM editor, maintenance planning, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.

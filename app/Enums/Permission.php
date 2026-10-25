@@ -84,6 +84,8 @@ enum Permission: string
     case ApPaymentPost = 'finance.ap.payment_post';
     case ApPaymentReverse = 'finance.ap.payment_reverse';
     case ApPaymentCancel = 'finance.ap.payment_cancel';
+    case ApAdvanceRecord = 'finance.ap.advance_record';
+    case ApAdvanceReverse = 'finance.ap.advance_reverse';
 
     // ------------------------------------------------------------- accounts receivable
     case ArView = 'finance.ar.view';
@@ -97,6 +99,8 @@ enum Permission: string
     case ArReceiptCancel = 'finance.ar.receipt_cancel';
     case ArCreditNoteRecord = 'finance.ar.credit_note_record';
     case ArCreditNoteReverse = 'finance.ar.credit_note_reverse';
+    case ArAdvanceRecord = 'finance.ar.advance_record';
+    case ArAdvanceReverse = 'finance.ar.advance_reverse';
 
     // ------------------------------------------------------------- cash and bank
     case CashView = 'finance.cash.view';
@@ -255,6 +259,10 @@ enum Permission: string
             self::ArReceiptCancel => 'Cancel draft customer receipts',
             self::ArCreditNoteRecord => 'Give customers discounts and quality allowances (credit notes)',
             self::ArCreditNoteReverse => 'Reverse credit notes',
+            self::ArAdvanceRecord => 'Record customer advances and apply them to invoices',
+            self::ArAdvanceReverse => 'Reverse customer advances and their applications',
+            self::ApAdvanceRecord => 'Pay supplier advances and apply them to invoices',
+            self::ApAdvanceReverse => 'Reverse supplier advances and their applications',
             self::CashView => 'View cash/bank accounts, the cash/bank book, vouchers and transfers',
             self::CashAccountsManage => 'Configure cash and bank accounts',
             self::CashExpenseCreate => 'Create and edit draft expense vouchers',

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payables;
 
+use App\Models\SupplierAdvance;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Support\DailyDocumentSequence;
@@ -27,6 +28,11 @@ class GeneratePayableReference
             'internal_invoice_number',
             $date === null ? null : Carbon::instance($date),
         );
+    }
+
+    public function forSupplierAdvance(?CarbonInterface $date = null): string
+    {
+        return $this->sequence->next('SADV', SupplierAdvance::class, 'advance_number', $date === null ? null : Carbon::instance($date));
     }
 
     public function forPayment(?CarbonInterface $date = null): string

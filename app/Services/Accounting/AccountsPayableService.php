@@ -37,13 +37,17 @@ class AccountsPayableService
     }
 
     /**
-     * How much of this invoice has been paid by payments that are still posted.
+     * How much of this invoice has been paid: by payments still posted, and by standing supplier
+     * advances applied to it.
      */
     public function paidAmount(SupplierInvoice $invoice, ?CarbonInterface $asOf = null): string
     {
-        return DecimalMath::cost((string) $this->allocationQuery($asOf)
+        $payments = (string) $this->allocationQuery($asOf)
             ->where('supplier_invoice_id', $invoice->getKey())
-            ->sum('amount'));
+            ->sum('amount');
+
+        // Money paid before the invoice, set against it later, is money paid too.
+        return DecimalMath::cost(DecimalMath::add(DecimalMath::of($payments), app(AdvanceBalances::class)->appliedToSupplierInvoice($invoice, $asOf)));
     }
 
     /**

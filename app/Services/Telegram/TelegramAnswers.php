@@ -232,15 +232,18 @@ class TelegramAnswers
 
         if ($user->hasPermission(Permission::CashView)) {
             $money = $this->monthly->money($today, $today);
-            $out = array_reduce(['to_suppliers', 'expenses', 'salaries', 'advances', 'loan_payments', 'maintenance'], fn (string $sum, string $key): string => DecimalMath::add($sum, $money[$key]), DecimalMath::zero());
+            $out = array_reduce(['to_suppliers', 'expenses', 'salaries', 'advances', 'loan_payments', 'maintenance', 'advances_to_suppliers'], fn (string $sum, string $key): string => DecimalMath::add($sum, $money[$key]), DecimalMath::zero());
+            $in = DecimalMath::add($money['from_customers'], $money['advances_from_customers']);
             $lines[] = '';
             $lines[] = '🔄 <b>'.e(__('Money in & out')).'</b>';
             $lines[] = '⬇ '.e(__('Received from customers')).': <b>'.e(DisplayNumber::money($money['from_customers'])).'</b>';
+            $lines[] = '⬇ '.e(__('Advances from customers')).': '.e(DisplayNumber::money($money['advances_from_customers']));
+            $lines[] = '⬆ '.e(__('Advances paid to suppliers')).': '.e(DisplayNumber::money($money['advances_to_suppliers']));
             $lines[] = '⬆ '.e(__('Paid to suppliers')).': '.e(DisplayNumber::money($money['to_suppliers']));
             $lines[] = '⬆ '.e(__('Expenses paid')).': '.e(DisplayNumber::money($money['expenses']));
             $lines[] = '⬆ '.e(__('Salaries and advances')).': '.e(DisplayNumber::money(DecimalMath::add($money['salaries'], $money['advances'])));
             $lines[] = '⬆ '.e(__('Loans and maintenance')).': '.e(DisplayNumber::money(DecimalMath::add($money['loan_payments'], $money['maintenance'])));
-            $lines[] = '<b>'.e(__('In less out')).': '.e($this->money(DecimalMath::sub($money['from_customers'], $out))).'</b>';
+            $lines[] = '<b>'.e(__('In less out')).': '.e($this->money(DecimalMath::sub($in, $out))).'</b>';
         }
 
         return $this->answer($lines);

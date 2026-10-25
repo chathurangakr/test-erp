@@ -147,7 +147,7 @@ class SalesCreditNotesTest extends TestCase
         CustomerReceiptAllocation::factory()->create(['customer_receipt_id' => $receipt->id, 'sales_invoice_id' => $this->invoice->id, 'amount' => '250000']);
         app(PostCustomerReceipt::class)->handle($receipt->refresh());
 
-        $this->assertRefused(fn () => $this->credit(['amount' => '10000.01']), 'amount', 'owed only 10000.00');
+        $this->assertRefused(fn () => $this->credit(['amount' => '10000.01']), 'amount', 'owed only 10,000.00');
         $this->assertRefused(fn () => $this->credit(['credit_date' => '2026-09-09']), 'credit_date', 'dated after this credit note');
 
         $this->credit(['amount' => '10000']);

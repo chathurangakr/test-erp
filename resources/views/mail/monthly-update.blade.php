@@ -148,9 +148,11 @@
                 ['Salary advances', $m['advances']],
                 ['Loan installments', $m['loan_payments']],
                 ['Asset maintenance', $m['maintenance']],
+                ['Advances paid to suppliers', $m['advances_to_suppliers']],
             ];
             $outTotal = DecimalMath::money(array_reduce($out, fn ($sum, $r) => DecimalMath::add($sum, $r[1]), '0'));
-            $flow = DecimalMath::money(DecimalMath::sub($m['from_customers'], $outTotal));
+            $inTotal = DecimalMath::add($m['from_customers'], $m['advances_from_customers']);
+            $flow = DecimalMath::money(DecimalMath::sub($inTotal, $outTotal));
         @endphp
         <div style="height:26px;"></div>
         <p style="{{ $sectionTitle }}{{ $font }}">🔄 {{ __('Money in & out') }}</p>
@@ -160,6 +162,10 @@
                 <tr>
                     <td style="{{ $row }}font-weight:700;color:#047857;">⬇ {{ __('Received from customers') }}</td>
                     <td align="right" style="{{ $row }}font-weight:700;color:#047857;white-space:nowrap;">{{ DisplayNumber::money($m['from_customers']) }}</td>
+                </tr>
+                <tr>
+                    <td style="{{ $row }}color:#047857;">⬇ {{ __('Advances from customers') }}</td>
+                    <td align="right" style="{{ $row }}color:#047857;white-space:nowrap;">{{ DisplayNumber::money($m['advances_from_customers']) }}</td>
                 </tr>
                 @foreach ($out as [$name, $amount])
                     <tr>

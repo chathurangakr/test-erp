@@ -50,6 +50,8 @@ class MonthlyUpdateMessage
 
         $sections[] = self::block('🔄', __('Money in & out'), [
             '⬇ '.self::row(__('Received from customers'), $m['from_customers']),
+            '⬇ '.self::row(__('Advances from customers'), $m['advances_from_customers']),
+            '⬆ '.self::row(__('Advances paid to suppliers'), $m['advances_to_suppliers']),
             '⬆ '.self::row(__('Paid to suppliers'), $m['to_suppliers']),
             '⬆ '.self::row(__('Expenses paid'), $m['expenses']),
             '⬆ '.self::row(__('Salaries paid'), $m['salaries']),

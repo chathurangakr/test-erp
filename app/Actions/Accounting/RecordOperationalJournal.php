@@ -4,6 +4,8 @@ namespace App\Actions\Accounting;
 
 use App\Enums\JournalEntryStatus;
 use App\Models\CashBankAccount;
+use App\Models\CustomerAdvance;
+use App\Models\CustomerAdvanceApplication;
 use App\Models\CustomerBagMovement;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
@@ -14,6 +16,8 @@ use App\Models\ProductionOrder;
 use App\Models\SalesCreditNote;
 use App\Models\SalesReturn;
 use App\Models\StockDamage;
+use App\Models\SupplierAdvance;
+use App\Models\SupplierAdvanceApplication;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
@@ -334,6 +338,75 @@ class RecordOperationalJournal
      *
      * Written whatever the cutover — a returned line was invoiced, so the books are already on.
      */
+    /**
+     * Money a customer paid before their invoice: `Dr cash or bank / Cr customer advances`.
+     * See docs/ACCOUNTING_RULES.md §34.
+     */
+    public function forCustomerAdvance(CustomerAdvance $advance, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $advance->amount);
+        $customer = $advance->customer?->code ?? RecordText::of('customer');
+
+        return $this->record($advance, $advance->advance_date, RecordText::of('Advance :reference received from :customer', [
+            'reference' => $advance->advance_number,
+            'customer' => $customer,
+        ]), [
+            ['account_id' => $advance->cashBankAccount->account_id, 'description' => $advance->reference, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $this->policy->customerAdvancesAccount()->id, 'description' => RecordText::of('Advance from :customer', ['customer' => $customer]), 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
+     * Part of a customer advance set against an invoice: `Dr customer advances / Cr trade receivables`.
+     */
+    public function forCustomerAdvanceApplication(CustomerAdvanceApplication $application, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $application->amount);
+        $advance = $application->advance;
+
+        return $this->record($application, $application->application_date, RecordText::of('Advance :advance applied to :invoice', [
+            'advance' => $advance->advance_number,
+            'invoice' => $application->invoice->invoice_number,
+        ]), [
+            ['account_id' => $this->policy->customerAdvancesAccount()->id, 'description' => $advance->advance_number, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $this->policy->tradeReceivablesAccount()->id, 'description' => $application->invoice->invoice_number, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
+     * Money paid to a supplier before their invoice: `Dr supplier advances / Cr cash or bank`.
+     */
+    public function forSupplierAdvance(SupplierAdvance $advance, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $advance->amount);
+        $supplier = $advance->supplier?->code ?? RecordText::of('supplier');
+
+        return $this->record($advance, $advance->advance_date, RecordText::of('Advance :reference paid to :supplier', [
+            'reference' => $advance->advance_number,
+            'supplier' => $supplier,
+        ]), [
+            ['account_id' => $this->policy->supplierAdvancesAccount()->id, 'description' => RecordText::of('Advance to :supplier', ['supplier' => $supplier]), 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $advance->cashBankAccount->account_id, 'description' => $advance->reference, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
+     * Part of a supplier advance set against their invoice: `Dr trade payables / Cr supplier advances`.
+     */
+    public function forSupplierAdvanceApplication(SupplierAdvanceApplication $application, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $application->amount);
+        $advance = $application->advance;
+
+        return $this->record($application, $application->application_date, RecordText::of('Advance :advance applied to :invoice', [
+            'advance' => $advance->advance_number,
+            'invoice' => $application->invoice->internal_invoice_number,
+        ]), [
+            ['account_id' => $this->policy->tradePayablesAccount()->id, 'description' => $application->invoice->internal_invoice_number, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $this->policy->supplierAdvancesAccount()->id, 'description' => $advance->advance_number, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
     /**
      * A discount or quality allowance: `Dr sales discounts and allowances / Cr trade receivables`,
      * at the credit note's own amount. No stock moves. See docs/ACCOUNTING_RULES.md §33.
