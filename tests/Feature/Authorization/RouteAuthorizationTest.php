@@ -10,6 +10,7 @@ use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -37,6 +38,7 @@ use App\Models\StockDamage;
 use App\Models\Supplier;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Models\User;
@@ -328,6 +330,8 @@ class RouteAuthorizationTest extends TestCase
                 'supplierAdvance' => SupplierAdvance::factory()->create(),
                 'customerAdvanceApplication' => CustomerAdvanceApplication::factory()->create(),
                 'supplierAdvanceApplication' => SupplierAdvanceApplication::factory()->create(),
+                'customerAdvanceRefund' => CustomerAdvanceRefund::factory()->create(),
+                'supplierAdvanceRefund' => SupplierAdvanceRefund::factory()->create(),
                 'bankReconciliation' => BankReconciliation::create([
                     'cash_bank_account_id' => CashBankAccount::factory()->create()->id,
                     'statement_date' => '2026-09-30', 'statement_balance' => '0', 'status' => BankReconciliation::COMPLETED,

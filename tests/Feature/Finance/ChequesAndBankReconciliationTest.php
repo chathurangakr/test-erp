@@ -109,6 +109,25 @@ class ChequesAndBankReconciliationTest extends TestCase
     }
 
     #[Test]
+    public function the_bank_charge_for_a_bounce_is_expensed_from_the_cheques_bank(): void
+    {
+        $bankBefore = app(AccountingBalanceService::class)->balance(Account::where('code', '1120')->firstOrFail());
+
+        $this->assertRefused(fn () => app(BounceCheque::class)->handle(CustomerAdvance::class, $this->received->id, '2026-09-12', 'Insufficient funds', null, '-1'), 'bank_charge', 'zero or more');
+
+        $event = app(BounceCheque::class)->handle(CustomerAdvance::class, $this->received->id, '2026-09-12', 'Insufficient funds', null, '350');
+
+        $lines = $event->journalEntry->lines->mapWithKeys(fn ($line) => [$line->account->code => [$line->debit, $line->credit]]);
+        $this->assertSame(['350.000000', '0.000000'], $lines['6970']);
+        $this->assertSame(['0.000000', '350.000000'], $lines['1120']);
+        $this->assertSame(bcsub($bankBefore, '100350', 6), app(AccountingBalanceService::class)->balance(Account::where('code', '1120')->firstOrFail()));
+        $this->assertSame('350.000000', $this->row($this->received)['bank_charge']);
+
+        // No charge: no journal.
+        $this->assertNull(app(BounceCheque::class)->handle(SupplierAdvance::class, $this->issued->id, '2026-09-12', 'Stopped', null, '0')->journal_entry_id);
+    }
+
+    #[Test]
     public function a_statement_is_agreed_line_by_line_in_date_order(): void
     {
         $lines = JournalEntryLine::query()->where('account_id', $this->bank->account_id)->orderBy('id')->pluck('id')->all();

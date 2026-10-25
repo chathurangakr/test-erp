@@ -17,10 +17,21 @@ import type { ProfitLossStatement } from '@/types';
 import { money } from '@/lib/money';
 import { exportMethod as exportReport } from '@/routes/reports/profit-loss';
 
+type Change = { current: string; prior: string; change: string; change_percent: string | null };
+type Comparison = {
+    from: string;
+    to: string;
+    prior_from: string;
+    prior_to: string;
+    sections: (Change & { key: string; label: string; rows: (Change & { account_id: number; code: string; name: string; depth: number; is_group: boolean })[] })[];
+    lines: (Change & { key: string; label: string })[];
+};
+
 const props = defineProps<{
     statement: ProfitLossStatement;
+    comparison: Comparison | null;
     periods: { id: number; name: string }[];
-    filters: { fiscal_period_id: number | null; from: string | null; to: string | null };
+    filters: { fiscal_period_id: number | null; from: string | null; to: string | null; compare: string | null };
     currency: string;
 }>();
 
@@ -32,14 +43,34 @@ const { chartsVisible } = useChartsVisible();
 const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
 const from = ref(props.filters.from ?? '');
 const to = ref(props.filters.to ?? '');
+const compare = ref(props.filters.compare ?? '');
+const canCompare = computed(() => props.statement.from !== null && props.statement.to !== null);
 
-watch([periodId, from, to], () => {
+/** A rise in revenue or profit is good; a rise in a cost is not. */
+function changeClass(key: string, change: string): string {
+    const value = Number(change);
+
+    if (value === 0) {
+        return '';
+    }
+
+    const good = key === 'cost_of_sales' || key === 'operating_expenses' ? value < 0 : value > 0;
+
+    return good ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive';
+}
+
+function percent(value: string | null): string {
+    return value === null ? t('new') : `${Number(value) > 0 ? '+' : ''}${value}%`;
+}
+
+watch([periodId, from, to, compare], () => {
     router.get(
         profitLoss().url,
         {
             fiscal_period_id: periodId.value || undefined,
             from: periodId.value ? undefined : from.value || undefined,
             to: periodId.value ? undefined : to.value || undefined,
+            compare: compare.value || undefined,
         },
         { preserveState: false, replace: true },
     );
@@ -76,7 +107,7 @@ const bridge = computed(() => [
             </div>
         </div>
 
-        <section class="grid gap-4 sm:grid-cols-3">
+        <section class="grid gap-4 sm:grid-cols-4">
             <div class="grid gap-2">
                 <Label for="period">{{ t('Fiscal period') }}</Label>
                 <SearchableSelect
@@ -93,7 +124,54 @@ const bridge = computed(() => [
                 <Label for="to">{{ t('To') }}</Label>
                 <Input id="to" v-model="to" type="date" :disabled="periodId !== ''" />
             </div>
+            <div class="grid gap-2">
+                <Label for="compare">{{ t('Compare with') }}</Label>
+                <select id="compare" v-model="compare" class="border-input bg-background h-9 rounded-md border px-3 text-sm" :disabled="!canCompare">
+                    <option value="">{{ t('Nothing') }}</option>
+                    <option value="previous">{{ t('The period before') }}</option>
+                    <option value="last_year">{{ t('The same period last year') }}</option>
+                </select>
+                <p v-if="!canCompare" class="text-muted-foreground text-xs">{{ t('Choose a period or both dates to compare.') }}</p>
+            </div>
         </section>
+
+        <div v-if="comparison" class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
+            <div class="bg-muted/50 px-4 py-2 text-sm font-medium">
+                {{ t(':from to :to compared with :prior_from to :prior_to', { from: comparison.from, to: comparison.to, prior_from: comparison.prior_from, prior_to: comparison.prior_to }) }}
+            </div>
+            <table class="w-full text-sm">
+                <thead class="text-muted-foreground text-xs">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-medium">{{ t('Account') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ t('This period') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ t('Compared with') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ t('Change') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template v-for="section in comparison.sections" :key="section.key">
+                        <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t font-medium">
+                            <td class="px-4 py-2" colspan="5">{{ section.label }}</td>
+                        </tr>
+                        <tr v-for="row in section.rows" :key="row.account_id" class="border-sidebar-border/70 dark:border-sidebar-border border-t" :class="row.is_group ? 'font-medium' : ''">
+                            <td class="py-1.5 pr-4" :style="{ paddingLeft: `${1 + row.depth}rem` }">{{ row.code }} {{ row.name }}</td>
+                            <td class="px-4 py-1.5 text-right font-mono">{{ money(row.current) }}</td>
+                            <td class="text-muted-foreground px-4 py-1.5 text-right font-mono">{{ money(row.prior) }}</td>
+                            <td class="px-4 py-1.5 text-right font-mono" :class="changeClass(section.key, row.change)">{{ money(row.change) }}</td>
+                            <td class="px-4 py-1.5 text-right font-mono" :class="changeClass(section.key, row.change)">{{ percent(row.change_percent) }}</td>
+                        </tr>
+                    </template>
+                    <tr v-for="line in comparison.lines" :key="line.key" class="border-sidebar-border/70 dark:border-sidebar-border bg-muted/30 border-t font-medium">
+                        <td class="px-4 py-2">{{ line.label }}</td>
+                        <td class="px-4 py-2 text-right font-mono">{{ money(line.current) }}</td>
+                        <td class="text-muted-foreground px-4 py-2 text-right font-mono">{{ money(line.prior) }}</td>
+                        <td class="px-4 py-2 text-right font-mono" :class="changeClass(line.key, line.change)">{{ money(line.change) }}</td>
+                        <td class="px-4 py-2 text-right font-mono" :class="changeClass(line.key, line.change)">{{ percent(line.change_percent) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
         <div v-if="chartsVisible" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
             <h3 class="mb-3 text-sm font-medium">{{ t('From revenue to net profit') }}</h3>

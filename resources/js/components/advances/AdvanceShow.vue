@@ -15,6 +15,7 @@ import { show as journalShow } from '@/routes/journals';
 import type { RouteDefinition } from '@/wayfinder';
 
 type Application = { id: number; date: string; invoice: string | null; amount: string; status: string; status_label: string };
+type Refund = { id: number; date: string; account: string | null; payment_method_label: string; reference: string | null; amount: string; status: string; status_label: string };
 
 const props = defineProps<{
     partyLabel: string;
@@ -42,8 +43,15 @@ const props = defineProps<{
         reversed_at: string | null;
         can_reverse: boolean;
         applications: Application[];
+        refunds: Refund[];
     };
     invoices: { id: number; number: string; date: string; outstanding: string }[];
+    canRefund: boolean;
+    accounts: { id: number; code: string | null; name: string; kind: string }[];
+    paymentMethods: { value: string; label: string }[];
+    refundTitle: string;
+    refundAction: RouteDefinition<'post'>;
+    reverseRefundUrl: (id: number) => string;
     today: string;
     currency: string;
     canRecord: boolean;
@@ -72,6 +80,24 @@ function apply(): void {
     form.submit(props.applyAction, { preserveScroll: true, onSuccess: () => form.reset('invoice_id', 'amount') });
 }
 
+const refundForm = useForm({
+    refund_date: props.today,
+    amount: '',
+    cash_bank_account_id: props.accounts[0] ? String(props.accounts[0].id) : '',
+    payment_method: 'CASH',
+    reference: '',
+});
+
+function giveBack(): void {
+    refundForm.submit(props.refundAction, { preserveScroll: true, onSuccess: () => refundForm.reset('amount', 'reference') });
+}
+
+function undoRefund(refund: Refund): void {
+    if (window.confirm(t('Reverse this refund? The advance has :amount back.', { amount: money(refund.amount) }))) {
+        router.patch(props.reverseRefundUrl(refund.id), {}, { preserveScroll: true });
+    }
+}
+
 function undo(): void {
     if (window.confirm(t('Reverse advance :reference?', { reference: props.advance.advance_number }))) {
         router.patch(props.reverseUrl, {}, { preserveScroll: true });
@@ -95,7 +121,7 @@ function undoApplication(application: Application): void {
 
         <dl class="border-sidebar-border/70 dark:border-sidebar-border grid max-w-3xl gap-4 rounded-xl border p-4 text-sm sm:grid-cols-3">
             <div><dt class="text-muted-foreground">{{ t('Amount (:currency)', { currency }) }}</dt><dd class="font-mono text-lg font-semibold">{{ money(advance.amount) }}</dd></div>
-            <div><dt class="text-muted-foreground">{{ t('Not yet applied') }}</dt><dd class="font-mono text-lg font-semibold">{{ money(advance.remaining) }}</dd></div>
+            <div><dt class="text-muted-foreground">{{ t('Not yet applied or refunded') }}</dt><dd class="font-mono text-lg font-semibold">{{ money(advance.remaining) }}</dd></div>
             <div><dt class="text-muted-foreground">{{ t('Status') }}</dt><dd><Badge :variant="advance.status === 'REVERSED' ? 'destructive' : 'default'">{{ advance.status_label }}</Badge></dd></div>
             <div><dt class="text-muted-foreground">{{ t(partyLabel) }}</dt><dd>{{ advance.party }}</dd></div>
             <div><dt class="text-muted-foreground">{{ t('Account') }}</dt><dd>{{ advance.account }} · {{ advance.payment_method_label }}</dd></div>
@@ -137,6 +163,62 @@ function undoApplication(application: Application): void {
                 </div>
             </div>
         </form>
+
+        <form v-if="canRecord && canRefund" class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl space-y-4 rounded-xl border p-4" @submit.prevent="giveBack">
+            <h2 class="font-semibold">{{ t(refundTitle) }}</h2>
+            <p class="text-muted-foreground text-sm">{{ t('Only what is not yet applied (:amount) can be refunded.', { amount: money(advance.remaining) }) }}</p>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="grid gap-2">
+                    <Label for="refund_amount">{{ t('Amount (:currency)', { currency }) }}</Label>
+                    <Input id="refund_amount" v-model="refundForm.amount" inputmode="decimal" />
+                    <InputError :message="refundForm.errors.amount" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="refund_date">{{ t('Date') }}</Label>
+                    <Input id="refund_date" v-model="refundForm.refund_date" type="date" />
+                    <InputError :message="refundForm.errors.refund_date" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="refund_method">{{ t('Method') }}</Label>
+                    <select id="refund_method" v-model="refundForm.payment_method" class="border-input bg-background h-9 rounded-md border px-3 text-sm">
+                        <option v-for="method in paymentMethods" :key="method.value" :value="method.value">{{ method.label }}</option>
+                    </select>
+                    <InputError :message="refundForm.errors.payment_method" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="refund_account">{{ t('Cash or bank account') }}</Label>
+                    <select id="refund_account" v-model="refundForm.cash_bank_account_id" class="border-input bg-background h-9 rounded-md border px-3 text-sm">
+                        <option v-for="account in accounts" :key="account.id" :value="String(account.id)">{{ account.name }} ({{ account.kind }})</option>
+                    </select>
+                    <InputError :message="refundForm.errors.cash_bank_account_id" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="refund_reference">{{ t('Reference') }}</Label>
+                    <Input id="refund_reference" v-model="refundForm.reference" />
+                    <InputError :message="refundForm.errors.reference" />
+                </div>
+                <div class="flex items-end">
+                    <Button type="submit" :disabled="refundForm.processing || !refundForm.amount">{{ t('Record refund') }}</Button>
+                </div>
+            </div>
+        </form>
+
+        <div v-if="advance.refunds.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl overflow-x-auto rounded-xl border">
+            <div class="bg-muted/50 px-4 py-2 text-sm font-medium">{{ t('Refunds') }}</div>
+            <table class="w-full text-sm">
+                <tbody>
+                    <tr v-for="refund in advance.refunds" :key="refund.id" class="border-sidebar-border/70 dark:border-sidebar-border border-t">
+                        <td class="px-4 py-2">{{ refund.date }}</td>
+                        <td class="px-4 py-2">{{ refund.account }} · {{ refund.payment_method_label }}<span v-if="refund.reference"> · {{ refund.reference }}</span></td>
+                        <td class="px-4 py-2 text-right font-mono">{{ money(refund.amount) }}</td>
+                        <td class="px-4 py-2"><Badge :variant="refund.status === 'REVERSED' ? 'destructive' : 'secondary'">{{ refund.status_label }}</Badge></td>
+                        <td class="px-4 py-2 text-right">
+                            <Button v-if="refund.status === 'POSTED' && canReverse" size="sm" variant="ghost" @click="undoRefund(refund)">{{ t('Reverse') }}</Button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border max-w-3xl overflow-x-auto rounded-xl border">
             <div class="bg-muted/50 px-4 py-2 text-sm font-medium">{{ t('Applied to invoices') }}</div>

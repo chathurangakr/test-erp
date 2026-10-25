@@ -19,6 +19,7 @@ use App\Enums\PricingBasis;
 use App\Enums\SalesCreditNoteStatus;
 use App\Enums\SalesInvoiceStatus;
 use App\Models\Account;
+use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\CustomerReceiptAllocation;
@@ -170,6 +171,45 @@ class SalesCreditNotesTest extends TestCase
         $this->assertSame(SalesInvoiceStatus::Posted, $this->invoice->status);
         $this->assertReceivablesReconcile();
         $this->assertRefused(fn () => app(ReverseSalesCreditNote::class)->handle($note), 'status', 'already been reversed');
+    }
+
+    #[Test]
+    public function money_back_for_a_paid_invoice_comes_from_cash_or_bank_and_leaves_what_it_is_owed(): void
+    {
+        $bank = CashBankAccount::query()->whereHas('account', fn ($q) => $q->where('code', '1120'))->firstOrFail();
+        $refund = fn (array $overrides) => $this->credit(array_merge(['settlement' => 'REFUND', 'cash_bank_account_id' => $bank->id, 'payment_method' => 'BANK_TRANSFER'], $overrides));
+
+        // Nothing paid yet: there is nothing to give back.
+        $this->assertRefused(fn () => $refund(['amount' => '1']), 'amount', 'paid only 0.00');
+
+        $receipt = CustomerReceipt::factory()->create([
+            'customer_id' => $this->customer->id, 'receipt_date' => '2026-09-12',
+            'receipt_account_id' => $bank->account_id, 'amount' => '260000',
+        ]);
+        CustomerReceiptAllocation::factory()->create(['customer_receipt_id' => $receipt->id, 'sales_invoice_id' => $this->invoice->id, 'amount' => '260000']);
+        app(PostCustomerReceipt::class)->handle($receipt->refresh());
+        $this->assertSame(SalesInvoiceStatus::Paid, $this->invoice->refresh()->status);
+
+        $this->assertRefused(fn () => $refund(['amount' => '260000.01']), 'amount', 'paid only 260,000.00');
+        $this->assertRefused(fn () => $refund(['payment_method' => 'CASH']), 'cash_bank_account_id', 'Cash');
+
+        $bankBefore = app(AccountingBalanceService::class)->balance(Account::where('code', '1120')->firstOrFail());
+        $note = $refund(['amount' => '15000']);
+
+        $lines = $note->journalEntry->lines->mapWithKeys(fn ($line) => [$line->account->code => [$line->debit, $line->credit]]);
+        $this->assertSame(['15000.000000', '0.000000'], $lines['4190']);
+        $this->assertSame(['0.000000', '15000.000000'], $lines['1120']);
+        $this->assertArrayNotHasKey('1210', $lines->all());
+        $this->assertSame('0.000000', app(AccountsReceivableService::class)->outstanding($this->invoice->refresh()));
+        $this->assertSame(SalesInvoiceStatus::Paid, $this->invoice->status);
+        $this->assertSame('245000.000000', app(AccountsReceivableService::class)->refundableAmount($this->invoice));
+        $this->assertSame(bcsub($bankBefore, '15000', 6), app(AccountingBalanceService::class)->balance(Account::where('code', '1120')->firstOrFail()));
+        $this->assertReceivablesReconcile();
+
+        app(ReverseSalesCreditNote::class)->handle($note);
+        $this->assertSame('260000.000000', app(AccountsReceivableService::class)->refundableAmount($this->invoice->refresh()));
+        $this->assertSame($bankBefore, app(AccountingBalanceService::class)->balance(Account::where('code', '1120')->firstOrFail()));
+        $this->assertReceivablesReconcile();
     }
 
     #[Test]

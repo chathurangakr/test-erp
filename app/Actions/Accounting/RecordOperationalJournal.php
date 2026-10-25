@@ -3,9 +3,12 @@
 namespace App\Actions\Accounting;
 
 use App\Enums\JournalEntryStatus;
+use App\Enums\SalesCreditNoteSettlement;
 use App\Models\CashBankAccount;
+use App\Models\ChequeEvent;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\CustomerBagMovement;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
@@ -18,6 +21,7 @@ use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Services\Accounting\AccountingPolicy;
 use App\Support\DecimalMath;
 use App\Support\RecordText;
@@ -374,6 +378,45 @@ class RecordOperationalJournal
     }
 
     /**
+     * What the bank took for a bounced cheque: `Dr bank charges / Cr the cheque's bank account`.
+     */
+    public function forChequeBankCharge(ChequeEvent $event, int $bankAccountId, string $chequeLabel, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $event->bank_charge);
+
+        return $this->record($event, $event->event_date, RecordText::of('Bank charge for bounced cheque :cheque', ['cheque' => $chequeLabel]), [
+            ['account_id' => $this->policy->bankChargesAccount()->id, 'description' => $event->reason, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $bankAccountId, 'description' => $chequeLabel, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
+     * Unused customer advance given back: `Dr customer advances / Cr cash or bank`.
+     */
+    public function forCustomerAdvanceRefund(CustomerAdvanceRefund $refund, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $refund->amount);
+
+        return $this->record($refund, $refund->refund_date, RecordText::of('Advance :advance given back', ['advance' => $refund->advance->advance_number]), [
+            ['account_id' => $this->policy->customerAdvancesAccount()->id, 'description' => $refund->advance->advance_number, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $refund->cashBankAccount->account_id, 'description' => $refund->reference, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
+     * Unused supplier advance returned to us: `Dr cash or bank / Cr supplier advances`.
+     */
+    public function forSupplierAdvanceRefund(SupplierAdvanceRefund $refund, ?int $userId = null): JournalEntry
+    {
+        $amount = DecimalMath::cost((string) $refund->amount);
+
+        return $this->record($refund, $refund->refund_date, RecordText::of('Advance :advance returned by the supplier', ['advance' => $refund->advance->advance_number]), [
+            ['account_id' => $refund->cashBankAccount->account_id, 'description' => $refund->reference, 'debit' => $amount, 'credit' => DecimalMath::cost('0')],
+            ['account_id' => $this->policy->supplierAdvancesAccount()->id, 'description' => $refund->advance->advance_number, 'debit' => DecimalMath::cost('0'), 'credit' => $amount],
+        ], $userId);
+    }
+
+    /**
      * Money paid to a supplier before their invoice: `Dr supplier advances / Cr cash or bank`.
      */
     public function forSupplierAdvance(SupplierAdvance $advance, ?int $userId = null): JournalEntry
@@ -432,12 +475,19 @@ class RecordOperationalJournal
                     'debit' => $amount,
                     'credit' => $zero,
                 ],
-                [
-                    'account_id' => $this->policy->tradeReceivablesAccount()->id,
-                    'description' => RecordText::of('Credit to :customer', ['customer' => $customer]),
-                    'debit' => $zero,
-                    'credit' => $amount,
-                ],
+                $note->settlement === SalesCreditNoteSettlement::Refund
+                    ? [
+                        'account_id' => $note->cashBankAccount->account_id,
+                        'description' => RecordText::of('Money back to :customer', ['customer' => $customer]),
+                        'debit' => $zero,
+                        'credit' => $amount,
+                    ]
+                    : [
+                        'account_id' => $this->policy->tradeReceivablesAccount()->id,
+                        'description' => RecordText::of('Credit to :customer', ['customer' => $customer]),
+                        'debit' => $zero,
+                        'credit' => $amount,
+                    ],
             ],
             $userId,
         );

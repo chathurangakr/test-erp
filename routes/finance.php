@@ -34,6 +34,7 @@ use App\Http\Controllers\Receivables\SalesInvoiceController;
 use App\Http\Controllers\Receivables\UnbilledDeliveryController;
 use App\Http\Controllers\Reports\BalanceSheetController;
 use App\Http\Controllers\Reports\CashBankPositionController;
+use App\Http\Controllers\Reports\CashFlowController;
 use App\Http\Controllers\Reports\FinanceDashboardController;
 use App\Http\Controllers\Reports\InventoryGlReconciliationController;
 use App\Http\Controllers\Reports\InventoryValuationController;
@@ -187,6 +188,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('finance/customer-advance-applications/{customerAdvanceApplication}/reverse', [CustomerAdvanceController::class, 'reverseApplication'])
         ->name('customer-advances.reverse-application')
         ->can(Permission::ArAdvanceReverse);
+    Route::post('finance/customer-advances/{customerAdvance}/refunds', [CustomerAdvanceController::class, 'refund'])
+        ->name('customer-advances.refund')
+        ->can(Permission::ArAdvanceRecord);
+    Route::patch('finance/customer-advance-refunds/{customerAdvanceRefund}/reverse', [CustomerAdvanceController::class, 'reverseRefund'])
+        ->name('customer-advances.reverse-refund')
+        ->can(Permission::ArAdvanceReverse);
     // Supplier advances — docs/ACCOUNTING_RULES.md §34.
     Route::get('finance/supplier-advances', [SupplierAdvanceController::class, 'index'])
         ->name('supplier-advances.index')
@@ -208,6 +215,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->can(Permission::ApAdvanceRecord);
     Route::patch('finance/supplier-advance-applications/{supplierAdvanceApplication}/reverse', [SupplierAdvanceController::class, 'reverseApplication'])
         ->name('supplier-advances.reverse-application')
+        ->can(Permission::ApAdvanceReverse);
+    Route::post('finance/supplier-advances/{supplierAdvance}/refunds', [SupplierAdvanceController::class, 'refund'])
+        ->name('supplier-advances.refund')
+        ->can(Permission::ApAdvanceRecord);
+    Route::patch('finance/supplier-advance-refunds/{supplierAdvanceRefund}/reverse', [SupplierAdvanceController::class, 'reverseRefund'])
+        ->name('supplier-advances.reverse-refund')
         ->can(Permission::ApAdvanceReverse);
     // Discounts and quality allowances — docs/ACCOUNTING_RULES.md §33.
     Route::get('finance/credit-notes', [SalesCreditNoteController::class, 'index'])
@@ -320,6 +333,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finance/reports/inventory-gl-reconciliation', [InventoryGlReconciliationController::class, 'index'])
         ->name('reports.inventory-gl-reconciliation')
         ->can(Permission::ReportsInventory);
+    Route::get('finance/reports/cash-flow', [CashFlowController::class, 'index'])
+        ->name('reports.cash-flow')
+        ->can(Permission::ReportsFinance);
     Route::get('finance/reports/cash-bank-position', [CashBankPositionController::class, 'index'])
         ->name('reports.cash-bank-position')
         ->can(Permission::ReportsFinance);

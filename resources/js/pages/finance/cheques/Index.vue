@@ -28,6 +28,7 @@ type Cheque = {
     status_date: string | null;
     can_clear: boolean;
     can_bounce: boolean;
+    bank_charge: string | null;
     can_undo_clear: boolean;
 };
 
@@ -55,6 +56,7 @@ function filter(): void {
 const acting = ref<string | null>(null);
 const actionDate = ref(props.today);
 const reason = ref('');
+const bankCharge = ref('');
 const mode = ref<'clear' | 'bounce'>('clear');
 
 function open(cheque: Cheque, what: 'clear' | 'bounce'): void {
@@ -62,6 +64,7 @@ function open(cheque: Cheque, what: 'clear' | 'bounce'): void {
     mode.value = what;
     actionDate.value = props.today;
     reason.value = '';
+    bankCharge.value = '';
 }
 
 function confirm(cheque: Cheque): void {
@@ -70,7 +73,7 @@ function confirm(cheque: Cheque): void {
     }
 
     const url = mode.value === 'clear' ? clear().url : bounce().url;
-    router.post(url, { cheque: cheque.key, event_date: actionDate.value, reason: reason.value }, { preserveScroll: true, onSuccess: () => (acting.value = null) });
+    router.post(url, { cheque: cheque.key, event_date: actionDate.value, reason: reason.value, bank_charge: bankCharge.value || undefined }, { preserveScroll: true, onSuccess: () => (acting.value = null) });
 }
 
 function undo(cheque: Cheque): void {
@@ -98,7 +101,7 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
             </select>
         </div>
 
-        <InputError :message="errors.status ?? errors.event_date ?? errors.reason" />
+        <InputError :message="errors.status ?? errors.event_date ?? errors.reason ?? errors.bank_charge" />
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
@@ -126,6 +129,7 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
                             <td class="px-4 py-3">
                                 <Badge :variant="variant(cheque.status)">{{ cheque.status_label }}</Badge>
                                 <span v-if="cheque.status_date" class="text-muted-foreground block text-xs">{{ cheque.status_date }}</span>
+                                <span v-if="cheque.bank_charge" class="text-muted-foreground block text-xs">{{ t('Bank charge :amount', { amount: money(cheque.bank_charge) }) }}</span>
                                 <span v-if="cheque.status === 'WAITING' && cheque.not_yet_due" class="block text-xs text-amber-600">{{ t('Not yet due') }}</span>
                             </td>
                             <td class="space-x-1 px-4 py-3 text-right whitespace-nowrap">
@@ -141,6 +145,7 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
                                 <div class="flex flex-wrap items-end gap-3">
                                     <label class="grid gap-1 text-xs">{{ mode === 'clear' ? t('Cleared on') : t('Bounced on') }}<Input v-model="actionDate" type="date" class="w-40" /></label>
                                     <label v-if="mode === 'bounce'" class="grid flex-1 gap-1 text-xs">{{ t('Reason') }}<Input v-model="reason" :placeholder="t('For example: insufficient funds')" /></label>
+                                    <label v-if="mode === 'bounce'" class="grid gap-1 text-xs">{{ t('Bank charge (:currency)', { currency }) }}<Input v-model="bankCharge" inputmode="decimal" placeholder="0.00" class="w-32" /></label>
                                     <Button size="sm" @click="confirm(cheque)">{{ mode === 'clear' ? t('Mark cleared') : t('Mark bounced') }}</Button>
                                     <Button size="sm" variant="ghost" @click="acting = null">{{ t('Cancel') }}</Button>
                                 </div>

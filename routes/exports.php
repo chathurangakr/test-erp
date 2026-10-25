@@ -14,6 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     $exports = [
         'reports.profit-loss.export' => ['finance/reports/profit-loss/export', 'profit-loss', Permission::ReportsFinance],
         'reports.balance-sheet.export' => ['finance/reports/balance-sheet/export', 'balance-sheet', Permission::ReportsFinance],
+        'reports.cash-flow.export' => ['finance/reports/cash-flow/export', 'cash-flow', Permission::ReportsFinance],
         'reports.cash-bank-position.export' => ['finance/reports/cash-bank-position/export', 'cash-bank-position', Permission::ReportsFinance],
         'reports.inventory-valuation.export' => ['finance/reports/inventory-valuation/export', 'inventory-valuation', Permission::ReportsInventory],
         'reports.inventory-gl-reconciliation.export' => ['finance/reports/inventory-gl-reconciliation/export', 'inventory-gl-reconciliation', Permission::ReportsInventory],

@@ -7,6 +7,7 @@ use App\Enums\SalesReturnSettlement;
 use App\Models\AssetMaintenance;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -35,6 +36,7 @@ use App\Models\StockDamage;
 use App\Models\StockDamageLine;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceLine;
 use App\Models\SupplierPayment;
@@ -94,6 +96,7 @@ class TransactionAlertMessage
             $model instanceof SalesCreditNote => $this->creditNote($model),
             $model instanceof CustomerAdvance, $model instanceof SupplierAdvance => $this->partyAdvance($model),
             $model instanceof CustomerAdvanceApplication, $model instanceof SupplierAdvanceApplication => $this->advanceApplication($model),
+            $model instanceof CustomerAdvanceRefund, $model instanceof SupplierAdvanceRefund => $this->advanceRefund($model),
             $model instanceof CustomerBagMovement => $this->bags($model),
             $model instanceof SupplierInvoice => $this->supplierInvoice($model),
             $model instanceof SupplierPayment => $this->supplierPayment($model),
@@ -229,15 +232,28 @@ class TransactionAlertMessage
         ], [], [__('Applied'), (string) $application->amount], route($customer ? 'customer-advances.show' : 'supplier-advances.show', $application->advance));
     }
 
+    private function advanceRefund(CustomerAdvanceRefund|SupplierAdvanceRefund $refund): array
+    {
+        $customer = $refund instanceof CustomerAdvanceRefund;
+        $refund->load(['advance', 'cashBankAccount']);
+
+        return $this->make('↩️', $customer ? __('Advance given back to a customer') : __('Advance returned by a supplier'), (string) $refund->advance?->advance_number, $refund->refund_date, [
+            [$customer ? __('Paid from') : __('Received into'), $refund->cashBankAccount?->display_name],
+            [__('Method'), $refund->payment_method->label()],
+            [__('Reference'), $refund->reference],
+        ], [], [__('Amount'), (string) $refund->amount], route($customer ? 'customer-advances.show' : 'supplier-advances.show', $refund->advance));
+    }
+
     private function creditNote(SalesCreditNote $note): array
     {
-        $note->load(['customer', 'invoice']);
+        $note->load(['customer', 'invoice', 'cashBankAccount']);
 
         return $this->make('🏷️', $note->kind->label(), $note->credit_note_number, $note->credit_date, [
             [__('Customer'), $note->customer?->name],
             [__('Invoice'), $note->invoice?->invoice_number],
+            [__('Paid from'), $note->cashBankAccount?->display_name],
             [__('Reason'), $note->reason],
-        ], [], [__('Credited'), (string) $note->amount], route('credit-notes.show', $note));
+        ], [], [$note->cashBankAccount === null ? __('Credited') : __('Money back'), (string) $note->amount], route('credit-notes.show', $note));
     }
 
     private function bags(CustomerBagMovement $movement): array

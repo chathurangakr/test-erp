@@ -2,6 +2,8 @@
 
 namespace App\Services\Reporting;
 
+use App\Http\Controllers\Reports\CashFlowController;
+use App\Http\Controllers\Reports\ProfitLossController;
 use App\Models\Account;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
@@ -13,6 +15,7 @@ use App\Services\Accounting\AccountsPayableService;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\BalanceSheetService;
 use App\Services\Accounting\CashBankBookService;
+use App\Services\Accounting\CashFlowService;
 use App\Services\Accounting\GrniReconciliationService;
 use App\Services\Accounting\InventoryGlReconciliationService;
 use App\Services\Accounting\InventoryValuationReportService;
@@ -40,7 +43,7 @@ class ReportExports
 {
     /** The reports that can be exported, by the key their export route carries. */
     public const REPORTS = [
-        'profit-loss', 'balance-sheet', 'trial-balance', 'general-ledger', 'cash-bank-position',
+        'profit-loss', 'balance-sheet', 'cash-flow', 'trial-balance', 'general-ledger', 'cash-bank-position',
         'cash-bank-book', 'ar-aging', 'ap-aging', 'unbilled-deliveries', 'grni-reconciliation',
         'inventory-valuation', 'inventory-gl-reconciliation', 'product-profitability', 'stock-on-hand',
     ];
@@ -59,6 +62,7 @@ class ReportExports
         private readonly InventoryValuationReportService $valuation,
         private readonly InventoryGlReconciliationService $inventoryGl,
         private readonly ProductProfitabilityService $profitability,
+        private readonly CashFlowService $cashFlowService,
     ) {}
 
     /**
@@ -69,6 +73,7 @@ class ReportExports
         return match ($report) {
             'profit-loss' => $this->profitLoss($request),
             'balance-sheet' => $this->balanceSheet($request),
+            'cash-flow' => $this->cashFlow($request),
             'trial-balance' => $this->trialBalance($request),
             'general-ledger' => $this->generalLedger($request),
             'cash-bank-position' => $this->cashBankPosition($request),
@@ -101,9 +106,41 @@ class ReportExports
         $rows = [...$rows, ...$this->tree(__('Operating expenses'), $statement['operating_expenses'])];
         $rows[] = ['cells' => [DecimalMath::isNegative($statement['net_profit']) ? __('Net loss') : __('Net profit'), $statement['net_profit']], 'bold' => true];
 
+        $sections = [['heading' => null, 'columns' => $money, 'rows' => $rows]];
+        $compare = in_array($request->query('compare'), ProfitLossController::COMPARISONS, true) ? $request->query('compare') : null;
+        $comparison = app(ProfitLossController::class)->comparison($statement, $compare);
+
+        if ($comparison !== null) {
+            $compared = [];
+
+            foreach ($comparison['sections'] as $section) {
+                $compared[] = ['cells' => [$section['label'], null, null, null, null], 'bold' => true];
+
+                foreach ($section['rows'] as $row) {
+                    $compared[] = ['cells' => [$row['code'].' '.$row['name'], $row['current'], $row['prior'], $row['change'], $row['change_percent']], 'bold' => $row['is_group'], 'indent' => $row['depth'] + 1];
+                }
+            }
+
+            foreach ($comparison['lines'] as $line) {
+                $compared[] = ['cells' => [$line['label'], $line['current'], $line['prior'], $line['change'], $line['change_percent']], 'bold' => true];
+            }
+
+            $sections[] = [
+                'heading' => __('Compared with :from to :to', ['from' => $comparison['prior_from'], 'to' => $comparison['prior_to']]),
+                'columns' => [
+                    ['label' => __('Account'), 'type' => 'text'],
+                    ['label' => __('This period'), 'type' => 'money'],
+                    ['label' => __('Compared with'), 'type' => 'money'],
+                    ['label' => __('Change'), 'type' => 'money'],
+                    ['label' => __('Change %'), 'type' => 'percent'],
+                ],
+                'rows' => $compared,
+            ];
+        }
+
         return $this->export(__('Profit and loss'), 'profit-and-loss', [
             $this->range($statement['from'], $statement['to'], $statement['period']),
-        ], [['heading' => null, 'columns' => $money, 'rows' => $rows]]);
+        ], $sections);
     }
 
     private function balanceSheet(Request $request): array
@@ -123,6 +160,30 @@ class ReportExports
         return $this->export(__('Balance sheet'), 'balance-sheet', [
             __('As at :date', ['date' => $statement['as_of']]),
         ], [['heading' => null, 'columns' => $money, 'rows' => $rows]]);
+    }
+
+    private function cashFlow(Request $request): array
+    {
+        [$from, $to] = CashFlowController::window($request);
+        $statement = $this->cashFlowService->statement($from, $to);
+        $rows = [['cells' => [__('Cash and bank at the start'), $statement['opening']], 'bold' => true]];
+
+        foreach ($statement['sections'] as $section) {
+            $rows[] = ['cells' => [$section['label'], null], 'bold' => true];
+
+            foreach ($section['rows'] as $row) {
+                $rows[] = ['cells' => [$row['label'], $row['amount']], 'indent' => 1];
+            }
+
+            $rows[] = ['cells' => [__('Net from :section', ['section' => mb_strtolower($section['label'])]), $section['total']], 'bold' => true];
+        }
+
+        $rows[] = ['cells' => [__('Net change in cash and bank'), $statement['net_change']], 'bold' => true];
+        $rows[] = ['cells' => [__('Cash and bank at the end'), $statement['closing']], 'bold' => true];
+
+        return $this->export(__('Cash flow statement'), 'cash-flow', [
+            $this->range($statement['from'], $statement['to']),
+        ], [['heading' => null, 'columns' => [['label' => __('Item'), 'type' => 'text'], ['label' => __('Amount'), 'type' => 'money']], 'rows' => $rows]]);
     }
 
     private function trialBalance(Request $request): array

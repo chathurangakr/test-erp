@@ -25,6 +25,7 @@ use App\Services\Accounting\AccountingPolicy;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Support\DecimalMath;
+use App\Support\DisplayNumber;
 use App\Support\RecordText;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
@@ -322,18 +323,13 @@ class RecordSalesReturn
         $this->policy->assertMethodFitsAccount($method, $configuration, 'cash_bank_account_id');
 
         // Money back only for money received: never more than the customer paid on the invoice
-        // that billed these goods, less what earlier returns already gave back.
-        $refunded = DecimalMath::of((string) SalesReturn::query()
-            ->where('original_invoice_id', $original->id)
-            ->where('settlement', SalesReturnSettlement::Refund->value)
-            ->where('status', SalesReturnStatus::Posted->value)
-            ->sum('credit_amount'));
-        $paid = DecimalMath::sub($this->receivables->receivedAmount($original), $refunded);
+        // that billed these goods, less what earlier returns and credit notes already gave back.
+        $paid = $this->receivables->refundableAmount($original);
 
         if (DecimalMath::compare($credit, $paid, 2) > 0) {
             throw ValidationException::withMessages([
                 'settlement' => __('The customer has paid only :paid on invoice :reference, so no more than that can be given back. Reduce what they owe instead.', [
-                    'paid' => DecimalMath::money($paid),
+                    'paid' => DisplayNumber::money($paid),
                     'reference' => $original->invoice_number,
                 ]),
             ]);

@@ -54,6 +54,7 @@ import {
     PiggyBank,
     FileCheck,
     ListChecks,
+    ArrowRightLeft,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -119,6 +120,7 @@ import { index as financeDashboardIndex } from '@/routes/finance-dashboard';
 import {
     balanceSheet as balanceSheetReport,
     cashBankPosition as cashBankPositionReport,
+    cashFlow as cashFlowReport,
     inventoryGlReconciliation as inventoryGlReconciliationReport,
     inventoryValuation as inventoryValuationReport,
     productProfitability as productProfitabilityReport,
@@ -399,6 +401,12 @@ const reportsNavItems: NavItem[] = [
         href: balanceSheetReport(),
         permission: 'reports.finance',
         icon: Scale,
+    },
+    {
+        title: 'Cash Flow',
+        href: cashFlowReport(),
+        permission: 'reports.finance',
+        icon: ArrowRightLeft,
     },
     {
         title: 'Inventory Valuation',

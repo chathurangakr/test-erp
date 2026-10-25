@@ -74,6 +74,12 @@ class CustomerAdvance extends Model
         return $this->hasMany(CustomerAdvanceApplication::class);
     }
 
+    /** @return HasMany<CustomerAdvanceRefund, $this> */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(CustomerAdvanceRefund::class);
+    }
+
     /** @return BelongsTo<CashBankAccount, $this> */
     public function cashBankAccount(): BelongsTo
     {

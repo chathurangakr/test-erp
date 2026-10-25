@@ -4,6 +4,23 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.26.0 — 25 October 2026
+
+- **Cash flow statement.** Reports → Cash Flow shows where money came from and where it went for any
+  dates: from customers, to suppliers, expenses, salaries, loans, assets and so on, grouped into
+  day-to-day business, assets and loans. It starts from the cash and bank you had and ends at what
+  you have, and checks itself against the books. Download it as PDF or Excel.
+- **Compare profit and loss.** On Profit & loss, choose "Compare with" — the period before (for
+  example October beside September) or the same period last year. Each account shows both figures
+  and how much it went up or down.
+- **Give an unused advance back.** On a customer advance, **Give money back to the customer** records
+  money returned from cash or bank. On a supplier advance, **Money returned by the supplier** records
+  the supplier giving back what was not used. Both can be reversed.
+- **Money back for a discount.** A discount or quality allowance can now be paid back in cash or by
+  bank when the invoice is already paid — choose "Money back" on the credit note.
+- **Bank charges on a bounced cheque.** When marking a cheque bounced, enter what the bank charged.
+  It is taken from that bank account and shown as a Bank Charges expense.
+
 ## 1.25.0 — 25 October 2026
 
 - **Loan interest rate.** Give a loan its interest rate (% a year). Each time you record a payment,

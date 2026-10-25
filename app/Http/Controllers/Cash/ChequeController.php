@@ -7,6 +7,7 @@ use App\Actions\Cash\MarkChequeCleared;
 use App\Actions\Cash\UndoChequeCleared;
 use App\Enums\ChequeStatus;
 use App\Http\Controllers\Controller;
+use App\Rules\Money;
 use App\Services\Accounting\ChequeRegister;
 use App\Support\BusinessClock;
 use Illuminate\Http\RedirectResponse;
@@ -60,8 +61,12 @@ class ChequeController extends Controller
     public function bounce(Request $request, BounceCheque $action): RedirectResponse
     {
         [$type, $id] = $this->cheque($request);
-        $data = $request->validate(['event_date' => ['required', 'date_format:Y-m-d'], 'reason' => ['required', 'string', 'max:255']]);
-        $action->handle($type, $id, $data['event_date'], $data['reason'], auth()->id());
+        $data = $request->validate([
+            'event_date' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'max:255'],
+            'bank_charge' => ['nullable', 'numeric', new Money, 'gte:0'],
+        ]);
+        $action->handle($type, $id, $data['event_date'], $data['reason'], auth()->id(), isset($data['bank_charge']) ? (string) $data['bank_charge'] : null);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Cheque marked bounced. Its document was reversed.')]);
 

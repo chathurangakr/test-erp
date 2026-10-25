@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Advances;
 
 use App\Actions\Receivables\ApplyCustomerAdvance;
 use App\Actions\Receivables\RecordCustomerAdvance;
+use App\Actions\Receivables\RefundCustomerAdvance;
 use App\Actions\Receivables\ReverseCustomerAdvance;
 use App\Actions\Receivables\ReverseCustomerAdvanceApplication;
+use App\Actions\Receivables\ReverseCustomerAdvanceRefund;
 use App\Enums\SalesInvoiceStatus;
 use App\Http\Requests\Advances\ApplyAdvanceRequest;
+use App\Http\Requests\Advances\RefundAdvanceRequest;
 use App\Http\Requests\Advances\StoreAdvanceRequest;
 use App\Models\Customer;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\DecimalMath;
@@ -80,6 +84,24 @@ class CustomerAdvanceController extends AdvanceScreens
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application reversed. The invoice is owed the amount again.')]);
 
         return to_route('customer-advances.show', $customerAdvanceApplication->customer_advance_id);
+    }
+
+    public function refund(RefundAdvanceRequest $request, CustomerAdvance $customerAdvance, RefundCustomerAdvance $action): RedirectResponse
+    {
+        $action->handle($customerAdvance, $request->validated(), auth()->id());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Money given back.')]);
+
+        return to_route('customer-advances.show', $customerAdvance);
+    }
+
+    public function reverseRefund(CustomerAdvanceRefund $customerAdvanceRefund, ReverseCustomerAdvanceRefund $action): RedirectResponse
+    {
+        $action->handle($customerAdvanceRefund, auth()->id());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Refund reversed. The advance has the amount back.')]);
+
+        return to_route('customer-advances.show', $customerAdvanceRefund->customer_advance_id);
     }
 
     protected function party(): string

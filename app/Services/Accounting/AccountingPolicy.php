@@ -210,6 +210,15 @@ class AccountingPolicy
         return $account;
     }
 
+    public function bankChargesAccount(): Account
+    {
+        $account = AccountingSetting::current()?->bankChargesAccount
+            ?? throw ValidationException::withMessages(['bank_charge' => __('No bank charges account is configured. Choose one in Accounting Setup first.')]);
+        $this->assertUsable($account, AccountType::Expense, __('Bank charges'));
+
+        return $account;
+    }
+
     public function salesDiscountAccount(): Account
     {
         $account = AccountingSetting::current()?->salesDiscountAccount;

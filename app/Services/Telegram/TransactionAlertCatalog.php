@@ -6,6 +6,7 @@ use App\Enums\LoanFunding;
 use App\Models\AssetMaintenance;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\CustomerBagMovement;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
@@ -25,6 +26,7 @@ use App\Models\SalesReturn;
 use App\Models\StockDamage;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use Illuminate\Database\Eloquent\Model;
@@ -52,8 +54,10 @@ final class TransactionAlertCatalog
         SalesCreditNote::class => 'credit_notes',
         CustomerAdvance::class => 'customer_advances',
         CustomerAdvanceApplication::class => 'customer_advances',
+        CustomerAdvanceRefund::class => 'customer_advances',
         SupplierAdvance::class => 'supplier_advances',
         SupplierAdvanceApplication::class => 'supplier_advances',
+        SupplierAdvanceRefund::class => 'supplier_advances',
         CustomerBagMovement::class => 'customer_bags',
         SupplierInvoice::class => 'supplier_invoices',
         SupplierPayment::class => 'supplier_payments',

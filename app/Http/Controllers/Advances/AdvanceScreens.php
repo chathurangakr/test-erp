@@ -7,8 +7,10 @@ use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerAdvance;
 use App\Models\CustomerAdvanceApplication;
+use App\Models\CustomerAdvanceRefund;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Services\Accounting\AdvanceBalances;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
@@ -20,7 +22,7 @@ use Inertia\Response;
 
 /**
  * The screens customer and supplier advances share: a list, the form, and an advance with its
- * applications and a form to apply what is left. Each side's controller states its own models,
+ * applications and refunds, and forms to apply or give back what is left. Each side's controller states its own models,
  * routes and actions; nothing here posts. See docs/ACCOUNTING_RULES.md §34.
  */
 abstract class AdvanceScreens extends Controller
@@ -77,7 +79,7 @@ abstract class AdvanceScreens extends Controller
     protected function renderShow(CustomerAdvance|SupplierAdvance $advance): Response
     {
         $party = $this->party();
-        $advance->load([$party, 'cashBankAccount', 'journalEntry:id,journal_number', 'reversalJournalEntry:id,journal_number', 'createdBy:id,name', 'reversedBy:id,name', 'applications.invoice']);
+        $advance->load([$party, 'cashBankAccount', 'journalEntry:id,journal_number', 'reversalJournalEntry:id,journal_number', 'createdBy:id,name', 'reversedBy:id,name', 'applications.invoice', 'refunds.cashBankAccount']);
         $remaining = $this->balances->remaining($advance);
 
         return Inertia::render("finance/{$party}-advances/Show", [
@@ -96,7 +98,19 @@ abstract class AdvanceScreens extends Controller
                 'posted_at' => BusinessClock::display($advance->posted_at),
                 'reversed_by' => $advance->reversedBy?->name,
                 'reversed_at' => BusinessClock::display($advance->reversed_at),
-                'can_reverse' => $advance->status->canReverse() && ! $advance->applications->contains(fn (Model $a): bool => $a->status === AdvanceStatus::Posted),
+                'can_reverse' => $advance->status->canReverse()
+                    && ! $advance->applications->contains(fn (Model $a): bool => $a->status === AdvanceStatus::Posted)
+                    && ! $advance->refunds->contains(fn (Model $r): bool => $r->status === AdvanceStatus::Posted),
+                'refunds' => $advance->refunds->sortByDesc('id')->map(fn (CustomerAdvanceRefund|SupplierAdvanceRefund $refund): array => [
+                    'id' => $refund->id,
+                    'date' => $refund->refund_date->toDateString(),
+                    'account' => $refund->cashBankAccount?->display_name,
+                    'payment_method_label' => $refund->payment_method->label(),
+                    'reference' => $refund->reference,
+                    'amount' => (string) $refund->amount,
+                    'status' => $refund->status->value,
+                    'status_label' => $refund->status->label(),
+                ])->values(),
                 'applications' => $advance->applications->sortByDesc('id')->map(fn (CustomerAdvanceApplication|SupplierAdvanceApplication $application): array => [
                     'id' => $application->id,
                     'date' => $application->application_date->toDateString(),
@@ -109,6 +123,9 @@ abstract class AdvanceScreens extends Controller
             'invoices' => $advance->status === AdvanceStatus::Posted && DecimalMath::isPositive($remaining)
                 ? $this->openInvoices($advance->{"{$party}_id"})->values()
                 : [],
+            'canRefund' => $advance->status === AdvanceStatus::Posted && DecimalMath::isPositive($remaining),
+            'accounts' => $this->options->cashBankAccounts(),
+            'paymentMethods' => PaymentMethod::options(),
             'today' => BusinessClock::todayString(),
             'currency' => config('accounting.base_currency'),
         ]);

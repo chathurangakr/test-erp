@@ -8,6 +8,7 @@ use App\Enums\JournalEntryStatus;
 use App\Models\Account;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
+use App\Models\User;
 use App\Services\Accounting\AccountingBalanceService;
 use App\Services\Accounting\BalanceSheetService;
 use App\Services\Accounting\ProfitLossService;
@@ -99,6 +100,54 @@ class FinancialStatementsTest extends TestCase
         }
 
         return app(PostJournalEntry::class)->handle($entry->refresh());
+    }
+
+    #[Test]
+    public function the_window_compared_with_keeps_whole_months_whole(): void
+    {
+        $window = fn (string $from, string $to, string $mode) => array_map(
+            fn ($date) => $date->toDateString(),
+            ProfitLossService::priorWindow(Carbon::parse($from), Carbon::parse($to), $mode),
+        );
+
+        $this->assertSame(['2026-02-01', '2026-02-28'], $window('2026-03-01', '2026-03-31', 'previous'));
+        $this->assertSame(['2026-04-01', '2026-06-30'], $window('2026-07-01', '2026-09-30', 'previous'));
+        $this->assertSame(['2026-09-01', '2026-09-10'], $window('2026-09-11', '2026-09-20', 'previous'));
+        $this->assertSame(['2025-09-01', '2025-09-30'], $window('2026-09-01', '2026-09-30', 'last_year'));
+        $this->assertSame(['2027-02-01', '2027-02-28'], $window('2028-02-01', '2028-02-29', 'last_year'));
+    }
+
+    #[Test]
+    public function a_statement_is_compared_account_by_account_with_an_earlier_window(): void
+    {
+        $this->journal([['1210', '200000.000000', '0.000000'], ['4110', '0.000000', '200000.000000']], '2026-09-10');
+        $this->journal([['6400', '10000.000000', '0.000000'], ['1120', '0.000000', '10000.000000']], '2026-09-12');
+        $this->journal([['1210', '250000.000000', '0.000000'], ['4110', '0.000000', '250000.000000']], '2026-10-10');
+        $this->journal([['6400', '12000.000000', '0.000000'], ['1120', '0.000000', '12000.000000']], '2026-10-12');
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('reports.profit-loss', ['fiscal_period_id' => $this->october->id, 'compare' => 'previous']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('comparison.prior_from', '2026-09-01')
+                ->where('comparison.prior_to', '2026-09-30')
+                ->where('comparison.lines.0', ['key' => 'revenue', 'label' => 'Revenue', 'current' => '250000.000000', 'prior' => '200000.000000', 'change' => '50000.000000', 'change_percent' => '25.0'])
+                ->where('comparison.lines.4.change', '48000.000000')
+                ->where('comparison.lines.4.current', '238000.000000'));
+
+        foreach (['pdf', 'xlsx'] as $format) {
+            $this->get(route('reports.profit-loss.export', ['fiscal_period_id' => $this->october->id, 'compare' => 'last_year', 'format' => $format]))->assertOk();
+        }
+
+        // An account that moved only in the earlier window is still listed, at zero now.
+        $comparison = $this->profitLoss()->compare(Carbon::parse('2026-11-01'), Carbon::parse('2026-11-30'), Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'));
+        $expenses = collect($comparison['sections'])->firstWhere('key', 'operating_expenses');
+        $row = collect($expenses['rows'])->firstWhere('code', '6400');
+        $this->assertSame(['0.000000', '12000.000000', '-12000.000000', '-100.0'], [$row['current'], $row['prior'], $row['change'], $row['change_percent']]);
+
+        // Against a window with nothing in it there is no percentage — the figure is new.
+        $fromNothing = $this->profitLoss()->compare(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30'), Carbon::parse('2026-08-01'), Carbon::parse('2026-08-31'));
+        $this->assertNull(collect($fromNothing['lines'])->firstWhere('key', 'revenue')['change_percent']);
     }
 
     /** Find a row anywhere in a statement tree by account code. */

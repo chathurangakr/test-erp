@@ -22,6 +22,9 @@ const props = defineProps<{
         invoice_id: number;
         invoice_number: string | null;
         kind_label: string;
+        settlement: string;
+        settlement_label: string;
+        paid_from: string | null;
         amount: string;
         status: string;
         status_label: string;
@@ -45,7 +48,12 @@ const page = usePage();
 const error = computed(() => (page.props.errors as Record<string, string | undefined>).status);
 
 function undo(): void {
-    if (window.confirm(t('Reverse credit note :reference? The invoice is owed the amount again.', { reference: props.note.credit_note_number }))) {
+    const question =
+        props.note.settlement === 'REFUND'
+            ? t('Reverse credit note :reference? The money back is undone.', { reference: props.note.credit_note_number })
+            : t('Reverse credit note :reference? The invoice is owed the amount again.', { reference: props.note.credit_note_number });
+
+    if (window.confirm(question)) {
         router.patch(reverse(props.note.id).url, {}, { preserveScroll: true });
     }
 }
@@ -69,6 +77,8 @@ function undo(): void {
             </div>
             <div><dt class="text-muted-foreground">{{ t('Amount (:currency)', { currency }) }}</dt><dd class="font-mono text-lg font-semibold">{{ money(note.amount) }}</dd></div>
             <div><dt class="text-muted-foreground">{{ t('Status') }}</dt><dd><Badge :variant="note.status === 'REVERSED' ? 'destructive' : 'default'">{{ note.status_label }}</Badge></dd></div>
+            <div><dt class="text-muted-foreground">{{ t('How') }}</dt><dd>{{ note.settlement_label }}</dd></div>
+            <div v-if="note.paid_from"><dt class="text-muted-foreground">{{ t('Paid from') }}</dt><dd>{{ note.paid_from }}</dd></div>
             <div class="sm:col-span-2"><dt class="text-muted-foreground">{{ t('Reason') }}</dt><dd>{{ note.reason }}</dd></div>
             <div><dt class="text-muted-foreground">{{ t('Recorded') }}</dt><dd>{{ t(':date by :user', { date: note.posted_at ?? '—', user: note.created_by ?? '—' }) }}</dd></div>
             <div v-if="note.reversed_at">

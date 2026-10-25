@@ -129,6 +129,8 @@ class ChartOfAccountsSeeder extends Seeder
         ['6900', 'Stock Damage and Losses', AccountType::Expense, false, true],
         ['6950', 'Loan Interest', AccountType::Expense, false, false],
         ['6960', 'Loss on Sale of Assets', AccountType::Expense, false, false],
+        // What the bank takes for a bounced cheque (BounceCheque).
+        ['6970', 'Bank Charges', AccountType::Expense, false, false],
     ];
 
     /**

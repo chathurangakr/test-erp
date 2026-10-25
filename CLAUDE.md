@@ -369,7 +369,8 @@ The inventory engine exists and is tested. These rules are permanent:
   DERIVED by `ChequeRegister` from `cheque_events` and bank reconciliations (1.23.0, §35); a
   bounce reverses the cheque's document through its own reversal action. Bank statements are
   agreed by `RecordBankReconciliation` (§36): ticked lines must leave the statement balance to
-  the cent; neither feature writes a journal.
+  the cent; neither writes a journal — except a bounce's optional bank charge (1.26.0): `Dr bank
+  charges (accounting_settings.bank_charges_account_id, 6970) / Cr the cheque's bank`.
   **"Credit" is not a method**: it is an invoice left outstanding. See
   `docs/ACCOUNTING_RULES.md` §29-§30.
 - **A delivery recognises NO revenue.** It is a physical issue; revenue and the debt belong
@@ -431,8 +432,10 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Credit notes are implemented** (`RecordSalesCreditNote`, Finance → Credit notes, §33): a
   DISCOUNT or quality ALLOWANCE against one invoice still owed, never more than it owes, no stock
   moving. `Dr sales discounts and allowances (accounting_settings.sales_discount_account_id, 4190)
-  / Cr trade receivables`. Counted in `creditedAmount` with returns. Money back for a discount is
-  TBD. An invoice with a standing credit note cannot be reversed.
+  / Cr trade receivables`. Counted in `creditedAmount` with returns. `settlement` REFUND (1.26.0)
+  is money back for a paid invoice instead — `Dr 4190 / Cr cash or bank`, NOT counted in
+  `creditedAmount`, capped by `refundableAmount` (received − money already given back by returns
+  and credit notes, a cap the returns share). An invoice with a standing credit note cannot be reversed.
 - **Sales returns are implemented** (`RecordSalesReturn`, Sales → Returns, §32): against an
   INVOICED delivery line, never more than delivered nor credited beyond what was billed. The
   credit is the PRICE CHARGED; good goods re-enter stock (`SALES_RETURN`) at the line's
@@ -450,7 +453,9 @@ The inventory engine exists and is tested. These rules are permanent:
   1230 / Cr cash/bank`), set against invoices by `Apply…Advance` (`Dr 2130 / Cr trade receivables`;
   `Dr trade payables / Cr 1230`). What is left is derived (`AdvanceBalances`); applications count
   in `receivedAmount` / `paidAmount`. Invariants: each advances account == its unapplied advances.
-  Refunding an unused advance is TBD.
+  What is left may be given back as money (1.26.0, `Refund…Advance`: `Dr 2130 / Cr cash/bank`;
+  `Dr cash/bank / Cr 1230`); `remaining` subtracts standing refunds, and an advance with one
+  cannot be reversed.
 - **AR balances are derived, never stored.** A customer has no receivable column.
   `credit_limit` and `credit_days` are agreed terms; the credit days only suggest a due
   date, which stays editable.
@@ -544,8 +549,12 @@ The inventory engine exists and is tested. These rules are permanent:
 - **Exports (1.19.0):** every report downloads as PDF or Excel (`ReportExports` → dompdf / `XlsxWriter`)
   through its own export route with the SAME permission as the report, built from the same
   services and filters as the screen — never a second calculation. See `docs/REPORT_EXPORTS.md`.
-- **Not built:** cash flow statement, comparative periods,
-  historical inventory valuation.
+- **Cash flow statement (1.26.0, §37):** `CashFlowService`, direct method, from posted lines on
+  configured cash/bank accounts, classified by source document (`ROWS`); fund transfers left out;
+  opening + net change must equal closing. A new money-moving document needs a `ROWS` entry.
+- **P&L comparison (1.26.0, §38):** beside the period before or the same period last year
+  (`ProfitLossService::priorWindow` / `compare`); whole months stay whole months.
+- **Not built:** historical inventory valuation.
 
 ---
 
@@ -922,12 +931,11 @@ from the bank slip, what is still owed derived, and email reminders before each 
 loss against cost, and a maintenance log), and **Telegram transaction alerts** (a second bot told of
 every posting and reversal) with a **monthly report** by email and Telegram on the 1st, **report
 exports** to PDF and Excel, and **year-end closing** into retained earnings (financial year to 31 March), and **credit notes**
-for discounts and quality allowances, and **customer and supplier advances**, and **cheques** (waiting / cleared / bounced) with
-**bank reconciliation**.
+for discounts and quality allowances (or money back), and **customer and supplier advances** (with refunds), and **cheques** (waiting / cleared / bounced, with the bank's charge) with
+**bank reconciliation**, a **cash flow statement**, and **P&L comparisons** with an earlier period.
 
-**Not yet started — do not begin without instruction:** a cheque clearing account and bounce
-bank charges, refunding unused advances, money back for a discount, production expense
-accounting, VAT/SVAT, EPF/ETF and payslips, depreciation, cash flow statement, the permanent joint-product costing method, production planning,
+**Not yet started — do not begin without instruction:** a cheque clearing account, production expense
+accounting, VAT/SVAT, EPF/ETF, depreciation, the permanent joint-product costing method, production planning,
 BOM editor, maintenance planning, warehouse-scoped access, approval limits, field-level security, the
 Flutter app itself (its offline queue included — the server side is built), API attachments.
 

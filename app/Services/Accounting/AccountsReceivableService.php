@@ -3,8 +3,10 @@
 namespace App\Services\Accounting;
 
 use App\Enums\CustomerReceiptStatus;
+use App\Enums\SalesCreditNoteSettlement;
 use App\Enums\SalesCreditNoteStatus;
 use App\Enums\SalesInvoiceStatus;
+use App\Enums\SalesReturnSettlement;
 use App\Enums\SalesReturnStatus;
 use App\Models\Customer;
 use App\Models\CustomerReceiptAllocation;
@@ -67,11 +69,33 @@ class AccountsReceivableService
             ->sum('credit_amount');
         $creditNotes = (string) SalesCreditNote::query()
             ->where('sales_invoice_id', $invoice->getKey())
+            ->where('settlement', SalesCreditNoteSettlement::Credit->value)
             ->where('status', SalesCreditNoteStatus::Posted->value)
             ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('credit_date', '<=', $date->toDateString()))
             ->sum('amount');
 
         return DecimalMath::cost(DecimalMath::add(DecimalMath::of($returns), DecimalMath::of($creditNotes)));
+    }
+
+    /**
+     * How much money may still be given back on this invoice: what the customer paid on it, less
+     * what returns (REFUND) and credit notes (REFUND) have already given back. Money back never
+     * changes what the invoice is owed — it is paid out of cash or bank.
+     */
+    public function refundableAmount(SalesInvoice $invoice): string
+    {
+        $returns = (string) SalesReturn::query()
+            ->where('original_invoice_id', $invoice->getKey())
+            ->where('settlement', SalesReturnSettlement::Refund->value)
+            ->where('status', SalesReturnStatus::Posted->value)
+            ->sum('credit_amount');
+        $creditNotes = (string) SalesCreditNote::query()
+            ->where('sales_invoice_id', $invoice->getKey())
+            ->where('settlement', SalesCreditNoteSettlement::Refund->value)
+            ->where('status', SalesCreditNoteStatus::Posted->value)
+            ->sum('amount');
+
+        return DecimalMath::cost(DecimalMath::sub($this->receivedAmount($invoice), DecimalMath::add(DecimalMath::of($returns), DecimalMath::of($creditNotes))));
     }
 
     /**

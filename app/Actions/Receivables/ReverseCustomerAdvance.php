@@ -30,6 +30,10 @@ class ReverseCustomerAdvance
                 throw ValidationException::withMessages(['status' => __('Advance :reference is applied to invoices. Reverse those applications first.', ['reference' => $locked->advance_number])]);
             }
 
+            if ($locked->refunds()->where('status', AdvanceStatus::Posted->value)->exists()) {
+                throw ValidationException::withMessages(['status' => __('Advance :reference has a refund recorded against it. Reverse that refund first.', ['reference' => $locked->advance_number])]);
+            }
+
             $reversal = $this->reverseJournal->handle($locked->journalEntry()->firstOrFail(), $userId);
             $locked->update([
                 'status' => AdvanceStatus::Reversed,

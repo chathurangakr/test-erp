@@ -7,14 +7,17 @@ use App\Actions\Inventory\PostInventoryTransaction;
 use App\Actions\Payables\ApplySupplierAdvance;
 use App\Actions\Payables\PostSupplierInvoice;
 use App\Actions\Payables\RecordSupplierAdvance;
+use App\Actions\Payables\RefundSupplierAdvance;
 use App\Actions\Payables\ReverseSupplierAdvance;
 use App\Actions\Payables\ReverseSupplierAdvanceApplication;
 use App\Actions\Payables\ReverseSupplierInvoice;
 use App\Actions\Receivables\ApplyCustomerAdvance;
 use App\Actions\Receivables\PostSalesInvoice;
 use App\Actions\Receivables\RecordCustomerAdvance;
+use App\Actions\Receivables\RefundCustomerAdvance;
 use App\Actions\Receivables\ReverseCustomerAdvance;
 use App\Actions\Receivables\ReverseCustomerAdvanceApplication;
+use App\Actions\Receivables\ReverseCustomerAdvanceRefund;
 use App\Actions\Receivables\ReverseSalesInvoice;
 use App\Actions\Sales\PostDelivery;
 use App\Data\Inventory\PendingInventoryLine;
@@ -218,6 +221,57 @@ class AdvancesTest extends TestCase
     }
 
     #[Test]
+    public function what_is_left_of_an_advance_can_be_given_back_and_the_refund_reversed(): void
+    {
+        $advance = $this->customerAdvance();
+        app(ApplyCustomerAdvance::class)->handle($advance, ['sales_invoice_id' => $this->salesInvoice->id, 'amount' => '60000', 'application_date' => '2026-09-11']);
+        $bankBefore = $this->balance('1120');
+        $refund = fn (array $data) => app(RefundCustomerAdvance::class)->handle($advance, array_merge([
+            'refund_date' => '2026-09-15', 'amount' => '40000', 'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER',
+        ], $data));
+
+        $this->assertRefused(fn () => $refund(['amount' => '40000.01']), 'amount', 'Only 40,000.00 is left');
+        $this->assertRefused(fn () => $refund(['refund_date' => '2026-09-01']), 'refund_date', 'on or after the advance');
+        $this->assertRefused(fn () => $refund(['payment_method' => 'CASH']), 'cash_bank_account_id', 'Cash');
+
+        $given = $refund([]);
+        $lines = $given->journalEntry->lines->mapWithKeys(fn ($line) => [$line->account->code => [$line->debit, $line->credit]]);
+        $this->assertSame(['40000.000000', '0.000000'], $lines['2130']);
+        $this->assertSame(['0.000000', '40000.000000'], $lines['1120']);
+        $this->assertSame('0.000000', app(AdvanceBalances::class)->remaining($advance));
+        $this->assertSame(bcsub($bankBefore, '40000', 6), $this->balance('1120'));
+        $this->assertInvariantsHold();
+        $this->assertRefused(fn () => app(ReverseCustomerAdvance::class)->handle($advance), 'status', 'Reverse');
+
+        app(ReverseCustomerAdvanceRefund::class)->handle($given);
+        $this->assertSame('40000.000000', app(AdvanceBalances::class)->remaining($advance));
+        $this->assertSame($bankBefore, $this->balance('1120'));
+        $this->assertRefused(fn () => app(ReverseCustomerAdvanceRefund::class)->handle($given), 'status', 'already been reversed');
+        $this->assertInvariantsHold();
+    }
+
+    #[Test]
+    public function a_supplier_returns_what_is_left_of_their_advance(): void
+    {
+        $advance = app(RecordSupplierAdvance::class)->handle([
+            'supplier_id' => $this->supplier->id, 'advance_date' => '2026-09-03', 'amount' => '50000',
+            'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER',
+        ]);
+        $bankBefore = $this->balance('1120');
+
+        $returned = app(RefundSupplierAdvance::class)->handle($advance, [
+            'refund_date' => '2026-09-20', 'amount' => '20000', 'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER', 'reference' => 'Order cancelled',
+        ]);
+
+        $lines = $returned->journalEntry->lines->mapWithKeys(fn ($line) => [$line->account->code => [$line->debit, $line->credit]]);
+        $this->assertSame(['20000.000000', '0.000000'], $lines['1120']);
+        $this->assertSame(['0.000000', '20000.000000'], $lines['1230']);
+        $this->assertSame('30000.000000', app(AdvanceBalances::class)->remaining($advance));
+        $this->assertSame(bcadd($bankBefore, '20000', 6), $this->balance('1120'));
+        $this->assertInvariantsHold();
+    }
+
+    #[Test]
     public function the_screens_follow_the_permissions(): void
     {
         $advance = $this->customerAdvance();
@@ -237,6 +291,12 @@ class AdvancesTest extends TestCase
             'supplier_id' => $this->supplier->id, 'advance_date' => '2026-09-04', 'amount' => '2500',
             'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER',
         ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->actingAs($viewer)->post(route('customer-advances.refund', $advance), ['refund_date' => '2026-09-15', 'amount' => '1', 'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER'])->assertForbidden();
+        $this->actingAs($admin)->post(route('customer-advances.refund', $advance), ['refund_date' => '2026-09-15', 'amount' => '500', 'cash_bank_account_id' => $this->bank->id, 'payment_method' => 'BANK_TRANSFER'])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($viewer)->get(route('customer-advances.show', $advance))
+            ->assertInertia(fn ($page) => $page->where('advance.remaining', '98500.000000')->has('advance.refunds', 1)->where('advance.can_reverse', false));
         $this->assertInvariantsHold();
     }
 

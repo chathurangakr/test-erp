@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\ChequeEvent;
 use App\Models\CustomerReceipt;
 use App\Models\Delivery;
 use App\Models\ExpenseVoucher;
@@ -36,6 +37,7 @@ final class SourceDocument
         FundTransfer::class => 'Fund transfer',
         JournalEntry::class => 'Journal entry',
         FinancialYearClosing::class => 'Year-end closing',
+        ChequeEvent::class => 'Bounced cheque',
     ];
 
     /**

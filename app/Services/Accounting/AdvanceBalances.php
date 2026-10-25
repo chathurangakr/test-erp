@@ -23,7 +23,7 @@ use Carbon\CarbonInterface;
  */
 class AdvanceBalances
 {
-    /** What is left of one advance to apply: its amount less its standing applications. */
+    /** What is left of one advance: its amount less its standing applications and refunds. */
     public function remaining(CustomerAdvance|SupplierAdvance $advance): string
     {
         if ($advance->status !== AdvanceStatus::Posted) {
@@ -31,8 +31,9 @@ class AdvanceBalances
         }
 
         $applied = (string) $advance->applications()->where('status', AdvanceStatus::Posted->value)->sum('amount');
+        $refunded = (string) $advance->refunds()->where('status', AdvanceStatus::Posted->value)->sum('amount');
 
-        return DecimalMath::cost(DecimalMath::sub((string) $advance->amount, DecimalMath::of($applied)));
+        return DecimalMath::cost(DecimalMath::sub((string) $advance->amount, DecimalMath::add(DecimalMath::of($applied), DecimalMath::of($refunded))));
     }
 
     /** How much of standing customer advances has been set against this invoice. */

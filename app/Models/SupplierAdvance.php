@@ -74,6 +74,12 @@ class SupplierAdvance extends Model
         return $this->hasMany(SupplierAdvanceApplication::class);
     }
 
+    /** @return HasMany<SupplierAdvanceRefund, $this> */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(SupplierAdvanceRefund::class);
+    }
+
     /** @return BelongsTo<CashBankAccount, $this> */
     public function cashBankAccount(): BelongsTo
     {

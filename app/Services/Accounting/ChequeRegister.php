@@ -99,6 +99,7 @@ class ChequeRegister
         $partyModel = $document->{$party};
         $standing = $this->standing($document);
         $cleared = $this->event($document, ChequeEvent::CLEARED);
+        $bounced = $this->event($document, ChequeEvent::BOUNCED);
 
         return [
             'source_type' => $document::class,
@@ -117,6 +118,7 @@ class ChequeRegister
             'status' => $status->value,
             'status_label' => $status->label(),
             'status_date' => $statusDate,
+            'bank_charge' => $bounced?->bank_charge === null ? null : (string) $bounced->bank_charge,
             'can_clear' => $standing && $status === ChequeStatus::Waiting,
             'can_bounce' => $standing && $cleared === null && in_array($status, [ChequeStatus::Waiting, ChequeStatus::Cleared], true),
             'can_undo_clear' => $cleared !== null,
@@ -166,14 +168,20 @@ class ChequeRegister
         return in_array((string) ($document->getAttributes()['status'] ?? ''), ['POSTED', 'PARTIALLY_PAID', 'PAID'], true);
     }
 
-    /** The document's journal line on its bank account — what a bank statement shows. */
-    private function bankLine(Model $document): ?JournalEntryLine
+    /** The ledger account of the bank the cheque went through. */
+    public function bankAccountId(Model $document): ?int
     {
-        $accountId = match (true) {
+        return match (true) {
             $document instanceof CustomerReceipt => $document->receipt_account_id,
             $document instanceof SupplierPayment => $document->payment_account_id,
             default => $document->cashBankAccount?->account_id,
         };
+    }
+
+    /** The document's journal line on its bank account — what a bank statement shows. */
+    private function bankLine(Model $document): ?JournalEntryLine
+    {
+        $accountId = $this->bankAccountId($document);
 
         return $document->journal_entry_id === null ? null : JournalEntryLine::query()
             ->where('journal_entry_id', $document->journal_entry_id)

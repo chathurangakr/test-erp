@@ -942,13 +942,13 @@ to make a report tidy destroys the audit trail.
 
 | # | Item | Why it is not built |
 | --- | --- | --- |
-| 1 | Year-end closing | Not instructed. When built, Current Earnings (§24) must start from the last close. |
-| 2 | Financial-year definition | Fiscal periods have no year grouping; needed by year-end closing. |
+| 1 | Year-end closing | ✅ Built in 1.20.0 (§24). |
+| 2 | Financial-year definition | ✅ `accounting_settings.financial_year_end_month` (1.20.0). |
 | 3 | Historical (as-of) inventory valuation | `StockQueryService` has no date filter; not faked (§26). |
 | 4 | Inventory opening balances at cutover | Needed to reconcile pre-cutover stock (§26). |
-| 5 | Cash flow statement | Out of scope for this phase. |
-| 6 | PDF / Excel export | No established export mechanism exists; screens came first. |
-| 7 | Comparative periods (this period vs last) | Not requested. |
+| 5 | Cash flow statement | ✅ Built in 1.26.0 (§37). |
+| 6 | PDF / Excel export | ✅ Built in 1.19.0 (`docs/REPORT_EXPORTS.md`). |
+| 7 | Comparative periods (this period vs last) | ✅ The P&L, built in 1.26.0 (§38). |
 
 ## 29. Payment methods — cash, cheque, bank transfer
 
@@ -1115,15 +1115,21 @@ discount agreed after the sale (`DISCOUNT`) or an allowance for poor quality (`A
 `App\Actions\Receivables\RecordSalesCreditNote`, Finance → Credit notes, numbered `CRN-YYYYMMDD-…`.
 
 ```
-Dr  Sales Discounts and Allowances   (accounting_settings.sales_discount_account_id — 4190, REVENUE)
-    Cr  Trade Receivables
+CREDIT  Dr  Sales Discounts and Allowances   (accounting_settings.sales_discount_account_id — 4190, REVENUE)
+            Cr  Trade Receivables
+REFUND  Dr  Sales Discounts and Allowances
+            Cr  Cash or Bank                 (a configured cash/bank account, method checked)
 ```
 
 - 4190 is a revenue account carrying a debit balance, so the P&L shows sales revenue net of
   discounts — Sales Revenue falls by the credit.
-- **Against an invoice still owed** (POSTED or PARTIALLY_PAID), never more than it still owes,
-  never dated before it. Money back for a discount is **not built** (TBD) — a paid invoice cannot
-  take a credit note; reduce another invoice of the customer instead.
+- **`settlement` CREDIT** (as before): against an invoice still owed (POSTED or PARTIALLY_PAID),
+  never more than it still owes, never dated before it.
+- **`settlement` REFUND** (1.26.0): money back for an invoice the customer has paid. Never more
+  than `AccountsReceivableService::refundableAmount` — what was received on the invoice less what
+  sales returns and earlier credit notes already gave back as money (returns share this cap). It
+  does **not** change what the invoice is owed — `creditedAmount` counts CREDIT notes only — so
+  Trade Receivables is untouched and the invariant holds.
 - **No stock moves.** Goods coming back are a sales return (§32).
 - An invoice's outstanding is total − receipts − returns credited − credit notes
   (`AccountsReceivableService::creditedAmount` counts both), so the invariant
@@ -1148,7 +1154,7 @@ supplier advance        Dr supplier advances (1230, ASSET, control)   Cr cash or
 - Accounts are `accounting_settings.customer_advances_account_id` / `supplier_advances_account_id`.
   Both are control accounts — only these documents post to them.
 - **What is left of an advance is derived** (`AdvanceBalances::remaining`: amount − standing
-  applications), never stored. The invariants: **Customer Advances == unapplied customer
+  applications − standing refunds), never stored. The invariants: **Customer Advances == unapplied customer
   advances**, **Supplier Advances == unapplied supplier advances**; Trade Receivables / Payables ==
   invoice outstanding keep holding, because an application counts as money received
   (`AccountsReceivableService::receivedAmount`) or paid (`AccountsPayableService::paidAmount`).
@@ -1160,8 +1166,12 @@ supplier advance        Dr supplier advances (1230, ASSET, control)   Cr cash or
 - **Corrections are reversals.** An application is reversed (the invoice is owed the amount again,
   the advance has it back); an advance is reversed only when none of it stands applied. An invoice
   with a standing application cannot be reversed.
-- **Not built (TBD):** refunding an unused customer advance, or recovering an unused supplier
-  advance, as money — reverse the advance if it was a mistake; otherwise apply it.
+- **Refunds (1.26.0)** give what is left back as money: a customer advance given back
+  (`RefundCustomerAdvance`, `Dr customer advances / Cr cash or bank`) or a supplier returning an
+  unused advance (`RefundSupplierAdvance`, `Dr cash or bank / Cr supplier advances`). Never more
+  than is left, never dated before the advance, with a configured account fitting the method.
+  Corrected by `ReverseCustomerAdvanceRefund` / `ReverseSupplierAdvanceRefund`; an advance with a
+  standing refund cannot be reversed. Same permissions as recording / reversing an advance.
 - Permissions `finance.ar.advance_record` / `finance.ar.advance_reverse` and
   `finance.ap.advance_record` / `finance.ap.advance_reverse`; viewing with `finance.ar.view` /
   `finance.ap.view`.
@@ -1182,8 +1192,11 @@ posted; there is still no clearing account.
 - **Mark bounced** (`BounceCheque`, a day and a reason) REVERSES the cheque's document with that
   document's own reversal action, in the same transaction — the money never moved, so the invoice
   it paid is owed again (an advance still applied must be unapplied first). A cheque marked cleared
-  must be un-cleared before it can bounce. **Bank charges for a bounce are not modelled (TBD)** —
-  record them as an expense voucher.
+  must be un-cleared before it can bounce.
+- **Bank charges (1.26.0):** the bank's charge for the bounce may be entered with it. It is
+  journalled in the same step, sourced to the `cheque_events` row: `Dr Bank Charges
+  (accounting_settings.bank_charges_account_id — 6970) / Cr the cheque's bank account`. Zero or
+  blank writes nothing. A wrong charge is corrected by reversing that journal.
 - Permission `finance.cash.cheque_manage`; viewing with `finance.cash.view`.
 
 ## 36. Bank reconciliation — ✅ **CONFIRMED** (2026-10-25)
@@ -1201,3 +1214,33 @@ earlier statements, plus these) equals the statement balance to the cent**.
 - The book balance at the statement date is shown beside it; the difference between books and
   bank is exactly the unticked lines (money in transit, cheques not yet presented).
 - Permission `finance.cash.reconcile`; viewing with `finance.cash.view`.
+
+## 37. Cash flow statement — ✅ **CONFIRMED** (2026-10-25)
+
+Reports → Cash Flow (`App\Services\Accounting\CashFlowService`, direct method), read-only and
+stored nowhere. Every posted line on a **configured cash/bank account** in the window is money in
+(debit) or out (credit), classified by the document its journal came from:
+
+- **Operating:** customers, customer advances (and refunds), returns and credit-note refunds,
+  suppliers, supplier advances (and refunds), expense vouchers, salaries and salary advances,
+  repairs, loan interest.
+- **Investing:** fixed assets bought (the asset's own journal) and sold (any other).
+- **Financing:** loans received; loan repayments. A loan payment is split — its interest is
+  operating, the rest financing.
+- **Other movements:** manual journals and anything not listed.
+
+Fund transfers are left out (the same money moving between our own accounts). Reversals carry
+their original's source, so they net off in the same row. The statement checks itself:
+**opening + net change == closing**, both read from the cash/bank balances. Exported as PDF / Excel
+with the other reports.
+
+## 38. Profit and loss comparison — ✅ **CONFIRMED** (2026-10-25)
+
+The P&L may be shown beside **the period before** or **the same period last year**
+(`ProfitLossService::priorWindow` / `compare`). Whole months stay whole months (March beside
+February; a quarter beside the quarter before); any other window is compared with the same number
+of days just before it. Every account that moved in either window is listed with both figures, the
+change, and the change as a percentage of the earlier figure — none when the earlier figure is zero.
+Year-end closings are excluded from both, as in §24. Comparison needs a window with both ends
+(a fiscal period, or both dates). It reaches the export as a second table.
+

@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Advances;
 
 use App\Actions\Payables\ApplySupplierAdvance;
 use App\Actions\Payables\RecordSupplierAdvance;
+use App\Actions\Payables\RefundSupplierAdvance;
 use App\Actions\Payables\ReverseSupplierAdvance;
 use App\Actions\Payables\ReverseSupplierAdvanceApplication;
+use App\Actions\Payables\ReverseSupplierAdvanceRefund;
 use App\Enums\SupplierInvoiceStatus;
 use App\Http\Requests\Advances\ApplyAdvanceRequest;
+use App\Http\Requests\Advances\RefundAdvanceRequest;
 use App\Http\Requests\Advances\StoreAdvanceRequest;
 use App\Models\Supplier;
 use App\Models\SupplierAdvance;
 use App\Models\SupplierAdvanceApplication;
+use App\Models\SupplierAdvanceRefund;
 use App\Models\SupplierInvoice;
 use App\Services\Accounting\AccountsPayableService;
 use App\Support\DecimalMath;
@@ -80,6 +84,24 @@ class SupplierAdvanceController extends AdvanceScreens
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application reversed. The invoice is owed the amount again.')]);
 
         return to_route('supplier-advances.show', $supplierAdvanceApplication->supplier_advance_id);
+    }
+
+    public function refund(RefundAdvanceRequest $request, SupplierAdvance $supplierAdvance, RefundSupplierAdvance $action): RedirectResponse
+    {
+        $action->handle($supplierAdvance, $request->validated(), auth()->id());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Money returned by the supplier recorded.')]);
+
+        return to_route('supplier-advances.show', $supplierAdvance);
+    }
+
+    public function reverseRefund(SupplierAdvanceRefund $supplierAdvanceRefund, ReverseSupplierAdvanceRefund $action): RedirectResponse
+    {
+        $action->handle($supplierAdvanceRefund, auth()->id());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Refund reversed. The advance has the amount back.')]);
+
+        return to_route('supplier-advances.show', $supplierAdvanceRefund->supplier_advance_id);
     }
 
     protected function party(): string

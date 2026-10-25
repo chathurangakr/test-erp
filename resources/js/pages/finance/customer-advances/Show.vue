@@ -2,11 +2,14 @@
 import { Head } from '@inertiajs/vue3';
 import AdvanceShow from '@/components/advances/AdvanceShow.vue';
 import { usePermissions } from '@/composables/usePermissions';
-import { apply, index, reverse, reverseApplication } from '@/routes/customer-advances';
+import { apply, index, refund, reverse, reverseApplication, reverseRefund } from '@/routes/customer-advances';
 
 const props = defineProps<{
     advance: InstanceType<typeof AdvanceShow>['$props']['advance'];
     invoices: { id: number; number: string; date: string; outstanding: string }[];
+    canRefund: boolean;
+    accounts: { id: number; code: string | null; name: string; kind: string }[];
+    paymentMethods: { value: string; label: string }[];
     today: string;
     currency: string;
 }>();
@@ -22,6 +25,12 @@ const { can } = usePermissions();
         party-label="Customer"
         :advance="advance"
         :invoices="invoices"
+        :can-refund="canRefund"
+        :accounts="accounts"
+        :payment-methods="paymentMethods"
+        refund-title="Give money back to the customer"
+        :refund-action="refund(advance.id)"
+        :reverse-refund-url="(id: number) => reverseRefund(id).url"
         :today="today"
         :currency="currency"
         :can-record="can('finance.ar.advance_record')"
