@@ -4,6 +4,13 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.28.0 — 25 October 2026
+
+- **Back button.** Every page under a list — a user, an invoice, a delivery, a form — has a
+  **Back** button at the top left, beside the page path. It returns to where you came from, and a
+  list comes back with the same filters and page you left it on. If you opened the page directly
+  (from a link or after a reload), Back goes to its list instead. No more scrolling down the menu.
+
 ## 1.27.0 — 25 October 2026
 
 - **Every list can be filtered, sorted and sized.** Above each list: its own filters (search,

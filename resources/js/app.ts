@@ -6,6 +6,7 @@ import AuthLayout from '@/layouts/AuthLayout.vue';
 import KioskLayout from '@/layouts/KioskLayout.vue';
 import PrintLayout from '@/layouts/PrintLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { initializeBackHistory } from '@/lib/backHistory';
 import { initializeFlashToast } from '@/lib/flashToast';
 import { initializePrinting } from '@/lib/printing';
 
@@ -43,3 +44,6 @@ initializeFlashToast();
 
 // Printouts are always printed in the light theme...
 initializePrinting();
+
+// Lets the Back button know whether the browser's back stays inside the system...
+initializeBackHistory();
