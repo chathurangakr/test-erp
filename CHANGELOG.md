@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.28.1 — 25 October 2026
+
+- **Fix: updates no longer stop when the first admin account is switched off.** Once you have your
+  own administrator login and switch off `admin@example.com`, an update now leaves that account
+  switched off and carries on, instead of stopping halfway.
+
 ## 1.28.0 — 25 October 2026
 
 - **Back button.** Every page under a list — a user, an invoice, a delivery, a form — has a

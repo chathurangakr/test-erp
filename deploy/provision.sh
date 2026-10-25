@@ -441,8 +441,15 @@ as_app bash -c "cd '$APP_DIR' && npm ci --no-audit --no-fund --loglevel=error &&
 ok "Screens built"
 
 say "Creating the administrator account"
-runuser -u "$APP_USER" -- env HOME="$APP_HOME" COCONUT_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    php "$APP_DIR/artisan" authorization:create-admin "$ADMIN_EMAIL" --name="$ADMIN_NAME" --no-interaction
+# An administrator may have switched the first account off once they had their own login. An
+# update leaves it switched off — it never re-activates or re-promotes it.
+admin_active="$(mariadb -N -B -e "SELECT is_active FROM \`${DB_NAME}\`.users WHERE email = '${ADMIN_EMAIL//\'/\'\'}'" 2>/dev/null || true)"
+if [[ "$admin_active" == "0" ]]; then
+    ok "The account $ADMIN_EMAIL is switched off on this system; left as it is"
+else
+    runuser -u "$APP_USER" -- env HOME="$APP_HOME" COCONUT_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        php "$APP_DIR/artisan" authorization:create-admin "$ADMIN_EMAIL" --name="$ADMIN_NAME" --no-interaction
+fi
 
 as_app php "$APP_DIR/artisan" optimize --no-interaction >/dev/null
 ok "Caches warmed"
