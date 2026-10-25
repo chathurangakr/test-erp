@@ -33,6 +33,20 @@ class LoanBalances
     }
 
     /** What is still owed: the amount borrowed less the principal paid. A reversed loan owes nothing. */
+    /**
+     * This month's interest at the loan's rate: what is still owed × rate (% a year) ÷ 12, to the
+     * cent. Only a suggestion for the payment form — the bank slip's figure is what is recorded.
+     * Null when the loan carries no interest or has no rate.
+     */
+    public function suggestedInterest(Loan $loan): ?string
+    {
+        if (! $loan->has_interest || $loan->interest_rate === null) {
+            return null;
+        }
+
+        return DecimalMath::money(DecimalMath::div(DecimalMath::mul($this->outstanding($loan), (string) $loan->interest_rate), '1200'));
+    }
+
     public function outstanding(Loan $loan): string
     {
         if ($loan->status !== LoanDocumentStatus::Posted) {

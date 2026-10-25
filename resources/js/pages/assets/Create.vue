@@ -40,6 +40,7 @@ const form = useForm({
     reference: '',
     lender: '',
     has_interest: true,
+    interest_rate: '',
     installment_amount: '',
     due_day: '',
 });
@@ -65,6 +66,7 @@ function submit(): void {
             reference: data.reference,
             lender: loan ? data.lender : undefined,
             has_interest: data.has_interest,
+            interest_rate: loan && data.has_interest ? data.interest_rate || null : undefined,
             installment_amount: loan ? data.installment_amount || null : undefined,
             due_day: loan ? data.due_day || null : undefined,
         };
@@ -149,6 +151,11 @@ function submit(): void {
                     <input v-model="form.has_interest" type="checkbox" class="border-input size-4 rounded" />
                     {{ t('This loan carries interest') }}
                 </label>
+                <div v-if="form.has_interest" class="grid gap-2">
+                    <Label for="interest_rate">{{ t('Interest rate (% a year)') }}</Label>
+                    <Input id="interest_rate" v-model="form.interest_rate" inputmode="decimal" :placeholder="t('e.g. 18')" />
+                    <InputError :message="errors.interest_rate" />
+                </div>
                 <p class="text-sm sm:col-span-2"><strong>{{ t('Loan: :amount', { amount: money(borrowed) }) }}</strong> — {{ t('it appears under Loans, with reminders before each installment.') }}</p>
             </div>
 

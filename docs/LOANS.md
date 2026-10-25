@@ -78,3 +78,11 @@ Accountant; existing roles are ticked by an administrator.
 A loan **already running** may be entered with its real start date even if that is before the books
 began: it is brought in (`Dr opening balance equity / Cr loans`) on the day it is entered. The
 Finance Dashboard shows **Loans still owed** — the Loans Payable balance.
+
+## Interest rate (1.25.0)
+
+A loan with interest may carry its **interest rate, % a year on what is still owed** (the owner's
+choice: reducing balance). It is editable (`Loan::EDITABLE`) because banks change rates. On the
+payment form the interest is **suggested** as still owed × rate ÷ 12, to the cent
+(`LoanBalances::suggestedInterest`); the figure typed from the bank slip is what is recorded, so a
+bank that counts days or rounds differently is still followed exactly.

@@ -22,7 +22,7 @@ class Loan extends Model
     use HasFactory;
 
     /** What may change after recording: descriptions and the reminder schedule, never money. */
-    public const EDITABLE = ['lender', 'purpose', 'has_interest', 'installment_amount', 'due_day', 'notes'];
+    public const EDITABLE = ['lender', 'purpose', 'has_interest', 'interest_rate', 'installment_amount', 'due_day', 'notes'];
 
     protected $fillable = [
         'loan_number',
@@ -34,6 +34,7 @@ class Loan extends Model
         'cash_bank_account_id',
         'fixed_asset_id',
         'has_interest',
+        'interest_rate',
         'installment_amount',
         'due_day',
         'notes',
@@ -53,6 +54,7 @@ class Loan extends Model
             'funding' => LoanFunding::class,
             'amount' => 'decimal:6',
             'has_interest' => 'boolean',
+            'interest_rate' => 'decimal:4',
             'installment_amount' => 'decimal:6',
             'due_day' => 'integer',
             'status' => LoanDocumentStatus::class,

@@ -7,6 +7,7 @@ export type LoanRow = {
     outstanding: string;
     paid_off: boolean;
     has_interest: boolean;
+    interest_rate: string | null;
     installment_amount: string | null;
     due_day: number | null;
     next_due_date: string | null;
@@ -37,6 +38,7 @@ export type LoanDetail = LoanRow & {
     received_into: string | null;
     principal_paid: string;
     interest_paid: string;
+    suggested_interest: string | null;
     created_by: string | null;
     posted_at: string | null;
     reversed_by: string | null;

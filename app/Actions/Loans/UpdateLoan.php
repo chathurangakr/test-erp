@@ -12,14 +12,15 @@ use App\Support\DecimalMath;
 class UpdateLoan
 {
     /**
-     * @param  array{lender: string, purpose?: string|null, has_interest?: bool, installment_amount?: string|null, due_day?: int|null, notes?: string|null}  $data
+     * @param  array{lender: string, purpose?: string|null, has_interest?: bool, interest_rate?: string|null, installment_amount?: string|null, due_day?: int|null, notes?: string|null}  $data
      */
     public function handle(Loan $loan, array $data): Loan
     {
         $loan->update([
             'lender' => $data['lender'],
             'purpose' => $data['purpose'] ?? null,
-            'has_interest' => (bool) ($data['has_interest'] ?? $loan->has_interest),
+            'has_interest' => $hasInterest = (bool) ($data['has_interest'] ?? $loan->has_interest),
+            'interest_rate' => $hasInterest && filled($data['interest_rate'] ?? null) ? (string) $data['interest_rate'] : null,
             'installment_amount' => filled($data['installment_amount'] ?? null) ? DecimalMath::money(DecimalMath::of((string) $data['installment_amount'])) : null,
             'due_day' => $data['due_day'] ?? null,
             'notes' => $data['notes'] ?? null,

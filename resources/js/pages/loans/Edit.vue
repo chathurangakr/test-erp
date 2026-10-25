@@ -8,7 +8,7 @@ import LoanScheduleFields from '@/components/loans/LoanScheduleFields.vue';
 
 const props = defineProps<{
     currency: string;
-    loan: { id: number; loan_number: string; lender: string; purpose: string | null; has_interest: boolean; installment_amount: string | null; due_day: number | null; notes: string | null };
+    loan: { id: number; loan_number: string; lender: string; purpose: string | null; has_interest: boolean; interest_rate: string | null; installment_amount: string | null; due_day: number | null; notes: string | null };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Loans', href: index() }] } });
@@ -19,13 +19,14 @@ const form = useForm({
     lender: props.loan.lender,
     purpose: props.loan.purpose ?? '',
     has_interest: props.loan.has_interest,
+    interest_rate: props.loan.interest_rate ? String(Number(props.loan.interest_rate)) : '',
     installment_amount: props.loan.installment_amount ? String(Number(props.loan.installment_amount).toFixed(2)) : '',
     due_day: props.loan.due_day ? String(props.loan.due_day) : '',
     notes: props.loan.notes ?? '',
 });
 
 function submit(): void {
-    form.transform((data) => ({ ...data, installment_amount: data.installment_amount || null, due_day: data.due_day || null })).submit(update(props.loan.id));
+    form.transform((data) => ({ ...data, interest_rate: data.interest_rate || null, installment_amount: data.installment_amount || null, due_day: data.due_day || null })).submit(update(props.loan.id));
 }
 </script>
 
@@ -40,6 +41,7 @@ function submit(): void {
                 v-model:lender="form.lender"
                 v-model:purpose="form.purpose"
                 v-model:has-interest="form.has_interest"
+                v-model:interest-rate="form.interest_rate"
                 v-model:installment="form.installment_amount"
                 v-model:due-day="form.due_day"
                 v-model:notes="form.notes"

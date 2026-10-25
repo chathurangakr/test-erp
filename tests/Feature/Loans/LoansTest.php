@@ -6,6 +6,7 @@ use App\Actions\Loans\RecordLoan;
 use App\Actions\Loans\RecordLoanPayment;
 use App\Actions\Loans\ReverseLoan;
 use App\Actions\Loans\ReverseLoanPayment;
+use App\Actions\Loans\UpdateLoan;
 use App\Enums\LoanDocumentStatus;
 use App\Enums\Permission;
 use App\Mail\LoanReminder;
@@ -160,6 +161,29 @@ class LoansTest extends TestCase
         $this->assertSame(LoanDocumentStatus::Reversed, $reversed->status);
         $this->assertSame('0.000000', $this->balance('2400'));
         $this->assertLoansAgree();
+    }
+
+    #[Test]
+    public function the_yearly_rate_suggests_each_months_interest_on_what_is_still_owed(): void
+    {
+        $loan = $this->loan(['interest_rate' => '18']);
+        $balances = app(LoanBalances::class);
+
+        // 500,000 × 18% ÷ 12 = 7,500.
+        $this->assertSame('7500.000000', $balances->suggestedInterest($loan));
+
+        // Paid 25,000 of which 7,500 interest: 482,500 still owed → 7,237.50 next month.
+        $this->pay($loan, '25000', '7500');
+        $this->assertSame('7237.500000', $balances->suggestedInterest($loan->refresh()));
+
+        // The rate can change (the bank changes it); no rate or no interest suggests nothing.
+        app(UpdateLoan::class)->handle($loan, ['lender' => $loan->lender, 'has_interest' => true, 'interest_rate' => '12']);
+        $this->assertSame('4825.000000', $balances->suggestedInterest($loan->refresh()));
+        $this->assertNull($balances->suggestedInterest($this->loan()));
+        $this->assertNull($balances->suggestedInterest($this->loan(['has_interest' => false, 'interest_rate' => '18'])));
+
+        $this->actingAs(User::factory()->admin()->create())->get(route('loans.show', $loan))
+            ->assertInertia(fn ($page) => $page->where('loan.interest_rate', '12.0000')->where('loan.suggested_interest', '4825.000000'));
     }
 
     #[Test]

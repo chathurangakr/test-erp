@@ -35,6 +35,7 @@ class StoreFixedAssetRequest extends FormRequest
             'reference' => ['nullable', 'string', 'max:100'],
             'lender' => $loan ? ['required', 'string', 'max:150'] : ['prohibited'],
             'has_interest' => ['boolean'],
+            'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,4'],
             'installment_amount' => $loan ? ['nullable', 'numeric', 'gt:0', new Money] : ['prohibited'],
             'due_day' => $loan ? ['nullable', 'integer', 'between:1,31'] : ['prohibited'],
         ];

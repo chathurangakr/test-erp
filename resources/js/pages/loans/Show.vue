@@ -34,7 +34,7 @@ const { can } = usePermissions();
 const form = useForm({
     payment_date: props.today,
     amount: moneyInput(props.loan.installment_amount),
-    interest_amount: '',
+    interest_amount: moneyInput(props.loan.suggested_interest),
     payment_method: 'BANK_TRANSFER',
     cash_bank_account_id: null as number | null,
     reference: '',
@@ -44,7 +44,11 @@ const form = useForm({
 const principal = computed(() => Math.max(0, (Number(form.amount) || 0) - (Number(form.interest_amount) || 0)));
 
 function pay(): void {
-    form.submit(storePayment(props.loan.id), { preserveScroll: true, onSuccess: () => form.reset('interest_amount', 'reference') });
+    form.submit(storePayment(props.loan.id), { preserveScroll: true, onSuccess: () => {
+            form.reset('reference');
+            // Less is owed now, so next month's suggested interest is lower.
+            form.interest_amount = moneyInput(props.loan.suggested_interest);
+        }, });
 }
 
 function reverseLoan(): void {
@@ -120,6 +124,9 @@ function reversePayment(id: number): void {
                 <div v-if="loan.has_interest" class="grid gap-2">
                     <Label for="interest_amount">{{ t('Of which interest') }}</Label>
                     <Input id="interest_amount" v-model="form.interest_amount" inputmode="decimal" :placeholder="t('From the bank slip')" />
+                    <p v-if="loan.suggested_interest !== null" class="text-muted-foreground text-xs">
+                        {{ t(':rate% a year on :owed still owed — check it against the bank slip.', { rate: Number(loan.interest_rate), owed: money(loan.outstanding) }) }}
+                    </p>
                     <InputError :message="form.errors.interest_amount" />
                 </div>
                 <div class="grid gap-2">

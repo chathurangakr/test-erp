@@ -30,6 +30,7 @@ const form = useForm({
     lender: '',
     purpose: '',
     has_interest: true,
+    interest_rate: '',
     installment_amount: '',
     due_day: '',
     notes: '',
@@ -41,7 +42,7 @@ function submit(): void {
     form.transform((data) => ({
         ...data,
         cash_bank_account_id: data.funding === 'RECEIVED' ? data.cash_bank_account_id : undefined,
-        installment_amount: data.installment_amount || null,
+        interest_rate: data.interest_rate || null, installment_amount: data.installment_amount || null,
         due_day: data.due_day || null,
     })).submit(store());
 }
@@ -100,6 +101,7 @@ function submit(): void {
                 v-model:lender="form.lender"
                 v-model:purpose="form.purpose"
                 v-model:has-interest="form.has_interest"
+                v-model:interest-rate="form.interest_rate"
                 v-model:installment="form.installment_amount"
                 v-model:due-day="form.due_day"
                 v-model:notes="form.notes"

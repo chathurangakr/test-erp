@@ -10,6 +10,7 @@ defineProps<{ errors: Record<string, string | undefined>; currency: string }>();
 const lender = defineModel<string>('lender', { required: true });
 const purpose = defineModel<string>('purpose', { required: true });
 const hasInterest = defineModel<boolean>('hasInterest', { required: true });
+const interestRate = defineModel<string>('interestRate', { required: true });
 const installment = defineModel<string>('installment', { required: true });
 const dueDay = defineModel<string>('dueDay', { required: true });
 const notes = defineModel<string>('notes', { required: true });
@@ -44,6 +45,12 @@ const { t } = useT();
             <input v-model="hasInterest" type="checkbox" class="border-input size-4 rounded" />
             <span>{{ t('This loan carries interest') }} <span class="text-muted-foreground">— {{ t('untick for machinery paid in installments with no interest') }}</span></span>
         </label>
+        <div v-if="hasInterest" class="grid gap-2">
+            <Label for="interest_rate">{{ t('Interest rate (% a year)') }}</Label>
+            <Input id="interest_rate" v-model="interestRate" inputmode="decimal" :placeholder="t('e.g. 18')" />
+            <p class="text-muted-foreground text-xs">{{ t('On what is still owed. Each payment suggests this month\'s interest; the bank slip\'s figure is what is recorded.') }}</p>
+            <InputError :message="errors.interest_rate" />
+        </div>
         <div class="grid gap-2 sm:col-span-2">
             <Label for="notes">{{ t('Notes') }}</Label>
             <Input id="notes" v-model="notes" maxlength="2000" />

@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.25.0 — 25 October 2026
+
+- **Loan interest rate.** Give a loan its interest rate (% a year). Each time you record a payment,
+  this month's interest is filled in for you — what is still owed × the rate ÷ 12 — and you can
+  change it to match the bank slip. The rate can be changed later if the bank changes it.
+
 ## 1.24.0 — 25 October 2026
 
 - **Payslips.** Open a salary payment and click **Payslips** (everyone in it) or **Payslip** beside one

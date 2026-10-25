@@ -2606,5 +2606,9 @@
     "Received by (:name)": "ලබා ගත්තේ (:name)",
     "REVERSED — this payment was undone": "ආපසු හරවන ලදී — මෙම ගෙවීම අහෝසි කරන ලදී",
     "Every loan, from Loans Payable": "සියලු ණය, ගෙවිය යුතු ණය ගිණුමෙන්",
-    "What the assets in use cost": "භාවිතයේ ඇති වත්කම්වල පිරිවැය"
+    "What the assets in use cost": "භාවිතයේ ඇති වත්කම්වල පිරිවැය",
+    "Interest rate (% a year)": "පොලී අනුපාතය (වසරකට %)",
+    "e.g. 18": "උදා. 18",
+    "On what is still owed. Each payment suggests this month's interest; the bank slip's figure is what is recorded.": "තවමත් ගෙවිය යුතු මුදල මත. සෑම ගෙවීමකදීම මෙම මාසයේ පොලිය යෝජනා කෙරේ; සටහන් වන්නේ බැංකු පත්‍රිකාවේ අගයයි.",
+    ":rate% a year on :owed still owed — check it against the bank slip.": "තවමත් ගෙවිය යුතු :owed මත වසරකට :rate% — බැංකු පත්‍රිකාව සමඟ පරීක්ෂා කරන්න."
 }
