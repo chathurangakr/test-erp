@@ -20,6 +20,7 @@ use App\Models\SupplierInvoice;
 use App\Services\Accounting\AccountsPayableService;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,9 +31,9 @@ use Inertia\Response;
  */
 class SupplierAdvanceController extends AdvanceScreens
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        return $this->renderIndex();
+        return $this->renderIndex($request);
     }
 
     public function create(): Response
@@ -107,6 +108,11 @@ class SupplierAdvanceController extends AdvanceScreens
     protected function party(): string
     {
         return 'supplier';
+    }
+
+    protected function partyClass(): string
+    {
+        return Supplier::class;
     }
 
     protected function model(): string

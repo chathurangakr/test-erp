@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/accounts';
@@ -13,7 +16,7 @@ import type { AccountRow, Paginated, StatusOption } from '@/types';
 
 const props = defineProps<{
     accounts: Paginated<AccountRow>;
-    filters: { search: string; type: string; status: string };
+    filters: { search: string; type: string; status: string } & ListControlValues;
     types: StatusOption[];
     currency: string;
 }>();
@@ -23,23 +26,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Chart of accounts', href: inde
 const { can } = usePermissions();
 const { t } = useT();
 
-const search = ref(props.filters.search ?? '');
-const type = ref(props.filters.type ?? '');
-const status = ref(props.filters.status ?? 'all');
-
-function applyFilters(): void {
-    router.get(
-        index().url,
-        {
-            search: search.value || undefined,
-            type: type.value || undefined,
-            status: status.value === 'all' ? undefined : status.value,
-        },
-        { preserveState: true, replace: true, preserveScroll: true },
-    );
-}
-
-watch([type, status], applyFilters);
+const { filters, sortBy, clear } = useListFilters(() => index().url, { ...props.filters });
 
 const controlClass =
     'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
@@ -59,35 +46,28 @@ const controlClass =
             </Button>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-3">
-            <div class="grid gap-1.5">
-                <label for="f-search" class="text-sm font-medium">{{ t('Search') }}</label>
-                <input
-                    id="f-search"
-                    v-model="search"
-                    type="search"
-                    :placeholder="t('Code or name')"
-                    :class="controlClass"
-                    @keyup.enter="applyFilters"
-                />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="f-type" class="text-sm font-medium">{{ t('Type') }}</label>
+        <ListControls v-model:per-page="filters.per_page" :period="false" @clear="clear">
+            <label class="grid gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Search') }}</span>
+                <input v-model="filters.search" type="search" :placeholder="t('Code or name')" :class="controlClass" class="w-56" />
+            </label>
+            <label class="grid gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Type') }}</span>
                 <SearchableSelect
-                    id="f-type"
-                    v-model="type"
-                    :options="[{ value: '', label: t('All types') }, ...(types).map((option) => ({ value: option.value, label: `${(option.label) ?? ''}` }))]"
+                    v-model="filters.type"
+                    class="w-48"
+                    :options="[{ value: '', label: t('All types') }, ...types.map((option) => ({ value: option.value, label: option.label }))]"
                 />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
+            </label>
+            <label class="grid gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Status') }}</span>
                 <SearchableSelect
-                    id="f-status"
-                    v-model="status"
+                    v-model="filters.status"
+                    class="w-40"
                     :options="[{ value: 'all', label: t('All') }, { value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }]"
                 />
-            </div>
-        </div>
+            </label>
+        </ListControls>
 
         <div
             v-if="accounts.data.length === 0"
@@ -100,13 +80,13 @@ const controlClass =
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Type') }}</th>
+                        <SortHeader label="Code" column="code" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Name" column="name" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Type" column="type" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 font-medium">{{ t('Normal balance') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Control') }}</th>
+                        <SortHeader label="Control" column="control" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 font-medium">{{ t('Manual posting') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -145,22 +125,8 @@ const controlClass =
             </table>
         </div>
 
-        <div v-if="accounts.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-            <p class="text-muted-foreground text-sm">
-                {{ t('Showing :from–:to of :total', { from: accounts.from ?? 0, to: accounts.to ?? 0, total: accounts.total }) }}
-            </p>
-            <div class="flex flex-wrap items-center gap-1">
-                <Button
-                    v-for="link in accounts.links"
-                    :key="link.label"
-                    :variant="link.active ? 'default' : 'outline'"
-                    size="sm"
-                    :disabled="!link.url"
-                    @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
-                    v-html="link.label"
-                />
-            </div>
-        </div>
+
+        <ListPagination :page="accounts" />
 
         <p class="text-muted-foreground max-w-3xl text-xs">
             {{ t('Accounts are deactivated, never deleted — historic journal lines must keep referring to something meaningful. A control account is reconciled from a subsidiary ledger, so it is posted to by the system rather than by hand.') }}

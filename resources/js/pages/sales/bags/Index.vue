@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { PackageMinus, PackagePlus, PackageX } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { PackageMinus, PackagePlus, PackageX, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/customer-bags';
 import type { CustomerBagHolding, CustomerBagRow, Paginated } from '@/types';
@@ -14,8 +18,9 @@ import { useT } from '@/lib/i18n';
 const props = defineProps<{
     holdings: CustomerBagHolding[];
     movements: Paginated<CustomerBagRow>;
-    filters: { customer_id: number | null };
+    filters: { search: string; customer_id: number | null; kind: string } & ListControlValues;
     customers: { id: number; code: string; name: string }[];
+    kinds: { value: string; label: string }[];
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Customer bags', href: index() }] } });
@@ -23,9 +28,9 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Customer bags', href: index() 
 const { t } = useT();
 const { can } = usePermissions();
 
-const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
-watch(customerId, () => {
-    router.get(index().url, { customer_id: customerId.value || undefined }, { preserveState: true, replace: true });
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    customer_id: props.filters.customer_id ? String(props.filters.customer_id) : '',
 });
 
 const kindVariant = (row: CustomerBagRow) => (row.kind === 'GIVEN' ? 'default' : row.kind === 'RETURNED' ? 'secondary' : 'destructive');
@@ -44,12 +49,24 @@ const kindVariant = (row: CustomerBagRow) => (row.kind === 'GIVEN' ? 'default' :
             </div>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-64">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search record or customer…')" class="pl-9" :aria-label="t('Search bag records')" />
+            </div>
             <SearchableSelect
-                v-model="customerId"
+                v-model="filters.customer_id"
+                class="w-full sm:w-64"
+                :aria-label="t('Filter by customer')"
                 :options="[{ value: '', label: t('All customers') }, ...customers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
             />
-        </div>
+            <SearchableSelect
+                v-model="filters.kind"
+                class="w-full sm:w-48"
+                :aria-label="t('Filter by what happened')"
+                :options="[{ value: '', label: t('Everything') }, ...kinds.map((k) => ({ value: k.value, label: k.label }))]"
+            />
+        </ListControls>
 
         <section class="space-y-2">
             <h2 class="text-sm font-medium">{{ t('Bags with customers now') }}</h2>
@@ -85,12 +102,12 @@ const kindVariant = (row: CustomerBagRow) => (row.kind === 'GIVEN' ? 'default' :
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Record') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('What happened') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Bags') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <SortHeader label="Record" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Customer" column="customer" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="What happened" column="kind" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Bags" column="quantity" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         </tr>
                     </thead>
                     <tbody>
@@ -112,12 +129,6 @@ const kindVariant = (row: CustomerBagRow) => (row.kind === 'GIVEN' ? 'default' :
             </div>
         </section>
 
-        <div v-if="movements.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in movements.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="movements" />
     </div>
 </template>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Payroll;
 
 use App\Actions\Payroll\PayPayroll;
 use App\Actions\Payroll\ReversePayroll;
+use App\Enums\PayrollDocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\PayPayrollRequest;
 use App\Models\Employee;
@@ -13,6 +14,8 @@ use App\Models\PayrollRun;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Services\Payroll\PayrollCalculator;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,24 +30,37 @@ use Inertia\Response;
  */
 class PayrollController extends Controller
 {
-    private const PER_PAGE = 24;
-
     public function __construct(
         private readonly PayrollCalculator $calculator,
         private readonly CashDocumentOptions $options,
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $runs = PayrollRun::query()
+        $search = (string) $request->string('search');
+        $status = (string) $request->string('status');
+        $total = fn (string $column) => fn (Builder $q, string $d) => $q->orderBy(PayrollLine::selectRaw("COALESCE(SUM({$column}), 0)")->whereColumn('payroll_lines.payroll_run_id', 'payroll_runs.id'), $d);
+        $list = ListQuery::from($request)->period('pay_date')->sortable([
+            'number' => 'payroll_number',
+            'period' => 'period_start',
+            'pay_date' => 'pay_date',
+            'employees' => fn (Builder $q, string $d) => $q->orderBy(PayrollLine::selectRaw('COUNT(*)')->whereColumn('payroll_lines.payroll_run_id', 'payroll_runs.id'), $d),
+            'gross_pay' => $total('gross_pay'),
+            'advances' => $total('advances_deducted'),
+            'net_pay' => $total('net_pay'),
+            'status' => 'status',
+        ], 'pay_date');
+
+        $runs = $list->paginate(PayrollRun::query()
             ->with(['lines', 'cashBankAccount:id,display_name'])
-            ->orderByDesc('period_start')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
+            ->when($search !== '', fn ($query) => $query->where('payroll_number', 'like', "%{$search}%"))
+            ->when($status, fn ($query, string $s) => $query->where('status', $s)))
             ->through(fn (PayrollRun $run): array => $this->summarise($run));
 
         return Inertia::render('payroll/payrolls/Index', [
             'payrolls' => $runs,
+            'filters' => ['search' => $search, 'status' => $status] + $list->filters(),
+            'statuses' => PayrollDocumentStatus::options(),
             'currency' => config('accounting.base_currency'),
         ]);
     }

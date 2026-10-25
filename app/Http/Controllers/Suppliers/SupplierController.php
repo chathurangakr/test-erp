@@ -15,6 +15,7 @@ use App\Models\SupplierPayment;
 use App\Services\Accounting\AccountsPayableService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,27 +31,32 @@ class SupplierController extends Controller
 {
     public function __construct(private readonly AccountsPayableService $payables) {}
 
-    private const PER_PAGE = 15;
-
     public function index(Request $request): Response
     {
         $search = (string) $request->string('search');
         $status = (string) $request->string('status');
 
-        $suppliers = Supplier::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'contact' => 'contact_person',
+            'phone' => 'phone',
+            'city' => 'city',
+            'terms' => 'payment_terms_days',
+            'status' => 'is_active',
+        ], 'code', 'asc');
+
+        $suppliers = $list->paginate(Supplier::query()
             ->search($search)
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
-            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
-            ->orderBy('code')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)));
 
         return Inertia::render('suppliers/Index', [
             'suppliers' => $suppliers,
             'filters' => [
                 'search' => $search,
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
         ]);
     }
 

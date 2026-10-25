@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use App\Support\SourceDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -22,8 +23,6 @@ use Inertia\Response;
  */
 class InventoryLotController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(private readonly StockQueryService $stock) {}
 
     public function index(Request $request): Response
@@ -32,15 +31,20 @@ class InventoryLotController extends Controller
         $productId = $request->integer('product_id') ?: null;
         $status = (string) $request->string('status');
 
-        $lots = InventoryLot::query()
+        $list = ListQuery::from($request)->period('received_at')->sortable([
+            'lot' => 'lot_number',
+            'product' => fn (Builder $q, string $d) => $q->orderBy(Product::select('code')->whereColumn('products.id', 'inventory_lots.product_id'), $d),
+            'manufactured' => 'manufactured_at',
+            'received' => 'received_at',
+            'status' => 'is_active',
+        ], 'received');
+
+        $lots = $list->paginate(InventoryLot::query()
             ->with(['product:id,code,name,primary_uom_id', 'product.primaryUom:id,code'])
             ->search($search)
             ->when($productId, fn (Builder $q, int $id) => $q->where('product_id', $id))
             ->when($status === 'active', fn (Builder $q) => $q->where('is_active', true))
-            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', false))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', false)));
 
         $balances = $this->stock->balancesByLot()->groupBy('lot_id');
 
@@ -83,7 +87,7 @@ class InventoryLotController extends Controller
                 'search' => $search,
                 'product_id' => $productId,
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
             'products' => Product::query()->orderBy('code')->get(['id', 'code', 'name']),
         ]);
     }

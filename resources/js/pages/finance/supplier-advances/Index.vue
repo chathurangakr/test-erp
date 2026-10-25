@@ -7,7 +7,13 @@ import { useT } from '@/lib/i18n';
 import { create, index, show } from '@/routes/supplier-advances';
 import type { Paginated } from '@/types';
 
-defineProps<{ advances: Paginated<AdvanceRow>; currency: string }>();
+defineProps<{
+    advances: Paginated<AdvanceRow>;
+    filters: InstanceType<typeof AdvanceIndex>['$props']['filters'];
+    statuses: { value: string; label: string }[];
+    parties: { id: number; code: string; name: string }[];
+    currency: string;
+}>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier advances', href: index() }] } });
 
@@ -24,6 +30,11 @@ const { can } = usePermissions();
         new-label="Pay an advance"
         :can-record="can('finance.ap.advance_record')"
         :advances="advances"
+        :filters="filters"
+        :statuses="statuses"
+        :parties="parties"
+        all-parties-label="All suppliers"
+        :index-url="index().url"
         :currency="currency"
         :create-href="create().url"
         :show-href="(id: number) => show(id).url"

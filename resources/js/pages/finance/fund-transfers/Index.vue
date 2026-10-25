@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +18,7 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     transfers: Paginated<FundTransferRow>;
-    filters: { search: string; status: string };
+    filters: { search: string; status: string } & ListControlValues;
     statuses: { value: string; label: string }[];
     currency: string;
 }>();
@@ -26,16 +29,7 @@ const { t } = useT();
 
 const { can } = usePermissions();
 
-const search = ref(props.filters.search);
-const status = ref(props.filters.status);
-
-watch([search, status], () => {
-    router.get(
-        index().url,
-        { search: search.value || undefined, status: status.value || undefined },
-        { preserveState: true, replace: true },
-    );
-});
+const { filters, sortBy, clear } = useListFilters(() => index().url, { ...props.filters });
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -62,24 +56,27 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Input v-model="search" :placeholder="t('Search number or reference')" />
-            <SearchableSelect
-                v-model="status"
-                :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
-            />
-        </div>
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="grid gap-1 text-xs w-full sm:w-56">
+                <span class="text-muted-foreground">{{ t('Search') }}</span>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search number or reference')" />
+            </div>
+            <div class="grid gap-1 text-xs w-full sm:w-48">
+                <span class="text-muted-foreground">{{ t('Status') }}</span>
+                <SearchableSelect v-model="filters.status" :options="[{ value: '', label: t('All statuses') }, ...statuses.map((s) => ({ value: s.value, label: s.label }))]" />
+            </div>
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Transfer') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('From') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('To') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
+                        <SortHeader label="Transfer" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="From" column="from" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="To" column="to" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Amount" column="amount" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Amount (:currency)', { currency }) }}</SortHeader>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,6 +107,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :page="transfers" />
 
         <p class="text-muted-foreground max-w-3xl text-xs">
             {{ t('A transfer moves money between accounts the factory already owns. Nothing is earned, spent or owed, and the combined cash-and-bank total is identical before and after.') }}

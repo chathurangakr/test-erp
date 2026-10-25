@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Plus, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/stock-damages';
 import type { Paginated, StockDamageRow } from '@/types';
@@ -14,7 +18,8 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     damages: Paginated<StockDamageRow>;
-    filters: { product_id: number | null };
+    filters: { product_id: number | null; search: string; status: string } & ListControlValues;
+    statuses: { value: string; label: string }[];
     products: { id: number; code: string; name: string }[];
     currency: string;
 }>();
@@ -24,9 +29,9 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Damaged stock', href: index() 
 const { t } = useT();
 const { can } = usePermissions();
 
-const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
-watch(productId, () => {
-    router.get(index().url, { product_id: productId.value || undefined }, { preserveState: true, replace: true });
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    product_id: props.filters.product_id ? String(props.filters.product_id) : '',
 });
 </script>
 
@@ -41,23 +46,34 @@ watch(productId, () => {
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-64">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search number or reason…')" class="pl-9" :aria-label="t('Search write-offs')" />
+            </div>
             <SearchableSelect
-                v-model="productId"
+                v-model="filters.product_id"
+                class="w-full sm:w-64"
                 :options="[{ value: '', label: t('All products') }, ...products.map((p) => ({ value: String(p.id), label: `${p.code} — ${p.name}` }))]"
             />
-        </div>
+            <SearchableSelect
+                v-model="filters.status"
+                class="w-full sm:w-44"
+                :aria-label="t('Filter by status')"
+                :options="[{ value: '', label: t('All statuses') }, ...statuses]"
+            />
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Write-off') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
+                        <SortHeader label="Write-off" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 font-medium">{{ t('Products') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Reason') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Value lost (:currency)', { currency }) }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Reason" column="reason" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Value lost" column="value" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Value lost (:currency)', { currency }) }}</SortHeader>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -78,12 +94,6 @@ watch(productId, () => {
             </table>
         </div>
 
-        <div v-if="damages.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in damages.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="damages" />
     </div>
 </template>

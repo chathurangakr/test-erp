@@ -7,6 +7,8 @@ use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Models\Product;
 use App\Models\UnitOfMeasure;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -21,28 +23,31 @@ use Inertia\Response;
  */
 class ProductController extends Controller
 {
-    private const PER_PAGE = 15;
-
     public function index(Request $request): Response
     {
         $search = (string) $request->string('search');
         $status = (string) $request->string('status');
 
-        $products = Product::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'primary_uom' => fn (Builder $q, string $d) => $q->orderBy(UnitOfMeasure::select('code')->whereColumn('units_of_measure.id', 'products.primary_uom_id'), $d),
+            'secondary_uom' => fn (Builder $q, string $d) => $q->orderBy(UnitOfMeasure::select('code')->whereColumn('units_of_measure.id', 'products.secondary_uom_id'), $d),
+            'status' => 'is_active',
+        ], 'code', 'asc');
+
+        $products = $list->paginate(Product::query()
             ->with(['primaryUom:id,code', 'secondaryUom:id,code'])
             ->search($search)
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
-            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
-            ->orderBy('code')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)));
 
         return Inertia::render('products/Index', [
             'products' => $products,
             'filters' => [
                 'search' => $search,
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
         ]);
     }
 

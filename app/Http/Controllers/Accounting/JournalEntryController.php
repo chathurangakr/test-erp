@@ -15,6 +15,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use App\Support\SourceDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -39,28 +40,27 @@ use Inertia\Response;
  */
 class JournalEntryController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(private readonly GenerateJournalReference $references) {}
 
     public function index(Request $request): Response
     {
         $status = (string) $request->string('status');
         $periodId = $request->integer('fiscal_period_id') ?: null;
-        $from = $request->date('from')?->toDateString();
-        $to = $request->date('to')?->toDateString();
+        $list = ListQuery::from($request)->period('journal_date')->sortable([
+            'number' => 'journal_number',
+            'date' => 'journal_date',
+            'description' => 'description',
+            'source' => 'source_type',
+            'status' => 'status',
+            'debit' => fn (Builder $q, string $d) => $q->orderBy(JournalEntryLine::selectRaw('COALESCE(SUM(debit), 0)')->whereColumn('journal_entry_lines.journal_entry_id', 'journal_entries.id'), $d),
+            'credit' => fn (Builder $q, string $d) => $q->orderBy(JournalEntryLine::selectRaw('COALESCE(SUM(credit), 0)')->whereColumn('journal_entry_lines.journal_entry_id', 'journal_entries.id'), $d),
+        ], 'date');
 
-        $entries = JournalEntry::query()
+        $entries = $list->paginate(JournalEntry::query()
             ->with(['lines', 'fiscalPeriod:id,name'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($periodId, fn (Builder $q, int $id) => $q->where('fiscal_period_id', $id))
-            ->when($from, fn (Builder $q, string $d) => $q->whereDate('journal_date', '>=', $d))
-            ->when($to, fn (Builder $q, string $d) => $q->whereDate('journal_date', '<=', $d))
-            ->orderByDesc('journal_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($periodId, fn (Builder $q, int $id) => $q->where('fiscal_period_id', $id)))
             ->through(fn (JournalEntry $entry): array => $this->summarise($entry));
 
         return Inertia::render('finance/journals/Index', [
@@ -69,9 +69,7 @@ class JournalEntryController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'fiscal_period_id' => $periodId,
-                'from' => $from,
-                'to' => $to,
-            ],
+            ] + $list->filters(),
             'statuses' => JournalEntryStatus::options(),
             'periods' => FiscalPeriod::query()->orderByDesc('start_date')->get(['id', 'name']),
             'currency' => config('accounting.base_currency'),

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
+import { Plus, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import { Input } from '@/components/ui/input';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
@@ -10,7 +15,7 @@ import type { LoanRow } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 
-defineProps<{ loans: LoanRow[]; showAll: boolean; totals: { outstanding: string }; currency: string }>();
+const props = defineProps<{ loans: LoanRow[]; showAll: boolean; totals: { outstanding: string }; currency: string }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Loans', href: index() }] } });
 
@@ -23,6 +28,19 @@ function dueTone(loan: LoanRow): string {
     if (loan.days_to_due <= 7) return 'text-amber-600 font-medium';
     return '';
 }
+const { filters, visible, pageCount, range, sortBy, clear } = useClientList(() => props.loans, {
+    search: (loan) => `${loan.lender} ${loan.loan_number}`,
+    date: (loan) => loan.start_date,
+    sorts: {
+        lender: (loan) => loan.lender,
+        borrowed: (loan) => Number(loan.amount),
+        owed: (loan) => Number(loan.outstanding),
+        installment: (loan) => (loan.installment_amount === null ? null : Number(loan.installment_amount)),
+        due: (loan) => loan.next_due_date,
+        status: (loan) => (loan.status === 'REVERSED' ? 2 : loan.paid_off ? 1 : 0),
+    },
+    defaultSort: 'due',
+});
 </script>
 
 <template>
@@ -46,20 +64,27 @@ function dueTone(loan: LoanRow): string {
             </Button>
         </div>
 
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search lender or loan number…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Lender') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Borrowed') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Still owed') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Installment') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Next due') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Lender" column="lender" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Borrowed" column="borrowed" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Still owed" column="owed" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Installment" column="installment" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Next due" column="due" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="loan in loans" :key="loan.id" class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t">
+                    <tr v-for="loan in visible" :key="loan.id" class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t">
                         <td class="px-4 py-3">
                             <Link :href="show(loan.id)" class="font-medium hover:underline">{{ loan.lender }}</Link>
                             <span class="text-muted-foreground block font-mono text-xs">{{ loan.loan_number }}</span>
@@ -82,11 +107,13 @@ function dueTone(loan: LoanRow): string {
                             </Badge>
                         </td>
                     </tr>
-                    <tr v-if="loans.length === 0">
+                    <tr v-if="visible.length === 0">
                         <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">{{ t('No loans yet.') }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ClientPagination v-model:page="filters.page" :range="range" :page-count="pageCount" />
     </div>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as ledgerIndex } from '@/routes/inventory/ledger';
 import type {
@@ -13,6 +14,7 @@ import type {
     Paginated,
     TransactionTypeOption,
 } from '@/types';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 
@@ -23,9 +25,7 @@ const props = defineProps<{
         warehouse_id: number | null;
         lot_id: number | null;
         transaction_type: string | null;
-        from: string | null;
-        to: string | null;
-    };
+    } & ListControlValues;
     products: OptionRef[];
     warehouses: OptionRef[];
     lots: { id: number; lot_number: string }[];
@@ -40,41 +40,13 @@ defineOptions({
 
 const { t } = useT();
 
-const productId = ref(props.filters.product_id ? String(props.filters.product_id) : '');
-const warehouseId = ref(props.filters.warehouse_id ? String(props.filters.warehouse_id) : '');
-const lotId = ref(props.filters.lot_id ? String(props.filters.lot_id) : '');
-const transactionType = ref(props.filters.transaction_type ?? '');
-const from = ref(props.filters.from ?? '');
-const to = ref(props.filters.to ?? '');
-
-function applyFilters(): void {
-    router.get(
-        ledgerIndex().url,
-        {
-            product_id: productId.value || undefined,
-            warehouse_id: warehouseId.value || undefined,
-            lot_id: lotId.value || undefined,
-            transaction_type: transactionType.value || undefined,
-            from: from.value || undefined,
-            to: to.value || undefined,
-        },
-        { preserveState: true, replace: true, preserveScroll: true },
-    );
-}
-
-watch([productId, warehouseId, lotId, transactionType, from, to], applyFilters);
-
-function reset(): void {
-    productId.value = '';
-    warehouseId.value = '';
-    lotId.value = '';
-    transactionType.value = '';
-    from.value = '';
-    to.value = '';
-}
-
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
+const { filters, sortBy, clear } = useListFilters(() => ledgerIndex().url, {
+    ...props.filters,
+    product_id: props.filters.product_id ? String(props.filters.product_id) : '',
+    warehouse_id: props.filters.warehouse_id ? String(props.filters.warehouse_id) : '',
+    lot_id: props.filters.lot_id ? String(props.filters.lot_id) : '',
+    transaction_type: props.filters.transaction_type ?? '',
+});
 </script>
 
 <template>
@@ -89,52 +61,36 @@ const controlClass =
             <PrintButton />
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div class="grid gap-1.5">
-                <label for="from" class="text-sm font-medium">{{ t('From') }}</label>
-                <input id="from" v-model="from" type="date" :class="controlClass" />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="to" class="text-sm font-medium">{{ t('To') }}</label>
-                <input id="to" v-model="to" type="date" :class="controlClass" />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="l-product" class="text-sm font-medium">{{ t('Product') }}</label>
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <label class="grid w-40 gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Product') }}</span>
                 <SearchableSelect
-                    id="l-product"
-                    v-model="productId"
-                    :options="[{ value: '', label: t('All') }, ...(products).map((p) => ({ value: String(p.id), label: `${(p.code) ?? ''}` }))]"
+                    v-model="filters.product_id"
+                    :options="[{ value: '', label: t('All') }, ...products.map((p) => ({ value: String(p.id), label: `${p.code ?? ''}` }))]"
                 />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="l-warehouse" class="text-sm font-medium">{{ t('Warehouse') }}</label>
+            </label>
+            <label class="grid w-36 gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Warehouse') }}</span>
                 <SearchableSelect
-                    id="l-warehouse"
-                    v-model="warehouseId"
-                    :options="[{ value: '', label: t('All') }, ...(warehouses).map((w) => ({ value: String(w.id), label: `${(w.code) ?? ''}` }))]"
+                    v-model="filters.warehouse_id"
+                    :options="[{ value: '', label: t('All') }, ...warehouses.map((w) => ({ value: String(w.id), label: `${w.code ?? ''}` }))]"
                 />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="l-type" class="text-sm font-medium">{{ t('Type') }}</label>
+            </label>
+            <label class="grid w-48 gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Type') }}</span>
                 <SearchableSelect
-                    id="l-type"
-                    v-model="transactionType"
-                    :options="[{ value: '', label: t('All') }, ...(transactionTypes).map((option) => ({ value: option.value, label: `${(option.label) ?? ''}` }))]"
+                    v-model="filters.transaction_type"
+                    :options="[{ value: '', label: t('All') }, ...transactionTypes.map((option) => ({ value: option.value, label: `${option.label ?? ''}` }))]"
                 />
-            </div>
-            <div class="grid gap-1.5">
-                <label for="l-lot" class="text-sm font-medium">{{ t('Lot') }}</label>
+            </label>
+            <label class="grid w-40 gap-1 text-xs">
+                <span class="text-muted-foreground">{{ t('Lot') }}</span>
                 <SearchableSelect
-                    id="l-lot"
-                    v-model="lotId"
-                    :options="[{ value: '', label: t('All') }, ...(lots).map((lot) => ({ value: String(lot.id), label: `${(lot.lot_number) ?? ''}` }))]"
+                    v-model="filters.lot_id"
+                    :options="[{ value: '', label: t('All') }, ...lots.map((lot) => ({ value: String(lot.id), label: `${lot.lot_number ?? ''}` }))]"
                 />
-            </div>
-        </div>
-
-        <div>
-            <Button variant="outline" size="sm" @click="reset">{{ t('Clear filters') }}</Button>
-        </div>
+            </label>
+        </ListControls>
 
         <div
             v-if="lines.data.length === 0"
@@ -153,18 +109,18 @@ const controlClass =
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-3 py-3 font-medium">{{ t('Date') }}</th>
-                            <th class="px-3 py-3 font-medium">{{ t('Reference') }}</th>
-                            <th class="px-3 py-3 font-medium">{{ t('Type') }}</th>
-                            <th class="px-3 py-3 font-medium">{{ t('Product') }}</th>
-                            <th class="px-3 py-3 font-medium">{{ t('Whs') }}</th>
-                            <th class="px-3 py-3 font-medium">{{ t('Lot') }}</th>
+                            <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Reference" column="reference" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Type" column="type" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Product" column="product" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Whs" column="warehouse" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Lot" column="lot" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-3 py-3 text-right font-medium">{{ t('In') }}</th>
                             <th class="px-3 py-3 text-right font-medium">{{ t('Out') }}</th>
                             <th class="px-3 py-3 font-medium">{{ t('UOM') }}</th>
                             <th class="px-3 py-3 text-right font-medium">{{ t('2nd') }}</th>
-                            <th class="px-3 py-3 text-right font-medium">{{ t('Unit cost') }}</th>
-                            <th class="px-3 py-3 text-right font-medium">{{ t('Total cost') }}</th>
+                            <SortHeader label="Unit cost" column="unit_cost" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Total cost" column="total_cost" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-3 py-3 font-medium">{{ t('User') }}</th>
                         </tr>
                     </thead>
@@ -273,26 +229,9 @@ const controlClass =
                 </div>
             </div>
 
-            <div
-                v-if="lines.last_page > 1"
-                class="flex flex-col items-center justify-between gap-3 sm:flex-row"
-            >
-                <p class="text-muted-foreground text-sm">
-                    {{ t('Showing :from–:to of :total', { from: lines.from ?? 0, to: lines.to ?? 0, total: lines.total }) }}
-                </p>
-                <div class="flex flex-wrap items-center gap-1">
-                    <Button
-                        v-for="link in lines.links"
-                        :key="link.label"
-                        :variant="link.active ? 'default' : 'outline'"
-                        size="sm"
-                        :disabled="!link.url"
-                        @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
-                        v-html="link.label"
-                    />
-                </div>
-            </div>
         </template>
+
+        <ListPagination :page="lines" />
 
         <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Posted movements are permanent. Corrections are made by posting a reversal, which appears here as a separate entry referencing the original.') }}

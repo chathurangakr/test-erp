@@ -9,6 +9,7 @@ use App\Http\Requests\Administration\StoreUserRequest;
 use App\Http\Requests\Administration\UpdateUserAccessRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,26 +27,28 @@ use Inertia\Response;
  */
 class UserController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function index(Request $request): Response
     {
         $search = (string) $request->string('search');
+        $status = (string) $request->string('status');
+        $list = ListQuery::from($request)->sortable([
+            'name' => 'name',
+            'email' => 'email',
+            'status' => 'is_active',
+        ], 'name', 'asc');
 
-        $users = User::query()
+        $users = $list->paginate(User::query()
             ->with('roles:id,code,name,is_active')
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")))
-            ->orderByDesc('is_active')
-            ->orderBy('name')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)))
             ->through(fn (User $user): array => $this->present($user));
 
         return Inertia::render('administration/users/Index', [
             'users' => $users,
-            'filters' => ['search' => $search],
+            'filters' => ['search' => $search, 'status' => $status ?: 'all'] + $list->filters(),
         ]);
     }
 

@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus, Search, X } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Plus, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { index } from '@/routes/deliveries';
@@ -17,7 +20,7 @@ const { t } = useT();
 
 const props = defineProps<{
     deliveries: Paginated<DeliveryRow>;
-    filters: { search: string; status: string; customer_id: number | null };
+    filters: { search: string; status: string; customer_id: number | null } & ListControlValues;
     customers: OptionRef[];
     statuses: StatusOption[];
 }>();
@@ -26,30 +29,10 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Deliveries', href: index() }] 
 
 const { can } = usePermissions();
 
-const search = ref(props.filters.search ?? '');
-const status = ref(props.filters.status ?? '');
-const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
-
-let debounce: ReturnType<typeof setTimeout> | undefined;
-
-function applyFilters(immediate = false): void {
-    clearTimeout(debounce);
-    const run = () =>
-        router.get(
-            index().url,
-            {
-                search: search.value || undefined,
-                status: status.value || undefined,
-                customer_id: customerId.value || undefined,
-            },
-            { preserveState: true, replace: true, preserveScroll: true },
-        );
-    if (immediate) { run(); return; }
-    debounce = setTimeout(run, 300);
-}
-
-watch(search, () => applyFilters());
-watch([status, customerId], () => applyFilters(true));
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    customer_id: props.filters.customer_id ? String(props.filters.customer_id) : '',
+});
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -71,25 +54,24 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
             </Button>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div class="relative">
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
                 <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input v-model="search" type="search" :placeholder="t('Search delivery number, customer or vehicle…')" class="pl-9" :aria-label="t('Search deliveries')" />
-                <button v-if="search" type="button" class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2" :aria-label="t('Clear search')" @click="search = ''; applyFilters(true)">
-                    <X class="size-4" />
-                </button>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search delivery number, customer or vehicle…')" class="pl-9" :aria-label="t('Search deliveries')" />
             </div>
             <SearchableSelect
-                v-model="status"
+                v-model="filters.status"
+                class="w-full sm:w-48"
                 :aria-label="t('Filter by status')"
-                :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
+                :options="[{ value: '', label: t('All statuses') }, ...statuses.map((s) => ({ value: s.value, label: s.label }))]"
             />
             <SearchableSelect
-                v-model="customerId"
+                v-model="filters.customer_id"
+                class="w-full sm:w-64"
                 :aria-label="t('Filter by customer')"
-                :options="[{ value: '', label: t('All customers') }, ...(customers).map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
+                :options="[{ value: '', label: t('All customers') }, ...customers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
             />
-        </div>
+        </ListControls>
 
         <div v-if="deliveries.data.length === 0" class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center">
             <p class="font-medium">{{ t('No deliveries found') }}</p>
@@ -101,15 +83,15 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Delivery No') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
+                            <SortHeader label="Delivery No" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Customer" column="customer" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-4 py-3 font-medium">{{ t('SO') }}</th>
                             <th class="px-4 py-3 font-medium">{{ t('Whs') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Sales') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('COGS') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Profit') }}</th>
+                            <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Sales" column="sales" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="COGS" column="cogs" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Profit" column="profit" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         </tr>
                     </thead>
                     <tbody>
@@ -148,12 +130,8 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
                 </Link>
             </div>
 
-            <div v-if="deliveries.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">{{ t('Showing :from–:to of :total', { from: deliveries.from ?? 0, to: deliveries.to ?? 0, total: deliveries.total }) }}</p>
-                <div class="flex flex-wrap items-center gap-1">
-                    <Button v-for="link in deliveries.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })" v-html="link.label" />
-                </div>
-            </div>
         </template>
+
+        <ListPagination :page="deliveries" />
     </div>
 </template>

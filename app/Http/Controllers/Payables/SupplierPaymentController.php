@@ -7,12 +7,14 @@ use App\Enums\PaymentMethod;
 use App\Enums\SupplierPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payables\StoreSupplierPaymentRequest;
+use App\Models\Account;
 use App\Models\CashBankAccount;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Services\Accounting\AccountsPayableService;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,8 +29,6 @@ use Inertia\Response;
  */
 class SupplierPaymentController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveSupplierPayment $savePayment,
         private readonly AccountsPayableService $payables,
@@ -39,15 +39,21 @@ class SupplierPaymentController extends Controller
         $status = (string) $request->string('status');
         $supplierId = $request->integer('supplier_id') ?: null;
 
-        $payments = SupplierPayment::query()
+        $list = ListQuery::from($request)->period('payment_date')->sortable([
+            'number' => 'payment_number',
+            'supplier' => fn (Builder $q, string $d) => $q->orderBy(Supplier::select('code')->whereColumn('suppliers.id', 'supplier_payments.supplier_id'), $d),
+            'date' => 'payment_date',
+            'account' => fn (Builder $q, string $d) => $q->orderBy(Account::select('code')->whereColumn('accounts.id', 'supplier_payments.payment_account_id'), $d),
+            'reference' => 'reference',
+            'status' => 'status',
+            'amount' => 'amount',
+        ], 'date');
+
+        $payments = $list->paginate(SupplierPayment::query()
             ->with(['supplier:id,code,name', 'paymentAccount:id,code,name', 'allocations'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
-            ->orderByDesc('payment_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id)))
             ->through(fn (SupplierPayment $payment): array => $this->summarise($payment));
 
         return Inertia::render('finance/supplier-payments/Index', [
@@ -56,7 +62,7 @@ class SupplierPaymentController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'supplier_id' => $supplierId,
-            ],
+            ] + $list->filters(),
             'statuses' => SupplierPaymentStatus::options(),
             'suppliers' => Supplier::query()->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),

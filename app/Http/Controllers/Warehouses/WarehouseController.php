@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Warehouses\StoreWarehouseRequest;
 use App\Http\Requests\Warehouses\UpdateWarehouseRequest;
 use App\Models\Warehouse;
+use App\Support\ListQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,28 +22,29 @@ use Inertia\Response;
  */
 class WarehouseController extends Controller
 {
-    private const PER_PAGE = 15;
-
     public function index(Request $request): Response
     {
         $search = (string) $request->string('search');
         $status = (string) $request->string('status');
 
-        $warehouses = Warehouse::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'default' => 'is_default',
+            'status' => 'is_active',
+        ], 'code', 'asc');
+
+        $warehouses = $list->paginate(Warehouse::query()
             ->search($search)
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
-            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
-            ->orderByDesc('is_default')
-            ->orderBy('code')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)));
 
         return Inertia::render('warehouses/Index', [
             'warehouses' => $warehouses,
             'filters' => [
                 'search' => $search,
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
         ]);
     }
 

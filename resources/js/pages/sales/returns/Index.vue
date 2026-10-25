@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Plus, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/sales-returns';
 import type { Paginated, SalesReturnRow } from '@/types';
@@ -14,8 +18,9 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     returns: Paginated<SalesReturnRow>;
-    filters: { customer_id: number | null };
+    filters: { search: string; customer_id: number | null; settlement: string } & ListControlValues;
     customers: { id: number; code: string; name: string }[];
+    settlements: { value: string; label: string }[];
     currency: string;
 }>();
 
@@ -24,9 +29,9 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Returns', href: index() }] } }
 const { t } = useT();
 const { can } = usePermissions();
 
-const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
-watch(customerId, () => {
-    router.get(index().url, { customer_id: customerId.value || undefined }, { preserveState: true, replace: true });
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    customer_id: props.filters.customer_id ? String(props.filters.customer_id) : '',
 });
 </script>
 
@@ -41,25 +46,37 @@ watch(customerId, () => {
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search return, delivery, customer or product…')" class="pl-9" :aria-label="t('Search returns')" />
+            </div>
             <SearchableSelect
-                v-model="customerId"
+                v-model="filters.customer_id"
+                class="w-full sm:w-64"
+                :aria-label="t('Filter by customer')"
                 :options="[{ value: '', label: t('All customers') }, ...customers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
             />
-        </div>
+            <SearchableSelect
+                v-model="filters.settlement"
+                class="w-full sm:w-48"
+                :aria-label="t('Filter by settlement')"
+                :options="[{ value: '', label: t('Any settlement') }, ...settlements.map((o) => ({ value: o.value, label: o.label }))]"
+            />
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Return') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Credit (:currency)', { currency }) }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Settled by') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Return" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Customer" column="customer" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Product" column="product" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Quantity" column="quantity" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Credit" column="credit" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Credit (:currency)', { currency }) }}</SortHeader>
+                        <SortHeader label="Settled by" column="settlement" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -83,12 +100,6 @@ watch(customerId, () => {
             </table>
         </div>
 
-        <div v-if="returns.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in returns.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="returns" />
     </div>
 </template>

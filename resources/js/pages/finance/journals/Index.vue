@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/journals';
@@ -14,7 +18,7 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     entries: Paginated<JournalRow>;
-    filters: { search: string; status: string; fiscal_period_id: number | null; from: string | null; to: string | null };
+    filters: { search: string; status: string; fiscal_period_id: number | null } & ListControlValues;
     statuses: StatusOption[];
     periods: { id: number; name: string }[];
     currency: string;
@@ -24,25 +28,10 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Journal entries', href: index(
 
 const { can } = usePermissions();
 
-const status = ref(props.filters.status ?? '');
-const periodId = ref(props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '');
-const from = ref(props.filters.from ?? '');
-const to = ref(props.filters.to ?? '');
-
-function applyFilters(): void {
-    router.get(
-        index().url,
-        {
-            status: status.value || undefined,
-            fiscal_period_id: periodId.value || undefined,
-            from: from.value || undefined,
-            to: to.value || undefined,
-        },
-        { preserveState: true, replace: true, preserveScroll: true },
-    );
-}
-
-watch([status, periodId, from, to], applyFilters);
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    fiscal_period_id: props.filters.fiscal_period_id ? String(props.filters.fiscal_period_id) : '',
+});
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -50,8 +39,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'outline';
 }
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -70,32 +57,20 @@ const { t } = useT();
             </Button>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="grid gap-1.5">
-                <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>
-                <input id="f-from" v-model="from" type="date" :class="controlClass" />
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="grid gap-1 text-xs w-full sm:w-56">
+                <span class="text-muted-foreground">{{ t('Search') }}</span>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search number or description')" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-to" class="text-sm font-medium">{{ t('To') }}</label>
-                <input id="f-to" v-model="to" type="date" :class="controlClass" />
+            <div class="grid gap-1 text-xs w-full sm:w-48">
+                <span class="text-muted-foreground">{{ t('Status') }}</span>
+                <SearchableSelect v-model="filters.status" :options="[{ value: '', label: t('All statuses') }, ...statuses.map((s) => ({ value: s.value, label: s.label }))]" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <SearchableSelect
-                    id="f-status"
-                    v-model="status"
-                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
-                />
+            <div class="grid gap-1 text-xs w-full sm:w-48">
+                <span class="text-muted-foreground">{{ t('Fiscal period') }}</span>
+                <SearchableSelect v-model="filters.fiscal_period_id" :options="[{ value: '', label: t('All periods') }, ...periods.map((p) => ({ value: String(p.id), label: p.name }))]" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-period" class="text-sm font-medium">{{ t('Fiscal period') }}</label>
-                <SearchableSelect
-                    id="f-period"
-                    v-model="periodId"
-                    :options="[{ value: '', label: t('All periods') }, ...(periods).map((p) => ({ value: String(p.id), label: `${(p.name) ?? ''}` }))]"
-                />
-            </div>
-        </div>
+        </ListControls>
 
         <div
             v-if="entries.data.length === 0"
@@ -112,13 +87,13 @@ const { t } = useT();
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Journal No') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Description') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Source') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Debit') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Credit') }}</th>
+                            <SortHeader label="Journal No" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Description" column="description" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Source" column="source" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Debit" column="debit" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Credit" column="credit" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         </tr>
                     </thead>
                     <tbody>
@@ -167,22 +142,8 @@ const { t } = useT();
                 </Link>
             </div>
 
-            <div v-if="entries.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">
-                    {{ t('Showing :from–:to of :total', { from: entries.from ?? 0, to: entries.to ?? 0, total: entries.total }) }}
-                </p>
-                <div class="flex flex-wrap items-center gap-1">
-                    <Button
-                        v-for="link in entries.links"
-                        :key="link.label"
-                        :variant="link.active ? 'default' : 'outline'"
-                        size="sm"
-                        :disabled="!link.url"
-                        @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
-                        v-html="link.label"
-                    />
-                </div>
-            </div>
         </template>
+
+        <ListPagination :page="entries" />
     </div>
 </template>

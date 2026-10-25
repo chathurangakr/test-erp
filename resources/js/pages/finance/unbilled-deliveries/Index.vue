@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import { Search } from '@lucide/vue';
 import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import { Input } from '@/components/ui/input';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +18,7 @@ import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
 import { exportMethod as exportReport } from '@/routes/unbilled-deliveries';
 
-defineProps<{
+const props = defineProps<{
     report: UnbilledDeliveryReport;
     currency: string;
 }>();
@@ -32,6 +38,21 @@ function label(status: string): string {
 }
 
 const { t } = useT();
+const { filters, visible, pageCount, range, sortBy, clear } = useClientList(() => props.report.rows, {
+    search: (row) => `${row.delivery_number} ${row.customer_code} ${row.customer_name}`,
+    date: (row) => row.delivery_date,
+    sorts: {
+        delivery: (row) => row.delivery_number,
+        customer: (row) => row.customer_code,
+        date: (row) => row.delivery_date,
+        value: (row) => Number(row.sales_value),
+        invoiced: (row) => Number(row.billed_amount),
+        remaining: (row) => Number(row.remaining_amount),
+        status: (row) => t(label(row.status)),
+    },
+    defaultSort: 'date',
+    defaultDirection: 'desc',
+});
 </script>
 
 <template>
@@ -62,6 +83,13 @@ const { t } = useT();
             </div>
         </div>
 
+        <ListControls class="print:hidden" v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search delivery or customer…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div
             v-if="report.rows.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
@@ -76,18 +104,18 @@ const { t } = useT();
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Delivery') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Sales value') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Invoiced') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Remaining') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Delivery" column="delivery" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Customer" column="customer" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Sales value" column="value" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Invoiced" column="invoiced" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Remaining" column="remaining" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="row in report.rows"
+                        v-for="row in visible"
                         :key="row.delivery_id"
                         class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t"
                     >
@@ -121,6 +149,8 @@ const { t } = useT();
                 </tfoot>
             </table>
         </div>
+
+        <ClientPagination class="print:hidden" v-model:page="filters.page" :range="range" :page-count="pageCount" />
 
         <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('A delivery records what the goods cost when they leave; the revenue waits for the invoice. An amount still unbilled here is work done but not yet charged for, not an error. The delivered value shown is the figure the delivery itself stored, which is why a line priced per measured kilogram carries through exactly — nothing is repriced. A delivery appears here only once its cost of sales has reached the ledger.') }}

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
+import { Plus, Search } from '@lucide/vue';
 import { ref } from 'vue';
 import FiscalPeriodController from '@/actions/App/Http/Controllers/Accounting/FiscalPeriodController';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +18,7 @@ import { index } from '@/routes/fiscal-periods';
 import type { FiscalPeriodRow } from '@/types';
 import { useT } from '@/lib/i18n';
 
-defineProps<{
+const props = defineProps<{
     periods: FiscalPeriodRow[];
     filters: { search: string };
 }>();
@@ -26,6 +30,21 @@ const { can } = usePermissions();
 const showForm = ref(false);
 
 const { t } = useT();
+const { filters: list, visible, pageCount, range, sortBy, clear } = useClientList(() => props.periods, {
+    search: (period) => `${period.name} ${period.status_label}`,
+    date: (period) => period.start_date,
+    sorts: {
+        period: (period) => period.name,
+        from: (period) => period.start_date,
+        to: (period) => period.end_date,
+        status: (period) => period.status_label,
+        entries: (period) => period.entries_count,
+        drafts: (period) => period.draft_entries_count,
+        closed: (period) => period.closed_at,
+    },
+    defaultSort: 'from',
+    defaultDirection: 'desc',
+});
 </script>
 
 <template>
@@ -74,6 +93,13 @@ const { t } = useT();
             </Form>
         </div>
 
+        <ListControls v-model:per-page="list.per_page" v-model:from="list.from" v-model:to="list.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="list.search" type="search" :placeholder="t('Search period name…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div
             v-if="periods.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
@@ -88,19 +114,19 @@ const { t } = useT();
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Period') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('From') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('To') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Entries') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Drafts') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Closed') }}</th>
+                        <SortHeader label="Period" column="period" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="From" column="from" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="To" column="to" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Entries" column="entries" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Drafts" column="drafts" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Closed" column="closed" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="period in periods"
+                        v-for="period in visible"
                         :key="period.id"
                         class="border-sidebar-border/70 dark:border-sidebar-border border-t"
                     >
@@ -142,6 +168,8 @@ const { t } = useT();
                 </tbody>
             </table>
         </div>
+
+        <ClientPagination v-model:page="list.page" :range="range" :page-count="pageCount" />
 
         <p class="text-muted-foreground max-w-3xl text-xs">
             {{ t("A period cannot be closed while it still holds a draft — the draft would become unpostable and invisible to every report. Closing is final: reopening is deliberately not offered, because a closed period is the record of something already reported on. A reversal of an entry in a closed period posts into the open period containing the reversal's own date.") }}

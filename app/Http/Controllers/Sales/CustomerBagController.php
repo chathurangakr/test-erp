@@ -16,6 +16,8 @@ use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Services\Sales\CustomerBagBalances;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,8 +30,6 @@ use Inertia\Response;
  */
 class CustomerBagController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly CustomerBagBalances $balances,
         private readonly StockQueryService $stock,
@@ -41,13 +41,24 @@ class CustomerBagController extends Controller
         $customers = Customer::query()->orderBy('name')->get(['id', 'code', 'name'])->keyBy('id');
         $products = Product::query()->where('is_returnable', true)->orderBy('code')->get(['id', 'code', 'name'])->keyBy('id');
 
-        $movements = CustomerBagMovement::query()
+        $search = trim((string) $request->string('search'));
+        $kind = CustomerBagMovementKind::tryFrom((string) $request->string('kind'))?->value;
+        $list = ListQuery::from($request)->period('movement_date')->sortable([
+            'number' => 'movement_number',
+            'date' => 'movement_date',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('name')->whereColumn('customers.id', 'customer_bag_movements.customer_id'), $d),
+            'kind' => 'kind',
+            'quantity' => 'quantity',
+            'status' => 'status',
+        ], 'date');
+
+        $movements = $list->paginate(CustomerBagMovement::query()
             ->with(['customer:id,code,name', 'product:id,code,name', 'warehouse:id,code'])
             ->when($customerId, fn ($query, int $id) => $query->where('customer_id', $id))
-            ->orderByDesc('movement_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($kind, fn ($query, string $value) => $query->where('kind', $value))
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $q) => $q
+                ->where('movement_number', 'like', "%{$search}%")
+                ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")))))
             ->through(fn (CustomerBagMovement $movement): array => $this->summarise($movement));
 
         return Inertia::render('sales/bags/Index', [
@@ -62,7 +73,8 @@ class CustomerBagController extends Controller
                     'quantity' => $row->quantity,
                 ])->values(),
             'movements' => $movements,
-            'filters' => ['customer_id' => $customerId],
+            'filters' => ['search' => $search, 'customer_id' => $customerId, 'kind' => $kind ?? ''] + $list->filters(),
+            'kinds' => CustomerBagMovementKind::options(),
             'customers' => $customers->values(),
         ]);
     }

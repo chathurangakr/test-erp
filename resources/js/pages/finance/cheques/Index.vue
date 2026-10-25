@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { Search } from '@lucide/vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -81,6 +86,30 @@ function undo(cheque: Cheque): void {
 }
 
 const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 'destructive' : s === 'VOID' ? 'outline' : 'secondary');
+const { filters: list, visible, pageCount, range, sortBy, clear: clearList } = useClientList(() => props.cheques, {
+    search: (cheque) => `${cheque.cheque_number ?? ''} ${cheque.cheque_bank ?? ''} ${cheque.party ?? ''} ${cheque.document_number}`,
+    date: (cheque) => cheque.cheque_date ?? cheque.date,
+    sorts: {
+        cheque: (cheque) => cheque.cheque_date ?? cheque.date,
+        party: (cheque) => cheque.party,
+        document: (cheque) => cheque.date,
+        amount: (cheque) => Number(cheque.amount),
+        status: (cheque) => cheque.status_label,
+    },
+    defaultSort: 'cheque',
+    defaultDirection: 'desc',
+});
+
+/** Clears the in-page controls and, when set, the direction and status filters too. */
+function clearFilters(): void {
+    clearList();
+
+    if (direction.value || status.value) {
+        direction.value = '';
+        status.value = '';
+        filter();
+    }
+}
 </script>
 
 <template>
@@ -89,17 +118,21 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading title="Cheques" description="Every cheque received or issued. Mark one cleared when the bank has it, or bounced — a bounced cheque reverses its receipt or payment." />
 
-        <div class="flex flex-wrap gap-3">
-            <select v-model="direction" class="border-input bg-background h-9 rounded-md border px-3 text-sm" @change="filter">
+        <ListControls v-model:per-page="list.per_page" v-model:from="list.from" v-model:to="list.to" @clear="clearFilters">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="list.search" type="search" :placeholder="t('Search cheque number, bank, party or document…')" class="pl-9" />
+            </div>
+            <select v-model="direction" class="border-input bg-background h-9 rounded-md border px-3 text-sm" :aria-label="t('Received and issued')" @change="filter">
                 <option value="">{{ t('Received and issued') }}</option>
                 <option value="RECEIVED">{{ t('Received') }}</option>
                 <option value="ISSUED">{{ t('Issued') }}</option>
             </select>
-            <select v-model="status" class="border-input bg-background h-9 rounded-md border px-3 text-sm" @change="filter">
+            <select v-model="status" class="border-input bg-background h-9 rounded-md border px-3 text-sm" :aria-label="t('Every status')" @change="filter">
                 <option value="">{{ t('Every status') }}</option>
                 <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
-        </div>
+        </ListControls>
 
         <InputError :message="errors.status ?? errors.event_date ?? errors.reason ?? errors.bank_charge" />
 
@@ -107,16 +140,16 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Cheque') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Party') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Document') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Cheque" column="cheque" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Party" column="party" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Document" column="document" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Amount" column="amount" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy">{{ t('Amount (:currency)', { currency }) }}</SortHeader>
+                        <SortHeader label="Status" column="status" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <template v-for="cheque in cheques" :key="cheque.key">
+                    <template v-for="cheque in visible" :key="cheque.key">
                         <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top">
                             <td class="px-4 py-3">
                                 <span class="font-mono">#{{ cheque.cheque_number }}</span>
@@ -152,11 +185,13 @@ const variant = (s: string) => (s === 'CLEARED' ? 'default' : s === 'BOUNCED' ? 
                             </td>
                         </tr>
                     </template>
-                    <tr v-if="cheques.length === 0">
+                    <tr v-if="visible.length === 0">
                         <td colspan="6" class="text-muted-foreground px-4 py-8 text-center">{{ t('No cheques here.') }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ClientPagination v-model:page="list.page" :range="range" :page-count="pageCount" />
     </div>
 </template>

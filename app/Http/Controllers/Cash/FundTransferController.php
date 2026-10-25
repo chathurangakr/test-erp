@@ -6,9 +6,11 @@ use App\Actions\Cash\SaveFundTransfer;
 use App\Enums\FundTransferStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cash\StoreFundTransferRequest;
+use App\Models\CashBankAccount;
 use App\Models\FundTransfer;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,8 +26,6 @@ use Inertia\Response;
  */
 class FundTransferController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveFundTransfer $saveTransfer,
         private readonly CashDocumentOptions $options,
@@ -35,14 +35,19 @@ class FundTransferController extends Controller
     {
         $status = (string) $request->string('status');
 
-        $transfers = FundTransfer::query()
+        $list = ListQuery::from($request)->period('transfer_date')->sortable([
+            'number' => 'transfer_number',
+            'date' => 'transfer_date',
+            'from' => fn (Builder $q, string $d) => $q->orderBy(CashBankAccount::select('display_name')->whereColumn('cash_bank_accounts.id', 'fund_transfers.from_cash_bank_account_id'), $d),
+            'to' => fn (Builder $q, string $d) => $q->orderBy(CashBankAccount::select('display_name')->whereColumn('cash_bank_accounts.id', 'fund_transfers.to_cash_bank_account_id'), $d),
+            'status' => 'status',
+            'amount' => 'amount',
+        ], 'date');
+
+        $transfers = $list->paginate(FundTransfer::query()
             ->with(['fromAccount:id,display_name', 'toAccount:id,display_name'])
             ->search((string) $request->string('search'))
-            ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->orderByDesc('transfer_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status, fn (Builder $q, string $s) => $q->where('status', $s)))
             ->through(fn (FundTransfer $transfer): array => $this->summarise($transfer));
 
         return Inertia::render('finance/fund-transfers/Index', [
@@ -50,7 +55,7 @@ class FundTransferController extends Controller
             'filters' => [
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
-            ],
+            ] + $list->filters(),
             'statuses' => FundTransferStatus::options(),
             'currency' => config('accounting.base_currency'),
         ]);

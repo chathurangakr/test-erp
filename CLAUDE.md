@@ -848,6 +848,17 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
 
 ---
 
+## Lists (implemented — 1.27.0)
+
+- **Every list screen has the same controls:** its own filters, a From / To period on its date (when
+  it has one), Rows 25 / 50 / 100 / All, and sortable column headings. A server-paged list uses
+  `App\Support\ListQuery` (`period()`, a whitelist in `sortable()`, `paginate()`, `+ filters()`)
+  with `useListFilters`, `ListControls`, `SortHeader` and `ListPagination`; a list the page holds
+  whole uses `useClientList` with `ClientPagination`. A new list must use them too.
+- **All = the whole history unless a period is chosen**, up to `config('lists.all_limit')` (5,000) on
+  one page; beyond that it pages on. Never sort on a derived figure (stock, what is owed); sort
+  related names and line totals through subqueries on real columns.
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,

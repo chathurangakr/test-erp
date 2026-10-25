@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Inventory;
 use App\Enums\InventoryTransactionType;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryLot;
+use App\Models\InventoryTransaction;
 use App\Models\InventoryTransactionLine;
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,8 +24,6 @@ use Inertia\Response;
  */
 class StockLedgerController extends Controller
 {
-    private const PER_PAGE = 50;
-
     public function index(Request $request): Response
     {
         $filters = [
@@ -59,10 +59,20 @@ class StockLedgerController extends Controller
             ->when($filters['to'], fn (Builder $q, string $to) => $q->whereHas(
                 'transaction',
                 fn (Builder $t) => $t->whereDate('transaction_date', '<=', $to)
-            ))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ));
+
+        $list = ListQuery::from($request)->sortable([
+            'date' => fn (Builder $q, string $d) => $q->orderBy(InventoryTransaction::select('transaction_date')->whereColumn('inventory_transactions.id', 'inventory_transaction_lines.inventory_transaction_id'), $d),
+            'reference' => fn (Builder $q, string $d) => $q->orderBy(InventoryTransaction::select('reference')->whereColumn('inventory_transactions.id', 'inventory_transaction_lines.inventory_transaction_id'), $d),
+            'type' => fn (Builder $q, string $d) => $q->orderBy(InventoryTransaction::select('transaction_type')->whereColumn('inventory_transactions.id', 'inventory_transaction_lines.inventory_transaction_id'), $d),
+            'product' => fn (Builder $q, string $d) => $q->orderBy(Product::select('code')->whereColumn('products.id', 'inventory_transaction_lines.product_id'), $d),
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'inventory_transaction_lines.warehouse_id'), $d),
+            'lot' => fn (Builder $q, string $d) => $q->orderBy(InventoryLot::select('lot_number')->whereColumn('inventory_lots.id', 'inventory_transaction_lines.lot_id'), $d),
+            'unit_cost' => 'unit_cost',
+            'total_cost' => 'total_cost',
+        ], 'date');
+
+        $lines = $list->paginate($lines)
             ->through(fn (InventoryTransactionLine $line): array => [
                 'id' => $line->id,
                 'date' => $line->transaction?->transaction_date?->toDateString(),
@@ -87,7 +97,8 @@ class StockLedgerController extends Controller
 
         return Inertia::render('inventory/StockLedger', [
             'lines' => $lines,
-            'filters' => $filters,
+            // The period is the transaction's date, filtered above through the transaction.
+            'filters' => $filters + $list->filters(),
             'products' => Product::query()->orderBy('code')->get(['id', 'code', 'name']),
             'warehouses' => Warehouse::query()->orderBy('code')->get(['id', 'code', 'name']),
             'lots' => InventoryLot::query()->orderByDesc('id')->limit(200)->get(['id', 'lot_number']),

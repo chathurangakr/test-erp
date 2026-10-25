@@ -15,6 +15,7 @@ use App\Models\SalesOrder;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,27 +31,32 @@ class CustomerController extends Controller
 {
     public function __construct(private readonly AccountsReceivableService $receivables) {}
 
-    private const PER_PAGE = 15;
-
     public function index(Request $request): Response
     {
         $search = (string) $request->string('search');
         $status = (string) $request->string('status');
 
-        $customers = Customer::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'contact' => 'contact_person',
+            'phone' => 'phone',
+            'city' => 'city',
+            'credit_limit' => 'credit_limit',
+            'status' => 'is_active',
+        ], 'code', 'asc');
+
+        $customers = $list->paginate(Customer::query()
             ->search($search)
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
-            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
-            ->orderBy('code')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)));
 
         return Inertia::render('customers/Index', [
             'customers' => $customers,
             'filters' => [
                 'search' => $search,
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
         ]);
     }
 

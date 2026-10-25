@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
+import { Plus, Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import { Input } from '@/components/ui/input';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
@@ -28,6 +33,18 @@ function toggleInactive(): void {
         replace: true,
     });
 }
+const { filters: list, visible, pageCount, range, sortBy, clear } = useClientList(() => props.summary.rows, {
+    search: (row) => `${row.display_name} ${row.account_code} ${row.account_name} ${row.bank_name ?? ''} ${row.branch_name ?? ''} ${row.account_number ?? ''}`,
+    sorts: {
+        name: (row) => row.display_name,
+        account: (row) => row.account_code,
+        kind: (row) => row.kind_label,
+        bank: (row) => row.bank_name,
+        status: (row) => (row.is_active ? 0 : 1),
+        balance: (row) => Number(row.balance),
+    },
+    defaultSort: 'name',
+});
 </script>
 
 <template>
@@ -67,22 +84,29 @@ function toggleInactive(): void {
             </div>
         </div>
 
+        <ListControls v-model:per-page="list.per_page" v-model:from="list.from" v-model:to="list.to" :period="false" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="list.search" type="search" :placeholder="t('Search name, account or bank…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('GL account') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Kind') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Bank') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Balance') }}</th>
+                        <SortHeader label="Name" column="name" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="GL account" column="account" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Kind" column="kind" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Bank" column="bank" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                        <SortHeader label="Balance" column="balance" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="row in summary.rows"
+                        v-for="row in visible"
                         :key="row.id"
                         class="border-sidebar-border/70 dark:border-sidebar-border border-t"
                     >
@@ -118,7 +142,7 @@ function toggleInactive(): void {
                             </Button>
                         </td>
                     </tr>
-                    <tr v-if="summary.rows.length === 0">
+                    <tr v-if="visible.length === 0">
                         <td colspan="7" class="text-muted-foreground px-4 py-8 text-center">
                             {{ t('No cash or bank accounts are configured yet.') }}
                         </td>
@@ -126,6 +150,8 @@ function toggleInactive(): void {
                 </tbody>
             </table>
         </div>
+
+        <ClientPagination v-model:page="list.page" :range="range" :page-count="pageCount" />
 
         <p class="text-muted-foreground max-w-3xl text-xs">
             {{ t('Each balance is calculated from posted journal lines every time this page loads. There is no stored balance anywhere and there never will be — the general ledger is the only record of how much money there is. Configuring an account here does not create or change a single rupee; it only says which ledger account is a real till or bank account, so payments, receipts, expense vouchers and transfers all draw on one list. An account that money has moved through is deactivated, never deleted.') }}

@@ -9,6 +9,7 @@ use App\Http\Requests\Accounting\StoreAccountRequest;
 use App\Http\Requests\Accounting\UpdateAccountRequest;
 use App\Models\Account;
 use App\Services\Accounting\AccountingBalanceService;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,8 +25,6 @@ use Inertia\Response;
  */
 class AccountController extends Controller
 {
-    private const PER_PAGE = 50;
-
     public function __construct(private readonly AccountingBalanceService $balances) {}
 
     public function index(Request $request): Response
@@ -33,15 +32,20 @@ class AccountController extends Controller
         $type = (string) $request->string('type');
         $status = (string) $request->string('status');
 
-        $accounts = Account::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'type' => 'account_type',
+            'control' => 'is_control_account',
+            'status' => 'is_active',
+        ], 'code', 'asc');
+
+        $accounts = $list->paginate(Account::query()
             ->with('parent:id,code,name')
             ->search((string) $request->string('search'))
             ->when($type, fn (Builder $q, string $t) => $q->where('account_type', $t))
             ->when($status === 'active', fn (Builder $q) => $q->where('is_active', true))
-            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', false))
-            ->orderBy('code')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', false)))
             ->through(fn (Account $account): array => $this->summarise($account));
 
         return Inertia::render('finance/accounts/Index', [
@@ -50,7 +54,7 @@ class AccountController extends Controller
                 'search' => (string) $request->string('search'),
                 'type' => $type ?: '',
                 'status' => $status ?: 'all',
-            ],
+            ] + $list->filters(),
             'types' => AccountType::options(),
             'currency' => config('accounting.base_currency'),
         ]);

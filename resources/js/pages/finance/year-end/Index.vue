@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Lock, Undo2 } from '@lucide/vue';
+import { Lock, Search, Undo2 } from '@lucide/vue';
 import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import { Input } from '@/components/ui/input';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +55,22 @@ function undo(year: Year): void {
         router.patch(reverse(year.closing.id).url, {}, { preserveScroll: true });
     }
 }
+/** Closed, still running, or ended but not closed — the order the status column sorts by. */
+function standing(year: Year): number {
+    return year.closing ? 0 : !year.ended ? 1 : 2;
+}
+
+const { filters, visible, pageCount, range, sortBy, clear } = useClientList(() => props.years, {
+    search: (year) => `${year.start} ${year.end} ${year.closing ? t('Closed') : !year.ended ? t('Running') : t('Not closed')}`,
+    date: (year) => year.end,
+    sorts: {
+        year: (year) => year.end,
+        profit: (year) => Number(year.net_profit),
+        status: (year) => standing(year),
+    },
+    defaultSort: 'year',
+    defaultDirection: 'desc',
+});
 </script>
 
 <template>
@@ -60,18 +81,25 @@ function undo(year: Year): void {
 
         <InputError :message="error" />
 
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search year or status…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Financial year') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Net profit') }} ({{ currency }})</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Financial year" column="year" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Net profit" column="profit" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Net profit') }} ({{ currency }})</SortHeader>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="year in years" :key="year.end" class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top">
+                    <tr v-for="year in visible" :key="year.end" class="border-sidebar-border/70 dark:border-sidebar-border border-t align-top">
                         <td class="px-4 py-3 font-medium">{{ year.start }} → {{ year.end }}</td>
                         <td class="px-4 py-3 text-right font-mono" :class="year.net_profit.startsWith('-') ? 'text-destructive' : ''">{{ money(year.net_profit) }}</td>
                         <td class="px-4 py-3">
@@ -106,6 +134,8 @@ function undo(year: Year): void {
                 </tbody>
             </table>
         </div>
+
+        <ClientPagination v-model:page="filters.page" :range="range" :page-count="pageCount" />
 
         <ul class="text-muted-foreground max-w-3xl list-disc space-y-1 pl-5 text-xs">
             <li>{{ t('Close a year after its last day, BEFORE closing its last month: the closing entry is dated the year end.') }}</li>

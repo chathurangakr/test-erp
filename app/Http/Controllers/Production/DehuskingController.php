@@ -10,12 +10,15 @@ use App\Http\Requests\Production\StoreDehuskingRequest;
 use App\Http\Requests\Production\UpdateDehuskingRequest;
 use App\Models\InventoryLot;
 use App\Models\Product;
+use App\Models\ProductionInput;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOutput;
 use App\Models\ProductionRecipe;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,8 +37,6 @@ use Inertia\Response;
  */
 class DehuskingController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function __construct(
         private readonly SaveDehuskingOrder $saveOrder,
         private readonly StockQueryService $stock,
@@ -45,31 +46,32 @@ class DehuskingController extends Controller
     {
         $status = (string) $request->string('status');
         $warehouseId = $request->integer('warehouse_id') ?: null;
-        $from = $request->date('from')?->toDateString();
-        $to = $request->date('to')?->toDateString();
+        $search = (string) $request->string('search');
+        $list = ListQuery::from($request)->period('production_date')->sortable([
+            'number' => 'production_number',
+            'date' => 'production_date',
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'production_orders.warehouse_id'), $d),
+            'input_quantity' => fn (Builder $q, string $d) => $q->orderBy(ProductionInput::selectRaw('COALESCE(SUM(quantity), 0)')->whereColumn('production_inputs.production_order_id', 'production_orders.id'), $d),
+            'status' => 'status',
+            'input_value' => fn (Builder $q, string $d) => $q->orderBy(ProductionInput::selectRaw('COALESCE(SUM(total_cost), 0)')->whereColumn('production_inputs.production_order_id', 'production_orders.id'), $d),
+            'output_value' => fn (Builder $q, string $d) => $q->orderBy(ProductionOutput::selectRaw('COALESCE(SUM(allocated_cost), 0)')->whereColumn('production_outputs.production_order_id', 'production_orders.id'), $d),
+        ], 'date');
 
-        $orders = ProductionOrder::query()
+        $orders = $list->paginate(ProductionOrder::query()
             ->where('production_type', ProductionType::Dehusking)
             ->with(['warehouse:id,code', 'inputs', 'outputs'])
-            ->search((string) $request->string('search'))
+            ->search($search)
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($warehouseId, fn (Builder $q, int $id) => $q->where('warehouse_id', $id))
-            ->when($from, fn (Builder $q, string $d) => $q->whereDate('production_date', '>=', $d))
-            ->when($to, fn (Builder $q, string $d) => $q->whereDate('production_date', '<=', $d))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($warehouseId, fn (Builder $q, int $id) => $q->where('warehouse_id', $id)))
             ->through(fn (ProductionOrder $order): array => $this->summarise($order));
 
         return Inertia::render('production/dehusking/Index', [
             'orders' => $orders,
             'filters' => [
-                'search' => (string) $request->string('search'),
+                'search' => $search,
                 'status' => $status ?: '',
                 'warehouse_id' => $warehouseId,
-                'from' => $from,
-                'to' => $to,
-            ],
+            ] + $list->filters(),
             'warehouses' => Warehouse::query()->orderBy('code')->get(['id', 'code', 'name']),
             'statuses' => ProductionStatus::options(),
         ]);

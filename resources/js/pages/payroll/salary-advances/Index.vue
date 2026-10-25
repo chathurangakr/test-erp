@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/salary-advances';
 import type { Paginated, SalaryAdvanceRow } from '@/types';
@@ -14,7 +17,8 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     advances: Paginated<SalaryAdvanceRow>;
-    filters: { employee_id: number | null };
+    filters: { employee_id: number | null; status: string } & ListControlValues;
+    statuses: { value: string; label: string }[];
     employees: { id: number; code: string; name: string }[];
     currency: string;
 }>();
@@ -24,9 +28,9 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Salary advances', href: index(
 const { t } = useT();
 const { can } = usePermissions();
 
-const employeeId = ref(props.filters.employee_id ? String(props.filters.employee_id) : '');
-watch(employeeId, () => {
-    router.get(index().url, { employee_id: employeeId.value || undefined }, { preserveState: true, replace: true });
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    employee_id: props.filters.employee_id ? String(props.filters.employee_id) : '',
 });
 
 </script>
@@ -42,23 +46,28 @@ watch(employeeId, () => {
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
             <SearchableSelect
-                v-model="employeeId"
-                :options="[{ value: '', label: t('All employees') }, ...(employees).map((e) => ({ value: String(e.id), label: `${e.code} — ${e.name}` }))]"
+                v-model="filters.employee_id"
+                class="w-full sm:w-64"
+                :options="[{ value: '', label: t('All employees') }, ...employees.map((e) => ({ value: String(e.id), label: `${e.code} — ${e.name}` }))]"
             />
-        </div>
+            <select v-model="filters.status" class="border-input bg-background h-9 rounded-md border px-3 text-sm" :aria-label="t('Filter by status')">
+                <option value="">{{ t('All statuses') }}</option>
+                <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Advance') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Employee') }}</th>
+                        <SortHeader label="Advance" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Employee" column="employee" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 font-medium">{{ t('Paid from') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Amount" column="amount" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Amount (:currency)', { currency }) }}</SortHeader>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -82,12 +91,6 @@ watch(employeeId, () => {
             </table>
         </div>
 
-        <div v-if="advances.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in advances.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="advances" />
     </div>
 </template>

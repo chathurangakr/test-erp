@@ -15,7 +15,10 @@ use App\Services\Accounting\AdvanceBalances;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,8 +30,6 @@ use Inertia\Response;
  */
 abstract class AdvanceScreens extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         protected readonly AdvanceBalances $balances,
         private readonly CashDocumentOptions $options,
@@ -50,17 +51,36 @@ abstract class AdvanceScreens extends Controller
     /** @return Collection<int, Model> active parties to choose from */
     abstract protected function parties(): Collection;
 
-    protected function renderIndex(): Response
+    /** @return class-string<Model> the party model: Customer or Supplier */
+    abstract protected function partyClass(): string;
+
+    protected function renderIndex(Request $request): Response
     {
         $party = $this->party();
+        $table = (new ($this->model()))->getTable();
+        $search = trim((string) $request->string('search'));
+        $status = (string) $request->string('status');
+        $partyId = $request->integer('party_id') ?: null;
+        $list = ListQuery::from($request)->period('advance_date')->sortable([
+            'number' => 'advance_number',
+            'date' => 'advance_date',
+            'party' => fn (Builder $q, string $d) => $q->orderBy($this->partyClass()::select('code')->whereColumn("{$party}s.id", "{$table}.{$party}_id"), $d),
+            'amount' => 'amount',
+            'status' => 'status',
+        ], 'date');
 
         return Inertia::render("finance/{$party}-advances/Index", [
-            'advances' => $this->model()::query()
+            'advances' => $list->paginate($this->model()::query()
                 ->with("{$party}:id,code,name")
-                ->orderByDesc('advance_date')
-                ->orderByDesc('id')
-                ->paginate(self::PER_PAGE)
+                ->when($partyId, fn (Builder $q, int $id) => $q->where("{$party}_id", $id))
+                ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
+                ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
+                    ->where('advance_number', 'like', "%{$search}%")
+                    ->orWhereHas($party, fn (Builder $p) => $p->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")))))
                 ->through(fn (CustomerAdvance|SupplierAdvance $advance): array => $this->summarise($advance)),
+            'filters' => ['search' => $search, 'status' => $status, 'party_id' => $partyId] + $list->filters(),
+            'statuses' => array_map(fn (AdvanceStatus $s): array => ['value' => $s->value, 'label' => $s->label()], AdvanceStatus::cases()),
+            'parties' => $this->parties()->map(fn (Model $p): array => ['id' => $p->id, 'code' => $p->code, 'name' => $p->name])->values(),
             'currency' => config('accounting.base_currency'),
         ]);
     }

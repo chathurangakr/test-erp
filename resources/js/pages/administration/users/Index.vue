@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus, Search } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/users';
 import type { AdminUser, Paginated } from '@/types';
@@ -13,21 +16,12 @@ import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     users: Paginated<AdminUser>;
-    filters: { search: string };
+    filters: { search: string; status: string } & ListControlValues;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Users', href: index() }] } });
 
-const search = ref(props.filters.search ?? '');
-let debounce: ReturnType<typeof setTimeout> | undefined;
-
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(
-        () => router.get(index().url, { search: search.value || undefined }, { preserveState: true, replace: true }),
-        300,
-    );
-});
+const { filters, sortBy, clear } = useListFilters(() => index().url, { ...props.filters });
 
 const { can } = usePermissions();
 
@@ -48,19 +42,26 @@ const { t } = useT();
             </Button>
         </div>
 
-        <div class="relative max-w-md">
-            <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input v-model="search" type="search" :placeholder="t('Search by name or email…')" class="pl-9" :aria-label="t('Search users')" />
-        </div>
+        <ListControls v-model:per-page="filters.per_page" :period="false" @clear="clear">
+            <div class="relative w-full sm:w-80">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search by name or email…')" class="pl-9" :aria-label="t('Search users')" />
+            </div>
+            <select v-model="filters.status" class="border-input bg-background h-9 rounded-md border px-3 text-sm" :aria-label="t('Filter by status')">
+                <option value="all">{{ t('All') }}</option>
+                <option value="active">{{ t('Active') }}</option>
+                <option value="inactive">{{ t('Inactive') }}</option>
+            </select>
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Email') }}</th>
+                        <SortHeader label="Name" column="name" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Email" column="email" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 font-medium">{{ t('Roles') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -99,18 +100,6 @@ const { t } = useT();
             </table>
         </div>
 
-        <div v-if="users.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in users.links" :key="link.label">
-                <Link
-                    v-if="link.url"
-                    :href="link.url"
-                    class="rounded-md border px-3 py-1 text-sm"
-                    :class="link.active ? 'bg-muted font-medium' : ''"
-                    preserve-state
-                >
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="users" />
     </div>
 </template>

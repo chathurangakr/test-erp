@@ -16,6 +16,8 @@ use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,26 +29,35 @@ use Inertia\Response;
  */
 class StockDamageController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(private readonly StockQueryService $stock) {}
 
     public function index(Request $request): Response
     {
         $productId = $request->integer('product_id') ?: null;
+        $search = (string) $request->string('search');
+        $status = (string) $request->string('status');
+        $list = ListQuery::from($request)->period('damage_date')->sortable([
+            'number' => 'damage_number',
+            'date' => 'damage_date',
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'stock_damages.warehouse_id'), $d),
+            'reason' => 'reason',
+            'value' => fn (Builder $q, string $d) => $q->orderBy(StockDamageLine::selectRaw('COALESCE(SUM(total_cost), 0)')->whereColumn('stock_damage_lines.stock_damage_id', 'stock_damages.id'), $d),
+            'status' => 'status',
+        ], 'date');
 
-        $damages = StockDamage::query()
+        $damages = $list->paginate(StockDamage::query()
             ->with(['warehouse:id,code,name', 'lines.product:id,code,name'])
             ->when($productId, fn ($query, int $id) => $query->whereHas('lines', fn ($lines) => $lines->where('product_id', $id)))
-            ->orderByDesc('damage_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status, fn ($query, string $s) => $query->where('status', $s))
+            ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q
+                ->where('damage_number', 'like', "%{$search}%")
+                ->orWhere('reason', 'like', "%{$search}%"))))
             ->through(fn (StockDamage $damage): array => $this->summarise($damage));
 
         return Inertia::render('inventory/damages/Index', [
             'damages' => $damages,
-            'filters' => ['product_id' => $productId],
+            'filters' => ['product_id' => $productId, 'search' => $search, 'status' => $status] + $list->filters(),
+            'statuses' => array_map(fn (StockDamageStatus $case): array => ['value' => $case->value, 'label' => $case->label()], StockDamageStatus::cases()),
             'products' => Product::query()->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);

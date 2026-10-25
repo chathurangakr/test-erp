@@ -18,6 +18,7 @@ use App\Services\Accounting\AccountsPayableService;
 use App\Services\Accounting\GrniReconciliationService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,8 +35,6 @@ use Inertia\Response;
  */
 class SupplierInvoiceController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveSupplierInvoice $saveInvoice,
         private readonly AccountsPayableService $payables,
@@ -46,24 +45,25 @@ class SupplierInvoiceController extends Controller
     {
         $status = (string) $request->string('status');
         $supplierId = $request->integer('supplier_id') ?: null;
-        $from = $request->date('from')?->toDateString();
-        $to = $request->date('to')?->toDateString();
         $overdueOnly = $request->boolean('overdue');
+        $list = ListQuery::from($request)->period('invoice_date')->sortable([
+            'number' => 'internal_invoice_number',
+            'supplier_number' => 'supplier_invoice_number',
+            'supplier' => fn (Builder $q, string $d) => $q->orderBy(Supplier::select('code')->whereColumn('suppliers.id', 'supplier_invoices.supplier_id'), $d),
+            'date' => 'invoice_date',
+            'due' => 'due_date',
+            'status' => 'status',
+            'total' => fn (Builder $q, string $d) => $q->orderBy(SupplierInvoiceLine::selectRaw('COALESCE(SUM(amount), 0)')->whereColumn('supplier_invoice_lines.supplier_invoice_id', 'supplier_invoices.id'), $d),
+        ], 'date');
 
-        $invoices = SupplierInvoice::query()
+        $invoices = $list->paginate(SupplierInvoice::query()
             ->with(['supplier:id,code,name', 'lines'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
-            ->when($from, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '>=', $d))
-            ->when($to, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '<=', $d))
             ->when($overdueOnly, fn (Builder $q) => $q
                 ->whereDate('due_date', '<', BusinessClock::todayString())
-                ->whereIn('status', [SupplierInvoiceStatus::Posted->value, SupplierInvoiceStatus::PartiallyPaid->value]))
-            ->orderByDesc('invoice_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+                ->whereIn('status', [SupplierInvoiceStatus::Posted->value, SupplierInvoiceStatus::PartiallyPaid->value])))
             ->through(fn (SupplierInvoice $invoice): array => $this->summarise($invoice));
 
         return Inertia::render('finance/supplier-invoices/Index', [
@@ -72,10 +72,8 @@ class SupplierInvoiceController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'supplier_id' => $supplierId,
-                'from' => $from,
-                'to' => $to,
                 'overdue' => $overdueOnly,
-            ],
+            ] + $list->filters(),
             'statuses' => SupplierInvoiceStatus::options(),
             'suppliers' => Supplier::query()->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),

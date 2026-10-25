@@ -12,6 +12,7 @@ use App\Models\PayrollLine;
 use App\Models\SalaryAdvance;
 use App\Services\Payroll\PayrollCalculator;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,28 +26,31 @@ use Inertia\Response;
  */
 class EmployeeController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(private readonly PayrollCalculator $calculator) {}
 
     public function index(Request $request): Response
     {
         $status = (string) $request->string('status', 'active');
 
-        $employees = Employee::query()
+        $list = ListQuery::from($request)->sortable([
+            'code' => 'code',
+            'name' => 'name',
+            'phone' => 'phone',
+            'daily_rate' => 'daily_rate',
+            'status' => 'is_active',
+        ], 'name', 'asc');
+
+        $employees = $list->paginate(Employee::query()
             ->search((string) $request->string('search'))
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
-            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
-            ->orderBy('name')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false)))
             ->through(fn (Employee $employee): array => $this->summarise($employee) + [
                 'advances_owed' => $this->owed($employee),
             ]);
 
         return Inertia::render('payroll/employees/Index', [
             'employees' => $employees,
-            'filters' => ['search' => (string) $request->string('search'), 'status' => $status],
+            'filters' => ['search' => (string) $request->string('search'), 'status' => $status] + $list->filters(),
         ]);
     }
 

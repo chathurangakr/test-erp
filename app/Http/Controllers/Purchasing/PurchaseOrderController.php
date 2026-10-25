@@ -9,10 +9,12 @@ use App\Http\Requests\Purchasing\StorePurchaseOrderRequest;
 use App\Http\Requests\Purchasing\UpdatePurchaseOrderRequest;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderLine;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,8 +29,6 @@ use Inertia\Response;
  */
 class PurchaseOrderController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function __construct(private readonly SavePurchaseOrder $saveOrder) {}
 
     public function index(Request $request): Response
@@ -37,14 +37,20 @@ class PurchaseOrderController extends Controller
         $status = (string) $request->string('status');
         $supplierId = $request->integer('supplier_id') ?: null;
 
-        $orders = PurchaseOrder::query()
+        $list = ListQuery::from($request)->period('order_date')->sortable([
+            'number' => 'po_number',
+            'supplier' => fn (Builder $q, string $d) => $q->orderBy(Supplier::select('code')->whereColumn('suppliers.id', 'purchase_orders.supplier_id'), $d),
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'purchase_orders.warehouse_id'), $d),
+            'date' => 'order_date',
+            'status' => 'status',
+            'total' => fn (Builder $q, string $d) => $q->orderBy(PurchaseOrderLine::selectRaw('COALESCE(SUM(line_total), 0)')->whereColumn('purchase_order_lines.purchase_order_id', 'purchase_orders.id'), $d),
+        ], 'date');
+
+        $orders = $list->paginate(PurchaseOrder::query()
             ->with(['supplier:id,code,name', 'warehouse:id,code', 'lines'])
             ->search($search)
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id)))
             ->through(fn (PurchaseOrder $order): array => $this->summarise($order));
 
         return Inertia::render('purchasing/purchase-orders/Index', [
@@ -53,7 +59,7 @@ class PurchaseOrderController extends Controller
                 'search' => $search,
                 'status' => $status ?: '',
                 'supplier_id' => $supplierId,
-            ],
+            ] + $list->filters(),
             'suppliers' => Supplier::query()->orderBy('code')->get(['id', 'code', 'name']),
             'statuses' => PurchaseOrderStatus::options(),
         ]);

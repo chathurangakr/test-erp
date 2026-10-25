@@ -11,9 +11,11 @@ use App\Http\Requests\Sales\UpdateSalesOrderRequest;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\SalesOrder;
+use App\Models\SalesOrderLine;
 use App\Models\Warehouse;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +31,6 @@ use Inertia\Response;
  */
 class SalesOrderController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function __construct(private readonly SaveSalesOrder $saveOrder) {}
 
     public function index(Request $request): Response
@@ -39,14 +39,20 @@ class SalesOrderController extends Controller
         $status = (string) $request->string('status');
         $customerId = $request->integer('customer_id') ?: null;
 
-        $orders = SalesOrder::query()
+        $list = ListQuery::from($request)->period('order_date')->sortable([
+            'number' => 'so_number',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('code')->whereColumn('customers.id', 'sales_orders.customer_id'), $d),
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'sales_orders.warehouse_id'), $d),
+            'date' => 'order_date',
+            'status' => 'status',
+            'total' => fn (Builder $q, string $d) => $q->orderBy(SalesOrderLine::selectRaw('COALESCE(SUM(line_total), 0)')->whereColumn('sales_order_lines.sales_order_id', 'sales_orders.id'), $d),
+        ], 'date');
+
+        $orders = $list->paginate(SalesOrder::query()
             ->with(['customer:id,code,name', 'warehouse:id,code', 'lines'])
             ->search($search)
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id)))
             ->through(fn (SalesOrder $order): array => $this->summarise($order));
 
         return Inertia::render('sales/sales-orders/Index', [
@@ -55,7 +61,7 @@ class SalesOrderController extends Controller
                 'search' => $search,
                 'status' => $status ?: '',
                 'customer_id' => $customerId,
-            ],
+            ] + $list->filters(),
             'customers' => Customer::query()->orderBy('code')->get(['id', 'code', 'name']),
             'statuses' => SalesOrderStatus::options(),
         ]);

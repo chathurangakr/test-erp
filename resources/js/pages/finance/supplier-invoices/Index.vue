@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/supplier-invoices';
@@ -14,7 +18,7 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     invoices: Paginated<SupplierInvoiceRow>;
-    filters: { search: string; status: string; supplier_id: number | null; from: string | null; to: string | null; overdue: boolean };
+    filters: { search: string; status: string; supplier_id: number | null; overdue: boolean } & ListControlValues;
     statuses: StatusOption[];
     suppliers: OptionRef[];
     currency: string;
@@ -24,27 +28,11 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Supplier invoices', href: inde
 
 const { can } = usePermissions();
 
-const status = ref(props.filters.status ?? '');
-const supplierId = ref(props.filters.supplier_id ? String(props.filters.supplier_id) : '');
-const from = ref(props.filters.from ?? '');
-const to = ref(props.filters.to ?? '');
-const overdue = ref(props.filters.overdue ?? false);
-
-function applyFilters(): void {
-    router.get(
-        index().url,
-        {
-            status: status.value || undefined,
-            supplier_id: supplierId.value || undefined,
-            from: from.value || undefined,
-            to: to.value || undefined,
-            overdue: overdue.value ? 1 : undefined,
-        },
-        { preserveState: true, replace: true, preserveScroll: true },
-    );
-}
-
-watch([status, supplierId, from, to, overdue], applyFilters);
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    supplier_id: props.filters.supplier_id ? String(props.filters.supplier_id) : '',
+    overdue: props.filters.overdue ? '1' : '',
+});
 
 function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (value === 'CANCELLED' || value === 'REVERSED') return 'destructive';
@@ -53,8 +41,6 @@ function badgeVariant(value: string): 'default' | 'secondary' | 'destructive' | 
     return 'outline';
 }
 
-const controlClass =
-    'border-input bg-background focus-visible:ring-ring dark:bg-input/30 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none';
 
 const { t } = useT();
 </script>
@@ -73,38 +59,24 @@ const { t } = useT();
             </Button>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div class="grid gap-1.5">
-                <label for="f-supplier" class="text-sm font-medium">{{ t('Supplier') }}</label>
-                <SearchableSelect
-                    id="f-supplier"
-                    v-model="supplierId"
-                    :options="[{ value: '', label: t('All suppliers') }, ...(suppliers).map((s) => ({ value: String(s.id), label: `${s.code} — ${s.name}` }))]"
-                />
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" period-label="Invoice date" @clear="clear">
+            <div class="grid gap-1 text-xs w-full sm:w-56">
+                <span class="text-muted-foreground">{{ t('Search') }}</span>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search number or reference')" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-status" class="text-sm font-medium">{{ t('Status') }}</label>
-                <SearchableSelect
-                    id="f-status"
-                    v-model="status"
-                    :options="[{ value: '', label: t('All statuses') }, ...(statuses).map((s) => ({ value: s.value, label: `${(s.label) ?? ''}` }))]"
-                />
+            <div class="grid gap-1 text-xs w-full sm:w-64">
+                <span class="text-muted-foreground">{{ t('Supplier') }}</span>
+                <SearchableSelect v-model="filters.supplier_id" :options="[{ value: '', label: t('All suppliers') }, ...suppliers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-from" class="text-sm font-medium">{{ t('From') }}</label>
-                <input id="f-from" v-model="from" type="date" :class="controlClass" />
+            <div class="grid gap-1 text-xs w-full sm:w-48">
+                <span class="text-muted-foreground">{{ t('Status') }}</span>
+                <SearchableSelect v-model="filters.status" :options="[{ value: '', label: t('All statuses') }, ...statuses.map((s) => ({ value: s.value, label: s.label }))]" />
             </div>
-            <div class="grid gap-1.5">
-                <label for="f-to" class="text-sm font-medium">{{ t('To') }}</label>
-                <input id="f-to" v-model="to" type="date" :class="controlClass" />
-            </div>
-            <div class="flex items-end">
-                <label class="flex items-center gap-2 text-sm">
-                    <input v-model="overdue" type="checkbox" />
-                    {{ t('Overdue only') }}
-                </label>
-            </div>
-        </div>
+            <label class="flex h-9 items-center gap-2 text-sm">
+                <input type="checkbox" :checked="filters.overdue === '1'" @change="filters.overdue = ($event.target as HTMLInputElement).checked ? '1' : ''" />
+                {{ t('Overdue only') }}
+            </label>
+        </ListControls>
 
         <div
             v-if="invoices.data.length === 0"
@@ -120,13 +92,13 @@ const { t } = useT();
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Internal No') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t("Supplier's No") }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Supplier') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Invoice date') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Due') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Total') }}</th>
+                        <SortHeader label="Internal No" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Supplier's No" column="supplier_number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Supplier" column="supplier" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Invoice date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Due" column="due" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Total" column="total" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 text-right font-medium">{{ t('Paid') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Outstanding') }}</th>
                     </tr>
@@ -163,21 +135,6 @@ const { t } = useT();
             </table>
         </div>
 
-        <div v-if="invoices.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-            <p class="text-muted-foreground text-sm">
-                {{ t('Showing :from–:to of :total', { from: invoices.from ?? 0, to: invoices.to ?? 0, total: invoices.total }) }}
-            </p>
-            <div class="flex flex-wrap items-center gap-1">
-                <Button
-                    v-for="link in invoices.links"
-                    :key="link.label"
-                    :variant="link.active ? 'default' : 'outline'"
-                    size="sm"
-                    :disabled="!link.url"
-                    @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
-                    v-html="link.label"
-                />
-            </div>
-        </div>
+        <ListPagination :page="invoices" />
     </div>
 </template>

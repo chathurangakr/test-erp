@@ -19,7 +19,8 @@ import { useT } from '@/lib/i18n';
 /**
  * A dropdown you can type into: the list narrows to the options whose label contains what was
  * typed (anywhere, any case), so a long list of suppliers, products or accounts is found by a
- * few letters. Used in place of a plain <select> everywhere.
+ * few letters. Opened without typing, it lists every option, even when one is already chosen.
+ * Used in place of a plain <select> everywhere.
  *
  * Works with v-model, or — for a plain HTML / Inertia <Form> — with `name` and `defaultValue`,
  * submitting the chosen value through a hidden input exactly as a <select name> would.
@@ -106,7 +107,8 @@ watch(
 
 const search = ref('');
 const filtered = computed(() => {
-    const term = search.value.trim().toLowerCase();
+    // The box shows the current choice's name; opening it must list every option, not just that one.
+    const term = search.value === labelFor(selectedKey.value) ? '' : search.value.trim().toLowerCase();
 
     return props.options
         .map((option, index) => ({ option, key: keyOf(index) }))

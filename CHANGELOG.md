@@ -4,6 +4,19 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.27.0 — 25 October 2026
+
+- **Every list can be filtered, sorted and sized.** Above each list: its own filters (search,
+  status, customer and so on), a **From / To** period on the list's date, and **Rows** — 25, 50,
+  100 or **All**. Click any column heading to sort by it; click again to turn the order round.
+  **Clear filters** puts the list back as it opened.
+- **"All" shows everything.** With no dates chosen it shows every record ever entered; choose a
+  From / To period to see all the records of just that period. Very long lists (more than 5,000
+  records) still go on to a second page so the screen stays quick.
+- Under each list: how many records match and which are shown.
+- **Fix: dropdowns show every choice when opened.** Before, opening a dropdown that already had
+  a choice (for example "All customers") showed only that choice until its text was erased.
+
 ## 1.26.0 — 25 October 2026
 
 - **Cash flow statement.** Reports → Cash Flow shows where money came from and where it went for any

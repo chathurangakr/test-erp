@@ -20,6 +20,7 @@ use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\DecimalMath;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,9 +31,9 @@ use Inertia\Response;
  */
 class CustomerAdvanceController extends AdvanceScreens
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        return $this->renderIndex();
+        return $this->renderIndex($request);
     }
 
     public function create(): Response
@@ -107,6 +108,11 @@ class CustomerAdvanceController extends AdvanceScreens
     protected function party(): string
     {
         return 'customer';
+    }
+
+    protected function partyClass(): string
+    {
+        return Customer::class;
     }
 
     protected function model(): string

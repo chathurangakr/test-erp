@@ -7,12 +7,14 @@ use App\Enums\CustomerReceiptStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreCustomerReceiptRequest;
+use App\Models\Account;
 use App\Models\CashBankAccount;
 use App\Models\Customer;
 use App\Models\CustomerReceipt;
 use App\Models\SalesInvoice;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,8 +29,6 @@ use Inertia\Response;
  */
 class CustomerReceiptController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveCustomerReceipt $saveReceipt,
         private readonly AccountsReceivableService $receivables,
@@ -39,15 +39,21 @@ class CustomerReceiptController extends Controller
         $status = (string) $request->string('status');
         $customerId = $request->integer('customer_id') ?: null;
 
-        $receipts = CustomerReceipt::query()
+        $list = ListQuery::from($request)->period('receipt_date')->sortable([
+            'number' => 'receipt_number',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('code')->whereColumn('customers.id', 'customer_receipts.customer_id'), $d),
+            'date' => 'receipt_date',
+            'account' => fn (Builder $q, string $d) => $q->orderBy(Account::select('code')->whereColumn('accounts.id', 'customer_receipts.receipt_account_id'), $d),
+            'reference' => 'reference',
+            'status' => 'status',
+            'amount' => 'amount',
+        ], 'date');
+
+        $receipts = $list->paginate(CustomerReceipt::query()
             ->with(['customer:id,code,name', 'receiptAccount:id,code,name', 'allocations'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
-            ->orderByDesc('receipt_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id)))
             ->through(fn (CustomerReceipt $receipt): array => $this->summarise($receipt));
 
         return Inertia::render('finance/customer-receipts/Index', [
@@ -56,7 +62,7 @@ class CustomerReceiptController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'customer_id' => $customerId,
-            ],
+            ] + $list->filters(),
             'statuses' => CustomerReceiptStatus::options(),
             'customers' => Customer::query()->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),

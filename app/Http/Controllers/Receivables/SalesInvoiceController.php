@@ -13,6 +13,7 @@ use App\Models\SalesInvoiceLine;
 use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +30,6 @@ use Inertia\Response;
  */
 class SalesInvoiceController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveSalesInvoice $saveInvoice,
         private readonly AccountsReceivableService $receivables,
@@ -41,24 +40,24 @@ class SalesInvoiceController extends Controller
     {
         $status = (string) $request->string('status');
         $customerId = $request->integer('customer_id') ?: null;
-        $from = $request->date('from')?->toDateString();
-        $to = $request->date('to')?->toDateString();
         $overdueOnly = $request->boolean('overdue');
+        $list = ListQuery::from($request)->period('invoice_date')->sortable([
+            'number' => 'invoice_number',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('code')->whereColumn('customers.id', 'sales_invoices.customer_id'), $d),
+            'date' => 'invoice_date',
+            'due' => 'due_date',
+            'status' => 'status',
+            'total' => fn (Builder $q, string $d) => $q->orderBy(SalesInvoiceLine::selectRaw('COALESCE(SUM(amount), 0)')->whereColumn('sales_invoice_lines.sales_invoice_id', 'sales_invoices.id'), $d),
+        ], 'date');
 
-        $invoices = SalesInvoice::query()
+        $invoices = $list->paginate(SalesInvoice::query()
             ->with(['customer:id,code,name', 'lines'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
-            ->when($from, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '>=', $d))
-            ->when($to, fn (Builder $q, string $d) => $q->whereDate('invoice_date', '<=', $d))
             ->when($overdueOnly, fn (Builder $q) => $q
                 ->whereDate('due_date', '<', BusinessClock::todayString())
-                ->whereIn('status', [SalesInvoiceStatus::Posted->value, SalesInvoiceStatus::PartiallyPaid->value]))
-            ->orderByDesc('invoice_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+                ->whereIn('status', [SalesInvoiceStatus::Posted->value, SalesInvoiceStatus::PartiallyPaid->value])))
             ->through(fn (SalesInvoice $invoice): array => $this->summarise($invoice));
 
         return Inertia::render('finance/sales-invoices/Index', [
@@ -67,10 +66,8 @@ class SalesInvoiceController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'customer_id' => $customerId,
-                'from' => $from,
-                'to' => $to,
                 'overdue' => $overdueOnly,
-            ],
+            ] + $list->filters(),
             'statuses' => SalesInvoiceStatus::options(),
             'customers' => Customer::query()->orderBy('code')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),

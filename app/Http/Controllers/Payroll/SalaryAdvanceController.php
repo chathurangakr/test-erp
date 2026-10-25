@@ -11,6 +11,8 @@ use App\Models\Employee;
 use App\Models\SalaryAdvance;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,26 +24,30 @@ use Inertia\Response;
  */
 class SalaryAdvanceController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(private readonly CashDocumentOptions $options) {}
 
     public function index(Request $request): Response
     {
         $employeeId = $request->integer('employee_id') ?: null;
+        $status = (string) $request->string('status');
+        $list = ListQuery::from($request)->period('advance_date')->sortable([
+            'number' => 'advance_number',
+            'date' => 'advance_date',
+            'employee' => fn (Builder $q, string $d) => $q->orderBy(Employee::select('name')->whereColumn('employees.id', 'salary_advances.employee_id'), $d),
+            'amount' => 'amount',
+            'status' => 'status',
+        ], 'date');
 
-        $advances = SalaryAdvance::query()
+        $advances = $list->paginate(SalaryAdvance::query()
             ->with(['employee:id,code,name', 'cashBankAccount:id,display_name'])
             ->when($employeeId, fn ($query, int $id) => $query->where('employee_id', $id))
-            ->orderByDesc('advance_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($status, fn ($query, string $s) => $query->where('status', $s)))
             ->through(fn (SalaryAdvance $advance): array => $this->summarise($advance));
 
         return Inertia::render('payroll/salary-advances/Index', [
             'advances' => $advances,
-            'filters' => ['employee_id' => $employeeId],
+            'filters' => ['employee_id' => $employeeId, 'status' => $status] + $list->filters(),
+            'statuses' => PayrollDocumentStatus::options(),
             'employees' => Employee::query()->orderBy('name')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);

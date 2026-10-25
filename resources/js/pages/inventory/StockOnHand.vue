@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import { Search } from '@lucide/vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import { useClientList } from '@/composables/useClientList';
+import { Input } from '@/components/ui/input';
+import ClientPagination from '@/components/lists/ClientPagination.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import ExportButtons from '@/components/print/ExportButtons.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +65,20 @@ const totalValue = computed(() =>
     props.rows
         .reduce((carry, row) => carry + Number(row.value), 0),
 );
+const { filters: list, visible, pageCount, range, sortBy, clear } = useClientList(() => props.rows, {
+    search: (row) => `${row.product_code} ${row.product_name} ${row.warehouse_code}`,
+    sorts: {
+        code: (row) => row.product_code,
+        product: (row) => row.product_name,
+        warehouse: (row) => row.warehouse_code,
+        quantity: (row) => Number(row.quantity),
+        uom: (row) => row.primary_uom,
+        secondary: (row) => (row.secondary_quantity === null ? null : Number(row.secondary_quantity)),
+        cost: (row) => Number(row.unit_cost),
+        value: (row) => Number(row.value),
+    },
+    defaultSort: 'code',
+});
 </script>
 
 <template>
@@ -105,6 +125,13 @@ const totalValue = computed(() =>
             </div>
         </div>
 
+        <ListControls class="print:hidden" v-model:per-page="list.per_page" v-model:from="list.from" v-model:to="list.to" :period="false" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="list.search" type="search" :placeholder="t('Search product or warehouse…')" class="pl-9" />
+            </div>
+        </ListControls>
+
         <div
             v-if="rows.length === 0"
             class="border-sidebar-border/70 dark:border-sidebar-border flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-12 text-center"
@@ -123,20 +150,20 @@ const totalValue = computed(() =>
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Product') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Warehouse') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Quantity') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('UOM') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Secondary') }}</th>
+                            <SortHeader label="Code" column="code" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="Product" column="product" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="Warehouse" column="warehouse" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="Quantity" column="quantity" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="UOM" column="uom" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="Secondary" column="secondary" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
                             <th class="px-4 py-3 font-medium">{{ t('2nd UOM') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Avg cost') }}</th>
-                            <th class="px-4 py-3 text-right font-medium">{{ t('Value') }}</th>
+                            <SortHeader label="Avg cost" column="cost" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
+                            <SortHeader label="Value" column="value" align="right" :sort="list.sort" :direction="list.direction" @sort="sortBy" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in rows"
+                            v-for="row in visible"
                             :key="`${row.product_id}-${row.warehouse_id}`"
                             class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted/40 border-t"
                         >
@@ -190,7 +217,7 @@ const totalValue = computed(() =>
             <!-- Mobile -->
             <div class="grid gap-3 md:hidden">
                 <div
-                    v-for="row in rows"
+                    v-for="row in visible"
                     :key="`m-${row.product_id}-${row.warehouse_id}`"
                     class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
                 >
@@ -231,6 +258,8 @@ const totalValue = computed(() =>
                 </div>
             </div>
         </template>
+
+        <ClientPagination class="print:hidden" v-model:page="list.page" :range="range" :page-count="pageCount" />
 
         <p class="text-muted-foreground max-w-3xl text-xs print:hidden">
             {{ t('Weighted average cost is maintained at company level, so it is the same for a product in every warehouse. Moving stock between warehouses does not change total quantity, total value or the average cost.') }}

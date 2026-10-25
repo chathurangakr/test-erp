@@ -7,10 +7,13 @@ use App\Enums\ExpenseVoucherStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cash\StoreExpenseVoucherRequest;
 use App\Http\Requests\Cash\UpdateExpenseVoucherRequest;
+use App\Models\CashBankAccount;
 use App\Models\ExpenseVoucher;
+use App\Models\ExpenseVoucherLine;
 use App\Models\Supplier;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,8 +28,6 @@ use Inertia\Response;
  */
 class ExpenseVoucherController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly SaveExpenseVoucher $saveVoucher,
         private readonly CashDocumentOptions $options,
@@ -37,15 +38,21 @@ class ExpenseVoucherController extends Controller
         $status = (string) $request->string('status');
         $accountId = $request->integer('cash_bank_account_id') ?: null;
 
-        $vouchers = ExpenseVoucher::query()
+        $list = ListQuery::from($request)->period('voucher_date')->sortable([
+            'number' => 'voucher_number',
+            'date' => 'voucher_date',
+            // The payee is the supplier when one is named, else the name typed on the voucher.
+            'payee' => fn (Builder $q, string $d) => $q->orderByRaw('COALESCE((SELECT name FROM suppliers WHERE suppliers.id = expense_vouchers.supplier_id), expense_vouchers.payee_name) '.$d),
+            'account' => fn (Builder $q, string $d) => $q->orderBy(CashBankAccount::select('display_name')->whereColumn('cash_bank_accounts.id', 'expense_vouchers.cash_bank_account_id'), $d),
+            'status' => 'status',
+            'amount' => fn (Builder $q, string $d) => $q->orderBy(ExpenseVoucherLine::selectRaw('COALESCE(SUM(amount), 0)')->whereColumn('expense_voucher_lines.expense_voucher_id', 'expense_vouchers.id'), $d),
+        ], 'date');
+
+        $vouchers = $list->paginate(ExpenseVoucher::query()
             ->with(['cashBankAccount:id,display_name', 'supplier:id,code,name', 'lines'])
             ->search((string) $request->string('search'))
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($accountId, fn (Builder $q, int $id) => $q->where('cash_bank_account_id', $id))
-            ->orderByDesc('voucher_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($accountId, fn (Builder $q, int $id) => $q->where('cash_bank_account_id', $id)))
             ->through(fn (ExpenseVoucher $voucher): array => $this->summarise($voucher));
 
         return Inertia::render('finance/expense-vouchers/Index', [
@@ -54,7 +61,7 @@ class ExpenseVoucherController extends Controller
                 'search' => (string) $request->string('search'),
                 'status' => $status ?: '',
                 'cash_bank_account_id' => $accountId,
-            ],
+            ] + $list->filters(),
             'statuses' => ExpenseVoucherStatus::options(),
             'accounts' => $this->options->cashBankAccounts(),
             'currency' => config('accounting.base_currency'),

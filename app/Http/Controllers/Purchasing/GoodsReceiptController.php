@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StoreGoodsReceiptRequest;
 use App\Http\Requests\Purchasing\UpdateGoodsReceiptRequest;
 use App\Models\GoodsReceipt;
+use App\Models\GoodsReceiptLine;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -16,6 +17,7 @@ use App\Models\Warehouse;
 use App\Services\Purchasing\LandedCostAllocator;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,8 +36,6 @@ use Inertia\Response;
  */
 class GoodsReceiptController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function __construct(
         private readonly SaveGoodsReceipt $saveReceipt,
         private readonly LandedCostAllocator $allocator,
@@ -47,14 +47,23 @@ class GoodsReceiptController extends Controller
         $status = (string) $request->string('status');
         $supplierId = $request->integer('supplier_id') ?: null;
 
-        $receipts = GoodsReceipt::query()
+        $material = GoodsReceiptLine::selectRaw('COALESCE(SUM(quantity * unit_price), 0)')->whereColumn('goods_receipt_lines.goods_receipt_id', 'goods_receipts.id');
+        $list = ListQuery::from($request)->period('receipt_date')->sortable([
+            'number' => 'grn_number',
+            'supplier' => fn (Builder $q, string $d) => $q->orderBy(Supplier::select('code')->whereColumn('suppliers.id', 'goods_receipts.supplier_id'), $d),
+            'warehouse' => fn (Builder $q, string $d) => $q->orderBy(Warehouse::select('code')->whereColumn('warehouses.id', 'goods_receipts.warehouse_id'), $d),
+            'date' => 'receipt_date',
+            'status' => 'status',
+            'material' => fn (Builder $q, string $d) => $q->orderBy($material, $d),
+            'landed' => fn (Builder $q, string $d) => $q->orderByRaw('(COALESCE(transport_cost, 0) + COALESCE(loading_cost, 0) + COALESCE(other_cost, 0)) '.$d),
+            'total' => fn (Builder $q, string $d) => $q->orderByRaw('(('.$material->toRawSql().') + COALESCE(transport_cost, 0) + COALESCE(loading_cost, 0) + COALESCE(other_cost, 0)) '.$d),
+        ], 'date');
+
+        $receipts = $list->paginate(GoodsReceipt::query()
             ->with(['supplier:id,code,name', 'warehouse:id,code', 'lines', 'purchaseOrder:id,po_number'])
             ->search($search)
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id)))
             ->through(fn (GoodsReceipt $receipt): array => $this->summarise($receipt));
 
         return Inertia::render('purchasing/goods-receipts/Index', [
@@ -63,7 +72,7 @@ class GoodsReceiptController extends Controller
                 'search' => $search,
                 'status' => $status ?: '',
                 'supplier_id' => $supplierId,
-            ],
+            ] + $list->filters(),
             'suppliers' => Supplier::query()->orderBy('code')->get(['id', 'code', 'name']),
             'statuses' => GoodsReceiptStatus::options(),
         ]);

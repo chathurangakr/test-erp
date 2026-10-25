@@ -195,8 +195,10 @@ class LocalisationTest extends TestCase
                 preg_match_all('/\bt\("((?:[^"\\\\]|\\\\.)+)"/', $source, $double);
                 // A default inside t(), e.g. t(props.label ?? 'Sign in with a passkey').
                 preg_match_all("/\\bt\\([^()']*\\?\\?\\s*'((?:[^'\\\\]|\\\\.)+)'/", $source, $fallback);
+                // Column headings and list controls translate the English they are given.
+                preg_match_all('/<(?:SortHeader|ListControls)\b[^>]*?\s(?:label|period-label)="([^"]+)"/', $source, $headings);
 
-                foreach ([...$single[1], ...$double[1], ...$fallback[1]] as $key) {
+                foreach ([...$single[1], ...$double[1], ...$fallback[1], ...$headings[1]] as $key) {
                     $key = stripslashes($key);
 
                     if (! array_key_exists($key, $sinhala)) {

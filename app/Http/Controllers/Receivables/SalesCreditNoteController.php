@@ -7,6 +7,7 @@ use App\Actions\Receivables\ReverseSalesCreditNote;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesCreditNoteKind;
 use App\Enums\SalesCreditNoteSettlement;
+use App\Enums\SalesCreditNoteStatus;
 use App\Enums\SalesInvoiceStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Receivables\StoreSalesCreditNoteRequest;
@@ -17,6 +18,8 @@ use App\Services\Accounting\AccountsReceivableService;
 use App\Services\Accounting\CashDocumentOptions;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,8 +32,6 @@ use Inertia\Response;
  */
 class SalesCreditNoteController extends Controller
 {
-    private const PER_PAGE = 25;
-
     public function __construct(
         private readonly AccountsReceivableService $receivables,
         private readonly CashDocumentOptions $options,
@@ -39,17 +40,29 @@ class SalesCreditNoteController extends Controller
     public function index(Request $request): Response
     {
         $customerId = $request->integer('customer_id') ?: null;
+        $search = trim((string) $request->string('search'));
+        $status = (string) $request->string('status');
+        $list = ListQuery::from($request)->period('credit_date')->sortable([
+            'number' => 'credit_note_number',
+            'date' => 'credit_date',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('name')->whereColumn('customers.id', 'sales_credit_notes.customer_id'), $d),
+            'invoice' => fn (Builder $q, string $d) => $q->orderBy(SalesInvoice::select('invoice_number')->whereColumn('sales_invoices.id', 'sales_credit_notes.sales_invoice_id'), $d),
+            'kind' => 'kind',
+            'amount' => 'amount',
+            'status' => 'status',
+        ], 'date');
 
         return Inertia::render('finance/credit-notes/Index', [
-            'notes' => SalesCreditNote::query()
+            'notes' => $list->paginate(SalesCreditNote::query()
                 ->with(['customer:id,code,name', 'invoice:id,invoice_number'])
-                ->when($customerId, fn ($query, int $id) => $query->where('customer_id', $id))
-                ->orderByDesc('credit_date')
-                ->orderByDesc('id')
-                ->paginate(self::PER_PAGE)
-                ->withQueryString()
+                ->when($customerId, fn (Builder $query, int $id) => $query->where('customer_id', $id))
+                ->when($status, fn (Builder $query, string $s) => $query->where('status', $s))
+                ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $q) => $q
+                    ->where('credit_note_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")))))
                 ->through(fn (SalesCreditNote $note): array => $this->summarise($note)),
-            'filters' => ['customer_id' => $customerId],
+            'filters' => ['customer_id' => $customerId, 'search' => $search, 'status' => $status] + $list->filters(),
+            'statuses' => array_map(fn (SalesCreditNoteStatus $s): array => ['value' => $s->value, 'label' => $s->label()], SalesCreditNoteStatus::cases()),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);

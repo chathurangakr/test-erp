@@ -11,6 +11,7 @@ use App\Http\Requests\Sales\StoreDeliveryRequest;
 use App\Http\Requests\Sales\UpdateDeliveryRequest;
 use App\Models\Customer;
 use App\Models\Delivery;
+use App\Models\DeliveryLine;
 use App\Models\InventoryLot;
 use App\Models\Product;
 use App\Models\ProductionRecipe;
@@ -19,6 +20,7 @@ use App\Models\Warehouse;
 use App\Services\Inventory\StockQueryService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,8 +38,6 @@ use Inertia\Response;
  */
 class DeliveryController extends Controller
 {
-    private const PER_PAGE = 20;
-
     public function __construct(
         private readonly SaveDelivery $saveDelivery,
         private readonly StockQueryService $stock,
@@ -48,15 +48,21 @@ class DeliveryController extends Controller
         $search = (string) $request->string('search');
         $status = (string) $request->string('status');
         $customerId = $request->integer('customer_id') ?: null;
+        $list = ListQuery::from($request)->period('delivery_date')->sortable([
+            'number' => 'delivery_number',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('code')->whereColumn('customers.id', 'deliveries.customer_id'), $d),
+            'date' => 'delivery_date',
+            'status' => 'status',
+            'sales' => fn (Builder $q, string $d) => $q->orderBy(DeliveryLine::selectRaw('COALESCE(SUM(sales_value), 0)')->whereColumn('delivery_lines.delivery_id', 'deliveries.id'), $d),
+            'cogs' => fn (Builder $q, string $d) => $q->orderBy(DeliveryLine::selectRaw('COALESCE(SUM(cost_of_goods_sold), 0)')->whereColumn('delivery_lines.delivery_id', 'deliveries.id'), $d),
+            'profit' => fn (Builder $q, string $d) => $q->orderBy(DeliveryLine::selectRaw('COALESCE(SUM(sales_value - COALESCE(cost_of_goods_sold, 0)), 0)')->whereColumn('delivery_lines.delivery_id', 'deliveries.id'), $d),
+        ], 'date');
 
-        $deliveries = Delivery::query()
+        $deliveries = $list->paginate(Delivery::query()
             ->with(['customer:id,code,name', 'warehouse:id,code', 'lines', 'salesOrder:id,so_number'])
             ->search($search)
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id)))
             ->through(fn (Delivery $delivery): array => $this->summarise($delivery));
 
         return Inertia::render('sales/deliveries/Index', [
@@ -65,7 +71,7 @@ class DeliveryController extends Controller
                 'search' => $search,
                 'status' => $status ?: '',
                 'customer_id' => $customerId,
-            ],
+            ] + $list->filters(),
             'customers' => Customer::query()->orderBy('code')->get(['id', 'code', 'name']),
             'statuses' => DeliveryStatus::options(),
         ]);

@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/employees';
 import type { EmployeeRow, Paginated } from '@/types';
@@ -15,7 +18,7 @@ import { money } from '@/lib/money';
 
 const props = defineProps<{
     employees: Paginated<EmployeeRow>;
-    filters: { search: string; status: string };
+    filters: { search: string; status: string } & ListControlValues;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Employees', href: index() }] } });
@@ -23,12 +26,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Employees', href: index() }] }
 const { t } = useT();
 const { can } = usePermissions();
 
-const search = ref(props.filters.search);
-const status = ref(props.filters.status);
-
-watch([search, status], () => {
-    router.get(index().url, { search: search.value || undefined, status: status.value }, { preserveState: true, replace: true });
-});
+const { filters, sortBy, clear } = useListFilters(() => index().url, { ...props.filters });
 
 </script>
 
@@ -43,23 +41,24 @@ watch([search, status], () => {
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Input v-model="search" :placeholder="t('Search code, name, NIC or phone')" />
+        <ListControls v-model:per-page="filters.per_page" :period="false" @clear="clear">
+            <Input v-model="filters.search" type="search" class="w-full sm:w-72" :placeholder="t('Search code, name, NIC or phone')" />
             <SearchableSelect
-                v-model="status"
+                v-model="filters.status"
+                class="w-full sm:w-40"
                 :options="[{ value: 'active', label: t('Active') }, { value: 'inactive', label: t('Inactive') }, { value: 'all', label: t('All') }]"
             />
-        </div>
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Employee') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Phone') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Daily rate') }}</th>
+                        <SortHeader label="Employee" column="name" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Phone" column="phone" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Daily rate" column="daily_rate" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         <th class="px-4 py-3 text-right font-medium">{{ t('Advance owed') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -86,12 +85,6 @@ watch([search, status], () => {
             </table>
         </div>
 
-        <div v-if="employees.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in employees.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="employees" />
     </div>
 </template>

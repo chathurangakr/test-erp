@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
@@ -26,7 +30,8 @@ type CreditNoteRow = {
 
 const props = defineProps<{
     notes: Paginated<CreditNoteRow>;
-    filters: { customer_id: number | null };
+    filters: { customer_id: number | null; search: string; status: string } & ListControlValues;
+    statuses: { value: string; label: string }[];
     customers: { id: number; code: string; name: string }[];
     currency: string;
 }>();
@@ -36,9 +41,9 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Credit notes', href: index() }
 const { t } = useT();
 const { can } = usePermissions();
 
-const customerId = ref(props.filters.customer_id ? String(props.filters.customer_id) : '');
-watch(customerId, () => {
-    router.get(index().url, { customer_id: customerId.value || undefined }, { preserveState: true, replace: true });
+const { filters, sortBy, clear } = useListFilters(() => index().url, {
+    ...props.filters,
+    customer_id: props.filters.customer_id ? String(props.filters.customer_id) : '',
 });
 </script>
 
@@ -53,24 +58,32 @@ watch(customerId, () => {
             </Button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <SearchableSelect
-                v-model="customerId"
-                :options="[{ value: '', label: t('All customers') }, ...customers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]"
-            />
-        </div>
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" @clear="clear">
+            <div class="grid gap-1 text-xs w-full sm:w-56">
+                <span class="text-muted-foreground">{{ t('Search') }}</span>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search number or customer')" />
+            </div>
+            <div class="grid gap-1 text-xs w-full sm:w-64">
+                <span class="text-muted-foreground">{{ t('Customer') }}</span>
+                <SearchableSelect v-model="filters.customer_id" :options="[{ value: '', label: t('All customers') }, ...customers.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]" />
+            </div>
+            <div class="grid gap-1 text-xs w-full sm:w-48">
+                <span class="text-muted-foreground">{{ t('Status') }}</span>
+                <SearchableSelect v-model="filters.status" :options="[{ value: '', label: t('All statuses') }, ...statuses.map((s) => ({ value: s.value, label: s.label }))]" />
+            </div>
+        </ListControls>
 
         <div class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
-                        <th class="px-4 py-3 font-medium">{{ t('Credit note') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Date') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Customer') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Invoice') }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Kind') }}</th>
-                        <th class="px-4 py-3 text-right font-medium">{{ t('Amount (:currency)', { currency }) }}</th>
-                        <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                        <SortHeader label="Credit note" column="number" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Date" column="date" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Customer" column="customer" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Invoice" column="invoice" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Kind" column="kind" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                        <SortHeader label="Amount" column="amount" align="right" :sort="filters.sort" :direction="filters.direction" @sort="sortBy">{{ t('Amount (:currency)', { currency }) }}</SortHeader>
+                        <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                     </tr>
                 </thead>
                 <tbody>
@@ -90,12 +103,6 @@ watch(customerId, () => {
             </table>
         </div>
 
-        <div v-if="notes.last_page > 1" class="flex flex-wrap gap-1">
-            <template v-for="link in notes.links" :key="link.label">
-                <Link v-if="link.url" :href="link.url" class="rounded-md border px-3 py-1 text-sm" :class="link.active ? 'bg-muted font-medium' : ''" preserve-state>
-                    <span v-html="link.label" />
-                </Link>
-            </template>
-        </div>
+        <ListPagination :page="notes" />
     </div>
 </template>

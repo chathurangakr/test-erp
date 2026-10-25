@@ -14,6 +14,7 @@ use App\Http\Requests\Payroll\PayPayrollRequest;
 use App\Http\Requests\Sales\StoreSalesReturnRequest;
 use App\Models\Customer;
 use App\Models\DeliveryLine;
+use App\Models\Product;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Models\SalesReturn;
@@ -23,6 +24,8 @@ use App\Services\Accounting\CashDocumentOptions;
 use App\Services\Accounting\SalesBillingReconciliationService;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,8 +38,6 @@ use Inertia\Response;
  */
 class SalesReturnController extends Controller
 {
-    private const PER_PAGE = 25;
-
     /** How far back the form looks for deliveries to return against. */
     private const LOOKBACK_DAYS = 180;
 
@@ -48,19 +49,34 @@ class SalesReturnController extends Controller
     public function index(Request $request): Response
     {
         $customerId = $request->integer('customer_id') ?: null;
+        $search = trim((string) $request->string('search'));
+        $settlement = SalesReturnSettlement::tryFrom((string) $request->string('settlement'))?->value;
+        $list = ListQuery::from($request)->period('return_date')->sortable([
+            'number' => 'return_number',
+            'date' => 'return_date',
+            'customer' => fn (Builder $q, string $d) => $q->orderBy(Customer::select('name')->whereColumn('customers.id', 'sales_returns.customer_id'), $d),
+            'product' => fn (Builder $q, string $d) => $q->orderBy(Product::select('name')->whereColumn('products.id', 'sales_returns.product_id'), $d),
+            'quantity' => fn (Builder $q, string $d) => $q->orderByRaw('(COALESCE(good_quantity, 0) + COALESCE(damaged_quantity, 0)) '.$d),
+            'credit' => 'credit_amount',
+            'settlement' => 'settlement',
+            'status' => 'status',
+        ], 'date');
 
-        $returns = SalesReturn::query()
+        $returns = $list->paginate(SalesReturn::query()
             ->with(['customer:id,code,name', 'product:id,code,name', 'deliveryLine.delivery:id,delivery_number'])
             ->when($customerId, fn ($query, int $id) => $query->where('customer_id', $id))
-            ->orderByDesc('return_date')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
-            ->withQueryString()
+            ->when($settlement, fn ($query, string $value) => $query->where('settlement', $value))
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $q) => $q
+                ->where('return_number', 'like', "%{$search}%")
+                ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
+                ->orWhereHas('product', fn (Builder $p) => $p->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
+                ->orWhereHas('deliveryLine.delivery', fn (Builder $dl) => $dl->where('delivery_number', 'like', "%{$search}%")))))
             ->through(fn (SalesReturn $return): array => $this->summarise($return));
 
         return Inertia::render('sales/returns/Index', [
             'returns' => $returns,
-            'filters' => ['customer_id' => $customerId],
+            'filters' => ['search' => $search, 'customer_id' => $customerId, 'settlement' => $settlement ?? ''] + $list->filters(),
+            'settlements' => SalesReturnSettlement::options(),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'code', 'name']),
             'currency' => config('accounting.base_currency'),
         ]);

@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { Search, X } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Head } from '@inertiajs/vue3';
+import { Search } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import type { LotRow, OptionRef, Paginated } from '@/types';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
@@ -17,7 +19,7 @@ const props = defineProps<{
         search: string;
         product_id: number | null;
         status: 'all' | 'active' | 'inactive';
-    };
+    } & ListControlValues;
     products: OptionRef[];
 }>();
 
@@ -29,39 +31,10 @@ defineOptions({
 
 const { t } = useT();
 
-const search = ref(props.filters.search ?? '');
-const productId = ref(
-    props.filters.product_id ? String(props.filters.product_id) : '',
-);
-const status = ref(props.filters.status ?? 'all');
-
-let debounce: ReturnType<typeof setTimeout> | undefined;
-
-function applyFilters(immediate = false): void {
-    clearTimeout(debounce);
-
-    const run = () =>
-        router.get(
-            lotsIndex().url,
-            {
-                search: search.value || undefined,
-                product_id: productId.value || undefined,
-                status: status.value === 'all' ? undefined : status.value,
-            },
-            { preserveState: true, replace: true, preserveScroll: true },
-        );
-
-    if (immediate) {
-        run();
-        return;
-    }
-
-    debounce = setTimeout(run, 300);
-}
-
-watch(search, () => applyFilters());
-watch([productId, status], () => applyFilters(true));
-
+const { filters, sortBy, clear } = useListFilters(() => lotsIndex().url, {
+    ...props.filters,
+    product_id: props.filters.product_id ? String(props.filters.product_id) : '',
+});
 
 const statusOptions = [
     { value: 'all', label: 'All' },
@@ -79,65 +52,31 @@ const statusOptions = [
             description="Batch traceability. Lots are created by posting documents, not by hand."
         />
 
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div class="relative flex-1">
-                <Search
-                    class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                />
-                <Input
-                    v-model="search"
-                    type="search"
-                    :placeholder="t('Search lot number or supplier lot…')"
-                    class="pl-9"
-                    :aria-label="t('Search lots')"
-                />
-                <button
-                    v-if="search"
-                    type="button"
-                    class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                    :aria-label="t('Clear search')"
-                    @click="
-                        search = '';
-                        applyFilters(true);
-                    "
-                >
-                    <X class="size-4" />
-                </button>
+        <ListControls v-model:per-page="filters.per_page" v-model:from="filters.from" v-model:to="filters.to" period-label="Received" @clear="clear">
+            <div class="relative w-full sm:w-72">
+                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input v-model="filters.search" type="search" :placeholder="t('Search lot number or supplier lot…')" class="pl-9" :aria-label="t('Search lots')" />
             </div>
-
-            <div class="grid gap-1.5 lg:w-64">
-                <label for="lot-product" class="text-sm font-medium">{{
-                    t('Product')
-                }}</label>
-                <SearchableSelect
-                    id="lot-product"
-                    v-model="productId"
-                    :options="[{ value: '', label: t('All products') }, ...(products).map((p) => ({ value: String(p.id), label: `${(p.code) ?? ''}` }))]"
-                />
-            </div>
-
-            <div
-                class="bg-muted inline-flex shrink-0 rounded-md p-1"
-                role="group"
-                :aria-label="t('Filter by status')"
-            >
+            <SearchableSelect
+                v-model="filters.product_id"
+                class="w-full sm:w-56"
+                :aria-label="t('Product')"
+                :options="[{ value: '', label: t('All products') }, ...products.map((p) => ({ value: String(p.id), label: `${p.code ?? ''}` }))]"
+            />
+            <div class="bg-muted inline-flex h-9 shrink-0 items-center rounded-md p-1" role="group" :aria-label="t('Filter by status')">
                 <button
                     v-for="option in statusOptions"
                     :key="option.value"
                     type="button"
-                    class="rounded px-3 py-1.5 text-sm font-medium transition-colors"
-                    :class="
-                        status === option.value
-                            ? 'bg-background text-foreground shadow-xs'
-                            : 'text-muted-foreground hover:text-foreground'
-                    "
-                    :aria-pressed="status === option.value"
-                    @click="status = option.value"
+                    class="rounded px-3 py-1 text-sm font-medium transition-colors"
+                    :class="filters.status === option.value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+                    :aria-pressed="filters.status === option.value"
+                    @click="filters.status = option.value"
                 >
                     {{ t(option.label) }}
                 </button>
             </div>
-        </div>
+        </ListControls>
 
         <div
             v-if="lots.data.length === 0"
@@ -160,30 +99,20 @@ const statusOptions = [
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">
-                                {{ t('Lot number') }}
-                            </th>
-                            <th class="px-4 py-3 font-medium">
-                                {{ t('Product') }}
-                            </th>
+                            <SortHeader label="Lot number" column="lot" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Product" column="product" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-4 py-3 font-medium">
                                 {{ t('Source') }}
                             </th>
-                            <th class="px-4 py-3 font-medium">
-                                {{ t('Received') }}
-                            </th>
-                            <th class="px-4 py-3 font-medium">
-                                {{ t('Manufactured') }}
-                            </th>
+                            <SortHeader label="Received" column="received" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Manufactured" column="manufactured" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-4 py-3 text-right font-medium">
                                 {{ t('Quantity') }}
                             </th>
                             <th class="px-4 py-3 font-medium">
                                 {{ t('Warehouses') }}
                             </th>
-                            <th class="px-4 py-3 font-medium">
-                                {{ t('Status') }}
-                            </th>
+                            <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                         </tr>
                     </thead>
                     <tbody>
@@ -316,37 +245,8 @@ const statusOptions = [
                 </div>
             </div>
 
-            <div
-                v-if="lots.last_page > 1"
-                class="flex flex-col items-center justify-between gap-3 sm:flex-row"
-            >
-                <p class="text-muted-foreground text-sm">
-                    {{
-                        t('Showing :from–:to of :total', {
-                            from: lots.from ?? 0,
-                            to: lots.to ?? 0,
-                            total: lots.total,
-                        })
-                    }}
-                </p>
-                <div class="flex flex-wrap items-center gap-1">
-                    <Button
-                        v-for="link in lots.links"
-                        :key="link.label"
-                        :variant="link.active ? 'default' : 'outline'"
-                        size="sm"
-                        :disabled="!link.url"
-                        @click="
-                            link.url &&
-                            router.visit(link.url, {
-                                preserveState: true,
-                                preserveScroll: true,
-                            })
-                        "
-                        v-html="link.label"
-                    />
-                </div>
-            </div>
         </template>
+
+        <ListPagination :page="lots" />
     </div>
 </template>

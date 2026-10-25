@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, X } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Form, Head, Link } from '@inertiajs/vue3';
+import { Pencil, Plus, Search } from '@lucide/vue';
 import SupplierStatusController from '@/actions/App/Http/Controllers/Suppliers/SupplierStatusController';
 import Heading from '@/components/Heading.vue';
+import ListControls from '@/components/lists/ListControls.vue';
+import ListPagination from '@/components/lists/ListPagination.vue';
+import SortHeader from '@/components/lists/SortHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { type ListControls as ListControlValues, useListFilters } from '@/composables/useListFilters';
 import { usePermissions } from '@/composables/usePermissions';
 import { index } from '@/routes/suppliers';
 import type { Paginated, Supplier, ProductFilters } from '@/types';
@@ -14,7 +17,7 @@ import { useT } from '@/lib/i18n';
 
 const props = defineProps<{
     suppliers: Paginated<Supplier>;
-    filters: ProductFilters;
+    filters: ProductFilters & ListControlValues;
 }>();
 
 defineOptions({
@@ -25,39 +28,7 @@ defineOptions({
 
 const { can } = usePermissions();
 
-const search = ref(props.filters.search ?? '');
-const status = ref<ProductFilters['status']>(props.filters.status ?? 'all');
-
-let debounce: ReturnType<typeof setTimeout> | undefined;
-
-function applyFilters(immediate = false): void {
-    clearTimeout(debounce);
-
-    const run = () =>
-        router.get(
-            index().url,
-            {
-                search: search.value || undefined,
-                status: status.value === 'all' ? undefined : status.value,
-            },
-            { preserveState: true, replace: true, preserveScroll: true },
-        );
-
-    if (immediate) {
-        run();
-        return;
-    }
-
-    debounce = setTimeout(run, 300);
-}
-
-watch(search, () => applyFilters());
-watch(status, () => applyFilters(true));
-
-function clearSearch(): void {
-    search.value = '';
-    applyFilters(true);
-}
+const { filters, sortBy, clear } = useListFilters(() => index().url, { ...props.filters });
 
 const statusOptions: { value: ProductFilters['status']; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -82,45 +53,25 @@ const { t } = useT();
             </Button>
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div class="relative flex-1">
+        <ListControls v-model:per-page="filters.per_page" :period="false" @clear="clear">
+            <div class="relative w-full sm:w-80">
                 <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                    v-model="search"
-                    type="search"
-                    :placeholder="t('Search by code, name, contact, phone or city…')"
-                    class="pl-9"
-                    :aria-label="t('Search suppliers')"
-                />
-                <button
-                    v-if="search"
-                    type="button"
-                    class="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                    :aria-label="t('Clear search')"
-                    @click="clearSearch"
-                >
-                    <X class="size-4" />
-                </button>
+                <Input v-model="filters.search" type="search" :placeholder="t('Search by code, name, contact, phone or city…')" class="pl-9" :aria-label="t('Search suppliers')" />
             </div>
-
-            <div class="bg-muted inline-flex shrink-0 rounded-md p-1" role="group" :aria-label="t('Filter by status')">
+            <div class="bg-muted inline-flex h-9 shrink-0 items-center rounded-md p-1" role="group" :aria-label="t('Filter by status')">
                 <button
                     v-for="option in statusOptions"
                     :key="option.value"
                     type="button"
-                    class="rounded px-3 py-1.5 text-sm font-medium transition-colors"
-                    :class="
-                        status === option.value
-                            ? 'bg-background text-foreground shadow-xs'
-                            : 'text-muted-foreground hover:text-foreground'
-                    "
-                    :aria-pressed="status === option.value"
-                    @click="status = option.value"
+                    class="rounded px-3 py-1 text-sm font-medium transition-colors"
+                    :class="filters.status === option.value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+                    :aria-pressed="filters.status === option.value"
+                    @click="filters.status = option.value"
                 >
                     {{ t(option.label) }}
                 </button>
             </div>
-        </div>
+        </ListControls>
 
         <div
             v-if="suppliers.data.length === 0"
@@ -137,13 +88,13 @@ const { t } = useT();
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
-                            <th class="px-4 py-3 font-medium">{{ t('Code') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Name') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Contact') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Phone') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('City') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Terms') }}</th>
-                            <th class="px-4 py-3 font-medium">{{ t('Status') }}</th>
+                            <SortHeader label="Code" column="code" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Name" column="name" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Contact" column="contact" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Phone" column="phone" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="City" column="city" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Terms" column="terms" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
+                            <SortHeader label="Status" column="status" :sort="filters.sort" :direction="filters.direction" @sort="sortBy" />
                             <th class="px-4 py-3 text-right font-medium">{{ t('Actions') }}</th>
                         </tr>
                     </thead>
@@ -247,22 +198,8 @@ const { t } = useT();
                 </div>
             </div>
 
-            <div v-if="suppliers.last_page > 1" class="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p class="text-muted-foreground text-sm">
-                    {{ t('Showing :from–:to of :total', { from: suppliers.from ?? 0, to: suppliers.to ?? 0, total: suppliers.total }) }}
-                </p>
-                <div class="flex flex-wrap items-center gap-1">
-                    <Button
-                        v-for="link in suppliers.links"
-                        :key="link.label"
-                        :variant="link.active ? 'default' : 'outline'"
-                        size="sm"
-                        :disabled="!link.url"
-                        @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })"
-                        v-html="link.label"
-                    />
-                </div>
-            </div>
         </template>
+
+        <ListPagination :page="suppliers" />
     </div>
 </template>
