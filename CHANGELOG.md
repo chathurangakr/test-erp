@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.23.1 — 25 October 2026
+
+- **Pay salaries to each person separately.** On Pay salaries every employee now has a tick box:
+  untick anyone you are not paying today, and only the ticked people are paid. The others keep
+  their unpaid days for another day.
+
 ## 1.23.0 — 25 October 2026
 
 - **Cheques** (Cash & bank → Cheques). Every cheque you received or issued, with where it stands:

@@ -2585,5 +2585,12 @@
     "Statements are reconciled in order: the last one is dated :date.": "ප්‍රකාශ පිළිවෙළින් සසඳනු ලැබේ: අවසන් එක :date දිනැතියි.",
     "Some ticked lines are not on this account, are dated after the statement, or were already reconciled.": "සලකුණු කළ සමහර පේළි මෙම ගිණුමේ නැත, ප්‍රකාශයට පසු දිනැති හෝ දැනටමත් සසඳා ඇත.",
     "The ticked lines leave :cleared, but the statement says :statement — a difference of :difference.": "සලකුණු කළ පේළිවලින් ශේෂය :cleared, නමුත් ප්‍රකාශයේ :statement — වෙනස :difference.",
-    "Only the latest reconciliation of an account can be undone.": "ගිණුමක නවතම සැසඳීම පමණක් අහෝසි කළ හැක."
+    "Only the latest reconciliation of an account can be undone.": "ගිණුමක නවතම සැසඳීම පමණක් අහෝසි කළ හැක.",
+    "Pay :amount in salaries to :names for :from to :to? The money leaves the chosen account now.": ":names ට :from සිට :to දක්වා වැටුප් ලෙස :amount ගෙවන්නද? මුදල දැන් තෝරාගත් ගිණුමෙන් ඉවත් වේ.",
+    "Tick the people you are paying now — one, a few or everyone. Anyone left unticked can be paid on another day. Days already paid are shown and never paid again.": "දැන් ගෙවන අය සලකුණු කරන්න — එක් අයෙක්, කිහිප දෙනෙක් හෝ සියලු දෙනා. සලකුණු නොකළ අයට වෙනත් දිනක ගෙවිය හැක. දැනටමත් ගෙවූ දින පෙන්වනු ලබන අතර නැවත කිසිදා ගෙවනු නොලැබේ.",
+    "Tick everyone": "සියලු දෙනා සලකුණු කරන්න",
+    "Pay :name now": ":name ට දැන් ගෙවන්න",
+    "Total for the ticked people (:currency)": "සලකුණු කළ අයගේ එකතුව (:currency)",
+    "Pay everyone": "සියලු දෙනාට ගෙවන්න",
+    "Pay :count ticked": "සලකුණු කළ :count දෙනාට ගෙවන්න"
 }

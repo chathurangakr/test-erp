@@ -51,10 +51,19 @@ const takeBack = reactive<Record<number, string>>(Object.fromEntries(props.lines
 const net = (line: PayrollLineView) => Number(line.gross_pay) - Number(takeBack[line.employee_id] || 0);
 const tooMuch = (line: PayrollLineView) => Number(takeBack[line.employee_id] || 0) > Number(line.advances_deducted) || Number(takeBack[line.employee_id] || 0) < 0;
 
+/** Who is being paid now — everyone ticked to start; untick anyone paid on another day. */
+const chosen = reactive<Record<number, boolean>>(Object.fromEntries(props.lines.map((line) => [line.employee_id, true])));
+const chosenLines = computed(() => props.lines.filter((line) => chosen[line.employee_id]));
+const allChosen = computed(() => chosenLines.value.length === props.lines.length);
+
+function chooseAll(value: boolean): void {
+    props.lines.forEach((line) => (chosen[line.employee_id] = value));
+}
+
 const totals = computed(() => ({
-    gross: props.lines.reduce((sum, line) => sum + Number(line.gross_pay), 0),
-    taken: props.lines.reduce((sum, line) => sum + Number(takeBack[line.employee_id] || 0), 0),
-    net: props.lines.reduce((sum, line) => sum + net(line), 0),
+    gross: chosenLines.value.reduce((sum, line) => sum + Number(line.gross_pay), 0),
+    taken: chosenLines.value.reduce((sum, line) => sum + Number(takeBack[line.employee_id] || 0), 0),
+    net: chosenLines.value.reduce((sum, line) => sum + net(line), 0),
 }));
 
 /** People in scope whose every recorded day in the period was already paid. */
@@ -78,7 +87,9 @@ const form = useForm({
 const errors = computed(() => form.errors as Record<string, string | undefined>);
 
 function submit(): void {
-    if (!confirm(t('Pay :amount in salaries for :from to :to? The money leaves the chosen account now.', { amount: money(totals.value.net), from: props.periodStart, to: props.periodEnd }))) {
+    const names = chosenLines.value.map((line) => line.name).join(', ');
+
+    if (!confirm(t('Pay :amount in salaries to :names for :from to :to? The money leaves the chosen account now.', { amount: money(totals.value.net), names, from: props.periodStart, to: props.periodEnd }))) {
         return;
     }
 
@@ -86,8 +97,9 @@ function submit(): void {
         ...data,
         period_start: props.periodStart,
         period_end: props.periodEnd,
-        employee_ids: props.employeeId ? [props.employeeId] : undefined,
-        deductions: props.lines.map((line) => ({ employee_id: line.employee_id, amount: takeBack[line.employee_id] || '0' })),
+        // Only the ticked people are paid; everyone else's days stay unpaid for another day.
+        employee_ids: chosenLines.value.map((line) => line.employee_id),
+        deductions: chosenLines.value.map((line) => ({ employee_id: line.employee_id, amount: takeBack[line.employee_id] || '0' })),
     })).submit(store());
 }
 </script>
@@ -96,7 +108,7 @@ function submit(): void {
     <Head :title="t('Pay salaries')" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading title="Pay salaries" description="Pay for any period — one day, a few days or a month — for everyone or one person. Days already paid are shown and never paid again." />
+        <Heading title="Pay salaries" description="Tick the people you are paying now — one, a few or everyone. Anyone left unticked can be paid on another day. Days already paid are shown and never paid again." />
 
         <div class="flex flex-wrap items-end gap-4">
             <div class="grid gap-2">
@@ -125,6 +137,15 @@ function submit(): void {
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left">
                     <tr>
+                        <th class="w-10 px-4 py-3">
+                            <input
+                                type="checkbox"
+                                class="size-4"
+                                :checked="allChosen"
+                                :aria-label="t('Tick everyone')"
+                                @change="chooseAll(($event.target as HTMLInputElement).checked)"
+                            />
+                        </th>
                         <th class="px-4 py-3 font-medium">{{ t('Employee') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Full day') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Half day') }}</th>
@@ -136,7 +157,10 @@ function submit(): void {
                 </thead>
                 <tbody>
                     <template v-for="line in lines" :key="line.employee_id">
-                        <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t">
+                        <tr class="border-sidebar-border/70 dark:border-sidebar-border border-t" :class="chosen[line.employee_id] ? '' : 'opacity-50'">
+                            <td class="px-4 pt-3">
+                                <input v-model="chosen[line.employee_id]" type="checkbox" class="size-4" :aria-label="t('Pay :name now', { name: line.name ?? '' })" />
+                            </td>
                             <td class="px-4 pt-3">
                                 {{ line.name }}
                                 <span class="text-muted-foreground block font-mono text-xs">{{ line.code }}</span>
@@ -160,6 +184,7 @@ function submit(): void {
                             <td class="px-4 pt-3 text-right font-mono font-medium">{{ money(net(line)) }}</td>
                         </tr>
                         <tr>
+                            <td></td>
                             <td colspan="7" class="px-4 pt-2 pb-3">
                                 <div class="flex flex-wrap gap-1.5 text-xs">
                                     <span v-for="day in line.days" :key="day.date" class="rounded border border-green-300 bg-green-50 px-2 py-0.5 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
@@ -179,6 +204,7 @@ function submit(): void {
                         </tr>
                     </template>
                     <tr v-for="person in fullyPaid" :key="`paid-${person.id}`" class="border-sidebar-border/70 dark:border-sidebar-border border-t">
+                        <td></td>
                         <td class="px-4 py-3">{{ person.name }}</td>
                         <td colspan="6" class="text-muted-foreground px-4 py-3 text-xs">
                             {{ t('Every day in this period is already paid:') }}
@@ -186,12 +212,12 @@ function submit(): void {
                         </td>
                     </tr>
                     <tr v-if="lines.length === 0 && fullyPaid.length === 0">
-                        <td colspan="7" class="text-muted-foreground px-4 py-8 text-center">{{ t('No unpaid attendance in this period.') }}</td>
+                        <td colspan="8" class="text-muted-foreground px-4 py-8 text-center">{{ t('No unpaid attendance in this period.') }}</td>
                     </tr>
                 </tbody>
                 <tfoot v-if="lines.length > 0" class="bg-muted/30 font-medium">
                     <tr class="border-t">
-                        <td class="px-4 py-3" colspan="3">{{ t('Total (:currency)', { currency }) }}</td>
+                        <td class="px-4 py-3" colspan="4">{{ t('Total for the ticked people (:currency)', { currency }) }}</td>
                         <td class="px-4 py-3 text-right font-mono">{{ money(totals.gross) }}</td>
                         <td></td>
                         <td class="px-4 py-3 text-right font-mono">{{ money(totals.taken) }}</td>
@@ -239,7 +265,9 @@ function submit(): void {
             <InputError :message="errors.wages_account_id" />
             <InputError :message="errors.employee_advances_account_id" />
 
-            <Button type="submit" :disabled="form.processing || lines.some(tooMuch)">{{ t('Pay salaries') }}</Button>
+            <Button type="submit" :disabled="form.processing || chosenLines.length === 0 || chosenLines.some(tooMuch)">
+                {{ allChosen ? t('Pay everyone') : t('Pay :count ticked', { count: chosenLines.length }) }}
+            </Button>
         </form>
     </div>
 </template>
