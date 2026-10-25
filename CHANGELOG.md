@@ -4,6 +4,12 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.30.4 — 25 October 2026
+
+- **The server restarts by itself when a security update needs it** (a new kernel), at 3:30 at
+  night — after the nightly backup, never otherwise. It takes about a minute. Turn it off with
+  `AUTO_RESTART=no`, or move it with `AUTO_RESTART_TIME`, in the installer settings.
+
 ## 1.30.3 — 25 October 2026
 
 - **Fix: today's attendance can be saved again**, on the website and the phone app. It was refused

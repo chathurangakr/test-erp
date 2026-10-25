@@ -104,6 +104,8 @@ unset SUDO_PASSWORD
 : "${BACKUP_TIME:=02:30}"
 : "${BACKUP_KEEP_DAYS:=30}"
 : "${DRIVE_KEEP_DAYS:=90}"
+: "${AUTO_RESTART:=yes}"
+: "${AUTO_RESTART_TIME:=03:30}"
 : "${SMTP_USERNAME:=}"
 : "${SMTP_PASSWORD:=}"
 : "${SMTP_HOST:=smtp.gmail.com}"
@@ -127,6 +129,8 @@ ok "$PRETTY_NAME"
 [[ "$HTTP_PORT" =~ ^[0-9]+$ && "$HTTPS_PORT" =~ ^[0-9]+$ ]] || die "HTTP_PORT and HTTPS_PORT must be numbers."
 [[ "$HTTP_PORT" != "$HTTPS_PORT" ]] || die "HTTP_PORT and HTTPS_PORT must be different."
 [[ "$BACKUP_TIME" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "BACKUP_TIME must look like 02:30."
+[[ "$AUTO_RESTART" == "yes" || "$AUTO_RESTART" == "no" ]] || die "AUTO_RESTART must be yes or no."
+[[ "$AUTO_RESTART_TIME" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "AUTO_RESTART_TIME must look like 03:30."
 [[ "$LETSENCRYPT" == "yes" || "$LETSENCRYPT" == "no" ]] || die "LETSENCRYPT must be yes or no."
 [[ "$SELF_REGISTRATION" == "yes" || "$SELF_REGISTRATION" == "no" ]] || die "SELF_REGISTRATION must be yes or no."
 [[ -n "$ADMIN_EMAIL" ]] || die "ADMIN_EMAIL is required (the first administrator's sign-in)."
@@ -804,7 +808,20 @@ cat > /etc/apt/apt.conf.d/20auto-upgrades <<'APT'
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 APT
-ok "SSH guarded by fail2ban, root SSH sign-in off, security updates automatic"
+# A security update that needs a restart (a new kernel) restarts the computer by itself at
+# AUTO_RESTART_TIME — only then, never otherwise. Off with AUTO_RESTART=no.
+auto_restart=false; [[ "$AUTO_RESTART" == "yes" ]] && auto_restart=true
+cat > /etc/apt/apt.conf.d/52coconut-erp-restart <<APT
+// Written by the Coconut ERP installer (deploy/provision.sh); rewritten on updates.
+Unattended-Upgrade::Automatic-Reboot "${auto_restart}";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "${AUTO_RESTART_TIME}";
+APT
+if [[ "$AUTO_RESTART" == "yes" ]]; then
+    ok "SSH guarded by fail2ban, root SSH sign-in off, security updates automatic (restart when needed at ${AUTO_RESTART_TIME})"
+else
+    ok "SSH guarded by fail2ban, root SSH sign-in off, security updates automatic (restarts left to you)"
+fi
 
 # ------------------------------------------------------------------- scheduler + backups
 say "Setting up the scheduler and nightly backups"

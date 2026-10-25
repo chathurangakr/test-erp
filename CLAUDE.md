@@ -892,7 +892,8 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
 - **The installer hardens the server** (`provision.sh` "server hardening"): fail2ban for SSH (bans in
   its own nftables table, never saved with the cloud's iptables rules), `sshd_config.d/10-coconut-erp.conf`
   (no root login, no X11; password sign-in untouched), the sshd jail in `mode = aggressive` (key-only bots never fail a password), rpcbind off, MariaDB `local_infile = 0`,
-  unattended security upgrades, Mozilla-intermediate TLS and the security headers repeated in
+  unattended security upgrades (restarting by themselves only when one needs it, at
+  `AUTO_RESTART_TIME` 03:30, after the 02:30 backup; `AUTO_RESTART=no` turns it off), Mozilla-intermediate TLS and the security headers repeated in
   `/build/`. Keep it idempotent.
 - **Build toolchain (1.30.2): vite-plus 1.x**, where `vite` is an alias of
   `@voidzero-dev/vite-plus-core` in both `devDependencies` and `overrides` (`vp` refuses a plain
