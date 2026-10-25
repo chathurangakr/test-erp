@@ -72,8 +72,8 @@ class PayrollCalculator
 
         return PayrollRun::query()
             ->where('status', PayrollDocumentStatus::Posted)
-            ->whereDate('period_start', '<=', $date)
-            ->whereDate('period_end', '>=', $date)
+            ->whereOnOrBefore('period_start', $date)
+            ->whereOnOrAfter('period_end', $date)
             ->first();
     }
 
@@ -88,7 +88,7 @@ class PayrollCalculator
         $advanced = (string) SalaryAdvance::query()
             ->where('employee_id', $employeeId)
             ->where('status', PayrollDocumentStatus::Posted)
-            ->when($upTo, fn ($query) => $query->whereDate('advance_date', '<=', $upTo->toDateString()))
+            ->when($upTo, fn ($query) => $query->whereOnOrBefore('advance_date', $upTo->toDateString()))
             ->sum('amount');
 
         return DecimalMath::money(DecimalMath::sub(DecimalMath::of($advanced), $this->deducted($employeeId)));
@@ -117,8 +117,8 @@ class PayrollCalculator
     {
         $days = EmployeeAttendance::query()
             ->whereNull('payroll_run_id')
-            ->whereDate('work_date', '>=', $start->toDateString())
-            ->whereDate('work_date', '<=', $end->toDateString())
+            ->whereOnOrAfter('work_date', $start->toDateString())
+            ->whereOnOrBefore('work_date', $end->toDateString())
             ->when($employeeIds !== null, fn ($query) => $query->whereIn('employee_id', $employeeIds))
             ->orderBy('work_date')
             ->get()
@@ -174,8 +174,8 @@ class PayrollCalculator
         return EmployeeAttendance::query()
             ->with('payrollRun:id,payroll_number')
             ->whereNotNull('payroll_run_id')
-            ->whereDate('work_date', '>=', $start->toDateString())
-            ->whereDate('work_date', '<=', $end->toDateString())
+            ->whereOnOrAfter('work_date', $start->toDateString())
+            ->whereOnOrBefore('work_date', $end->toDateString())
             ->when($employeeIds !== null, fn ($query) => $query->whereIn('employee_id', $employeeIds))
             ->orderBy('work_date')
             ->get()

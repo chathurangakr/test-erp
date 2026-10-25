@@ -71,7 +71,8 @@ class InventoryTransaction extends Model
      */
     public function lines(): HasMany
     {
-        return $this->hasMany(InventoryTransactionLine::class);
+        // In the order they were written — never left to whichever index the database reads.
+        return $this->hasMany(InventoryTransactionLine::class)->orderBy('id');
     }
 
     /**

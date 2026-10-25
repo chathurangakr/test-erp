@@ -42,7 +42,7 @@ class FinancialYears
     public function closingFor(CarbonInterface $yearEnd): ?FinancialYearClosing
     {
         return FinancialYearClosing::query()
-            ->whereDate('year_end_date', $yearEnd->toDateString())
+            ->whereOnDay('year_end_date', $yearEnd->toDateString())
             ->where('status', FinancialYearClosingStatus::Posted)
             ->first();
     }

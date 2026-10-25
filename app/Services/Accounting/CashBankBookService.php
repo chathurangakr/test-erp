@@ -235,11 +235,11 @@ class CashBankBookService
                 ]);
 
                 if ($from !== null) {
-                    $entry->whereDate('journal_date', '>=', Carbon::instance($from)->toDateString());
+                    $entry->whereOnOrAfter('journal_date', Carbon::instance($from)->toDateString());
                 }
 
                 if ($to !== null) {
-                    $entry->whereDate('journal_date', '<=', Carbon::instance($to)->toDateString());
+                    $entry->whereOnOrBefore('journal_date', Carbon::instance($to)->toDateString());
                 }
             })
             ->with('entry:id,journal_number,journal_date,description,status,source_type,source_id')

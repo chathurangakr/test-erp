@@ -254,7 +254,7 @@ class AccountingBalanceService
             ->where('account_id', $account->id)
             ->when($from, fn (Builder $query, Carbon $date) => $query->whereHas(
                 'entry',
-                fn (Builder $entry) => $entry->whereDate('journal_date', '>=', $date->toDateString()),
+                fn (Builder $entry) => $entry->whereOnOrAfter('journal_date', $date->toDateString()),
             ))
             ->with(['entry:id,journal_number,journal_date,description,status,source_type,source_id'])
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.journal_entry_id')
@@ -319,11 +319,11 @@ class AccountingBalanceService
                 ]);
 
                 if ($asOf !== null) {
-                    $entry->whereDate('journal_date', '<=', $asOf->toDateString());
+                    $entry->whereOnOrBefore('journal_date', $asOf->toDateString());
                 }
 
                 if ($from !== null) {
-                    $entry->whereDate('journal_date', '>=', $from->toDateString());
+                    $entry->whereOnOrAfter('journal_date', $from->toDateString());
                 }
 
                 if ($period !== null) {

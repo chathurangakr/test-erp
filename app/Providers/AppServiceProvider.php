@@ -7,6 +7,7 @@ use App\Models\MailSetting;
 use App\Models\User;
 use App\Observers\TransactionAlertObserver;
 use App\Services\Telegram\TransactionAlertCatalog;
+use App\Support\DateFilters;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\QueryException;
@@ -35,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        DateFilters::register();
+
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureApiRateLimiting();

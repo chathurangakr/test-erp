@@ -47,7 +47,7 @@ class RecordAttendance
                 $existing = EmployeeAttendance::query()
                     ->with('payrollRun:id,payroll_number')
                     ->where('employee_id', $entry['employee_id'])
-                    ->whereDate('work_date', $day->toDateString())
+                    ->whereOnDay('work_date', $day->toDateString())
                     ->first();
 
                 // A paid day stays as it was paid; the register re-sending it unchanged is fine.

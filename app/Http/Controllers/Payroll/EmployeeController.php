@@ -77,7 +77,7 @@ class EmployeeController extends Controller
 
         $days = EmployeeAttendance::query()
             ->where('employee_id', $employee->id)
-            ->whereDate('work_date', '>=', $monthStart->subMonth()->toDateString())
+            ->whereOnOrAfter('work_date', $monthStart->subMonth()->toDateString())
             ->orderByDesc('work_date')
             ->get();
 

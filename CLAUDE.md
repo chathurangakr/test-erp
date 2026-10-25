@@ -859,6 +859,21 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
   one page; beyond that it pages on. Never sort on a derived figure (stock, what is owed); sort
   related names and line totals through subqueries on real columns.
 
+## Database performance (1.29.0)
+
+- **Keep the database fast for very large data.** Every new list filter, sort, period, join or
+  report query gets a supporting index in its migration; check heavy queries with EXPLAIN on
+  realistic volumes (1.29.0 was measured on 3 million journal and 1.6 million stock lines).
+- **Never `whereDate()` on a table that grows** — it wraps the column in DATE(…) and defeats its
+  index. Use `App\Support\DateFilters`: `whereOnOrAfter`, `whereOnOrBefore`, `whereBeforeDay`,
+  `whereAfterDay`, `whereOnDay` (whole days, DATE and DATETIME alike).
+- **Ledger sums read covering indexes** (`jel_*_amounts_index`, `itl_*_amounts_index`,
+  `je_date_status_index`): keep the summed columns in them. Relations that list lines order by
+  `id` explicitly — never rely on whichever index the database reads.
+- **The installer sizes MariaDB's cache** to about a third of the computer's memory
+  (`98-coconut-erp-performance.cnf`, applied without a restart) and logs queries over 2 s to
+  `/var/log/mysql/coconut-erp-slow.log`.
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,

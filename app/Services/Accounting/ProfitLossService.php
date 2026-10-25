@@ -8,6 +8,7 @@ use App\Support\DecimalMath;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * The profit and loss statement.
@@ -206,6 +207,22 @@ class ProfitLossService
             // No percentage against nothing: from zero, any change is "new", not infinite.
             'change_percent' => DecimalMath::isZero($prior) ? null : DecimalMath::round(DecimalMath::mul(DecimalMath::div($change, DecimalMath::isNegative($prior) ? DecimalMath::sub('0', $prior) : $prior), '100'), 1),
         ];
+    }
+
+    /**
+     * Net profit from account totals already summed (AccountingBalanceService::totalsByAccount) —
+     * so the balance sheet reads its current earnings from the same pass over the ledger as its
+     * accounts, instead of summing the whole history twice.
+     *
+     * @param  Collection<int, array{debit: string, credit: string, net: string}>  $totals
+     */
+    public function netProfitFromTotals(Collection $totals): string
+    {
+        $revenue = $this->tree->build([AccountType::Revenue], $totals)['total'];
+        $costOfSales = $this->tree->build([AccountType::CostOfSales], $totals)['total'];
+        $expenses = $this->tree->build([AccountType::Expense], $totals)['total'];
+
+        return DecimalMath::cost(DecimalMath::sub(DecimalMath::sub($revenue, $costOfSales), $expenses));
     }
 
     /**

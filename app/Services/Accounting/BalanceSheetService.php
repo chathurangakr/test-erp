@@ -66,8 +66,10 @@ class BalanceSheetService
         $liabilities = $this->tree->build([AccountType::Liability], $totals);
         $equity = $this->tree->build([AccountType::Equity], $totals);
 
-        // Everything earned up to this date and not yet closed. Computed, never posted.
-        $currentEarnings = $this->profitLoss->netProfit(null, $asOf, sinceLastClose: true);
+        // Everything earned up to this date and not yet closed. Computed, never posted. These
+        // totals count the year-end closings, so the profit-and-loss accounts in them hold exactly
+        // the profit since the last close — the same figure as netProfit(…, sinceLastClose: true).
+        $currentEarnings = $this->profitLoss->netProfitFromTotals($totals);
 
         $totalEquity = DecimalMath::cost(DecimalMath::add($equity['total'], $currentEarnings));
         $liabilitiesAndEquity = DecimalMath::cost(DecimalMath::add($liabilities['total'], $totalEquity));

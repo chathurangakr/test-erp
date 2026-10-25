@@ -949,6 +949,7 @@ to make a report tidy destroys the audit trail.
 | 5 | Cash flow statement | ✅ Built in 1.26.0 (§37). |
 | 6 | PDF / Excel export | ✅ Built in 1.19.0 (`docs/REPORT_EXPORTS.md`). |
 | 7 | Comparative periods (this period vs last) | ✅ The P&L, built in 1.26.0 (§38). |
+| 8 | Period balance snapshots | `TBD`. Statements sum the whole ledger: with indexes and a sized cache, 3 million journal lines (≈10 years of a busy factory) take ≈2.5 s for the trial balance or balance sheet. Beyond that, closed-period snapshots (non-authoritative, rebuildable) would keep them instant — a change to the "store nothing" rule above, so it needs the owner's decision. |
 
 ## 29. Payment methods — cash, cheque, bank transfer
 

@@ -89,7 +89,7 @@ class SalesReturnController extends Controller
         $lines = DeliveryLine::query()
             ->with(['delivery.customer:id,code,name', 'product.primaryUom:id,code', 'product.secondaryUom:id,code'])
             ->whereNull('backflush_product_id')
-            ->whereHas('delivery', fn ($query) => $query->where('status', DeliveryStatus::Posted->value)->whereDate('delivery_date', '>=', $since))
+            ->whereHas('delivery', fn ($query) => $query->where('status', DeliveryStatus::Posted->value)->whereOnOrAfter('delivery_date', $since))
             ->whereHas('invoiceLines.invoice', fn ($query) => $query->whereIn('status', $this->liveStatuses()))
             ->orderByDesc('id')
             ->limit(300)

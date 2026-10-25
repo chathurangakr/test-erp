@@ -45,8 +45,8 @@ class SalesOrderController extends Controller
             ->search((string) $request->string('search'))
             ->when($request->string('status')->toString(), fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($request->integer('customer_id'), fn (Builder $q, int $id) => $q->where('customer_id', $id))
-            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereDate('order_date', '>=', $d))
-            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereDate('order_date', '<=', $d))
+            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereOnOrAfter('order_date', $d))
+            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereOnOrBefore('order_date', $d))
             ->orderByDesc('id')
             ->paginate($this->perPage($request))
             ->withQueryString();

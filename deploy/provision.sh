@@ -298,6 +298,38 @@ if ! grep -rqsE '^\s*bind-address\s*=\s*127\.0\.0\.1' /etc/mysql/; then
 fi
 ok "Database '${DB_NAME}' and account '${DB_USER}' ready; MariaDB listens on this computer only"
 
+# Memory for the database's working cache: about a third of this computer's memory, in place of
+# MariaDB's 128 MB default. Balances, statements and stock are summed from the ledgers, so keeping
+# the ledgers in memory is what keeps them fast as years of history build up. Recalculated on every
+# install and update, applied at once without a restart (the file keeps it after one). Queries
+# slower than 2 seconds are logged to /var/log/mysql/coconut-erp-slow.log.
+say "Sizing the database cache"
+ram_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
+pool_mb=$(( ram_mb * 35 / 100 / 128 * 128 ))
+if (( pool_mb < 256 )); then pool_mb=256; fi
+perf_cnf=/etc/mysql/mariadb.conf.d/98-coconut-erp-performance.cnf
+perf_new="$(mktemp)"
+cat > "$perf_new" <<CNF
+[mysqld]
+# Written by the Coconut ERP installer from this computer's memory (${ram_mb} MB); rewritten on updates.
+innodb_buffer_pool_size = ${pool_mb}M
+innodb_log_file_size = 512M
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/coconut-erp-slow.log
+long_query_time = 2
+CNF
+if ! cmp -s "$perf_new" "$perf_cnf"; then
+    install -m 644 "$perf_new" "$perf_cnf"
+    install -d -o mysql -g adm -m 2750 /var/log/mysql
+    mariadb -e "SET GLOBAL innodb_buffer_pool_size = ${pool_mb} * 1024 * 1024" \
+        || warn "The new cache size takes effect when MariaDB next restarts"
+    mariadb -e "SET GLOBAL innodb_log_file_size = 512 * 1024 * 1024" >/dev/null 2>&1 || true
+    mariadb -e "SET GLOBAL slow_query_log_file = '/var/log/mysql/coconut-erp-slow.log'; SET GLOBAL long_query_time = 2; SET GLOBAL slow_query_log = 1" \
+        || warn "Slow-query logging starts when MariaDB next restarts"
+fi
+rm -f "$perf_new"
+ok "Database cache: ${pool_mb} MB of ${ram_mb} MB memory; slow queries are logged"
+
 # ------------------------------------------------------------------- app account
 say "Preparing the ERP's system account '$APP_USER'"
 if ! id "$APP_USER" >/dev/null 2>&1; then

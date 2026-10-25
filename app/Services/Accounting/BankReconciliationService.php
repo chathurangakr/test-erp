@@ -48,7 +48,7 @@ class BankReconciliationService
     {
         return $this->lines($account)
             ->whereNotIn('id', $this->reconciledLineIds($account))
-            ->when($upTo, fn (Builder $query, CarbonInterface $date) => $query->whereHas('entry', fn (Builder $entry) => $entry->whereDate('journal_date', '<=', $date->toDateString())))
+            ->when($upTo, fn (Builder $query, CarbonInterface $date) => $query->whereHas('entry', fn (Builder $entry) => $entry->whereOnOrBefore('journal_date', $date->toDateString())))
             ->with('entry:id,journal_number,journal_date,description,source_type,source_id')
             ->get()
             ->sortBy(fn (JournalEntryLine $line): string => $line->entry->journal_date->toDateString().'-'.str_pad((string) $line->id, 10, '0', STR_PAD_LEFT))

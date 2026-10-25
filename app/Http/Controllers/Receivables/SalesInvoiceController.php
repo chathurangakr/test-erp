@@ -56,7 +56,7 @@ class SalesInvoiceController extends Controller
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
             ->when($overdueOnly, fn (Builder $q) => $q
-                ->whereDate('due_date', '<', BusinessClock::todayString())
+                ->whereBeforeDay('due_date', BusinessClock::todayString())
                 ->whereIn('status', [SalesInvoiceStatus::Posted->value, SalesInvoiceStatus::PartiallyPaid->value])))
             ->through(fn (SalesInvoice $invoice): array => $this->summarise($invoice));
 

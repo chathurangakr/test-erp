@@ -87,8 +87,8 @@ class LoanBalances
         return LoanPayment::query()
             ->where('loan_id', $loan->id)
             ->where('status', LoanDocumentStatus::Posted->value)
-            ->whereDate('payment_date', '>', $previous->toDateString())
-            ->whereDate('payment_date', '<=', $due->toDateString())
+            ->whereAfterDay('payment_date', $previous->toDateString())
+            ->whereOnOrBefore('payment_date', $due->toDateString())
             ->exists();
     }
 

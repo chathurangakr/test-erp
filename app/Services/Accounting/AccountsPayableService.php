@@ -214,7 +214,7 @@ class AccountsPayableService
                 SupplierInvoiceStatus::PartiallyPaid->value,
                 SupplierInvoiceStatus::Paid->value,
             ])
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('invoice_date', '<=', $date->toDateString()));
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('invoice_date', $date->toDateString()));
     }
 
     /**
@@ -229,7 +229,7 @@ class AccountsPayableService
                 $query->where('status', SupplierPaymentStatus::Posted->value);
 
                 if ($asOf !== null) {
-                    $query->whereDate('payment_date', '<=', $asOf->toDateString());
+                    $query->whereOnOrBefore('payment_date', $asOf->toDateString());
                 }
             });
     }

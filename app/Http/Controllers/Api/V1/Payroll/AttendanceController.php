@@ -48,7 +48,7 @@ class AttendanceController extends Controller
     {
         $recorded = EmployeeAttendance::query()
             ->with('payrollRun:id,payroll_number')
-            ->whereDate('work_date', $date->toDateString())
+            ->whereOnDay('work_date', $date->toDateString())
             ->get()
             ->keyBy('employee_id');
 

@@ -42,8 +42,8 @@ class OpenNextFiscalPeriodsCommand extends Command
                 FiscalPeriod::query()->lockForUpdate()->get(['id']);
 
                 $overlaps = FiscalPeriod::query()
-                    ->whereDate('start_date', '<=', $end->toDateString())
-                    ->whereDate('end_date', '>=', $start->toDateString())
+                    ->whereOnOrBefore('start_date', $end->toDateString())
+                    ->whereOnOrAfter('end_date', $start->toDateString())
                     ->exists();
 
                 if ($overlaps) {

@@ -39,11 +39,11 @@ class LedgerController extends Controller
             ))
             ->when($request->date('from')?->toDateString(), fn (Builder $q, string $from) => $q->whereHas(
                 'transaction',
-                fn (Builder $t) => $t->whereDate('transaction_date', '>=', $from),
+                fn (Builder $t) => $t->whereOnOrAfter('transaction_date', $from),
             ))
             ->when($request->date('to')?->toDateString(), fn (Builder $q, string $to) => $q->whereHas(
                 'transaction',
-                fn (Builder $t) => $t->whereDate('transaction_date', '<=', $to),
+                fn (Builder $t) => $t->whereOnOrBefore('transaction_date', $to),
             ))
             ->orderByDesc('id')
             ->paginate($this->perPage($request))

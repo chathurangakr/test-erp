@@ -42,7 +42,7 @@ class AdvanceBalances
         return DecimalMath::cost(DecimalMath::of((string) CustomerAdvanceApplication::query()
             ->where('sales_invoice_id', $invoice->getKey())
             ->where('status', AdvanceStatus::Posted->value)
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('application_date', '<=', $date->toDateString()))
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('application_date', $date->toDateString()))
             ->sum('amount')));
     }
 
@@ -52,7 +52,7 @@ class AdvanceBalances
         return DecimalMath::cost(DecimalMath::of((string) SupplierAdvanceApplication::query()
             ->where('supplier_invoice_id', $invoice->getKey())
             ->where('status', AdvanceStatus::Posted->value)
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('application_date', '<=', $date->toDateString()))
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('application_date', $date->toDateString()))
             ->sum('amount')));
     }
 

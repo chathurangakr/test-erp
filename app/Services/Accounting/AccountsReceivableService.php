@@ -65,13 +65,13 @@ class AccountsReceivableService
         $returns = (string) SalesReturn::query()
             ->where('credit_invoice_id', $invoice->getKey())
             ->where('status', SalesReturnStatus::Posted->value)
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('return_date', '<=', $date->toDateString()))
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('return_date', $date->toDateString()))
             ->sum('credit_amount');
         $creditNotes = (string) SalesCreditNote::query()
             ->where('sales_invoice_id', $invoice->getKey())
             ->where('settlement', SalesCreditNoteSettlement::Credit->value)
             ->where('status', SalesCreditNoteStatus::Posted->value)
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('credit_date', '<=', $date->toDateString()))
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('credit_date', $date->toDateString()))
             ->sum('amount');
 
         return DecimalMath::cost(DecimalMath::add(DecimalMath::of($returns), DecimalMath::of($creditNotes)));
@@ -259,7 +259,7 @@ class AccountsReceivableService
                 SalesInvoiceStatus::PartiallyPaid->value,
                 SalesInvoiceStatus::Paid->value,
             ])
-            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereDate('invoice_date', '<=', $date->toDateString()));
+            ->when($asOf, fn ($query, CarbonInterface $date) => $query->whereOnOrBefore('invoice_date', $date->toDateString()));
     }
 
     /**
@@ -274,7 +274,7 @@ class AccountsReceivableService
                 $query->where('status', CustomerReceiptStatus::Posted->value);
 
                 if ($asOf !== null) {
-                    $query->whereDate('receipt_date', '<=', $asOf->toDateString());
+                    $query->whereOnOrBefore('receipt_date', $asOf->toDateString());
                 }
             });
     }

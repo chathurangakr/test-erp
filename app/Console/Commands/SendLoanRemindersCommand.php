@@ -45,7 +45,7 @@ class SendLoanRemindersCommand extends Command
             if (! in_array($daysBefore, self::DAYS_BEFORE, true)
                 || $balances->isPaidOff($loan)
                 || $balances->isInstallmentPaid($loan, $date)
-                || SentReminder::query()->where('loan_id', $loan->id)->whereDate('due_date', $date->toDateString())->where('days_before', $daysBefore)->exists()) {
+                || SentReminder::query()->where('loan_id', $loan->id)->whereOnDay('due_date', $date->toDateString())->where('days_before', $daysBefore)->exists()) {
                 continue;
             }
 

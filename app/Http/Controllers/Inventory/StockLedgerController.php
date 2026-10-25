@@ -54,11 +54,11 @@ class StockLedgerController extends Controller
             ))
             ->when($filters['from'], fn (Builder $q, string $from) => $q->whereHas(
                 'transaction',
-                fn (Builder $t) => $t->whereDate('transaction_date', '>=', $from)
+                fn (Builder $t) => $t->whereOnOrAfter('transaction_date', $from)
             ))
             ->when($filters['to'], fn (Builder $q, string $to) => $q->whereHas(
                 'transaction',
-                fn (Builder $t) => $t->whereDate('transaction_date', '<=', $to)
+                fn (Builder $t) => $t->whereOnOrBefore('transaction_date', $to)
             ));
 
         $list = ListQuery::from($request)->sortable([

@@ -109,8 +109,8 @@ class FiscalPeriod extends Model
 
         return self::query()
             ->where('status', FiscalPeriodStatus::Open)
-            ->whereDate('start_date', '<=', $date->toDateString())
-            ->whereDate('end_date', '>=', $date->toDateString())
+            ->whereOnOrBefore('start_date', $date->toDateString())
+            ->whereOnOrAfter('end_date', $date->toDateString())
             ->orderBy('start_date')
             ->first();
     }

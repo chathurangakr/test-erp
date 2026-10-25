@@ -158,11 +158,11 @@ final class ListQuery
         $to = $this->date('to');
 
         if ($from !== null) {
-            $query->whereDate($column, '>=', $from);
+            $query->whereOnOrAfter($column, $from);
         }
 
         if ($to !== null) {
-            $query->whereDate($column, '<=', $to);
+            $query->whereOnOrBefore($column, $to);
         }
     }
 

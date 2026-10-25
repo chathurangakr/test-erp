@@ -91,7 +91,8 @@ class JournalEntry extends Model
      */
     public function lines(): HasMany
     {
-        return $this->hasMany(JournalEntryLine::class);
+        // In the order they were written — never left to whichever index the database reads.
+        return $this->hasMany(JournalEntryLine::class)->orderBy('id');
     }
 
     /**

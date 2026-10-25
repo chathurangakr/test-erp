@@ -34,8 +34,8 @@ trait HandlesProductionOrders
             ->search((string) $request->string('search'))
             ->when($request->string('status')->toString(), fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($request->integer('warehouse_id'), fn (Builder $q, int $id) => $q->where('warehouse_id', $id))
-            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereDate('production_date', '>=', $d))
-            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereDate('production_date', '<=', $d))
+            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereOnOrAfter('production_date', $d))
+            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereOnOrBefore('production_date', $d))
             ->orderByDesc('id')
             ->paginate($this->perPage($request))
             ->withQueryString();

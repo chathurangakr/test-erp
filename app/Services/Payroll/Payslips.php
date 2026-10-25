@@ -75,7 +75,7 @@ class Payslips
         $advanced = (string) SalaryAdvance::query()
             ->where('employee_id', $employeeId)
             ->where('status', PayrollDocumentStatus::Posted)
-            ->whereDate('advance_date', '<=', $run->pay_date->toDateString())
+            ->whereOnOrBefore('advance_date', $run->pay_date->toDateString())
             ->sum('amount');
 
         $takenBack = (string) PayrollLine::query()
@@ -83,8 +83,8 @@ class Payslips
             ->whereHas('payrollRun', fn (Builder $query) => $query
                 ->where('status', PayrollDocumentStatus::Posted)
                 ->where(fn (Builder $when) => $when
-                    ->whereDate('pay_date', '<', $run->pay_date->toDateString())
-                    ->orWhere(fn (Builder $same) => $same->whereDate('pay_date', $run->pay_date->toDateString())->where('id', '<=', $run->id))))
+                    ->whereBeforeDay('pay_date', $run->pay_date->toDateString())
+                    ->orWhere(fn (Builder $same) => $same->whereOnDay('pay_date', $run->pay_date->toDateString())->where('id', '<=', $run->id))))
             ->sum('advances_deducted');
 
         $owed = DecimalMath::money(DecimalMath::sub(DecimalMath::of($advanced), DecimalMath::of($takenBack)));

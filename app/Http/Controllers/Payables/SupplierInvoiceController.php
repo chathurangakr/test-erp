@@ -62,7 +62,7 @@ class SupplierInvoiceController extends Controller
             ->when($status, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($supplierId, fn (Builder $q, int $id) => $q->where('supplier_id', $id))
             ->when($overdueOnly, fn (Builder $q) => $q
-                ->whereDate('due_date', '<', BusinessClock::todayString())
+                ->whereBeforeDay('due_date', BusinessClock::todayString())
                 ->whereIn('status', [SupplierInvoiceStatus::Posted->value, SupplierInvoiceStatus::PartiallyPaid->value])))
             ->through(fn (SupplierInvoice $invoice): array => $this->summarise($invoice));
 

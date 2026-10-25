@@ -199,7 +199,7 @@ class TelegramAnswers
         $lines = ['📅 <b>'.e(__('Today so far')).'</b> · '.e($today->toDateString())];
 
         if ($user->hasPermission(Permission::SalesView)) {
-            $deliveries = Delivery::query()->where('status', DeliveryStatus::Posted)->whereDate('delivery_date', $today->toDateString())->with('lines')->get();
+            $deliveries = Delivery::query()->where('status', DeliveryStatus::Posted)->whereOnDay('delivery_date', $today->toDateString())->with('lines')->get();
             $value = $deliveries->flatMap->lines->reduce(fn (string $sum, DeliveryLine $line): string => DecimalMath::add($sum, (string) $line->sales_value), DecimalMath::zero());
             $lines[] = '';
             $lines[] = '🚚 '.e(__('Deliveries')).': <b>'.$deliveries->count().'</b> — '.e($this->money($value));

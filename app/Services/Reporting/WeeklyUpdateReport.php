@@ -95,8 +95,8 @@ class WeeklyUpdateReport
     {
         $orders = ProductionOrder::query()
             ->where('status', ProductionStatus::Posted)
-            ->whereDate('production_date', '>=', $from->toDateString())
-            ->whereDate('production_date', '<=', $to->toDateString())
+            ->whereOnOrAfter('production_date', $from->toDateString())
+            ->whereOnOrBefore('production_date', $to->toDateString())
             ->with(['inputs.product.primaryUom', 'outputs.product.primaryUom'])
             ->get();
 

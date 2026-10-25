@@ -64,8 +64,8 @@ class PayPayroll
             // Lock everyone with a day in the period, so attendance, advances and another
             // payroll for the same people wait for this one.
             $employeeIds = EmployeeAttendance::query()
-                ->whereDate('work_date', '>=', $start->toDateString())
-                ->whereDate('work_date', '<=', $end->toDateString())
+                ->whereOnOrAfter('work_date', $start->toDateString())
+                ->whereOnOrBefore('work_date', $end->toDateString())
                 ->when($only !== null, fn ($query) => $query->whereIn('employee_id', $only))
                 ->distinct()
                 ->pluck('employee_id');

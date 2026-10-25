@@ -4,6 +4,19 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.29.0 — 25 October 2026
+
+- **Ready for many years of data.** Tested with about ten years of a busy factory's records
+  (3 million accounting lines, 1.6 million stock movements, 200,000 deliveries):
+  - a month's profit & loss now takes 0.06 seconds (was 4.4), the cash flow 0.6 (was 20),
+    the balance sheet 2.5 (was 11.7), one account's balance 0.13 (was 3.6);
+  - working out the cost of stock — done on every delivery, receipt and production run — takes
+    0.03 seconds (was 2.3), so saving documents stays quick as the history grows;
+  - lists stay instant (a page of 200,000 deliveries in 0.02 seconds).
+- **The database server uses the computer's memory properly.** It was using only 128 MB as its
+  working cache; an install or update now gives it about a third of the computer's memory (4 GB on
+  the cloud server), without restarting anything. Very slow requests are now written to a log.
+
 ## 1.28.1 — 25 October 2026
 
 - **Fix: updates no longer stop when the first admin account is switched off.** Once you have your

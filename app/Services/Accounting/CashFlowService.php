@@ -78,8 +78,8 @@ class CashFlowService
             ->whereIn('account_id', $accountIds)
             ->whereHas('entry', fn ($entry) => $entry
                 ->whereIn('status', [JournalEntryStatus::Posted->value, JournalEntryStatus::Reversed->value])
-                ->whereDate('journal_date', '>=', $from->toDateString())
-                ->whereDate('journal_date', '<=', $to->toDateString()))
+                ->whereOnOrAfter('journal_date', $from->toDateString())
+                ->whereOnOrBefore('journal_date', $to->toDateString()))
             ->with('entry:id,source_type,source_id,reversal_of_id')
             ->get();
 
@@ -165,7 +165,7 @@ class CashFlowService
             return [['investing', $original === $purchase ? 'Fixed assets bought' : 'Fixed assets sold', $amount]];
         }
 
-        [$section, $label] = self::ROWS[$type] ?? ['other', 'Other movements (manual journals and the rest)'];
+        [$section, $label] = self::ROWS[$type ?? ''] ?? ['other', 'Other movements (manual journals and the rest)'];
 
         return [[$section, $label, $amount]];
     }

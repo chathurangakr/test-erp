@@ -58,8 +58,8 @@ class DeliveryController extends Controller
             ->when($request->string('status')->toString(), fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($request->integer('customer_id'), fn (Builder $q, int $id) => $q->where('customer_id', $id))
             ->when($request->integer('warehouse_id'), fn (Builder $q, int $id) => $q->where('warehouse_id', $id))
-            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereDate('delivery_date', '>=', $d))
-            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereDate('delivery_date', '<=', $d))
+            ->when($request->date('from'), fn (Builder $q, $d) => $q->whereOnOrAfter('delivery_date', $d))
+            ->when($request->date('to'), fn (Builder $q, $d) => $q->whereOnOrBefore('delivery_date', $d))
             ->orderByDesc('id')
             ->paginate($this->perPage($request))
             ->withQueryString();

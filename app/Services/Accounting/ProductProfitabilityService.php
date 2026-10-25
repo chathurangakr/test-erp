@@ -61,11 +61,11 @@ class ProductProfitabilityService
                 $delivery->where('status', DeliveryStatus::Posted);
 
                 if ($from !== null) {
-                    $delivery->whereDate('delivery_date', '>=', $from->toDateString());
+                    $delivery->whereOnOrAfter('delivery_date', $from->toDateString());
                 }
 
                 if ($to !== null) {
-                    $delivery->whereDate('delivery_date', '<=', $to->toDateString());
+                    $delivery->whereOnOrBefore('delivery_date', $to->toDateString());
                 }
 
                 if ($customerId !== null) {
@@ -190,8 +190,8 @@ class ProductProfitabilityService
         return Delivery::query()
             ->where('status', DeliveryStatus::Posted)
             ->whereHas('lines', fn (Builder $line) => $line->where('product_id', $productId))
-            ->when($from, fn (Builder $q, CarbonInterface $d) => $q->whereDate('delivery_date', '>=', $d->toDateString()))
-            ->when($to, fn (Builder $q, CarbonInterface $d) => $q->whereDate('delivery_date', '<=', $d->toDateString()))
+            ->when($from, fn (Builder $q, CarbonInterface $d) => $q->whereOnOrAfter('delivery_date', $d->toDateString()))
+            ->when($to, fn (Builder $q, CarbonInterface $d) => $q->whereOnOrBefore('delivery_date', $d->toDateString()))
             ->when($customerId, fn (Builder $q, int $id) => $q->where('customer_id', $id))
             ->with(['customer:id,code,name'])
             ->orderByDesc('delivery_date')
