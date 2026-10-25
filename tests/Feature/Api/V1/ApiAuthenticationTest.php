@@ -115,6 +115,18 @@ class ApiAuthenticationTest extends TestCase
     }
 
     #[Test]
+    public function one_ip_cannot_try_passwords_against_many_accounts(): void
+    {
+        config(['api.rate_limits.login_per_ip_per_minute' => 3]);
+
+        foreach (range(1, 3) as $attempt) {
+            $this->login(User::factory()->create(), ['password' => 'wrong'])->assertUnprocessable();
+        }
+
+        $this->login(User::factory()->create())->assertStatus(429);
+    }
+
+    #[Test]
     public function a_user_with_two_factor_must_supply_a_code(): void
     {
         $user = User::factory()->withTwoFactor()->create();

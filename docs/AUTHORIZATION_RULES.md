@@ -121,11 +121,11 @@ production allocation or accounting arithmetic.
   permission** until an administrator grants one. It can sign in and see only the dashboard
   and its own settings.
 - **Self-registration can be closed** (`config('fortify.self_registration')`, env
-  `AUTH_SELF_REGISTRATION`, installer setting `SELF_REGISTRATION=yes|no`; default open). The two
+  `AUTH_SELF_REGISTRATION`, installer setting `SELF_REGISTRATION=yes|no`; default **closed** since 1.30.0, open before). The two
   names differ on purpose: the installer exports its settings, and an exported variable
   overrides `.env`. Closed, the sign-in
   page shows no "Sign up" link and both `/register` routes answer 404 — the routes stay
-  registered so the screens build the same. Recommended for a server on the internet.
+  registered so the screens build the same. Keep it closed on a server on the internet.
 - **Administrators add accounts** on Administration → Users → Add user (`users.create` /
   `users.store`, `users.manage`, `CreateUser`): name, email, a starting password under the
   sign-up password rules, and the roles it starts with. The person changes the password in their

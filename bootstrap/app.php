@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Telegram\TelegramWebhookController;
+use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\EnsureApiUserIsActive;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
@@ -15,6 +16,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
@@ -38,6 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'kiosk_locale', 'erp_locale']);
 
         $middleware->web(append: [
+            // A changed password signs the account out of every other browser: each session keeps
+            // the password hash it signed in with and is ended once that hash no longer matches.
+            AuthenticateSession::class,
+            ContentSecurityPolicy::class,
             EnsureUserIsActive::class,
             SetLocale::class,
             HandleAppearance::class,

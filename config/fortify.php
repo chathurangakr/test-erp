@@ -121,6 +121,14 @@ return [
     ],
 
     /*
+    | Sign-in attempts per minute from one IP, whatever email they name (on top of the 5 per email
+    | and IP), so one machine cannot try a password against many accounts. A factory signs in from
+    | one internet address, so this stays well above what its people need.
+    */
+
+    'login_attempts_per_ip_per_minute' => (int) env('LOGIN_ATTEMPTS_PER_IP_PER_MINUTE', 30),
+
+    /*
     |--------------------------------------------------------------------------
     | Register View Routes
     |--------------------------------------------------------------------------
@@ -166,14 +174,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | Whether anyone who can open the sign-in page may create their own account
-    | (it holds no role until an administrator grants one). A server reachable
-    | from the internet usually turns this off; administrators then add people
-    | on Administration → Users. The routes stay registered either way, so the
+    | (it holds no role until an administrator grants one). Off unless switched
+    | on (since 1.30.0): administrators add people on Administration → Users. The routes stay registered either way, so the
     | screens build the same; a closed sign-up page answers 404.
     |
     */
 
-    'self_registration' => (bool) env('AUTH_SELF_REGISTRATION', true),
+    'self_registration' => (bool) env('AUTH_SELF_REGISTRATION', false),
 
     'features' => [
         Features::registration(),

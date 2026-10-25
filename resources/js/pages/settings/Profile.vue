@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
@@ -31,6 +31,11 @@ type TelegramStatus = { available: boolean; linked: boolean; username: string | 
 const telegram = computed(() => page.props.telegram as TelegramStatus);
 
 const { t } = useT();
+
+// A new email address can take over the account through "forgot password", so changing it
+// needs the current password.
+const email = ref(user.value.email);
+const emailChanged = computed(() => email.value.trim().toLowerCase() !== user.value.email.toLowerCase());
 </script>
 
 <template>
@@ -71,12 +76,26 @@ const { t } = useT();
                     type="email"
                     class="mt-1 block w-full"
                     name="email"
-                    :default-value="user.email"
+                    v-model="email"
                     required
                     autocomplete="username"
                     :placeholder="t('Email address')"
                 />
                 <InputError class="mt-2" :message="errors.email" />
+            </div>
+
+            <div v-if="emailChanged" class="grid gap-2">
+                <Label for="current_password">{{ t('Current password') }}</Label>
+                <Input
+                    id="current_password"
+                    type="password"
+                    class="mt-1 block w-full"
+                    name="current_password"
+                    required
+                    autocomplete="current-password"
+                />
+                <p class="text-muted-foreground text-sm">{{ t('Needed to change your email address.') }}</p>
+                <InputError class="mt-2" :message="errors.current_password" />
             </div>
 
             <div v-if="page.props.mustVerifyEmail && !user.email_verified_at">

@@ -4,6 +4,7 @@ namespace Tests\Feature\Settings;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -96,6 +97,26 @@ class SecurityTest extends TestCase
             ->assertRedirect(route('security.edit'));
 
         $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+    }
+
+    public function test_a_changed_password_signs_other_browsers_out_but_not_this_one()
+    {
+        $user = User::factory()->create();
+        $signedInWithOldPassword = ['password_hash_web' => Auth::guard('web')->hashPasswordForCookie($user->password)];
+
+        $this->actingAs($user)->withSession($signedInWithOldPassword)
+            ->put(route('user-password.update'), [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])->assertSessionHasNoErrors();
+        $this->get(route('dashboard'))->assertOk();
+
+        // Another browser still holding the old password's hash.
+        $this->actingAs($user->refresh())->withSession($signedInWithOldPassword)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
     }
 
     public function test_correct_password_must_be_provided_to_update_password()

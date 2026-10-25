@@ -875,6 +875,25 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
   newer versions cannot grow it live) and logs queries over 2 s to
   `/var/log/mysql/coconut-erp-slow.log`.
 
+## Security (1.30.0)
+
+- **Every web page sends a Content-Security-Policy** (`App\Http\Middleware\ContentSecurityPolicy`):
+  scripts only from this site plus the per-response nonce. An inline `<script>` must carry
+  `nonce="{{ Vite::cspNonce() }}"`; never add `'unsafe-inline'` or `'unsafe-eval'` to `script-src`,
+  and never load a script, font or image from another site.
+- **A password change ends the account's other sessions** (`AuthenticateSession` in the web group).
+  Changing the own email needs `current_password`; changing where mail goes needs the SMTP password
+  again. Sign-in is limited per email + IP and per IP (`fortify.login_attempts_per_ip_per_minute`,
+  `api.rate_limits.login_per_ip_per_minute`).
+- **Self-registration defaults to closed** (`AUTH_SELF_REGISTRATION`, installer `SELF_REGISTRATION`).
+- **The installer hardens the server** (`provision.sh` "server hardening"): fail2ban for SSH (bans in
+  its own nftables table, never saved with the cloud's iptables rules), `sshd_config.d/10-coconut-erp.conf`
+  (no root login, no X11; password sign-in untouched), rpcbind off, MariaDB `local_infile = 0`,
+  unattended security upgrades, Mozilla-intermediate TLS and the security headers repeated in
+  `/build/`. Keep it idempotent.
+- **npm on the build machine:** `package.json` `overrides` pin patched sub-packages of vite-plus
+  0.3.0. Moving to vite-plus 1.x is a separate toolchain migration (vite alias, npm 12, vue-tsc 3).
+
 ## Master data rules
 
 These apply to every master table (products, units of measure, suppliers, customers,

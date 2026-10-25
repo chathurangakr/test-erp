@@ -37,6 +37,8 @@ return [
     'rate_limits' => [
         // Sign-in attempts per minute, per email address and IP together.
         'login_per_minute' => (int) env('API_LOGIN_PER_MINUTE', 5),
+        // ...and per IP alone, so one machine cannot try a password against many addresses.
+        'login_per_ip_per_minute' => (int) env('API_LOGIN_PER_IP_PER_MINUTE', 30),
         // Authenticated requests per minute, per user.
         'requests_per_minute' => (int) env('API_REQUESTS_PER_MINUTE', 120),
     ],

@@ -4,6 +4,36 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.30.0 — 25 October 2026
+
+A security check of the server, the database and the application, and everything it found fixed.
+
+- **Signing in is harder to attack.** On top of 5 tries per email address, one internet address
+  may now try at most 30 sign-ins a minute, so nobody can try a password against many accounts.
+  The same applies to the phone app's sign-in.
+- **A changed password signs you out everywhere else.** If someone had your session on another
+  computer, it ends the moment you change (or reset) your password. The browser you changed it in
+  stays signed in.
+- **Changing your email address asks for your password.** An email address can be used to reset
+  the password, so changing it now needs the current password (Settings → Profile).
+- **The saved email password goes only to the server it was typed for.** On Administration →
+  Email settings, changing the mail server, port, encryption or account now needs the app password
+  typed again.
+- **Pages run only the ERP's own code.** Browsers are told to refuse any script that is not part of
+  the ERP, as a second wall behind the escaping every screen already does.
+- **New installations start with sign-up closed.** Only administrators add people (Administration →
+  Users), unless `SELF_REGISTRATION=yes` is set. The cloud server already had it closed.
+- **The server protects itself.** An install or update now:
+  - blocks addresses that keep failing to sign in over SSH (fail2ban) — the cloud server saw
+    about 5,700 such attempts in a week;
+  - switches off SSH sign-in as root and X11 forwarding;
+  - switches off an unused network service (rpcbind);
+  - stops the database from loading files from disk;
+  - installs Ubuntu's security updates automatically every day;
+  - uses only modern encryption for HTTPS and sends extra protective headers on every file.
+- **Build tools updated** (development only, not part of the running site): fixed versions of
+  tinypool, vitest and vite.
+
 ## 1.29.1 — 25 October 2026
 
 - **Fix: the bigger database cache now always takes effect.** This MariaDB version can't enlarge

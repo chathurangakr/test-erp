@@ -89,4 +89,14 @@ class AuthenticationTest extends TestCase
 
         $response->assertTooManyRequests();
     }
+
+    public function test_one_ip_cannot_try_passwords_against_many_accounts()
+    {
+        RateLimiter::increment(md5('login'.'ip|127.0.0.1'), amount: config('fortify.login_attempts_per_ip_per_minute'));
+
+        $this->post(route('login.store'), [
+            'email' => User::factory()->create()->email,
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+    }
 }

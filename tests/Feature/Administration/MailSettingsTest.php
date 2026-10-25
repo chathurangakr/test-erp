@@ -71,6 +71,24 @@ class MailSettingsTest extends TestCase
     }
 
     #[Test]
+    public function the_saved_password_is_never_sent_to_another_server_without_being_typed_again(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->put(route('mail-settings.update'), $this->valid());
+
+        foreach ([['host' => 'smtp.attacker.example'], ['port' => 2525], ['encryption' => 'ssl'], ['username' => 'other@gmail.com']] as $change) {
+            $this->actingAs($admin)->put(route('mail-settings.update'), $this->valid(['password' => '', ...$change]))
+                ->assertSessionHasErrors('password');
+        }
+
+        $this->assertSame('smtp.gmail.com', MailSetting::sole()->host);
+
+        $this->actingAs($admin)->put(route('mail-settings.update'), $this->valid(['host' => 'smtp.office365.com', 'password' => 'newpassword']))
+            ->assertSessionHasNoErrors();
+        $this->assertSame('newpassword', MailSetting::sole()->password);
+    }
+
+    #[Test]
     public function saved_settings_drive_the_mailer_only_while_switched_on(): void
     {
         MailSetting::query()->create([...$this->valid(['password' => 'secretpassword', 'encryption' => 'ssl', 'port' => 465]), 'is_enabled' => false]);

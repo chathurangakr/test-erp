@@ -17,6 +17,9 @@ class RegistrationTest extends TestCase
         parent::setUp();
 
         $this->skipUnlessFortifyHas(Features::registration());
+
+        // Closed unless switched on (the default since 1.30.0); these tests open it.
+        config(['fortify.self_registration' => true]);
     }
 
     public function test_registration_screen_can_be_rendered()

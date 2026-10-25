@@ -89,7 +89,7 @@ unset SUDO_PASSWORD
 : "${TLS_CERT_FILE:=}"
 : "${TLS_KEY_FILE:=}"
 : "${LETSENCRYPT:=yes}"
-: "${SELF_REGISTRATION:=yes}"
+: "${SELF_REGISTRATION:=no}"
 : "${ENABLE_FIREWALL:=yes}"
 : "${MARIADB_ROOT_PASSWORD:=}"
 : "${DB_NAME:=coconut_erp}"
@@ -207,7 +207,8 @@ firewall_package=ufw
 say "Installing system packages (this takes a few minutes)"
 apt-get update -q
 apt-get install -y -q ca-certificates curl gnupg git unzip rsync openssl acl cron rclone \
-    software-properties-common nginx mariadb-server mariadb-client $firewall_package
+    software-properties-common nginx mariadb-server mariadb-client $firewall_package \
+    fail2ban nftables unattended-upgrades
 ok "Base packages, Nginx and MariaDB installed"
 
 if ! apt-cache show "php${PHP_VERSION}-fpm" >/dev/null 2>&1; then
@@ -317,11 +318,14 @@ innodb_log_file_size = 512M
 slow_query_log = 1
 slow_query_log_file = /var/log/mysql/coconut-erp-slow.log
 long_query_time = 2
+# Security: the ERP never loads files into the database, so nothing may (LOAD DATA LOCAL).
+local_infile = 0
 CNF
 if ! cmp -s "$perf_new" "$perf_cnf"; then
     install -m 644 "$perf_new" "$perf_cnf"
     install -d -o mysql -g adm -m 2750 /var/log/mysql
     mariadb -e "SET GLOBAL innodb_log_file_size = 512 * 1024 * 1024" >/dev/null 2>&1 || true
+    mariadb -e "SET GLOBAL local_infile = 0" >/dev/null 2>&1 || true
     mariadb -e "SET GLOBAL slow_query_log_file = '/var/log/mysql/coconut-erp-slow.log'; SET GLOBAL long_query_time = 2; SET GLOBAL slow_query_log = 1" \
         || warn "Slow-query logging starts when MariaDB next restarts"
 fi
@@ -570,6 +574,14 @@ write_nginx() {   # uses $CERT, $KEY and $TRUSTED_CERT
 # self-signed one it would stop a browser from ever accepting the certificate warning again.
 local hsts=""
 if [[ "$TRUSTED_CERT" == "yes" ]]; then hsts='add_header Strict-Transport-Security "max-age=31536000" always;'; fi
+# Sent with every reply. A location with an add_header of its own drops the server's ones, so
+# /build/ repeats them. (The Content-Security-Policy comes from the ERP, which knows each page's
+# nonce — app/Http/Middleware/ContentSecurityPolicy.php.)
+local security_headers="add_header X-Frame-Options \"SAMEORIGIN\" always;
+    add_header X-Content-Type-Options \"nosniff\" always;
+    add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
+    add_header Permissions-Policy \"camera=(), microphone=(), geolocation=(), payment=(), usb=()\" always;
+    ${hsts}"
 cat > /etc/nginx/sites-available/coconut-erp <<NGINX
 # Coconut Factory ERP — written by deploy/provision.sh (re-running the installer replaces it)
 server {
@@ -605,7 +617,11 @@ server {
     ssl_certificate     ${CERT};
     ssl_certificate_key ${KEY};
     ssl_protocols       TLSv1.2 TLSv1.3;
+    # Only modern, forward-secret ciphers for TLS 1.2 (Mozilla's "intermediate" list).
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
     ssl_session_cache   shared:coconut_erp:10m;
+    ssl_session_tickets off;
 
     root ${APP_DIR}/public;
     index index.php;
@@ -613,10 +629,7 @@ server {
     client_max_body_size 16m;
     server_tokens off;
 
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    ${hsts}
+    ${security_headers}
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
@@ -626,6 +639,7 @@ server {
         expires 1y;
         access_log off;
         add_header Cache-Control "public, immutable";
+        ${security_headers}
         try_files \$uri =404;
     }
 
@@ -655,6 +669,8 @@ NGINX
 }
 write_nginx
 ln -sf /etc/nginx/sites-available/coconut-erp /etc/nginx/sites-enabled/coconut-erp
+# Ubuntu's nginx.conf still offers TLS 1.0 / 1.1 by default; nothing here should.
+sed -i -E 's/^(\s*)ssl_protocols .*/\1ssl_protocols TLSv1.2 TLSv1.3;/' /etc/nginx/nginx.conf
 # The stock "Welcome to nginx" site would answer instead of the ERP on port 80.
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
@@ -728,6 +744,59 @@ elif [[ "$ENABLE_FIREWALL" == "yes" ]]; then
     ufw --force enable >/dev/null
     ok "Firewall on: SSH, ${HTTP_PORT} and ${HTTPS_PORT} open; the database stays closed"
 fi
+
+# ------------------------------------------------------------------- server hardening
+say "Hardening the server"
+# fail2ban: an address that fails to sign in over SSH 5 times in 10 minutes is shut out for an
+# hour, longer each time it comes back. Its bans live in its own nftables table, so saving the
+# cloud firewall's rules (above) never saves them.
+cat > /etc/fail2ban/jail.d/coconut-erp.conf <<'JAIL'
+# Written by the Coconut ERP installer (deploy/provision.sh); rewritten on updates.
+[DEFAULT]
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+bantime = 1h
+bantime.increment = true
+bantime.maxtime = 1w
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+JAIL
+systemctl enable fail2ban >/dev/null 2>&1 || true
+systemctl restart fail2ban || warn "fail2ban did not start — check: systemctl status fail2ban"
+
+# SSH: no root sign-in and no X11 forwarding. Read before the other files there, so it wins.
+# Password sign-in is left exactly as this computer had it.
+if command -v sshd >/dev/null 2>&1 && [[ -d /etc/ssh/sshd_config.d ]]; then
+    sshd_conf=/etc/ssh/sshd_config.d/10-coconut-erp.conf
+    cat > "$sshd_conf" <<'SSHD'
+# Written by the Coconut ERP installer (deploy/provision.sh); rewritten on updates.
+PermitRootLogin no
+X11Forwarding no
+LoginGraceTime 30
+SSHD
+    install -d -m 755 /run/sshd
+    if sshd -t 2>/dev/null; then
+        systemctl try-reload-or-restart ssh >/dev/null 2>&1 || systemctl try-reload-or-restart sshd >/dev/null 2>&1 || true
+    else
+        rm -f "$sshd_conf"
+        warn "SSH refused the hardening settings; left as it was"
+    fi
+fi
+
+# rpcbind serves NFS shares, which the ERP never uses (Oracle's image runs it anyway).
+if ! grep -qE '[[:space:]]nfs4?[[:space:]]' /proc/mounts; then
+    systemctl disable --now rpcbind.socket rpcbind.service >/dev/null 2>&1 || true
+fi
+
+# Security updates install themselves every day (Ubuntu's unattended-upgrades).
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<'APT'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT
+ok "SSH guarded by fail2ban, root SSH sign-in off, security updates automatic"
 
 # ------------------------------------------------------------------- scheduler + backups
 say "Setting up the scheduler and nightly backups"

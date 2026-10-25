@@ -76,12 +76,16 @@ class AppServiceProvider extends ServiceProvider
      * API throttles, sized in config/api.php.
      *
      * Sign-in is limited per email and IP together, so one attacker cannot lock out a user
-     * from every device; everything else is limited per signed-in user.
+     * from every device, and per IP alone, so one machine cannot try a password against many
+     * accounts; everything else is limited per signed-in user.
      */
     protected function configureApiRateLimiting(): void
     {
-        RateLimiter::for('api-login', fn (Request $request): Limit => Limit::perMinute(config('api.rate_limits.login_per_minute'))
-            ->by(mb_strtolower((string) $request->input('email')).'|'.$request->ip()));
+        RateLimiter::for('api-login', fn (Request $request): array => [
+            Limit::perMinute(config('api.rate_limits.login_per_minute'))
+                ->by(mb_strtolower((string) $request->input('email')).'|'.$request->ip()),
+            Limit::perMinute(config('api.rate_limits.login_per_ip_per_minute'))->by('ip|'.$request->ip()),
+        ]);
 
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(config('api.rate_limits.requests_per_minute'))
             ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));

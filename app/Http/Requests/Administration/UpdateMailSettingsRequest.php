@@ -41,10 +41,26 @@ class UpdateMailSettingsRequest extends FormRequest
             function (Validator $validator): void {
                 $typed = trim((string) $this->input('password')) !== '';
 
-                if ($this->boolean('is_enabled') && ! $typed && MailSetting::current()->password === null) {
+                $saved = MailSetting::current();
+
+                if ($this->boolean('is_enabled') && ! $typed && $saved->password === null) {
                     $validator->errors()->add('password', __('Enter the app password to switch email on.'));
+                }
+
+                // The saved password goes only to the server it was typed for: pointing the
+                // account somewhere else, or dropping its encryption, needs it typed again.
+                if (! $typed && $saved->password !== null && $this->changesWhereThePasswordGoes($saved)) {
+                    $validator->errors()->add('password', __('Enter the app password again: the mail server or account changed.'));
                 }
             },
         ];
+    }
+
+    private function changesWhereThePasswordGoes(MailSetting $saved): bool
+    {
+        return mb_strtolower(trim((string) $this->input('host'))) !== mb_strtolower((string) $saved->host)
+            || (int) $this->input('port') !== (int) $saved->port
+            || (string) $this->input('encryption') !== (string) $saved->encryption
+            || mb_strtolower(trim((string) $this->input('username'))) !== mb_strtolower((string) $saved->username);
     }
 }

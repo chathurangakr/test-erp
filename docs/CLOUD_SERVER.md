@@ -143,9 +143,10 @@ Google Account → Security → Third-party connections).
 3. If it says it **could not get a certificate**, the name does not point at this server yet
    (DuckDNS changes take a minute or two) or port 80 is blocked; fix that and run step 2 again.
 
-## 9. Only administrators add people (recommended on the internet)
+## 9. Only administrators add people (the default since 1.30.0)
 
-On a server anyone on the internet can reach, turn off self sign-up:
+Self sign-up is off unless `SELF_REGISTRATION=yes` is set. An older installation that had it on
+can turn it off with:
 
 ```bash
 sed -i 's/^SELF_REGISTRATION=.*/SELF_REGISTRATION=no/' ~/coconut-erp/deploy/provision.env

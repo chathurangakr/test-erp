@@ -2727,5 +2727,7 @@
     "Search supplier code or name…": "සැපයුම්කරු කේතය හෝ නම සොයන්න…",
     "Search write-offs": "කපා හැරීම් සොයන්න",
     "Search year or status…": "වර්ෂය හෝ තත්ත්වය සොයන්න…",
-    "Value lost": "අහිමි වූ වටිනාකම"
+    "Value lost": "අහිමි වූ වටිනාකම",
+    "Enter the app password again: the mail server or account changed.": "යෙදුම් මුරපදය (app password) නැවත ඇතුළත් කරන්න: තැපැල් සේවාදායකය හෝ ගිණුම වෙනස් විය.",
+    "Needed to change your email address.": "ඔබේ ඊමේල් ලිපිනය වෙනස් කිරීමට අවශ්‍යයි."
 }

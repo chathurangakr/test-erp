@@ -160,6 +160,7 @@ class RolesAndPermissionsTest extends TestCase
     public function a_self_registered_user_holds_no_role_and_no_permission(): void
     {
         $this->seedRoles();
+        config(['fortify.self_registration' => true]);
 
         $this->post(route('register.store'), [
             'name' => 'Walk In',
