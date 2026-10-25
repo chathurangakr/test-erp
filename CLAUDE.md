@@ -888,7 +888,7 @@ Full detail lives in `docs/WEEKLY_UPDATE.md`.
 - **Self-registration defaults to closed** (`AUTH_SELF_REGISTRATION`, installer `SELF_REGISTRATION`).
 - **The installer hardens the server** (`provision.sh` "server hardening"): fail2ban for SSH (bans in
   its own nftables table, never saved with the cloud's iptables rules), `sshd_config.d/10-coconut-erp.conf`
-  (no root login, no X11; password sign-in untouched), rpcbind off, MariaDB `local_infile = 0`,
+  (no root login, no X11; password sign-in untouched), the sshd jail in `mode = aggressive` (key-only bots never fail a password), rpcbind off, MariaDB `local_infile = 0`,
   unattended security upgrades, Mozilla-intermediate TLS and the security headers repeated in
   `/build/`. Keep it idempotent.
 - **npm on the build machine:** `package.json` `overrides` pin patched sub-packages of vite-plus

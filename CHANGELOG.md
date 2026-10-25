@@ -4,6 +4,11 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.30.1 — 25 October 2026
+
+- **Fix: fail2ban now also blocks bots that try SSH keys.** With password sign-in off, most bots
+  offer a key, are turned away and try again; those attempts now count towards a block too.
+
 ## 1.30.0 — 25 October 2026
 
 A security check of the server, the database and the application, and everything it found fixed.

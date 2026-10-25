@@ -763,6 +763,9 @@ maxretry = 5
 
 [sshd]
 enabled = true
+# "aggressive" also counts a bot that offers keys and is turned away ("Connection closed by
+# authenticating user … [preauth]") — with password sign-in off that is all most bots ever do.
+mode = aggressive
 JAIL
 systemctl enable fail2ban >/dev/null 2>&1 || true
 systemctl restart fail2ban || warn "fail2ban did not start — check: systemctl status fail2ban"
