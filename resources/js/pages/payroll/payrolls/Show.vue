@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { FileText } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import PrintButton from '@/components/print/PrintButton.vue';
 import JournalTable from '@/components/payroll/JournalTable.vue';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { show as employeeShow } from '@/routes/employees';
-import { index, reverse } from '@/routes/payrolls';
+import { index, payslips, reverse } from '@/routes/payrolls';
 import type { PayrollDetail } from '@/types';
 import { useT } from '@/lib/i18n';
 import { money } from '@/lib/money';
@@ -37,7 +38,12 @@ function reversePayroll(): void {
                         :title="t('Salaries for :from to :to', { from: payroll.period_start, to: payroll.period_end })"
                         :description="`${payroll.payroll_number} · ${payroll.pay_date} · ${payroll.payment_account ?? ''}`"
                     />
-                    <PrintButton />
+                    <div class="flex gap-2 print:hidden">
+                        <Button variant="outline" as-child>
+                            <Link :href="payslips(payroll.id)"><FileText class="size-4" />{{ t('Payslips') }}</Link>
+                        </Button>
+                        <PrintButton />
+                    </div>
                 </div>
                 <Badge :variant="payroll.status === 'REVERSED' ? 'destructive' : 'default'" class="w-fit">{{ payroll.status_label }}</Badge>
             </div>
@@ -71,6 +77,7 @@ function reversePayroll(): void {
                         <th class="px-4 py-3 text-right font-medium">{{ t('Earned') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Taken back') }}</th>
                         <th class="px-4 py-3 text-right font-medium">{{ t('Paid') }}</th>
+                        <th class="px-4 py-3 print:hidden"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,6 +92,9 @@ function reversePayroll(): void {
                         <td class="px-4 py-3 text-right font-mono">{{ money(line.gross_pay) }}</td>
                         <td class="px-4 py-3 text-right font-mono">{{ money(line.advances_deducted) }}</td>
                         <td class="px-4 py-3 text-right font-mono font-medium">{{ money(line.net_pay) }}</td>
+                        <td class="px-4 py-3 text-right whitespace-nowrap print:hidden">
+                            <Link :href="payslips(payroll.id, { query: { employee_id: line.employee_id } })" class="text-sm hover:underline">{{ t('Payslip') }}</Link>
+                        </td>
                     </tr>
                 </tbody>
             </table>

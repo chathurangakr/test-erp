@@ -2592,5 +2592,19 @@
     "Pay :name now": ":name ට දැන් ගෙවන්න",
     "Total for the ticked people (:currency)": "සලකුණු කළ අයගේ එකතුව (:currency)",
     "Pay everyone": "සියලු දෙනාට ගෙවන්න",
-    "Pay :count ticked": "සලකුණු කළ :count දෙනාට ගෙවන්න"
+    "Pay :count ticked": "සලකුණු කළ :count දෙනාට ගෙවන්න",
+    "Payslip": "වැටුප් පත්‍රිකාව",
+    "Payslips": "වැටුප් පත්‍රිකා",
+    "Advance still owed": "තවමත් ගෙවිය යුතු අත්තිකාරම",
+    "Advance taken back": "අඩු කළ අත්තිකාරම",
+    "Back to salaries": "වැටුප් වෙත ආපසු",
+    "Day rate": "දෛනික වේතනය",
+    "Full / half days / leave": "සම්පූර්ණ / අර්ධ දින / නිවාඩු",
+    "NIC": "ජා.හැ.අ.",
+    "PAYSLIP": "වැටුප් පත්‍රිකාව",
+    "Payslips — :number": "වැටුප් පත්‍රිකා — :number",
+    "Received by (:name)": "ලබා ගත්තේ (:name)",
+    "REVERSED — this payment was undone": "ආපසු හරවන ලදී — මෙම ගෙවීම අහෝසි කරන ලදී",
+    "Every loan, from Loans Payable": "සියලු ණය, ගෙවිය යුතු ණය ගිණුමෙන්",
+    "What the assets in use cost": "භාවිතයේ ඇති වත්කම්වල පිරිවැය"
 }

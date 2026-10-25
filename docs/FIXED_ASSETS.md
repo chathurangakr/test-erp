@@ -57,3 +57,10 @@ and Maintenance**) — seeded on a fresh install and added by `masters:add-new` 
 
 Depreciation (declined by the owner for now), revaluation, part disposals, maintenance planning or
 service reminders, assets in the mobile API.
+
+## Older assets (1.24.0)
+
+An asset **already owned** may be entered with its real purchase date even if that is before the
+books began: its opening entry (`Dr fixed assets / Cr opening balance equity`) is then booked on the
+day it is entered. For an older asset still being paid off, enter the asset as **already owned** and
+the loan as **already running** — never "bought on a loan", which would open a second loan.

@@ -149,6 +149,11 @@ destroy route anywhere in Finance.
   reporting year is a business decision.
 - **No year-end closing entries yet** — rolling the income statement into retained earnings
   is a later phase.
+- **Opening entries from before the books (1.24.0).** An asset ALREADY OWNED and a loan ALREADY
+  RUNNING keep their real purchase / start date on the document, but when no open period covers
+  that date (for example a tractor bought before the books began) their opening entry is booked on
+  the day they are entered (`FiscalPeriod::openingEntryDate`). Anything that moves money now — an
+  asset paid for, a loan received — still needs an open period at its own date.
 - **The next month opens itself (1.18.0).** `php artisan finance:open-next-periods`, daily at
   00:05 Sri Lanka time, makes sure this month and next month exist as OPEN periods named
   "November 2026" (1st to last day). It only continues a calendar someone started (no periods →

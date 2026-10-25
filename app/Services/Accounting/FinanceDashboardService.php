@@ -2,6 +2,7 @@
 
 namespace App\Services\Accounting;
 
+use App\Models\AccountingSetting;
 use App\Models\FiscalPeriod;
 use App\Support\BusinessClock;
 use App\Support\DecimalMath;
@@ -35,6 +36,7 @@ class FinanceDashboardService
         private readonly CashBankBookService $cashBank,
         private readonly InventoryValuationReportService $inventory,
         private readonly ProductProfitabilityService $profitability,
+        private readonly AccountingBalanceService $balances,
     ) {}
 
     /**
@@ -73,6 +75,10 @@ class FinanceDashboardService
                 'receivables' => $aging['totals']['total'],
                 'payables' => $payableAging['totals']['total'],
                 'inventory_value' => $this->inventory->report()['value_total'],
+                // What is still owed on loans and what fixed assets cost — each read from its own
+                // ledger account (accounting settings); null when that account is not set up.
+                'loans_owed' => $this->settingBalance('loansAccount', $asOf),
+                'fixed_assets' => $this->settingBalance('fixedAssetsAccount', $asOf),
                 'current_earnings' => $this->balanceSheet->statement($asOf)['current_earnings'],
             ],
             'receivables' => $this->agingSummary($aging, 'customer'),
@@ -220,5 +226,15 @@ class FinanceDashboardService
             'to' => $today->copy()->endOfMonth()->toDateString(),
             'fiscal_period_id' => null,
         ];
+    }
+
+    /**
+     * A configured account's balance as a statement shows it, or null when it is not set up.
+     */
+    private function settingBalance(string $relation, ?CarbonInterface $asOf): ?string
+    {
+        $account = AccountingSetting::current()?->{$relation};
+
+        return $account === null ? null : $this->balances->balance($account, $asOf === null ? null : Carbon::instance($asOf));
     }
 }

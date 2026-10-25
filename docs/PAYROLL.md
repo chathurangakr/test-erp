@@ -95,3 +95,17 @@ changed: an administrator ticks them on the Roles screen.
 - Interaction with **dehusking labour**: dehusking credits 6310 Production Labour Absorbed (a
   contra-expense) while salaries debit 6300 — by design, so labour sitting in unsold husk offsets
   wages until sold. The accountant should know both lines exist.
+
+## Payslips (1.24.0)
+
+Every paid payroll has payslips — one per person — at Payroll → Salaries → (a payroll) →
+**Payslips**, or **Payslip** beside one person. `GET payroll/salaries/{payroll}/payslips`
+(`?employee_id=` for one person, `?format=pdf` for a PDF with one slip per A5 page), permission
+`payroll.view`.
+
+`App\Services\Payroll\Payslips` reads, never recalculates: the payroll line's days, earned, advance
+taken back and paid; each attendance day it paid with the rate it was recorded at; and **the advance
+still owed right after this payment** — standing advances dated up to the pay date, less what
+standing payrolls took back up to and including this one. A reversed payroll's slips are marked
+REVERSED. The PDF is in English (its font has no Sinhala letters); the page follows the reader's
+language and prints from the browser too.

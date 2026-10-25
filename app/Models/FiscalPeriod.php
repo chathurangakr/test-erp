@@ -4,6 +4,9 @@ namespace App\Models;
 
 use App\Enums\FiscalPeriodStatus;
 use App\Enums\JournalEntryStatus;
+use App\Support\BusinessClock;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\FiscalPeriodFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -87,6 +90,19 @@ class FiscalPeriod extends Model
     /**
      * The open period a given date belongs to, or null.
      */
+    /**
+     * The day an OPENING entry is booked on — something the factory already had before it was
+     * entered (an asset already owned, a loan already running). Its own date when an open period
+     * covers it; otherwise, such as a date before the books started, the day it is entered. The
+     * real date stays on the document; only the ledger date moves. See docs/ACCOUNTING_RULES.md §7.
+     */
+    public static function openingEntryDate(CarbonInterface $date): CarbonImmutable
+    {
+        $date = CarbonImmutable::parse($date->toDateString());
+
+        return self::openFor($date->toDateString()) !== null ? $date : BusinessClock::today();
+    }
+
     public static function openFor(Carbon|string $date): ?self
     {
         $date = $date instanceof Carbon ? $date : Carbon::parse($date);

@@ -72,3 +72,9 @@ Accountant; existing roles are ticked by an administrator.
 
 - Loans funding an asset directly (with the fixed assets stage).
 - Interest schedules / amortisation tables; reminders by SMS; loans in the mobile API.
+
+## Older loans (1.24.0)
+
+A loan **already running** may be entered with its real start date even if that is before the books
+began: it is brought in (`Dr opening balance equity / Cr loans`) on the day it is entered. The
+Finance Dashboard shows **Loans still owed** — the Loans Payable balance.

@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect.vue';
 import { index as apAgingIndex } from '@/routes/ap-aging';
 import { index as arAgingIndex } from '@/routes/ar-aging';
+import { index as assetsIndex } from '@/routes/assets';
+import { index as loansIndex } from '@/routes/loans';
 import { index as financeDashboardIndex } from '@/routes/finance-dashboard';
 import {
     balanceSheet,
@@ -129,6 +131,12 @@ const positionCards = computed(() => [
         note: t('Current, from the inventory ledger'),
         href: inventoryValuation(),
     },
+    ...(props.summary.position.loans_owed === null
+        ? []
+        : [{ label: t('Loans still owed'), value: props.summary.position.loans_owed, note: t('Every loan, from Loans Payable'), href: loansIndex() }]),
+    ...(props.summary.position.fixed_assets === null
+        ? []
+        : [{ label: t('Fixed assets'), value: props.summary.position.fixed_assets, note: t('What the assets in use cost'), href: assetsIndex() }]),
 ]);
 
 const agingBuckets: { key: keyof AgingSummary; label: string }[] = [
@@ -254,7 +262,7 @@ const counterpartyLists = computed(() => [
                     {{ t('Open balance sheet →') }}
                 </Link>
             </div>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Link
                     v-for="card in positionCards"
                     :key="card.label"

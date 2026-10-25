@@ -877,6 +877,8 @@ export type FinanceDashboardSummary = {
         payables: string;
         inventory_value: string;
         current_earnings: string;
+        loans_owed: string | null;
+        fixed_assets: string | null;
     };
     receivables: AgingSummary;
     payables: AgingSummary;

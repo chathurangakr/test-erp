@@ -4,6 +4,18 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.24.0 — 25 October 2026
+
+- **Payslips.** Open a salary payment and click **Payslips** (everyone in it) or **Payslip** beside one
+  person. Each slip shows the days paid with their day rate, what was earned, the advance taken back,
+  what was handed over and the advance still owed, with a line for the employee to sign. Print it,
+  or download a PDF (one slip per A5 page).
+- **Loans and fixed assets on the Finance Dashboard.** Two new figures: loans still owed and what
+  the assets in use cost, each opening its own page.
+- **Fix: assets and loans from before the books began.** An asset you already owned, or a loan
+  already running, can now be entered with its real (older) date — for example a tractor bought
+  before July. Its opening entry goes on the day you enter it; the real date stays on the record.
+
 ## 1.23.1 — 25 October 2026
 
 - **Pay salaries to each person separately.** On Pay salaries every employee now has a tick box:

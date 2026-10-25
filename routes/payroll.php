@@ -4,6 +4,7 @@ use App\Enums\Permission;
 use App\Http\Controllers\Payroll\AttendanceController;
 use App\Http\Controllers\Payroll\EmployeeController;
 use App\Http\Controllers\Payroll\PayrollController;
+use App\Http\Controllers\Payroll\PayslipController;
 use App\Http\Controllers\Payroll\SalaryAdvanceController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['index', 'create', 'store', 'show'])
         ->middlewareFor(['index', 'show'], Permission::PayrollView->middleware())
         ->middlewareFor(['create', 'store'], Permission::PayrollSalaryPay->middleware());
+    Route::get('payroll/salaries/{payroll}/payslips', PayslipController::class)
+        ->name('payrolls.payslips')
+        ->can(Permission::PayrollView);
     Route::patch('payroll/salaries/{payroll}/reverse', [PayrollController::class, 'reverse'])
         ->name('payrolls.reverse')
         ->can(Permission::PayrollSalaryReverse);

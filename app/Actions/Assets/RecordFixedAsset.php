@@ -10,6 +10,7 @@ use App\Enums\FixedAssetStatus;
 use App\Enums\LoanDocumentStatus;
 use App\Enums\LoanFunding;
 use App\Enums\PaymentMethod;
+use App\Models\FiscalPeriod;
 use App\Models\FixedAsset;
 use App\Models\Loan;
 use App\Services\Accounting\AccountingPolicy;
@@ -64,7 +65,10 @@ class RecordFixedAsset
             $fixedAssets = $this->policy->fixedAssetsAccount();
             $paysNow = $funding === AssetFunding::CashBank || DecimalMath::isPositive($down);
             $account = $paysNow ? $this->money->account($data['cash_bank_account_id'] ?? null, $data['payment_method'] ?? null, __('an asset')) : null;
-            $period = $this->money->period($date, 'purchase_date');
+            // An asset already owned may have been bought before the books began: its opening
+            // entry is then booked on the day it is entered. Anything paid now needs its own date.
+            $bookDate = $funding === AssetFunding::Existing ? FiscalPeriod::openingEntryDate($date) : $date;
+            $period = $this->money->period($bookDate, 'purchase_date');
 
             $asset = FixedAsset::create([
                 'asset_number' => $this->references->forAsset($date),
@@ -94,7 +98,7 @@ class RecordFixedAsset
 
             $journal = $this->journal->handle(
                 $asset,
-                $date,
+                $bookDate,
                 $period,
                 RecordText::of('Asset :reference — :name', ['reference' => $asset->asset_number, 'name' => $asset->name]),
                 [[$fixedAssets->id, $price, '0', $asset->name], ...$credits],

@@ -59,8 +59,11 @@ class RecordLoan
                 $debitAccountId = $this->policy->openingBalanceAccount()->id;
             }
 
-            $period = FiscalPeriod::openFor($date) ?? throw ValidationException::withMessages([
-                'start_date' => __('There is no open fiscal period covering :date. Open the period first.', ['date' => $date->toDateString()]),
+            // A loan already running may have started before the books began: it is brought in on
+            // the day it is entered. Money received now needs its own date.
+            $bookDate = $funding === LoanFunding::Existing ? FiscalPeriod::openingEntryDate($date) : $date;
+            $period = FiscalPeriod::openFor($bookDate->toDateString()) ?? throw ValidationException::withMessages([
+                'start_date' => __('There is no open fiscal period covering :date. Open the period first.', ['date' => $bookDate->toDateString()]),
             ]);
 
             $loan = Loan::create([
@@ -82,7 +85,7 @@ class RecordLoan
 
             $journal = $this->journal->handle(
                 $loan,
-                $date,
+                $bookDate,
                 $period,
                 $funding === LoanFunding::Received
                     ? RecordText::of('Loan :reference received from :lender', ['reference' => $loan->loan_number, 'lender' => $loan->lender])
