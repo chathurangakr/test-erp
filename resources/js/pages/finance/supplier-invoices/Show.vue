@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Pencil } from '@lucide/vue';
+import { Pencil, Printer } from '@lucide/vue';
 import SupplierInvoiceActionController from '@/actions/App/Http/Controllers/Payables/SupplierInvoiceActionController';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +46,12 @@ const { t } = useT();
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" as-child>
+                    <a :href="`${index().url}/${invoice.id}/print`" target="_blank">
+                        <Printer class="size-4" />
+                        {{ t('Print invoice') }}
+                    </a>
+                </Button>
                 <Button
                     v-if="(invoice.status === 'POSTED' || invoice.status === 'PARTIALLY_PAID') && Number(invoice.outstanding) > 0 && can('finance.ap.payment_create')"
                     as-child

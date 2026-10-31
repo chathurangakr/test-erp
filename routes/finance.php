@@ -95,6 +95,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middlewareFor(['index', 'show'], Permission::ApView->middleware())
         ->middlewareFor(['create', 'store', 'edit', 'update'], Permission::ApInvoiceCreate->middleware());
 
+    Route::get('finance/supplier-invoices/{supplier_invoice}/print', [SupplierInvoiceController::class, 'print'])
+        ->name('supplier-invoices.print')
+        ->can(Permission::ApView);
     Route::patch('finance/supplier-invoices/{supplier_invoice}/post', [SupplierInvoiceActionController::class, 'post'])
         ->name('supplier-invoices.post')
         ->can(Permission::ApInvoicePost);

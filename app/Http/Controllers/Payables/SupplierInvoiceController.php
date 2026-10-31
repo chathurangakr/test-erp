@@ -114,6 +114,49 @@ class SupplierInvoiceController extends Controller
         ]);
     }
 
+    /**
+     * The invoice as recorded in our books, laid out for an A4 sheet to print or save as a PDF.
+     */
+    public function print(SupplierInvoice $supplierInvoice): Response
+    {
+        $supplierInvoice->load([
+            'supplier',
+            'lines.goodsReceipt:id,grn_number,receipt_date',
+            'lines.debitAccount:id,code,name',
+        ]);
+
+        $supplier = $supplierInvoice->supplier;
+
+        return Inertia::render('finance/supplier-invoices/Print', [
+            'invoice' => array_merge($this->summarise($supplierInvoice), [
+                'description' => $supplierInvoice->description,
+                'supplier' => [
+                    'code' => $supplier?->code,
+                    'name' => $supplier?->name,
+                    'contact_person' => $supplier?->contact_person,
+                    'address' => collect([$supplier?->address_line_1, $supplier?->address_line_2, $supplier?->city])
+                        ->filter()
+                        ->implode(', '),
+                    'phone' => $supplier?->phone,
+                    'email' => $supplier?->email,
+                    'tax_number' => $supplier?->tax_number,
+                ],
+                'lines' => $supplierInvoice->lines->map(fn (SupplierInvoiceLine $line): array => [
+                    'id' => $line->id,
+                    'line_type' => $line->line_type->value,
+                    'line_type_label' => $line->line_type->label(),
+                    'grn_number' => $line->goodsReceipt?->grn_number,
+                    'receipt_date' => $line->goodsReceipt?->receipt_date?->toDateString(),
+                    'account_code' => $line->debitAccount?->code,
+                    'account_name' => $line->debitAccount?->name,
+                    'description' => $line->description,
+                    'amount' => $line->amount,
+                ])->values(),
+            ]),
+            'currency' => config('accounting.base_currency'),
+        ]);
+    }
+
     public function edit(SupplierInvoice $supplierInvoice): Response
     {
         $this->saveInvoice->assertEditable($supplierInvoice);

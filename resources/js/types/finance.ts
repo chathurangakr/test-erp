@@ -262,6 +262,31 @@ export type SupplierInvoiceDetail = SupplierInvoiceRow & {
     }[];
 };
 
+/** A supplier invoice as printed from our books. */
+export type SupplierInvoicePrint = SupplierInvoiceRow & {
+    description: string | null;
+    supplier: {
+        code: string | null;
+        name: string | null;
+        contact_person: string | null;
+        address: string;
+        phone: string | null;
+        email: string | null;
+        tax_number: string | null;
+    };
+    lines: {
+        id: number;
+        line_type: string;
+        line_type_label: string;
+        grn_number: string | null;
+        receipt_date: string | null;
+        account_code: string | null;
+        account_name: string | null;
+        description: string | null;
+        amount: string;
+    }[];
+};
+
 export type MatchableGoodsReceipt = {
     id: number;
     grn_number: string;

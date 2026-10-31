@@ -4,6 +4,14 @@ Each release has a version number, shown at the bottom of the menu and on the si
 The middle number goes up for new features, the last number for fixes (1.0.0 → 1.0.1 → 1.1.0).
 To install a release, run `bash ~/coconut-erp/deploy/coconut-erp.sh` on the server computer.
 
+## 1.31.0 — 31 October 2026
+
+- **Supplier invoices can now be printed and shared.** Every supplier invoice page has a
+  "Print invoice" button that opens an A4 sheet with the company letterhead, the supplier's
+  details, both invoice numbers, the lines, and what has been paid and is still due. For a PDF
+  to send by WhatsApp or email, choose "Save as PDF" as the printer — the same as sales
+  invoices. A draft prints with a "DRAFT" warning; a reversed or cancelled one is marked void.
+
 ## 1.30.4 — 25 October 2026
 
 - **The server restarts by itself when a security update needs it** (a new kernel), at 3:30 at

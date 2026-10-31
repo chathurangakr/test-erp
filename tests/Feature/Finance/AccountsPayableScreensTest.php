@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\SupplierInvoiceStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Models\Account;
+use App\Models\CompanyProfile;
 use App\Models\FiscalPeriod;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
@@ -313,6 +314,32 @@ class AccountsPayableScreensTest extends TestCase
                 ->where('invoice.can_edit', false)
                 ->has('invoice.lines', 1)
                 ->has('invoice.journal.lines', 2));
+    }
+
+    #[Test]
+    public function the_printed_invoice_shows_what_was_recorded_and_the_letterhead(): void
+    {
+        $user = User::factory()->admin()->create();
+        $receipt = $this->postReceipt();
+        CompanyProfile::query()->create(['name' => 'Factory Co', 'address' => '1 Mill Road']);
+
+        $this->actingAs($user)->post(route('supplier-invoices.store'), $this->invoicePayload($receipt));
+        $invoice = SupplierInvoice::firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('supplier-invoices.print', $invoice))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('finance/supplier-invoices/Print')
+                ->where('company.name', 'Factory Co')
+                ->where('company.address', '1 Mill Road')
+                ->where('invoice.status', 'DRAFT')
+                ->where('invoice.supplier.name', $this->supplier->name)
+                ->where('invoice.total', '1000000.000000')
+                ->has('invoice.lines', 1)
+                ->where('invoice.lines.0.line_type', 'GRNI_MATCH')
+                ->where('invoice.lines.0.grn_number', $receipt->grn_number)
+                ->where('invoice.lines.0.amount', '1000000.000000'));
     }
 
     #[Test]
